@@ -3,11 +3,13 @@
 
 # You can set these variables from the command line, and also
 # from the environment for the first three.
-SPHINXOPTS    	?=
-SPHINXBUILD   	?= sphinx-build
+SPHINXOPTS      ?=
+SPHINXBUILD     ?= sphinx-build
 SPHINXAUTOBUILD ?= sphinx-autobuild
-SOURCEDIR     	= .
-BUILDDIR      	= build
+SOURCEDIR       = _build/src
+BUILDDIR        = _build/
+
+SPHINXOPTS := ${SPHINXOPTS} --conf-dir .
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -15,10 +17,16 @@ help:
 
 .PHONY: help Makefile
 
-live:
+mkdir:
+	mkdir -p ${SOURCEDIR}
+
+clean:
+	rm ${BUILDDIR} -r
+
+live: mkdir
 	@$(SPHINXAUTOBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
+%: mkdir Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
