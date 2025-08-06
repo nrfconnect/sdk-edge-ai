@@ -14,7 +14,7 @@
 
 #include <zephyr/logging/log.h>
 
-BT_NSMS_DEF(nsms_gesture, "Gesture", CONFIG_ML_APP_EI_RESULT_SECURITY_LEVEL, "Unknown", 16);
+BT_NSMS_DEF(nsms_gesture, "Gesture", CONFIG_ML_APP_ML_RESULT_SECURITY_LEVEL, "Unknown", 16);
 
 static void connected(struct bt_conn *conn, uint8_t err)
 {

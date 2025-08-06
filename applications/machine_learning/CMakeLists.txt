@@ -26,6 +26,7 @@ target_sources(app PRIVATE
 # Include application events and configuration headers
 target_include_directories(app PRIVATE
   src/events
+  src/runners
   src/util
 )
 
@@ -38,4 +39,5 @@ zephyr_include_directories(
 add_subdirectory(common/src/modules)
 add_subdirectory(src/events)
 add_subdirectory(src/modules)
+add_subdirectory(src/runners)
 add_subdirectory(src/util)

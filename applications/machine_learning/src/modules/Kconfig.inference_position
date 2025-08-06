@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2025 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+config ML_APP_INFERENCE_POSITION
+	bool "Marking ML processing with pin state change"
+	depends on ML_APP_ML_RESULT_EVENTS
+	help
+	  The module toggles pin state as last listener for sensor event and first listener for
+	  ml result event. Pins are defined in dts file under ``zephyr,user`` node
+	  in ``inference-position-gpios`` phandle.
