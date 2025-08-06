@@ -54,7 +54,7 @@ To run the sample using a custom machine learning model, you must complete the f
    #. In the **Classifying existing test sample** panel, select one of the test samples.
    #. Click :guilabel:`Load sample` to display the raw data preview.
 
-      .. figure:: ../../../doc/nrf/images/ei_loading_test_sample.png
+      .. figure:: /samples/images/ei_loading_test_sample.png
          :scale: 50 %
          :alt: Loading test sample input data in Edge Impulse studio
 
@@ -62,7 +62,7 @@ To run the sample using a custom machine learning model, you must complete the f
 
       The classification results will be displayed, with raw data preview.
 
-      .. figure:: ../../../doc/nrf/images/ei_raw_features.png
+      .. figure:: /samples/images/ei_raw_features.png
          :scale: 50 %
          :alt: Raw data preview in Edge Impulse studio
 

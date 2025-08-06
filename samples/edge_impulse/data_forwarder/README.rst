@@ -69,7 +69,7 @@ After programming the sample to your development kit, test it by performing the 
    a. Go to the :guilabel:`Data acquisition` tab.
    #. In the **Record new data** panel, set the desired values and click :guilabel:`Start sampling`.
 
-      .. figure:: ../../../doc/nrf/images/ei_data_acquisition.png
+      .. figure:: /samples/images/ei_data_acquisition.png
          :scale: 50 %
          :alt: Sampling under Data acquisition in Edge Impulse studio
 
@@ -78,7 +78,7 @@ After programming the sample to your development kit, test it by performing the 
    #. Observe the received sample data on the raw data graph under the panel.
       For the default sample configuration, you should observe sine waves.
 
-      .. figure:: ../../../doc/nrf/images/ei_start_sampling.png
+      .. figure:: /samples/images/ei_start_sampling.png
          :scale: 50 %
          :alt: Sampling example
 

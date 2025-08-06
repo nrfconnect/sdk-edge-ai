@@ -125,7 +125,7 @@ The application uses the :ref:`app_event_manager` to distribute events between m
 The following figure shows the application architecture.
 The figure visualizes relations between Application Event Manager, modules, drivers, and libraries.
 
-.. figure:: /images/ml_app_architecture.svg
+.. figure:: /applications/images/ml_app_architecture.svg
    :alt: nRF Machine Learning application architecture
 
    nRF Machine Learning application architecture
@@ -144,7 +144,7 @@ PPR handles sensor sampling and sending of data to the application processor.
 
 The following figure shows the application architecture for the nRF54H20 DK, visualizing the relations between the Application Event Manager, modules, drivers, and libraries.
 
-.. figure:: /images/ml_app_architecture_nrf54h20.svg
+.. figure:: /applications/images/ml_app_architecture_nrf54h20.svg
    :alt: nRF Machine Learning application architecture for the nRF54H20 DK
 
    Architecture of the nRF Machine Learning application for the nRF54H20 DK
@@ -690,7 +690,7 @@ To start forwarding data to Edge Impulse studio:
    a. Select the :guilabel:`Data acquisition` tab.
    #. In the **Record new data** panel, set the desired values and click :guilabel:`Start sampling`.
 
-      .. figure:: /images/ei_data_acquisition.png
+      .. figure:: /samples/images/ei_data_acquisition.png
          :scale: 50%
          :alt: Sampling under Data acquisition in Edge Impulse studio
 
@@ -699,7 +699,7 @@ To start forwarding data to Edge Impulse studio:
    #. Observe the received sample data on the raw data graph under the panel.
       The observed signal depends on the acceleration readouts.
 
-      .. figure:: /images/ei_start_sampling.png
+      .. figure:: /samples/images/ei_start_sampling.png
          :scale: 50%
          :alt: Sampling example
 
