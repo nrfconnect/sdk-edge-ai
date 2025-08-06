@@ -1,0 +1,27 @@
+#
+# Copyright (c) 2025 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig ML_APP_ML_RUNNER_EI
+	bool "Edge Impulse based machine learning model"
+	depends on EI_WRAPPER
+
+if ML_APP_ML_RUNNER_EI
+
+config ML_APP_ML_RUNNER_EI_WINDOW_SHIFT
+	int "Prediction window shift [windows]"
+	range 0 4096
+	default 1
+	help
+	  Number of windows the prediction window is shifted between predictions.
+
+config ML_APP_ML_RUNNER_EI_FRAME_SHIFT
+	int "Prediction window shift [frames]"
+	range 0 4096
+	default 0
+	help
+	  Number of frames the prediction window is shifted between predictions.
+
+endif # ML_APP_ML_RUNNER_EI

@@ -6,11 +6,18 @@
 
 menuconfig ML_APP_ML_RUNNER
 	bool "Machine learning model runner"
-	depends on EI_WRAPPER
 	depends on CAF_SENSOR_EVENTS
 	select ML_APP_ML_RESULT_EVENTS
 
 if ML_APP_ML_RUNNER
+
+choice
+	prompt "Select model"
+	default ML_APP_ML_RUNNER_STUB
+
+rsource "../runners/Kconfig.*"
+
+endchoice
 
 config ML_APP_ML_RUNNER_SENSOR_EVENT_DESCR
 	string "Description of handled sensor event"
@@ -18,20 +25,6 @@ config ML_APP_ML_RUNNER_SENSOR_EVENT_DESCR
 	help
 	  The module handles data related to sensor events with predefined description.
 	  Other sensor events are ignored.
-
-config ML_APP_ML_RUNNER_WINDOW_SHIFT
-	int "Prediction window shift [windows]"
-	range 0 4096
-	default 1
-	help
-	  Number of windows the prediction window is shifted between predictions.
-
-config ML_APP_ML_RUNNER_FRAME_SHIFT
-	int "Prediction window shift [frames]"
-	range 0 4096
-	default 0
-	help
-	  Number of frames the prediction window is shifted between predictions.
 
 module = ML_APP_ML_RUNNER
 module-str = machine learning model runner

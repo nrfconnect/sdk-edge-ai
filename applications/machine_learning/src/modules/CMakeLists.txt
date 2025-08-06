@@ -13,8 +13,8 @@ target_sources_ifdef(CONFIG_ML_APP_EI_DATA_FORWARDER_UART
 target_sources_ifdef(CONFIG_ML_APP_EI_DATA_FORWARDER_BT_NUS
 		     app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ei_data_forwarder_bt_nus.c)
 
-target_sources_ifdef(CONFIG_ML_APP_EI_RESULT_NSMS
-		     app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ei_result_nsms.c)
+target_sources_ifdef(CONFIG_ML_APP_ML_RESULT_NSMS
+		     app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ml_result_nsms.c)
 
 target_sources_ifdef(CONFIG_ML_APP_LED_STATE
 		     app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/led_state.c)
@@ -30,3 +30,9 @@ target_sources_ifdef(CONFIG_ML_APP_USB_STATE
 
 target_sources_ifdef(CONFIG_ML_APP_SENSOR_SIM_CTRL
 		     app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/sensor_sim_ctrl.c)
+
+target_sources_ifdef(CONFIG_ML_APP_INFERENCE_POSITION
+		     app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/inference_position.c)
+
+target_sources_ifdef(CONFIG_SYS_HEAP_RUNTIME_STATS
+		     app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/heap_profile.c)

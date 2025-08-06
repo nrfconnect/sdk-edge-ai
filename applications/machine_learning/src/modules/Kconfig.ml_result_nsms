@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-config ML_APP_EI_RESULT_NSMS
+config ML_APP_ML_RESULT_NSMS
 	bool "Enable ML result via NSMS"
 	default y
 	depends on BT_GAP_AUTO_UPDATE_CONN_PARAMS
@@ -15,8 +15,8 @@ config ML_APP_EI_RESULT_NSMS
 
 choice
 	prompt "Security level"
-	default ML_APP_EI_RESULT_SECURITY_LEVEL_NONE
-	depends on ML_APP_EI_RESULT_NSMS
+	default ML_APP_ML_RESULT_SECURITY_LEVEL_NONE
+	depends on ML_APP_ML_RESULT_NSMS
 	help
 	  Sets security level used by NSMS instance:
 		NONE		- access without any restrictions,
@@ -25,13 +25,13 @@ choice
 				  if devices are lacking capabilities to display/enter
 				  passkey.
 
-config ML_APP_EI_RESULT_SECURITY_LEVEL_NONE
+config ML_APP_ML_RESULT_SECURITY_LEVEL_NONE
 	bool "None"
 
-config ML_APP_EI_RESULT_SECURITY_LEVEL_ENCRYPT
+config ML_APP_ML_RESULT_SECURITY_LEVEL_ENCRYPT
 	bool "Encryption"
 
-config ML_APP_EI_RESULT_SECURITY_LEVEL_AUTHEN
+config ML_APP_ML_RESULT_SECURITY_LEVEL_AUTHEN
 	bool "Authentication"
 	depends on BT_SMP
 	depends on BT_SETTINGS
@@ -43,10 +43,10 @@ config ML_APP_EI_RESULT_SECURITY_LEVEL_AUTHEN
 
 endchoice
 
-config ML_APP_EI_RESULT_SECURITY_LEVEL
+config ML_APP_ML_RESULT_SECURITY_LEVEL
 	int
 	range 0 2
-	depends on ML_APP_EI_RESULT_NSMS
-	default 0 if ML_APP_EI_RESULT_SECURITY_LEVEL_NONE
-	default 1 if ML_APP_EI_RESULT_SECURITY_LEVEL_ENCRYPT
-	default 2 if ML_APP_EI_RESULT_SECURITY_LEVEL_AUTHEN
+	depends on ML_APP_ML_RESULT_NSMS
+	default 0 if ML_APP_ML_RESULT_SECURITY_LEVEL_NONE
+	default 1 if ML_APP_ML_RESULT_SECURITY_LEVEL_ENCRYPT
+	default 2 if ML_APP_ML_RESULT_SECURITY_LEVEL_AUTHEN
