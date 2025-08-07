@@ -1,0 +1,11 @@
+#
+# Copyright (c) 2025 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Edge AI add-on"
+
+source "$(ZEPHYR_EDGE_AI_MODULE_DIR)/lib/Kconfig"
+
+endmenu
