@@ -1,0 +1,26 @@
+diff --git a/lib/CMakeLists.txt b/lib/CMakeLists.txt
+index 705274168a..ec82526615 100644
+--- a/lib/CMakeLists.txt
++++ b/lib/CMakeLists.txt
+@@ -30,7 +30,7 @@ add_subdirectory_ifdef(CONFIG_GCF_SMS gcf_sms)
+ add_subdirectory_ifdef(CONFIG_SUPL_CLIENT_LIB supl)
+ add_subdirectory_ifdef(CONFIG_DATE_TIME date_time)
+ add_subdirectory_ifdef(CONFIG_HW_ID_LIBRARY hw_id)
+-add_subdirectory_ifdef(CONFIG_EDGE_IMPULSE edge_impulse)
++#add_subdirectory_ifdef(CONFIG_EDGE_IMPULSE edge_impulse)
+ add_subdirectory_ifdef(CONFIG_WAVE_GEN_LIB wave_gen)
+ add_subdirectory_ifdef(CONFIG_HW_UNIQUE_KEY_SRC hw_unique_key)
+ add_subdirectory_ifdef(CONFIG_APP_JWT app_jwt)
+diff --git a/lib/Kconfig b/lib/Kconfig
+index 4f068905ef..9a10a5d053 100644
+--- a/lib/Kconfig
++++ b/lib/Kconfig
+@@ -32,7 +32,7 @@ rsource "supl/Kconfig"
+ rsource "date_time/Kconfig"
+ rsource "hw_id/Kconfig"
+ rsource "ram_pwrdn/Kconfig"
+-rsource "edge_impulse/Kconfig"
++#rsource "edge_impulse/Kconfig"
+ rsource "wave_gen/Kconfig"
+ rsource "hw_unique_key/Kconfig"
+ rsource "modem_jwt/Kconfig"

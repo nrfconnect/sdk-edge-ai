@@ -1,0 +1,10 @@
+patches:
+  - path: nrf/disable-edge-impulse.patch
+    sha256sum: b10e5debe9e40171bb724d5c2bf39a207d384425c7912c0f967b08b0eb7e831c
+    module: nrf
+    author: Szymon Antkowiak
+    email: szymon.antkowiak@nordicsemi.no
+    date: 2025-07-31
+    upstreamable: false
+    comments: |
+      Disable edge-impules from nrf by commenting line in Kconfig and CMakeLists.txt
