@@ -33,14 +33,23 @@ The nRF Machine Learning application also uses the following dedicated applicati
 ``ei_data_forwarder_uart``
   The module forwards the sensor readouts over UART.
 
+``heap_profile``
+  The module prints statistics of Zephyr's ``_system_heap`` and libc heap in free RAM.
+  Used in profiling of the machine learning model.
+
+``inference_position``
+  The module listens to the ``sensor_event`` and ``ml_result_event`` and toggles two GPIO pins in response to the events.
+  This is used to monitor power usage during the inference of machine learning models.
+  The pins are configured in the ``inference-position-gpios`` phandle under the ``/zephyr,user`` devicetree node.
+
 ``led_state``
   The module displays the application state using LEDs.
   The LED effects used to display the state of data forwarding, the machine learning results, and the state of the simulated signal are defined in the :file:`led_state_def.h` file located in the application configuration directory.
   The common LED effects are used to represent the machine learning results and the simulated sensor signal.
 
 ``ml_runner``
-  The module uses the :ref:`ei_wrapper` API to control running the machine learning model.
-  It provides the prediction results using :c:struct:`ml_result_event`.
+  The module interfaces with one of the :ref:`model_runners` to control and feed data into machine learning model.
+  The model runner provides the prediction results using the :c:struct:`ml_result_event` event.
 
 ``ml_app_mode``
   The module controls application mode.
