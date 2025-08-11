@@ -1,3 +1,7 @@
+diff --git a/include/ei_wrapper.h b/include/ei_wrapper.h.ignore
+similarity index 100%
+rename from include/ei_wrapper.h
+rename to include/ei_wrapper.h.ignore
 diff --git a/lib/CMakeLists.txt b/lib/CMakeLists.txt
 index 705274168a..ec82526615 100644
 --- a/lib/CMakeLists.txt
