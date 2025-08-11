@@ -1,6 +1,6 @@
 patches:
   - path: nrf/disable-edge-impulse.patch
-    sha256sum: b10e5debe9e40171bb724d5c2bf39a207d384425c7912c0f967b08b0eb7e831c
+    sha256sum: dae8f348572026ec58c97277e5bb98ab0e2eda5d3384677f970f4b2509c0c6b4
     module: nrf
     author: Szymon Antkowiak
     email: szymon.antkowiak@nordicsemi.no
