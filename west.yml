@@ -15,8 +15,14 @@ manifest:
     - name: nrf
       remote: ncs
       repo-path: sdk-nrf
-      revision: main
+      revision: 65d5f258dba3fdcc173d5c1b19f518757c8afbc5
       import: true
+
+    - name: axons-ml
+      remote: ncs
+      repo-path: sdk-axons-ml
+      revision: main
+      import: false
 
   self:
     path: edge-ai
