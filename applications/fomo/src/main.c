@@ -71,6 +71,13 @@ typedef struct cube {
 	sys_snode_t node; // for storing in a sys_slist_t
 } cube_t;
 
+struct record {
+	uint8_t present_count;
+	uint8_t missing_count;
+	struct cube cube;
+	sys_snode_t node; // for storing in a sys_slist_t
+};
+
 /**
  * Checks whether a new section overlaps with a cube,
  * and if so, will **update the cube**
@@ -270,15 +277,77 @@ static int process_fomo_output(sys_slist_t *results, float treshold,
 		}
 	}
 
-	cube_t *cube;
-	SYS_SLIST_FOR_EACH_CONTAINER(results, cube, node) {
-		cube->x *= width_ratio;
-		cube->y *= height_ratio;
-		cube->width *= width_ratio;
-		cube->height *= height_ratio;
+	return sys_slist_len(results);
+}
+
+static int calc_overlap_size(size_t x1, size_t s1, size_t x2, size_t s2)
+{
+	int left = MAX(x1, x2);
+	int right = MIN(x1 + s1, x2 + s2);
+	return right - left;
+}
+
+static void save_output_to_records(sys_slist_t *results, sys_slist_t *records)
+{
+	struct record *r, *nr;
+	sys_snode_t *prev_r = NULL;
+
+	// update existing records
+	SYS_SLIST_FOR_EACH_CONTAINER_SAFE(records, r, nr, node) {
+		struct cube *c, *nc;
+		sys_snode_t *prev_c = NULL;
+
+		r->missing_count += 1;
+
+		SYS_SLIST_FOR_EACH_CONTAINER_SAFE(results, c, nc, node) {
+			bool same_channel = r->cube.channel == c->channel;
+
+			int cube_area = c->width * c->height;
+			int overlap_width =
+				calc_overlap_size(c->x, c->width, r->cube.x, r->cube.width);
+			int overlap_height =
+				calc_overlap_size(c->y, c->height, r->cube.y, r->cube.height);
+
+			bool small_adjacent_cube =
+				cube_area == 1 && ((overlap_height == 0 && overlap_width >= 0) ||
+						   (overlap_width == 0 && overlap_height >= 0));
+			bool high_overlap = overlap_width * overlap_height >= 0.5 * cube_area;
+
+			if (same_channel && (small_adjacent_cube || high_overlap)) {
+				sys_slist_remove(results, prev_c, &c->node);
+				r->cube = *c;
+				k_free(c);
+
+				r->present_count = MIN(r->present_count + 1, 3);
+				r->missing_count = 0;
+
+				break;
+			} else {
+				prev_c = &c->node;
+			}
+		}
+
+		if (r->missing_count >= 3) {
+			sys_slist_remove(records, prev_r, &r->node);
+			k_free(r);
+		} else {
+			prev_r = &r->node;
+		}
 	}
 
-	return sys_slist_len(results);
+	struct cube *c, *nc;
+
+	// add new records
+	SYS_SLIST_FOR_EACH_CONTAINER_SAFE(results, c, nc, node) {
+		r = k_malloc(sizeof(struct record));
+		r->present_count = 1;
+		r->missing_count = 0;
+		r->cube = *c;
+		sys_slist_append(records, &r->node);
+
+		sys_slist_remove(results, NULL, &c->node);
+		k_free(c);
+	}
 }
 
 void take_picture(void)
@@ -349,6 +418,10 @@ void run_inference(void)
 
 	k_timer_start(&my_timer, K_NO_WAIT, K_MSEC(500));
 
+	sys_slist_t results, records;
+	sys_slist_init(&results);
+	sys_slist_init(&records);
+
 	while (true) {
 		k_sem_take(&my_sem, K_FOREVER);
 
@@ -377,26 +450,36 @@ void run_inference(void)
 		} else {
 			// print_model_output("output", model);
 
-			sys_slist_t results;
-			sys_slist_init(&results);
-
 			process_fomo_output(&results, 0.5, model);
 
 			LOG_RAW("\n");
-			LOG_INF("Prediction results:");
+			LOG_INF("New prediction results:");
 
 			if (sys_slist_is_empty(&results)) {
 				LOG_INF("no prediction");
 			}
 
-			cube_t *c, *nc;
-			SYS_SLIST_FOR_EACH_CONTAINER_SAFE(&results, c, nc, node) {
+			cube_t *c;
+			SYS_SLIST_FOR_EACH_CONTAINER(&results, c, node) {
 				static const char *const labels[] = {"background", "beer", "can"};
 				LOG_INF("%s (%.2f) [x: %d, y: %d, width: %d, height: %d]",
 					labels[c->channel], c->confidence, c->x, c->y, c->width,
 					c->height);
-				sys_slist_remove(&results, NULL, &c->node);
-				k_free(c);
+			}
+
+			save_output_to_records(&results, &records);
+
+			LOG_INF("Tracked results:");
+			struct record *r;
+			SYS_SLIST_FOR_EACH_CONTAINER(&records, r, node) {
+				if (r->present_count < 3) {
+					continue;
+				}
+
+				static const char *const labels[] = {"background", "beer", "can"};
+				LOG_INF("%s (%.2f) [x: %d, y: %d, width: %d, height: %d]",
+					labels[r->cube.channel], r->cube.confidence, r->cube.x,
+					r->cube.y, r->cube.width, r->cube.height);
 			}
 		}
 	}
