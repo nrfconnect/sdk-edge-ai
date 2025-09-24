@@ -146,23 +146,39 @@ static void handle_detection(sys_slist_t *cubes, int x, int y, float vf, int cha
 		sys_slist_append(cubes, &cube->node);
 	}
 }
-
-static void extact_features(float *output, size_t output_size, const uint8_t *input,
-			    size_t input_size)
+static void extract_features(float *output, size_t output_size, const uint8_t *input,
+			     size_t input_size)
 {
 	__ASSERT_NO_MSG(output != NULL);
 	__ASSERT_NO_MSG(input != NULL);
 
-	for (size_t i = 0, j = 0; i < input_size && j < output_size; i += 2) {
-		uint16_t rgb565 = input[i] << 8 | input[i + 1];
+	// Pre-calculated integer coefficients (scaled by 65536)
+	// 0.299 * 65536 / 31 ≈ 631
+	// 0.587 * 65536 / 63 ≈ 611
+	// 0.114 * 65536 / 31 ≈ 241
+	const uint32_t R_COEFF = 631;
+	const uint32_t G_COEFF = 611;
+	const uint32_t B_COEFF = 241;
+	const float SCALE = 1.0f / 65536.0f;
 
-		// rgb to 0..1
-		float r = (float)(rgb565 >> 11 & 0x1F) / 31.0f;
-		float g = (float)(rgb565 >> 5 & 0x3F) / 63.0f;
-		float b = (float)(rgb565 >> 0 & 0x1F) / 31.0f;
+	size_t j = 0;
+	size_t max_i = (input_size & ~1); // Ensure even number
+	size_t max_j = output_size;
 
-		float v = (0.299f * r) + (0.587f * g) + (0.114f * b);
-		output[j++] = v;
+	for (size_t i = 0; i < max_i && j < max_j; i += 2) {
+		// Load RGB565 value
+		uint16_t rgb565 = (uint16_t)(input[i] << 8) | input[i + 1];
+
+		// Extract components
+		uint32_t r = (rgb565 >> 11) & 0x1F;
+		uint32_t g = (rgb565 >> 5) & 0x3F;
+		uint32_t b = rgb565 & 0x1F;
+
+		// Integer calculation
+		uint32_t gray = (R_COEFF * r) + (G_COEFF * g) + (B_COEFF * b);
+
+		// Convert to float only once
+		output[j++] = (float)gray * SCALE;
 	}
 }
 
@@ -282,7 +298,7 @@ void take_picture(void)
 
 	f_status = vbuf->flags;
 
-	extact_features(f_features_pos, f_size_left, vbuf->buffer, vbuf->bytesused);
+	extract_features(f_features_pos, f_size_left, vbuf->buffer, vbuf->bytesused);
 	f_features_pos += vbuf->bytesused / 2;
 	f_size_left -= vbuf->bytesused / 2;
 
@@ -292,7 +308,7 @@ void take_picture(void)
 		video_dequeue(video, &vbuf, K_FOREVER);
 		f_status = vbuf->flags;
 
-		extact_features(f_features_pos, f_size_left, vbuf->buffer, vbuf->bytesused);
+		extract_features(f_features_pos, f_size_left, vbuf->buffer, vbuf->bytesused);
 		f_features_pos += vbuf->bytesused / 2;
 		f_size_left -= vbuf->bytesused / 2;
 
@@ -301,6 +317,16 @@ void take_picture(void)
 	}
 
 	return;
+}
+
+void my_timer_handler(struct k_timer *dummy);
+
+K_SEM_DEFINE(my_sem, 0, 1);
+K_TIMER_DEFINE(my_timer, my_timer_handler, NULL);
+
+void my_timer_handler(struct k_timer *dummy)
+{
+	k_sem_give(&my_sem);
 }
 
 void run_inference(void)
@@ -321,7 +347,11 @@ void run_inference(void)
 		LOG_ERR("axon_nn_model_init failed!");
 	}
 
+	k_timer_start(&my_timer, K_NO_WAIT, K_MSEC(500));
+
 	while (true) {
+		k_sem_take(&my_sem, K_FOREVER);
+
 		video_stream_start(video, VIDEO_BUF_TYPE_OUTPUT);
 		take_picture();
 		video_stream_stop(video, VIDEO_BUF_TYPE_OUTPUT);
@@ -369,8 +399,6 @@ void run_inference(void)
 				k_free(c);
 			}
 		}
-
-		k_msleep(500);
 	}
 
 	LOG_INF("Inference complete");
