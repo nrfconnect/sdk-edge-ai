@@ -57,7 +57,7 @@ LOG_MODULE_REGISTER(fomo, LOG_LEVEL_DBG);
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
 #endif
 
-float f_features[9216]; // 96x96x3
+float f_features[9216]; // 96x96
 int8_t q_features[9216];
 const struct device *video;
 
@@ -400,11 +400,11 @@ void my_timer_handler(struct k_timer *dummy)
 
 void run_inference(void)
 {
-	LOG_INF("Start Platform!");
-	AxonResultEnum result = axon_platform_init();
-	if (result != kAxonResultSuccess) {
-		LOG_ERR("axon_platform_init failed!");
-	}
+	// LOG_INF("Start Platform!");
+	// AxonResultEnum result = axon_platform_init();
+	// if (result != kAxonResultSuccess) {
+	// 	LOG_ERR("axon_platform_init failed!");
+	// }
 
 	void *axon_handle = axon_driver_get_handle();
 	LOG_INF("Prepare and run Axon!");
@@ -437,9 +437,16 @@ void run_inference(void)
 
 		// print_vector("quantized_features", q_features, ARRAY_SIZE(q_features));
 
+		AxonResultEnum result = axon_platform_init();
+		if (result != kAxonResultSuccess) {
+			LOG_ERR("axon_platform_init failed!");
+		}
+
 		uint32_t start = axon_platform_get_ticks();
 		result = axon_nn_model_infer_sync(axon_handle, model, &(wrapper.cmd_buf_info),
 						  q_features, ARRAY_SIZE(q_features));
+
+		axon_platform_close();
 
 		uint32_t time =
 			(axon_platform_get_ticks() - start) * 1000 / axon_platform_get_clk_hz();
@@ -485,7 +492,7 @@ void run_inference(void)
 	}
 
 	LOG_INF("Inference complete");
-	axon_platform_close();
+	// axon_platform_close();
 }
 
 int main(void)
