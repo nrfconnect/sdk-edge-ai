@@ -8,3 +8,9 @@
    If you work with out-of-tree :ref:`freestanding applications <create_application_types_freestanding>`, you need to manually pass the ``--sysbuild`` parameter to every build command or :ref:`configure west to always use it <sysbuild_enabled_ncs_configuring>`.
 .. |thingy53_sample_note| replace:: If you build this application for Thingy:53, it enables additional features. See :ref:`thingy53_app_guide` for details.
 .. |54H_engb_2_8| replace:: The nRF54H20 DK Engineering A and B (up to version 0.8.2) are no longer supported starting with |NCS| v2.9.0.
+.. |test_sample| replace:: After programming the sample to your development kit, complete the following steps to test it:
+.. |connect_kit| replace:: Connect the kit to the computer using a USB cable.
+   The kit is assigned a serial port.
+   Serial ports are referred to as COM ports on Windows, /dev/ttyACM devices on Linux, and /dev/tty devices on macOS.
+   To list Nordic Semiconductor devices connected to your computer together with their serial ports, open a terminal and run the ``nrfutil device list`` command.
+   Alternatively, check your operating system's device manager or its equivalent.
