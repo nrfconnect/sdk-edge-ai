@@ -18,7 +18,6 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/video-controls.h>
 #include <zephyr/drivers/video.h>
-#include <zephyr/drivers/video/arducam_mega.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/printk.h>
@@ -353,7 +352,6 @@ static void save_output_to_records(sys_slist_t *results, sys_slist_t *records)
 void take_picture(void)
 {
 	int err;
-	enum video_frame_fragmented_status f_status;
 	struct video_buffer *vbuf;
 
 	float *f_features_pos = f_features;
@@ -365,17 +363,14 @@ void take_picture(void)
 		return;
 	}
 
-	f_status = vbuf->flags;
-
 	extract_features(f_features_pos, f_size_left, vbuf->buffer, vbuf->bytesused);
 	f_features_pos += vbuf->bytesused / 2;
 	f_size_left -= vbuf->bytesused / 2;
 
 	vbuf->type = VIDEO_BUF_TYPE_OUTPUT;
 	video_enqueue(video, vbuf);
-	while (f_status == VIDEO_BUF_FRAG) {
+	while (f_size_left != 0) {
 		video_dequeue(video, &vbuf, K_FOREVER);
-		f_status = vbuf->flags;
 
 		extract_features(f_features_pos, f_size_left, vbuf->buffer, vbuf->bytesused);
 		f_features_pos += vbuf->bytesused / 2;

@@ -9,26 +9,6 @@ patches:
     comments: |
       Disable edge-impules from nrf by commenting line in Kconfig and CMakeLists.txt
 
-  - path: zephyr/arducam-old.patch
-    sha256sum: 4228a785ed5b66ef09193e6fb3ab18396462c02fff32325ad71c527013f6921a
-    module: zephyr
-    author: Szymon Antkowiak
-    email: szymon.antkowiak@nordicsemi.no
-    date: 2025-09-12
-    upstreamable: false
-    comments: |
-      Old implementation of Arducam driver from PR
-
-  - path: zephyr/arducam-adapt.patch
-    sha256sum: 57379eadb2e79d01dfefc0f18fe2130c6ddae1b9a56f782d7d7413fea3cc2b16
-    module: zephyr
-    author: Szymon Antkowiak
-    email: szymon.antkowiak@nordicsemi.no
-    date: 2025-09-12
-    upstreamable: false
-    comments: |
-      Adapt driver for FOMO demo needs
-
   - path: axons-ml/add-dts.patch
     sha256sum: b949be54aaebae987da7fd7b67fa4a37b7958c58f685c01014bf2e9b8ee72fd5
     module: axons-ml
