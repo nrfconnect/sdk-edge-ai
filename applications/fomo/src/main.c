@@ -5,62 +5,38 @@
  * The use, copying, transfer or disclosure of such information is prohibited except by
  * express written agreement with Nordic Semiconductor ASA.
  */
-#include "axon_driver.h"
-#include "axon_nn_infer.h"
-#include "axon_platform.h"
-#include "axon_stringization.h"
-#include "zephyr/sys/__assert.h"
-#include "zephyr/sys/slist.h"
-
-#include <assert.h>
-#include <stddef.h>
 
 #include <zephyr/device.h>
-#include <zephyr/drivers/video-controls.h>
 #include <zephyr/drivers/video.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/printk.h>
+#include <zephyr/sys/slist.h>
+
+#include <axon_driver.h>
+#include <axon_nn_infer.h>
+#include <axon_platform.h>
+#include <axon_stringization.h>
 
 LOG_MODULE_REGISTER(fomo, LOG_LEVEL_DBG);
 
-#define AXON_MODEL_FILE_NAME_ROOT              axon_model_
-#define AXON_MODEL_LAYERS_FILE_NAME_ROOT       AXON_MODEL_FILE_NAME_ROOT
-#define AXON_MODEL_TEST_VECTORS_FILE_NAME_ROOT AXON_MODEL_FILE_NAME_ROOT
-#define AXON_MODEL_TEST_VECTORS_FILE_NAME_END  _test_vectors_.h
-#define AXON_MODEL_LAYERS_FILE_NAME_TAIL       _layers_.h
-#define AXON_MODEL_DOT_H                       _.h
+#define AXON_MODEL_FILE_NAME_ROOT        axon_model_
+#define AXON_MODEL_LAYERS_FILE_NAME_TAIL _layers_.h
+#define AXON_MODEL_DOT_H                 _.h
 
 #define AXON_MODEL_FILE_NAME                                                                       \
 	STRINGIZE_3_CONCAT(AXON_MODEL_FILE_NAME_ROOT, AXON_MODEL_NAME, AXON_MODEL_DOT_H)
-#define AXON_MODEL_FILE_LAYERS_NAME                                                                \
-	STRINGIZE_3_CONCAT(AXON_MODEL_LAYERS_FILE_NAME_ROOT, AXON_MODEL_NAME,                      \
-			   AXON_MODEL_LAYERS_FILE_NAME_TAIL)
-#define AXON_MODEL_TEST_VECTORS_FILE_NAME                                                          \
-	STRINGIZE_3_CONCAT(AXON_MODEL_TEST_VECTORS_FILE_NAME_ROOT, AXON_MODEL_NAME,                \
-			   AXON_MODEL_TEST_VECTORS_FILE_NAME_END)
 
 // generate structure name model_<model_name>
 #define THE_REAL_MODEL_STRUCT_NAME(model_name) model_##model_name
 #define THE_MODEL_STRUCT_NAME(model_name)      THE_REAL_MODEL_STRUCT_NAME(model_name)
 
 #include AXON_MODEL_FILE_NAME
-#if INCLUDE_VECTORS
-#include AXON_MODEL_TEST_VECTORS_FILE_NAME
-#if AXON_LAYER_TEST_VECTORS
-#include AXON_MODEL_FILE_LAYERS_NAME
-#endif
-#endif
-
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
-#endif
 
 float f_features[9216]; // 96x96
 int8_t q_features[9216];
 const struct device *video;
 
-typedef struct cube {
+struct box {
 	size_t x;
 	size_t y;
 	size_t width;
@@ -68,90 +44,91 @@ typedef struct cube {
 	float confidence;
 	int channel;
 	sys_snode_t node; // for storing in a sys_slist_t
-} cube_t;
+};
 
 struct record {
 	uint8_t present_count;
 	uint8_t missing_count;
-	struct cube cube;
+	struct box box;
 	sys_snode_t node; // for storing in a sys_slist_t
 };
 
 /**
- * Checks whether a new section overlaps with a cube,
- * and if so, will **update the cube**
+ * Checks whether a new section overlaps with a box,
+ * and if so, will **update the box**
  */
-static bool extend_cube(cube_t *c, int x, int y, int width, int height, float confidence)
+static bool extend_box(struct box *box, int x, int y, int width, int height, float confidence)
 {
-	bool is_overlapping = !(c->x + c->width < x || c->y + c->height < y || c->x > x + width ||
-				c->y > y + height);
+	bool is_overlapping = !(box->x + box->width < x || box->y + box->height < y ||
+				box->x > x + width || box->y > y + height);
 
 	if (!is_overlapping) {
 		return false;
 	}
 
 	// if we overlap, but the x of the new box is lower than the x of the current box
-	if (x < c->x) {
+	if (x < box->x) {
 		// update x to match new box and make width larger (by the diff between the boxes)
-		c->x = x;
-		c->width += c->x - x;
+		box->x = x;
+		box->width += box->x - x;
 	}
 	// if we overlap, but the y of the new box is lower than the y of the current box
-	if (y < c->y) {
+	if (y < box->y) {
 		// update y to match new box and make height larger (by the diff between the boxes)
-		c->y = y;
-		c->height += c->y - y;
+		box->y = y;
+		box->height += box->y - y;
 	}
 	// if we overlap, and x+width of the new box is higher than the x+width of the current box
-	if (x + width > c->x + c->width) {
+	if (x + width > box->x + box->width) {
 		// just make the box wider
-		c->width += (x + width) - (c->x + c->width);
+		box->width += (x + width) - (box->x + box->width);
 	}
 	// if we overlap, and y+height of the new box is higher than the y+height of the current box
-	if (y + height > c->y + c->height) {
+	if (y + height > box->y + box->height) {
 		// just make the box higher
-		c->height += (y + height) - (c->y + c->height);
+		box->height += (y + height) - (box->y + box->height);
 	}
 	// if the new box has higher confidence, then override confidence of the whole box
-	if (confidence > c->confidence) {
-		c->confidence = confidence;
+	if (confidence > box->confidence) {
+		box->confidence = confidence;
 	}
 
 	return true;
 }
 
-static void handle_detection(sys_slist_t *cubes, int x, int y, float vf, int channel)
+static void handle_detection(sys_slist_t *boxes, int x, int y, float vf, int channel)
 {
 
 	bool is_overlapping = false;
 
-	cube_t *c;
-	SYS_SLIST_FOR_EACH_CONTAINER(cubes, c, node) {
-		if (c->channel != channel) {
+	struct box *box;
+	SYS_SLIST_FOR_EACH_CONTAINER(boxes, box, node) {
+		if (box->channel != channel) {
 			continue;
 		}
 
-		if (extend_cube(c, x, y, 1, 1, vf)) {
+		if (extend_box(box, x, y, 1, 1, vf)) {
 			is_overlapping = true;
 			break;
 		}
 	}
 
 	if (!is_overlapping) {
-		cube_t *cube = k_malloc(sizeof(cube_t));
-		if (cube == NULL) {
-			LOG_ERR("Failed to allocate memory for cube");
+		struct box *box = k_malloc(sizeof(struct box));
+		if (box == NULL) {
+			LOG_ERR("Failed to allocate memory for box");
 			return;
 		}
-		cube->x = x;
-		cube->y = y;
-		cube->width = 1;
-		cube->height = 1;
-		cube->confidence = vf;
-		cube->channel = channel;
-		sys_slist_append(cubes, &cube->node);
+		box->x = x;
+		box->y = y;
+		box->width = 1;
+		box->height = 1;
+		box->confidence = vf;
+		box->channel = channel;
+		sys_slist_append(boxes, &box->node);
 	}
 }
+
 static void extract_features(float *output, size_t output_size, const uint8_t *input,
 			     size_t input_size)
 {
@@ -219,7 +196,7 @@ static void print_vector_f(const char *name, const float *vector, uint32_t vecto
 {
 	LOG_INF("%s=[", name);
 	for (uint32_t i = 0; i < vector_size; i++) {
-		LOG_RAW("%f, ", vector[i]);
+		LOG_RAW("%f, ", (double)vector[i]);
 		if (i % 16 == 15) {
 			LOG_RAW("\n");
 		}
@@ -245,7 +222,7 @@ static void print_model_output(const char *name, const axon_nn_compiled_model_st
 			for (int8_t x = 0; x < width; x++) {
 				value = model->output_ptr[height * width * c + y * width + x];
 				f_value = dequantize(model, value);
-				LOG_RAW("% .2f (% 4d) ", f_value, value);
+				LOG_RAW("% .2f (% 4d) ", (double)f_value, value);
 			}
 			LOG_RAW("\n");
 		}
@@ -254,14 +231,19 @@ static void print_model_output(const char *name, const axon_nn_compiled_model_st
 	}
 }
 
-static int process_fomo_output(sys_slist_t *results, float treshold,
+static void print_box(const struct box *box)
+{
+	static const char *const labels[] = {"background", "beer", "can"};
+	LOG_INF("%s (%.2f) [x: %d, y: %d, width: %d, height: %d]", labels[box->channel],
+		(double)box->confidence, box->x, box->y, box->width, box->height);
+}
+
+static int process_fomo_output(sys_slist_t *results, float threshold,
 			       const axon_nn_compiled_model_struct *model)
 {
 	int8_t height = model->output_dimensions.height;
 	int8_t width = model->output_dimensions.width;
 	int8_t channel_cnt = model->output_dimensions.channel_cnt;
-	uint8_t width_ratio = model->inputs[0].dimensions.width / model->output_dimensions.width;
-	uint8_t height_ratio = model->inputs[0].dimensions.height / model->output_dimensions.height;
 
 	for (int8_t c = 1; c < channel_cnt; c++) {
 		for (int8_t y = 0; y < height; y++) {
@@ -269,7 +251,7 @@ static int process_fomo_output(sys_slist_t *results, float treshold,
 				int8_t value =
 					model->output_ptr[height * width * c + y * width + x];
 				float f_value = dequantize(model, value);
-				if (f_value >= treshold) {
+				if (f_value >= threshold) {
 					handle_detection(results, x, y, f_value, c);
 				}
 			}
@@ -288,64 +270,68 @@ static int calc_overlap_size(size_t x1, size_t s1, size_t x2, size_t s2)
 
 static void save_output_to_records(sys_slist_t *results, sys_slist_t *records)
 {
-	struct record *r, *nr;
+	struct record *record, *safe_record;
 	sys_snode_t *prev_r = NULL;
 
 	// update existing records
-	SYS_SLIST_FOR_EACH_CONTAINER_SAFE(records, r, nr, node) {
-		struct cube *c, *nc;
-		sys_snode_t *prev_c = NULL;
+	SYS_SLIST_FOR_EACH_CONTAINER_SAFE(records, record, safe_record, node) {
+		struct box *box, *safe_box;
+		sys_snode_t *prev_box_node = NULL;
 
-		r->missing_count += 1;
+		record->missing_count += 1;
 
-		SYS_SLIST_FOR_EACH_CONTAINER_SAFE(results, c, nc, node) {
-			bool same_channel = r->cube.channel == c->channel;
+		SYS_SLIST_FOR_EACH_CONTAINER_SAFE(results, box, safe_box, node) {
+			bool same_channel = record->box.channel == box->channel;
 
-			int cube_area = c->width * c->height;
-			int overlap_width =
-				calc_overlap_size(c->x, c->width, r->cube.x, r->cube.width);
-			int overlap_height =
-				calc_overlap_size(c->y, c->height, r->cube.y, r->cube.height);
+			int box_area = box->width * box->height;
+			int overlap_width = calc_overlap_size(box->x, box->width, record->box.x,
+							      record->box.width);
+			int overlap_height = calc_overlap_size(box->y, box->height, record->box.y,
+							       record->box.height);
 
-			bool small_adjacent_cube =
-				cube_area == 1 && ((overlap_height == 0 && overlap_width >= 0) ||
-						   (overlap_width == 0 && overlap_height >= 0));
-			bool high_overlap = overlap_width * overlap_height >= 0.5 * cube_area;
+			bool small_adjacent_box =
+				box_area == 1 && ((overlap_height == 0 && overlap_width >= 0) ||
+						  (overlap_width == 0 && overlap_height >= 0));
+			bool high_overlap = overlap_width * overlap_height >= 0.5 * box_area;
 
-			if (same_channel && (small_adjacent_cube || high_overlap)) {
-				sys_slist_remove(results, prev_c, &c->node);
-				r->cube = *c;
-				k_free(c);
+			if (same_channel && (small_adjacent_box || high_overlap)) {
+				sys_slist_remove(results, prev_box_node, &box->node);
+				record->box = *box;
+				k_free(box);
 
-				r->present_count = MIN(r->present_count + 1, 3);
-				r->missing_count = 0;
+				record->present_count = MIN(record->present_count + 1, 3);
+				record->missing_count = 0;
 
 				break;
 			} else {
-				prev_c = &c->node;
+				prev_box_node = &box->node;
 			}
 		}
 
-		if (r->missing_count >= 3) {
-			sys_slist_remove(records, prev_r, &r->node);
-			k_free(r);
+		if (record->missing_count >= 3) {
+			sys_slist_remove(records, prev_r, &record->node);
+			k_free(record);
 		} else {
-			prev_r = &r->node;
+			prev_r = &record->node;
 		}
 	}
 
-	struct cube *c, *nc;
+	struct box *box, *safe_box;
 
 	// add new records
-	SYS_SLIST_FOR_EACH_CONTAINER_SAFE(results, c, nc, node) {
-		r = k_malloc(sizeof(struct record));
-		r->present_count = 1;
-		r->missing_count = 0;
-		r->cube = *c;
-		sys_slist_append(records, &r->node);
+	SYS_SLIST_FOR_EACH_CONTAINER_SAFE(results, box, safe_box, node) {
+		record = k_malloc(sizeof(struct record));
+		if (record == NULL) {
+			LOG_ERR("Failed to allocate memory for record");
+			return;
+		}
+		record->present_count = 1;
+		record->missing_count = 0;
+		record->box = *box;
+		sys_slist_append(records, &record->node);
 
-		sys_slist_remove(results, NULL, &c->node);
-		k_free(c);
+		sys_slist_remove(results, NULL, &box->node);
+		k_free(box);
 	}
 }
 
@@ -383,18 +369,19 @@ void take_picture(void)
 	return;
 }
 
-void my_timer_handler(struct k_timer *dummy);
+void capture_timer_handler(struct k_timer *dummy);
 
-K_SEM_DEFINE(my_sem, 0, 1);
-K_TIMER_DEFINE(my_timer, my_timer_handler, NULL);
+K_SEM_DEFINE(data_sem, 0, 1);
+K_TIMER_DEFINE(capture_timer, capture_timer_handler, NULL);
 
-void my_timer_handler(struct k_timer *dummy)
+void capture_timer_handler(struct k_timer *dummy)
 {
-	k_sem_give(&my_sem);
+	k_sem_give(&data_sem);
 }
 
 void run_inference(void)
 {
+	// Init moved inside inference loop to reduce idle power consumption
 	// LOG_INF("Start Platform!");
 	// AxonResultEnum result = axon_platform_init();
 	// if (result != kAxonResultSuccess) {
@@ -411,14 +398,14 @@ void run_inference(void)
 		LOG_ERR("axon_nn_model_init failed!");
 	}
 
-	k_timer_start(&my_timer, K_NO_WAIT, K_MSEC(500));
+	k_timer_start(&capture_timer, K_NO_WAIT, K_MSEC(500));
 
 	sys_slist_t results, records;
 	sys_slist_init(&results);
 	sys_slist_init(&records);
 
 	while (true) {
-		k_sem_take(&my_sem, K_FOREVER);
+		k_sem_take(&data_sem, K_FOREVER);
 
 		video_stream_start(video, VIDEO_BUF_TYPE_OUTPUT);
 		take_picture();
@@ -461,27 +448,21 @@ void run_inference(void)
 				LOG_INF("no prediction");
 			}
 
-			cube_t *c;
-			SYS_SLIST_FOR_EACH_CONTAINER(&results, c, node) {
-				static const char *const labels[] = {"background", "beer", "can"};
-				LOG_INF("%s (%.2f) [x: %d, y: %d, width: %d, height: %d]",
-					labels[c->channel], c->confidence, c->x, c->y, c->width,
-					c->height);
+			const struct box *box;
+			SYS_SLIST_FOR_EACH_CONTAINER(&results, box, node) {
+				print_box(box);
 			}
 
 			save_output_to_records(&results, &records);
 
 			LOG_INF("Tracked results:");
-			struct record *r;
-			SYS_SLIST_FOR_EACH_CONTAINER(&records, r, node) {
-				if (r->present_count < 3) {
+			const struct record *record;
+			SYS_SLIST_FOR_EACH_CONTAINER(&records, record, node) {
+				if (record->present_count < 3) {
 					continue;
 				}
 
-				static const char *const labels[] = {"background", "beer", "can"};
-				LOG_INF("%s (%.2f) [x: %d, y: %d, width: %d, height: %d]",
-					labels[r->cube.channel], r->cube.confidence, r->cube.x,
-					r->cube.y, r->cube.width, r->cube.height);
+				print_box(&record->box);
 			}
 		}
 	}
