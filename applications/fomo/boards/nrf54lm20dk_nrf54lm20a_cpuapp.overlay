@@ -1,0 +1,54 @@
+/*
+ * Copyright (c) 2023 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+// Include Axons
+&global_peripherals {
+	axons: axons@56000 {
+		compatible = "nordic,axons";
+		reg = <0x56000 0x1000>;
+		interrupts = <86 NRF_DEFAULT_IRQ_PRIORITY>;
+		status = "okay";
+	};
+};
+
+&pinctrl {
+	spi22_default: spi22_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 1, 4)>,
+			        <NRF_PSEL(SPIM_MISO, 1, 5)>,
+			        <NRF_PSEL(SPIM_MOSI, 1, 6)>;
+			bias-pull-down;
+		};
+	};
+
+	spi22_sleep: spi22_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 1, 4)>,
+			        <NRF_PSEL(SPIM_MISO, 1, 5)>,
+			        <NRF_PSEL(SPIM_MOSI, 1, 6)>;
+			bias-pull-down;
+			low-power-enable;
+		};
+	};
+};
+
+&spi22 {
+	compatible = "nordic,nrf-spim";
+	status = "okay";
+	pinctrl-0 = <&spi22_default>;
+	pinctrl-1 = <&spi22_sleep>;
+	pinctrl-names = "default", "sleep";
+	overrun-character = <0x00>;
+	zephyr,pm-device-runtime-auto;
+	cs-gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;
+
+	arducam_mega: arducam-mega@0 {
+		compatible = "arducam,mega";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+		status = "okay";
+	};
+};

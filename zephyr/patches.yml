@@ -8,3 +8,13 @@ patches:
     upstreamable: false
     comments: |
       Disable edge-impules from nrf by commenting line in Kconfig and CMakeLists.txt
+
+  - path: axons-ml/add-dts.patch
+    sha256sum: b949be54aaebae987da7fd7b67fa4a37b7958c58f685c01014bf2e9b8ee72fd5
+    module: axons-ml
+    author: Szymon Antkowiak
+    email: szymon.antkowiak@nordicsemi.no
+    date: 2025-09-12
+    upstreamable: false
+    comments: |
+      Add global dts/binding
