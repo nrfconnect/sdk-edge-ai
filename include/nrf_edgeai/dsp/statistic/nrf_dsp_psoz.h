@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Nordic Semiconductor ASA
+ * Copyright (c) 2025 Nordic Semiconductor ASA
  * SPDX-License-Identifier: Apache-2.0
  */
 /**
@@ -39,8 +39,7 @@ extern "C" {
  *
  * @return  flt32_t  Percentage of signal over zero in the vector
  */
-#define nrf_dsp_psoz_f32_s(p_input, num, stride) \
-    nrf_dsp_psot_f32_s((p_input), (num), stride, 0.f)
+#define nrf_dsp_psoz_f32_s(p_input, num, stride) nrf_dsp_psot_f32_s((p_input), (num), stride, 0.f)
 
 /**
  * @brief Calculates Percentage of signal over zero in a INT8 fixed-point vector.
@@ -61,8 +60,7 @@ extern "C" {
  *
  * @return  int16_t  Percentage of signal over zero in the vector, multiplied by NRF_DSP_PERCENTAGE_TO_INT_FACTOR
  */
-#define nrf_dsp_psoz_i8_s(p_input, num, stride) \
-    nrf_dsp_psot_i8_s((p_input), (num), stride, 0)
+#define nrf_dsp_psoz_i8_s(p_input, num, stride) nrf_dsp_psot_i8_s((p_input), (num), stride, 0)
 
 /**
  * @brief Calculates Percentage of signal over zero in a INT16 fixed-point vector.
@@ -83,8 +81,7 @@ extern "C" {
  *
  * @return  int16_t  Percentage of signal over zero in the vector, multiplied by NRF_DSP_PERCENTAGE_TO_INT_FACTOR
  */
-#define nrf_dsp_psoz_i16_s(p_input, num, stride) \
-    nrf_dsp_psot_i16_s((p_input), (num), stride, 0)
+#define nrf_dsp_psoz_i16_s(p_input, num, stride) nrf_dsp_psot_i16_s((p_input), (num), stride, 0)
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Nordic Semiconductor ASA
+ * Copyright (c) 2025 Nordic Semiconductor ASA
  * SPDX-License-Identifier: Apache-2.0
  */
 #ifndef _NRF_EDGEAI_TYPES_H_
@@ -83,10 +83,9 @@ typedef void (*nrf_edgeai_iface_decode_outputs_t)(nrf_edgeai_model_output_t*   p
 typedef nrf_edgeai_err_t (*nrf_edgeai_iface_process_features_t)(nrf_edgeai_input_t*        p_input,
                                                                 nrf_edgeai_dsp_pipeline_t* p_dsp);
 
-/***********************************************************************************************************************
-NRF Edge AI neural network interfaces structure definition
-***********************************************************************************************************************/
-
+/**
+ * @brief Edge AI runtime interfaces structure definition
+ */
 typedef struct nrf_edgeai_interfaces_s
 {
     nrf_edgeai_iface_input_setup_t       input_setup;
@@ -97,11 +96,36 @@ typedef struct nrf_edgeai_interfaces_s
     nrf_edgeai_iface_decode_outputs_t    decode_outputs;
 } nrf_edgeai_interfaces_t;
 
+/**
+ * @brief EdgeAI runtime version structure
+ */
+typedef union nrf_edgeai_rt_version_u
+{
+    struct
+    {
+        const uint8_t  major; /**< Major version */
+        const uint8_t  minor; /**< Minor version */
+        const uint16_t patch; /**< Patch version */
+    } field;
+    const uint32_t combined; /**< Combined version as a single 32-bit value */
+} nrf_edgeai_rt_version_t;
+
+/**
+ * @brief EdgeAI Solution metadata structure
+ */
+typedef struct nrf_edgeai_metadata_s
+{
+    const char*             p_solution_id; /**< Solution ID string */
+    nrf_edgeai_rt_version_t version;       /**< Solution runtime version */
+} nrf_edgeai_metadata_t;
+
 /***********************************************************************************************************************
-NRF Edge AI neural network context definition
+NRF Edge AI runtime context definition
 ***********************************************************************************************************************/
 struct nrf_edgeai_s
 {
+    /**< Model metadata information */
+    nrf_edgeai_metadata_t metadata;
     /** Input features processing context */
     nrf_edgeai_input_t input;
     /** DSP pipeline context */
