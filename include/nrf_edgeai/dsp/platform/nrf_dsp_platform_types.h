@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Nordic Semiconductor ASA
+ * Copyright (c) 2025 Nordic Semiconductor ASA
  * SPDX-License-Identifier: Apache-2.0
  */
 #ifndef _NRF_DSP_PLATFORM_TYPES_H_

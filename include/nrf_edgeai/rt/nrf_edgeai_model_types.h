@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Nordic Semiconductor ASA
+ * Copyright (c) 2025 Nordic Semiconductor ASA
  * SPDX-License-Identifier: Apache-2.0
  */
 #ifndef _NRF_EDGEAI_MODEL_TYPES_H_
@@ -91,8 +91,6 @@ typedef union nrf_edgeai_model_params_u
  */
 typedef struct nrf_edgeai_model_meta_s
 {
-    const char* p_solution_id_str; /**< Solution ID string */
-
     /**< Number of internal links for each neuron */
     const uint16_t* p_neuron_internal_links_num;
     /**< Number of external links for each neuron */
