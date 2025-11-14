@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Nordic Semiconductor ASA
+ * Copyright (c) 2025 Nordic Semiconductor ASA
  * SPDX-License-Identifier: Apache-2.0
  */
 /**
@@ -19,6 +19,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/***********************************************************************************************************************
+ * NRF Edge AI runtime public API
+ ***********************************************************************************************************************/
 
 /**
  * @brief Set up the internal components of the Edge AI runtime 
@@ -128,6 +132,28 @@ nrf_edgeai_model_task_t nrf_edgeai_model_task(const nrf_edgeai_t* p_edgeai);
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  */
 const char* nrf_edgeai_solution_id_str(const nrf_edgeai_t* p_edgeai);
+
+/**
+ * @brief Get solution runtime version
+ * 
+ * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
+ */
+nrf_edgeai_rt_version_t nrf_edgeai_solution_runtime_version(const nrf_edgeai_t* p_edgeai);
+
+/**
+ * @brief Get Edge AI runtime library version
+ * 
+ */
+nrf_edgeai_rt_version_t nrf_edgeai_runtime_version(void);
+
+/**
+ * @brief Check if the Edge AI runtime library version is compatible with the solution runtime version
+ * 
+ * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
+ * 
+ * @return true if compatible, false otherwise
+ */
+bool nrf_edgeai_is_runtime_compatible(const nrf_edgeai_t* p_edgeai);
 
 #ifdef __cplusplus
 }

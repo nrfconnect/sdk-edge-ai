@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Nordic Semiconductor ASA
+ * Copyright (c) 2025 Nordic Semiconductor ASA
  * SPDX-License-Identifier: Apache-2.0
  */
 #ifndef _NRF_EDGEAI_COMMON_TYPES_H_
@@ -34,6 +34,7 @@ typedef size_t size32_t;
  */
 typedef enum nrf_edgeai_err_e
 {
+    /** Operation is in progress */
     NRF_EDGEAI_ERR_INPROGRESS = 126,
 
     /** Operation successful */
@@ -56,6 +57,9 @@ typedef enum nrf_edgeai_err_e
 
     /** Wrong memory alignment */
     NRF_EDGEAI_ERR_WRONG_MEM_ALIGNMENT = -6,
+
+    /** Incompatibilty error */
+    NRF_EDGEAI_ERR_INCOMPATIBLE = -7,
 } nrf_edgeai_err_t;
 
 #ifdef __cplusplus
