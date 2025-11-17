@@ -1,0 +1,23 @@
+source "share/sysbuild/Kconfig"
+
+if SOC_SERIES_NRF53X
+
+config NRF_DEFAULT_IPC_RADIO
+	default y
+
+config MCUBOOT_UPDATEABLE_IMAGES
+	default 2
+
+config SECURE_BOOT
+	default y
+
+config SECURE_BOOT_NETCORE
+	default y
+
+config NETCORE_APP_UPDATE
+	default y
+
+config DFU_MULTI_IMAGE_PACKAGE_NET
+	default y
+
+endif # SOC_SERIES_NRF53X

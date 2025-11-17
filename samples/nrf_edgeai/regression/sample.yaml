@@ -1,0 +1,13 @@
+sample:
+  description: Sample showing NRF Edge AI regression model usage and results interpratation.
+  name: NRF Edge AI Regression Sample
+tests:
+  sample.ei_data_forwarder:
+    sysbuild: true
+    build_only: true
+    platform_allow:
+      - thingy53/nrf5340/cpuapp
+    integration_platforms:
+      - thingy53/nrf5340/cpuapp
+    tags:
+      - nrf_edgeai_sample_regression
