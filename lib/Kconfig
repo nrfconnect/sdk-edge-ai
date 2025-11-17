@@ -6,6 +6,6 @@
 
 menu "Libraries"
 
-rsource "edge_impulse/Kconfig"
+rsource "nrf_edgeai/Kconfig"
 
 endmenu
