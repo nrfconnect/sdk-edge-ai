@@ -1,0 +1,14 @@
+#
+# Copyright (c) 2025 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig EDGEAI
+    bool "Enable Edge AI"
+    select FPU
+    select NEWLIB_LIBC
+    help
+      Enable Edge AI library.
+
+endmenu

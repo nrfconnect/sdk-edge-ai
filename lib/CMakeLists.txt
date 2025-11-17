@@ -4,4 +4,14 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-add_subdirectory_ifdef(CONFIG_EDGE_IMPULSE edge_impulse)
+if (CONFIG_EDGEAI)
+    if(CONFIG_CPU_CORTEX_M4)
+         message(STATUS "Building for Cortex-M4 CPU")
+        add_subdirectory(cortex-m4)
+    elseif(CONFIG_CPU_CORTEX_M33)
+        message(STATUS "Building for Cortex-M33 CPU")
+        add_subdirectory(cortex-m33)
+    else()
+        message(FATAL_ERROR "Edge AI is not supported on the selected CPU architecture.")
+    endif()
+endif(CONFIG_EDGEAI)
