@@ -5,13 +5,5 @@
 #
 
 if (CONFIG_EDGEAI)
-    if(CONFIG_CPU_CORTEX_M4)
-         message(STATUS "Building for Cortex-M4 CPU")
-        add_subdirectory(cortex-m4)
-    elseif(CONFIG_CPU_CORTEX_M33)
-        message(STATUS "Building for Cortex-M33 CPU")
-        add_subdirectory(cortex-m33)
-    else()
-        message(FATAL_ERROR "Edge AI is not supported on the selected CPU architecture.")
-    endif()
+    add_subdirectory(nrf_edgeai)
 endif(CONFIG_EDGEAI)
