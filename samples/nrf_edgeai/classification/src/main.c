@@ -1,3 +1,40 @@
+/**
+ * @file main.c
+ * @brief Parcel State Classification Model using Acceleration Data
+ *
+ * This file implements a multi-class neural network model for classifying the state and
+ * handling conditions of parcels during delivery using triaxial accelerometer data.
+ *
+ * @details
+ * **Model Purpose:** Classify parcel delivery states into 7 distinct categories based on
+ * acceleration magnitude patterns, enabling detection of rough handling and impact events.
+ *
+ * **Input Features (1 total):**
+ *   - Acceleration Magnitude: sqrt(x^2 + y^2 + z^2) from triaxial accelerometer
+ *     Removes directional bias, captures only motion intensity
+ *   - Window size: 50 consecutive samples for temporal pattern analysis
+ *
+ * **Output Classes (7 total):**
+ *   0. IDLE - Parcel at rest on surface (~1000 mG baseline gravity)
+ *   1. SHAKING - Parcel vibrating or experiencing continuous motion (629-3505 mG range)
+ *   2. IMPACT - Sudden collision or drop event (extreme spikes, 5900+ mG)
+ *   3. FREE FALL - Parcel unsupported in air (~15-82 mG, near-zero gravity)
+ *   4. CARRYING - Being held and transported by person (793-1350 mG, rhythmic pattern)
+ *   5. IN_CAR - Inside vehicle during transport (920-1200 mG, smooth oscillation)
+ *   6. PLACED - Active placement or lowering motion (drop then recovery pattern)
+ *
+ * **Applications:**
+ *   - Detecting rough handling or potential damage to shipments
+ *   - Monitoring delivery quality and logistics conditions
+ *   - Alerting when parcels experience impacts or free falls
+ *   - Tracking parcel state transitions throughout delivery lifecycle
+ *
+ * **Validation Approach:**
+ *   The model is validated on 7 representative acceleration sequences (one per class),
+ *   each containing real-world sensor data captured during that specific parcel state.
+ *   Classification accuracy and confidence scores are reported for each test case.
+ */
+
 // ///////////////////////// Package Header Files ////////////////////////////
 // ////////////////////// Package Group Header Files /////////////////////////
 #include <nrf_edgeai/nrf_edgeai.h>
@@ -10,64 +47,37 @@
 #include <stdio.h>
 #include <assert.h>
 
-/*
- * ============================================================================
- * USE CASE: Parcel State Detection During Delivery
- * ============================================================================
+/**
+ * @brief Model Configuration Constants
  *
- * OVERVIEW:
- * This application demonstrates a machine learning model for detecting the
- * state and handling conditions of a parcel during the delivery lifecycle.
- * The model uses triaxial accelerometer data to classify different parcel
- * states, which is useful for:
- *   - Detecting rough handling or potential damage to shipments
- *   - Monitoring delivery quality and logistics conditions
- *   - Alerting when parcels experience impacts or free falls
- *   - Tracking parcel state transitions throughout delivery
- *
- * INPUT DATA:
- * - Source: Triaxial accelerometer (X, Y, Z axes)
- * - Processing: Magnitude of acceleration vector
- *   Input = sqrt(x^2 + y^2 + z^2)  (removes directional bias)
- * - Window size: 50 consecutive samples
- * - This rolling window approach captures temporal patterns in acceleration
- *
- * MODEL OUTPUT:
- * The trained neural network classifies parcel state into 7 distinct classes:
- *   0. IDLE          - Parcel at rest (static state, ~1000 m/s^2 gravity)
- *   1. SHAKING       - Parcel vibrating/shaking (high frequency variation)
- *   2. IMPACT        - Sudden impact event (very high acceleration spike)
- *   3. FREE FALL     - Zero or near-zero gravity (dropped/in-air state)
- *   4. CARRYING - Being carried/moved by person
- *   5. IN_CAR        - Inside vehicle during transport
- *   6. PLACED        - Actively placed or set down
- *
- * INFERENCE WORKFLOW:
- * 1. Feed acceleration samples one point at a time (streaming input)
- * 2. Model accumulates 50 samples into a window
- * 3. Once window is full, inference runs automatically
- * 4. Output: predicted class + confidence probability for all 7 classes
- * 5. Result shows which state the parcel is currently in
- *
- * TESTING:
- * This program demonstrates the model on 7 representative pre-recorded
- * acceleration sequences (one per class). Each sequence contains real-world
- * acceleration data captured during that specific parcel state, allowing
- * validation that the model correctly identifies each state.
- * ============================================================================
+ * These constants define the shape and structure of the parcel state classifier:
+ * - USER_WINDOW_SIZE: Number of acceleration samples accumulated before running inference.
+ *   A window of 50 samples captures temporal patterns in parcel motion.
+ * - USER_UNIQ_INPUTS_NUM: Total number of input features to the model.
+ *   Set to 1 for the single acceleration magnitude input from 3D accelerometer.
+ * - USER_MODELS_CLASS_NUM: Number of distinct classification output classes.
+ *   Set to 7 for the seven parcel states: IDLE, SHAKING, IMPACT, FREE_FALL, CARRYING, IN_CAR, PLACED.
  */
-
 static const size_t USER_WINDOW_SIZE      = 50; /* Samples per inference window */
 static const size_t USER_UNIQ_INPUTS_NUM  = 1;  /* Single input: acceleration magnitude */
 static const size_t USER_MODELS_CLASS_NUM = 7;  /* 7 parcel state classes */
 
-/* CLASS 0: IDLE STATE
- * Parcel at rest on a surface (e.g., on a shelf, table, or ground)
- * Characteristics:
- *   - Acceleration values cluster around 1000 mG (gravitational acceleration ~9.81 mG)
- *   - Minimal variation between samples (stable, static state)
- *   - No significant spikes or sudden changes
- * Use case: Parcel waiting at warehouse, on delivery truck stationary, or at customer
+/**
+ *  Class 0: IDLE STATE - Parcel at Rest
+ *
+ * Characteristics of the idle state:
+ *   - Acceleration values cluster tightly around 1000 mG (gravitational acceleration baseline)
+ *   - Minimal variation between consecutive samples (stable, static state)
+ *   - No significant spikes or sudden changes in acceleration
+ *   - Represents a parcel at rest on a surface (shelf, table, ground, stationary truck)
+ *
+ * Use cases:
+ *   - Parcel stored at warehouse awaiting shipment
+ *   - Parcel on delivery truck stationary between stops
+ *   - Parcel at customer delivery location
+ *   - Parcel placed on shelf or table
+ *
+ * Data characteristics: Consistent baseline with minimal noise, typical for gravitational field
  */
 static const flt32_t CLASS_0_PARCEL_IDLE_ACCEL_DATA[] = {
     1019.234877, 1018.652192, 1016.69811,  1019.901583, 1017.029378, 1014.381015, 1016.604559,
@@ -80,13 +90,22 @@ static const flt32_t CLASS_0_PARCEL_IDLE_ACCEL_DATA[] = {
     1014.715299,
 };
 
-/* CLASS 1: SHAKING STATE
- * Parcel being vibrated, shaken, or experiencing continuous motion
- * Characteristics:
- *   - Wide variation in acceleration values (ranging 629–3505 mG)
- *   - High-frequency oscillations (rapid changes between samples)
- *   - Peaks and valleys indicate repetitive shaking motion
- * Use case: Parcel in vehicle with rough road, being shaken by handler, vibrating machine
+/**
+ *  Class 1: SHAKING STATE - Parcel Vibrating or Experiencing Continuous Motion
+ *
+ * Characteristics of the shaking state:
+ *   - Wide variation in acceleration values (ranging 629–3505 mG across the window)
+ *   - High-frequency oscillations with rapid changes between consecutive samples
+ *   - Peaks and valleys in the signal indicate repetitive shaking or vibration pattern
+ *   - Elevated baseline compared to idle state, indicating active motion
+ *
+ * Use cases:
+ *   - Parcel in vehicle traveling on rough or unpaved road
+ *   - Parcel being shaken by delivery handler during transport
+ *   - Parcel near vibrating machinery or equipment
+ *   - Parcel experiencing turbulence during air transport
+ *
+ * Data characteristics: Oscillatory pattern with significant amplitude variation
  */
 static const flt32_t CLASS_1_PARCEL_SHAKING_ACCEL_DATA[] = {
     832.512589,  1272.162323, 1263.232939, 1489.776683, 1859.176281, 1772.024529, 1622.484949,
@@ -99,15 +118,24 @@ static const flt32_t CLASS_1_PARCEL_SHAKING_ACCEL_DATA[] = {
     872.8287226,
 };
 
-/* CLASS 2: IMPACT EVENT
- * Parcel experiences a sudden collision or drop impact
- * Characteristics:
- *   - Baseline values ~1000–1400 mG (idle/stable state)
- *   - Extreme spike in middle of window (5943–6924 mG, ~7x gravity)
- *   - Sharp, isolated peak indicates instantaneous collision
- *   - Recovery to normal levels after impact
- * Use case: Parcel dropped, thrown, hits wall/object, collision during handling
- * Risk: May indicate potential damage to contents
+/**
+ *  Class 2: IMPACT EVENT - Sudden Collision or Drop
+ *
+ * Characteristics of the impact state:
+ *   - Baseline values ~1000–1400 mG (idle/stable state before and after impact)
+ *   - Extreme acceleration spike in middle of window (5943–6924 mG, approximately 7x gravity)
+ *   - Sharp, isolated peak indicating instantaneous collision or drop event
+ *   - Recovery to normal levels immediately after impact spike
+ *   - Asymmetric acceleration profile with clear before/after pattern
+ *
+ * Use cases:
+ *   - Parcel dropped from height or accidentally thrown
+ *   - Parcel collides with wall, table, or other object during handling
+ *   - Parcel experiences sharp impact during loading/unloading operations
+ *   - Parcel falls from moving vehicle or conveyor belt
+ *
+ * Risk Assessment: High risk for potential damage to contents
+ * Data characteristics: Baseline + single large impulse, distinctive pattern for detection
  */
 static const flt32_t CLASS_2_PARCEL_IMPACT_ACCEL_DATA[] = {
     1015.482154, 1014.753436, 1014.523099, 1012.472024, 1009.822764, 1013.528832, 1010.94256,
@@ -121,14 +149,24 @@ static const flt32_t CLASS_2_PARCEL_IMPACT_ACCEL_DATA[] = {
 
 };
 
-/* CLASS 3: FREE FALL STATE
- * Parcel is in the air, unsupported, experiencing near-zero or reduced gravity
- * Characteristics:
- *   - Very low acceleration values (15–82 mG, ~0.1–0.8g)
- *   - Consistent low baseline (opposed to gravity effect)
- *   - No gravitational component (sensor in free fall frame)
- * Use case: Parcel dropped and falling, in-flight (drone delivery), lifted/suspended
- * Risk: High—indicates drop or loss of support (potential damage)
+/**
+ *  Class 3: FREE FALL STATE - Parcel Unsupported in Air
+ *
+ * Characteristics of the free fall state:
+ *   - Very low acceleration values (15–82 mG, approximately 0.1–0.8x gravity)
+ *   - Consistent low baseline throughout the window
+ *   - Absence of gravitational acceleration component (sensor in inertial frame)
+ *   - Minimal variation, indicating uniform free-fall motion
+ *   - Dramatic difference from idle state (which is ~1000 mG)
+ *
+ * Use cases:
+ *   - Parcel dropped and falling under gravity alone
+ *   - Parcel suspended or lifted without support (losing contact with surface)
+ *   - Parcel in flight during drone or aerial delivery
+ *   - Parcel ejected from moving vehicle
+ *
+ * Risk Assessment: Critical - indicates loss of support or drop in progress
+ * Data characteristics: Low constant acceleration, inverse of idle state pattern
  */
 static const flt32_t CLASS_3_PARCEL_FREE_FALL_ACCEL_DATA[] = {
     36.87388192, 32.60300207, 29.4674831,  32.69417905, 34.11116509, 33.15887284, 33.85626394,
@@ -142,15 +180,25 @@ static const flt32_t CLASS_3_PARCEL_FREE_FALL_ACCEL_DATA[] = {
 
 };
 
-/* CLASS 4: TRANSPORTED BY COURIER (person carrying)
- * Parcel being held and carried by a delivery person or handler
- * Characteristics:
- *   - Moderate acceleration variation (793–1350 mG)
- *   - Gradual, smooth transitions (not sharp spikes)
- *   - Pattern reflects natural human motion (walking, arm swinging)
- *   - Organized rhythmic fluctuation (periodic step patterns)
- * Use case: Courier walking with parcel, handler carrying to customer door
- * Quality: Normal handling, no impact events
+/**
+ *  Class 4: CARRYING STATE - Being Transported by Handler
+ *
+ * Characteristics of the carrying state:
+ *   - Moderate acceleration variation (793–1350 mG range)
+ *   - Gradual, smooth transitions between acceleration values
+ *   - No sharp spikes or sudden changes characteristic of impacts
+ *   - Pattern reflects natural human motion (walking, arm swinging, body sway)
+ *   - Organized rhythmic fluctuation corresponding to periodic step patterns
+ *   - Distinctly different from mechanical vibration (more organic signal)
+ *
+ * Use cases:
+ *   - Delivery courier walking with parcel in hand or in arms
+ *   - Handler carrying parcel to customer door
+ *   - Parcel held during package transfer operations
+ *   - Manual transport up stairs or through buildings
+ *
+ * Quality Assessment: Normal, gentle handling with no impact events
+ * Data characteristics: Smooth oscillatory pattern reflecting human locomotion
  */
 static const flt32_t CLASS_4_PARCEL_CARRYING_ACCEL_DATA[] = {
     1076.406463, 1109.062753, 1161.315764, 1237.303839, 1304.16174,  1350.922984, 1241.533046,
@@ -164,15 +212,24 @@ static const flt32_t CLASS_4_PARCEL_CARRYING_ACCEL_DATA[] = {
 
 };
 
-/* CLASS 5: IN CAR STATE (vehicle transport)
- * Parcel is inside a delivery vehicle (van, truck, car) during transport
- * Characteristics:
- *   - Moderate, steady acceleration (920–1200 mG)
- *   - Smoother variation compared to courier handling
- *   - Vehicle suspension and road vibration create gentle oscillations
- *   - Less organic (human) motion pattern vs. more mechanical (vehicle) pattern
- * Use case: Parcel in moving delivery van, on truck during road transport
- * Quality: Protected transport, minimal manual handling
+/**
+ *  Class 5: IN CAR STATE - Parcel Inside Vehicle During Transport
+ *
+ * Characteristics of the in-car state:
+ *   - Moderate, steady acceleration (920–1200 mG throughout the window)
+ *   - Smoother variation compared to hand-carried courier handling
+ *   - Vehicle suspension system and road vibration create gentle oscillations
+ *   - Less organic (human-like) motion pattern; more mechanical (vehicle-like) signature
+ *   - Baseline elevated from idle (~1000 mG) due to vehicle motion
+ *
+ * Use cases:
+ *   - Parcel on shelf or floor of moving delivery van
+ *   - Parcel in cargo area of delivery truck during road transport
+ *   - Parcel on seat or seat belt secured in personal vehicle
+ *   - Parcel in container being transported between warehouses
+ *
+ * Quality Assessment: Protected transport with minimal manual handling and impacts
+ * Data characteristics: Smooth mechanical oscillation from vehicle suspension
  */
 static const flt32_t CLASS_5_PARCEL_IN_CAR_ACCEL_DATA[] = {
     1020.14299,  1172.412078, 974.2434799, 1081.052374, 936.2345817, 1076.324048, 952.8650187,
@@ -185,15 +242,25 @@ static const flt32_t CLASS_5_PARCEL_IN_CAR_ACCEL_DATA[] = {
     1041.668807,
 };
 
-/* CLASS 6: PLACED STATE (active placement event)
- * Parcel is being placed, set down, or positioned on a surface
- * Characteristics:
+/**
+ *  Class 6: PLACED STATE - Active Placement or Lowering Motion
+ *
+ * Characteristics of the placed state:
  *   - Starts with variable mid-range acceleration (1000–1400 mG)
- *   - Sharp drop to very low value (~76 mG, near free fall) in middle
- *   - Recovery back to stable ~1000 mG (landed and at rest)
- *   - Signature: acceleration change during descent and landing motion
- * Use case: Parcel being gently placed down, set on shelf, lowered to ground
- * Quality: Intentional placement, potentially fragile handling
+ *   - Sharp drop to very low value (~76 mG) in middle of window (near free-fall)
+ *   - Recovery back to stable ~1000 mG (landed and resting on surface)
+ *   - Signature pattern: acceleration during descent followed by impact landing
+ *   - Asymmetric temporal profile: active descent phase then static rest phase
+ *   - Distinctive from pure free fall (has initial and final support)
+ *
+ * Use cases:
+ *   - Parcel being gently placed down on shelf or table
+ *   - Parcel being lowered to ground by handler or crane
+ *   - Parcel being set down in customer delivery location
+ *   - Parcel being suspended then released on support surface
+ *
+ * Quality Assessment: Intentional placement, potentially fragile/careful handling
+ * Data characteristics: Descent profile with clear phase transition from motion to rest
  */
 static const flt32_t CLASS_6_PARCEL_PLACED_ACCEL_DATA[] = {
     1028.084177, 1009.771942, 1023.977186, 1012.436213, 1020.685482, 1018.459741, 1013.2669,
@@ -284,24 +351,42 @@ static int32_t model_predict(nrf_edgeai_t*  p_user_model,
     return -1;
 }
 
-/* ========================================================================
- * PARCEL STATE DETECTION - MODEL VALIDATION & DEMONSTRATION
- * ========================================================================
+/** 
+ * @brief Parcel State Detection Model Validation Entry Point
  *
- * This main function validates and demonstrates the trained parcel state
- * classification model on 7 representative test cases covering all classes.
+ * This function orchestrates the complete validation workflow for the parcel state
+ * classification model. It initializes the neural network, runs inference on 7 representative
+ * test cases covering all parcel states, and validates classification accuracy.
  *
- * SETUP:
- *   1. Initialize the pre-trained neural network model
- *   2. Validate that model parameters match expected constants
- *   3. Run inference on each class test case
- *   4. Print predicted state and confidence for each
+ * **Workflow:**
+ * 1. Retrieve the pre-trained parcel state classification model
+ * 2. Validate model configuration matches expected parameters:
+ *    - Input window size: 50 acceleration samples
+ *    - Input features: 1 (acceleration magnitude)
+ *    - Output classes: 7 (IDLE, SHAKING, IMPACT, FREE_FALL, CARRYING, IN_CAR, PLACED)
+ * 3. Initialize the Edge AI runtime for neural network execution
+ * 4. For each of the 7 test cases:
+ *    a. Feed acceleration data one sample at a time
+ *    b. Model accumulates 50 samples into window
+ *    c. Run model inference to classify parcel state
+ *    d. Extract predicted class and confidence probability
+ *    e. Verify prediction matches expected class
  *
- * EXPECTED BEHAVIOR:
- *   - Model should correctly classify each test sequence to its class
- *   - Confidence (probability) should be high for correct predictions
- *   - Output shows both numeric class ID and human-readable state name
- * ======================================================================== */
+ * **Validation Metrics:**
+ * The predicted class and confidence score indicate model accuracy:
+ * - Correct classification for all 7 parcel states validates model performance
+ * - High confidence (probability) indicates strong prediction certainty
+ * - Misclassification or low confidence indicates potential model issues
+ *
+ * **Test Coverage:**
+ * The 7 test cases comprehensively cover all parcel delivery scenarios:
+ * - Static conditions: IDLE (parcel at rest)
+ * - Motion conditions: SHAKING, CARRYING, IN_CAR (various transport modes)
+ * - Event conditions: IMPACT (collision), FREE_FALL (drop), PLACED (lowering)
+ * - Acceleration ranges: from ~15 mG (free fall) to ~6900 mG (impact)
+ * - Ensures model validation across complete delivery lifecycle
+ *
+ */
 int main(void)
 {
     /* Get user generated model pointer */

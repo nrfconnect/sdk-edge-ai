@@ -1,3 +1,48 @@
+/**
+ * @file main.c
+ * @brief Mechanical Gear Anomaly Detection Model using Vibration Analysis
+ *
+ * This file implements an anomaly detection neural network model for monitoring gear health
+ * using multi-axis vibration data, enabling predictive maintenance and early fault detection.
+ *
+ * @details
+ * **Model Purpose:** Detect abnormal vibration patterns indicating gear degradation, wear,
+ * misalignment, or bearing failure using machine learning on dual-axis accelerometer data.
+ *
+ * **Input Features (2 total):**
+ *   - Sensor 1: X-axis vibration (radial direction) in m/s^2
+ *   - Sensor 2: Y-axis vibration (axial/tangential direction) in m/s^2
+ *   - Data format: Interleaved pairs [X1, Y1, X2, Y2, ...] for streaming input
+ *   - Window size: 128 consecutive samples per inference cycle
+ *
+ * **Output:**
+ *   - Anomaly Score: Single floating-point value (0.0 to 1.0+)
+ *     - Score < 0.000025: Normal operation (healthy gear, no maintenance needed)
+ *     - Score >= 0.000025: Anomaly detected (schedule maintenance alert)
+ *
+ * **Vibration Characteristics:**
+ *   - Healthy Gear: Regular, predictable signature (2.42-2.52 m/s^2, tight distribution)
+ *     * Dominated by mesh frequency and harmonics
+ *     * Stable periodic oscillation, minimal variation
+ *     * No impulsive events or amplitude modulation
+ *   - Faulty Gear: Erratic, irregular signature (2.40-2.56 m/s^2, wider spread)
+ *     * Sidebands and modulation indicating tooth wear/crack
+ *     * Random impulsive events from surface degradation
+ *     * Non-stationary pattern indicating bearing failure or misalignment
+ *
+ * **Applications:**
+ *   - Predictive maintenance for rotating machinery (pumps, motors, compressors)
+ *   - Early fault detection before catastrophic failure occurs
+ *   - Condition-based maintenance scheduling to reduce downtime and costs
+ *   - Asset health monitoring across industrial facilities
+ *   - Quality control and validation of newly manufactured gear units
+ *
+ * **Validation Approach:**
+ *   The model is validated on two representative vibration datasets: one from a healthy
+ *   gear (normal operation) and one from a faulty gear (degraded condition). The model
+ *   must correctly distinguish between states to confirm proper anomaly detection.
+ */
+
 // ///////////////////////// Package Header Files ////////////////////////////
 // ////////////////////// Package Group Header Files /////////////////////////
 #include <nrf_edgeai/nrf_edgeai.h>
@@ -10,89 +55,43 @@
 #include <stdio.h>
 #include <assert.h>
 
-/*
- * ============================================================================
- * USE CASE: Mechanical Gear Anomaly Detection Using Vibration Analysis
- * ============================================================================
+/**
+ * @brief Model Configuration Constants
  *
- * OVERVIEW:
- * This application demonstrates an anomaly detection model for monitoring
- * mechanical gears during operation. The model identifies abnormal vibration
- * patterns that indicate potential failures, wear, misalignment, or damage.
- *
- * INDUSTRIAL APPLICATION:
- * - Predictive maintenance for rotating machinery (pumps, motors, compressors)
- * - Early fault detection before catastrophic failure
- * - Condition-based maintenance scheduling (reduce downtime, cut costs)
- * - Asset health monitoring across industrial facilities
- * - Quality control on newly manufactured gear units
- *
- * SENSOR CONFIGURATION:
- * - 2 triaxial accelerometers mounted on gear housing (perpendicular axes)
- * - Sensor 1: X-axis vibration (radial direction)
- * - Sensor 2: Y-axis vibration (axial/tangential direction)
- * - Captures multi-directional vibration patterns from gear mesh
- * - Raw values: ~2.4-2.5 m/s^2 baseline (small vibrations)
- *
- * DATA CHARACTERISTICS:
- * - Healthy gear: Regular, predictable vibration signature
- *   Frequencies dominated by mesh frequency + harmonics
- *   Amplitude: ~2.42-2.52 m/s^2 (consistent, low variation)
- *   Temporal pattern: Stable periodic oscillation
- *
- * - Anomalous gear: Erratic, irregular vibration signature
- *   Includes sidebands, modulation, random impulses
- *   Amplitude: ~2.40-2.56 m/s^2 (wider spread, sudden spikes)
- *   Temporal pattern: Inconsistent, unpredictable changes
- *   Root causes: Tooth wear, crack, misalignment, bearing failure
- *
- * MODEL OUTPUT:
- * Anomaly Score (0.0 to 1.0+):
- *   - Low score (<threshold): Normal operation, no defects detected
- *   - High score (>=threshold): Anomaly detected, maintenance needed
- *   - Threshold = 0.000025 (tuned for high sensitivity/low false negatives)
- *
- * INFERENCE WORKFLOW:
- * 1. Collect 128 samples from 2 sensors (256 data points total)
- * 2. Feed samples one pair at a time (streaming input, real-world scenario)
- * 3. Model accumulates into 128-sample window
- * 4. Once full, inference runs automatically
- * 5. Output: Anomaly score (single value between healthy and faulty)
- * 6. Compare score against threshold to trigger alerts/maintenance
- *
- * TESTING:
- * This program validates the model on two representative gear datasets:
- *   1. GOOD gear: Normal vibration signature (should score << threshold)
- *   2. ANOMALOUS gear: Faulty vibration signature (should score >= threshold)
- * Both tests must pass, confirming the model correctly distinguishes
- * healthy from defective gears.
- * ============================================================================
+ * These constants define the shape and structure of the gear anomaly detector:
+ * - USER_WINDOW_SIZE: Number of vibration samples accumulated before running inference.
+ *   A window of 128 samples captures sufficient temporal detail in gear vibration patterns.
+ * - USER_UNIQ_INPUTS_NUM: Total number of input features to the model.
+ *   Set to 2 for the dual-axis accelerometer (X and Y vibration components).
+ * - USER_ANOMALY_THRESHOLD: Classification threshold for anomaly detection.
+ *   Scores above this threshold indicate abnormal gear operation requiring maintenance.
  */
-
 #define USER_WINDOW_SIZE       128       /* Samples per inference window */
 #define USER_UNIQ_INPUTS_NUM   2         /* 2 vibration sensors: axis X and Y */
 #define USER_ANOMALY_THRESHOLD 0.000025f /* Anomaly score threshold, high sensitivity */
-                                         /* Scores above this value indicate anomaly */
-                                         /* Below: healthy; >= above: anomaly detected */
 
-/* GOOD GEAR BASELINE DATA
- * Healthy mechanical gear under normal operating conditions.
+/**
+ *  Healthy Gear Vibration Baseline Data
  *
- * Vibration characteristics of a well-maintained gear:
- *   - Sensor 1 (X-axis): Values cluster around 2.42-2.52 m/s^2
- *   - Sensor 2 (Y-axis): Values cluster around 2.42-2.52 m/s^2
- *   - Both sensors show tight, consistent distribution
- *   - Variation pattern: Regular, predictable oscillation
- *   - Periodicity: Dominated by gear mesh frequency and harmonics
- *   - No sudden spikes, no amplitude modulation, stable baseline
+ * This dataset contains vibration measurements from a well-maintained mechanical gear
+ * operating under normal conditions. Used to validate that the model correctly identifies
+ * healthy gear operation with a low anomaly score.
+ *
+ * Data characteristics:
+ *   - Sensor 1 (X-axis): Tightly clustered values around 2.42-2.52 m/s^2
+ *   - Sensor 2 (Y-axis): Tightly clustered values around 2.42-2.52 m/s^2
+ *   - Tight, consistent distribution across both axes
+ *   - Regular, predictable oscillation pattern
+ *   - Signal periodicity dominated by gear mesh frequency and harmonics
+ *   - Stable baseline with no sudden spikes or amplitude modulation
  *
  * Data format:
  *   Interleaved pairs: [X1, Y1, X2, Y2, X3, Y3, ...]
- *   Total 256 values: 128 samples x 2 axes
+ *   Total 256 values: 128 samples × 2 axes
  *
  * Expected model output:
- *   Anomaly score << 0.000025 (low probability of defect)
- *   Model confidence: High (healthy state recognized)
+ *   Anomaly score << USER_ANOMALY_THRESHOLD (well below threshold, indicating healthy state)
+ *   Model confidence: High certainty of normal operation
  */
 static const flt32_t
     GOOD_GEAR_MECH_VIBRATION_DATA_2AXIS[USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM] = {
@@ -135,32 +134,36 @@ static const flt32_t
         2.521165312, 2.431481585, 2.5208368,   2.430988818,
     };
 
-/* ANOMALOUS GEAR DATA
- * Faulty mechanical gear exhibiting abnormal vibration patterns.
+/**
+ * Anomalous Gear Vibration Data - Faulty Operation
  *
- * Vibration characteristics of a defective gear:
- *   - Sensor 1 (X-axis): Wider range 2.40-2.56 m/s^2 (vs. good 2.42-2.52)
- *   - Sensor 2 (Y-axis): Wider range 2.40-2.56 m/s^2 (greater variation)
- *   - Both sensors show erratic, unpredictable fluctuations
- *   - Variation pattern: Irregular, with sudden amplitude changes
- *   - Modulation sidebands: Caused by tooth wear/crack/misalignment
- *   - Impulsive events: Random high-amplitude spikes (e.g., 2.56+)
- *   - Non-stationary: Signal properties change over time window
+ * This dataset contains vibration measurements from a defective mechanical gear exhibiting
+ * abnormal operating conditions. Used to validate that the model correctly identifies gear
+ * faults with an anomaly score above the detection threshold.
  *
- * Common root causes of this vibration signature:
- *   - Gear tooth crack or wear
- *   - Bearing failure or misalignment
- *   - Gear mesh surface degradation
- *   - Lubrication failure
+ * Data characteristics of defective gear:
+ *   - Sensor 1 (X-axis): Wider range 2.40-2.56 m/s^2 (vs. healthy 2.42-2.52 m/s^2)
+ *   - Sensor 2 (Y-axis): Wider range 2.40-2.56 m/s^2 (greater variation than healthy)
+ *   - Erratic, unpredictable fluctuations across both axes
+ *   - Irregular variation pattern with sudden amplitude changes
+ *   - Modulation sidebands indicating gear tooth damage or misalignment
+ *   - Random impulsive events with high-amplitude spikes (reaching 2.56+ m/s^2)
+ *   - Non-stationary characteristics indicating evolving fault condition
+ *
+ * Root causes of this vibration signature:
+ *   - Gear tooth crack or progressive wear
+ *   - Bearing failure or severe misalignment
+ *   - Gear mesh surface degradation and pitting
+ *   - Lubrication failure or contamination
  *
  * Data format:
  *   Interleaved pairs: [X1, Y1, X2, Y2, X3, Y3, ...]
- *   Total 256 values: 128 samples x 2 axes
+ *   Total 256 values: 128 samples × 2 axes
  *
  * Expected model output:
- *   Anomaly score >= USER_ANOMALY_THRESHOLD (high probability of defect)
- *   Model confidence: High (fault state recognized)
- *   Risk: Gear requires maintenance/replacement
+ *   Anomaly score >= USER_ANOMALY_THRESHOLD (at or above threshold, indicating fault)
+ *   Model confidence: High certainty of abnormal operation
+ *   Risk Level: High - maintenance or replacement required
  */
 static const flt32_t
     ANOMALOUS_GEAR_MECH_VIBRATION_DATA_2AXIS[USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM] = {
@@ -258,33 +261,48 @@ flt32_t model_predict(nrf_edgeai_t* p_user_model, const flt32_t* p_input_data, s
     return anomaly_score;
 }
 
-/* ========================================================================
- * GEAR ANOMALY DETECTION - MODEL VALIDATION & DEMONSTRATION
- * ========================================================================
+/**
+ * @brief Gear Anomaly Detection Model Validation Entry Point
  *
- * This function validates the trained anomaly detection model by testing
- * it on two representative vibration datasets: one from a healthy gear
- * and one from a faulty gear. The model must correctly distinguish
- * between the two states.
+ * This function orchestrates the complete validation workflow for the gear anomaly
+ * detection model. It initializes the neural network, runs inference on healthy and
+ * faulty gear vibration data, and validates anomaly detection accuracy.
  *
- * VALIDATION APPROACH:
- *   1. Initialize the pre-trained neural network model
- *   2. Validate model parameters (window size, # of sensors)
- *   3. Test on healthy gear data (expect low anomaly score)
- *   4. Test on faulty gear data (expect high anomaly score)
- *   5. Assert that both tests pass (confidence checks)
+ * **Workflow:**
+ * 1. Retrieve the pre-trained gear anomaly detection model
+ * 2. Validate model configuration matches expected parameters:
+ *    - Input window size: 128 vibration samples
+ *    - Input features: 2 (X and Y axis accelerometers)
+ *    - Output values: 1 (anomaly score)
+ * 3. Initialize the Edge AI runtime for neural network execution
+ * 4. For each of the 2 test cases:
+ *    a. Feed vibration data one sample pair at a time
+ *    b. Model accumulates 128 samples into window
+ *    c. Run model inference to compute anomaly score
+ *    d. Compare score against threshold (USER_ANOMALY_THRESHOLD)
+ *    e. Verify detection matches expected gear condition
  *
- * SUCCESS CRITERIA:
- *   - Healthy gear: anomaly_score < 0.000025 (normal operation)
- *   - Faulty gear: anomaly_score >= 0.000025 (maintenance alert)
- *   - Both assertions pass -> model is working correctly
+ * **Validation Metrics:**
+ * The anomaly score indicates gear health status:
+ * - Score < USER_ANOMALY_THRESHOLD: Normal operation (healthy gear, no maintenance needed)
+ * - Score >= USER_ANOMALY_THRESHOLD: Anomaly detected (faulty gear, maintenance required)
+ * - Correct classification validates model anomaly detection performance
+ * - Model confidence determined by score magnitude relative to threshold
  *
- * PRACTICAL DEPLOYMENT:
- *   Once validated, this model runs continuously on edge devices
- *   (e.g., Industrial IoT sensors on machinery) to detect early signs
- *   of gear degradation and trigger predictive maintenance alerts.
- * ======================================================================== */
-int main_anomaly(int x, char** y)
+ * **Test Coverage:**
+ * The 2 test cases validate critical gear operating scenarios:
+ * - Healthy gear: Regular, predictable vibration (2.42-2.52 m/s^2 tight distribution)
+ * - Faulty gear: Erratic, irregular vibration (2.40-2.56 m/s^2, wider distribution)
+ * - Covers the complete spectrum from normal to degraded gear condition
+ * - Validates model suitability for predictive maintenance applications
+ *
+ * **Practical Application:**
+ * Once validated, this model enables continuous monitoring of rotating machinery,
+ * detecting early signs of gear wear, cracks, misalignment, or bearing failure,
+ * triggering maintenance alerts before catastrophic failures occur.
+ *
+ */
+int main(void)
 {
     /*  Get user generated model pointer */
     nrf_edgeai_t* p_user_model = nrf_edgeai_user_model();
