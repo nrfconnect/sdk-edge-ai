@@ -3,19 +3,49 @@
 # -- Path setup --------------------------------------------------------------
 
 import sys
+import os
 from pathlib import Path
 
-import west.manifest
+# Try to read the west manifest to locate the top-level repositories. If
+# the `west` package is not available (for example when building docs in a
+# minimal environment), fall back to reasonable defaults derived from the
+# local filesystem and environment variables.
+try:
+    import west.manifest
 
-manifest = west.manifest.Manifest.from_topdir()
+    manifest = west.manifest.Manifest.from_topdir()
 
-EDGE_AI_BASE = Path(manifest.repo_abspath)
-ZEPHYR_BASE = Path(manifest.get_projects(["zephyr"])[0].abspath)
+    EDGE_AI_BASE = Path(manifest.repo_abspath)
+    ZEPHYR_BASE = Path(manifest.get_projects(["zephyr"])[0].abspath)
 
-sys.path.extend(map(
-    lambda project: str(Path(project.abspath).absolute() / "doc" / "_extensions"),
-    manifest.get_projects(["zephyr", "nrf"])
-))
+    sys.path.extend(map(
+        lambda project: str(Path(project.abspath).absolute() / "doc" / "_extensions"),
+        manifest.get_projects(["zephyr", "nrf"])
+    ))
+except Exception:
+    # west not available or manifest not found — fall back to local layout.
+    pkg_root = Path(__file__).resolve().parents[1]
+    EDGE_AI_BASE = pkg_root
+    # Prefer environment-provided ZEPHYR_BASE, else assume zephyr is a sibling
+    # repository next to the addon (common workspace layout).
+    ZEPHYR_BASE = Path(os.environ.get("ZEPHYR_BASE", str(EDGE_AI_BASE.parent / "zephyr"))).resolve()
+    # Ensure local and upstream Sphinx doc extensions are discoverable even when
+    # the `west` Python package is not installed. This helps imports such as
+    # `options_from_kconfig` which are provided by Zephyr/nRF doc extensions.
+    ext_candidates = [
+        EDGE_AI_BASE / "doc" / "_extensions",
+        Path(ZEPHYR_BASE) / "doc" / "_extensions",
+        Path(ZEPHYR_BASE).parent / "nrf" / "doc" / "_extensions",
+        EDGE_AI_BASE.parent / "nrf" / "doc" / "_extensions",
+    ]
+
+    for d in ext_candidates:
+        try:
+            if d.exists():
+                sys.path.insert(0, str(d.resolve()))
+        except Exception:
+            # ignore any filesystem oddities and continue — best-effort
+            pass
 
 # -- Project information -----------------------------------------------------
 

@@ -12,4 +12,4 @@ The following user guides describe the integrations available:
    :glob:
    :caption: Subpages:
 
-   *
+   nrf_edgeai

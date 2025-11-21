@@ -8,4 +8,4 @@ Samples
    :glob:
    :caption: Subpages:
 
-   edge_impulse
+   nrf_edgeai

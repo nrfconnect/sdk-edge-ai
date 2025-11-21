@@ -1,0 +1,20 @@
+This sample can be found under :file:`samples/nrf_edgeai`.
+
+.. note::
+   Before you flash your NRF Edge AI sample, make sure you have completed the
+   following:
+
+   * You have set up the nRF Connect SDK workspace as described in the main
+     documentation :ref:`setting_up_sdk` page.
+   * You have installed the required toolchain (Zephyr SDK) and `west`.
+
+To build the sample, use a command similar to the following (adjust the board):
+
+.. code-block:: console
+
+   west build -b <board> samples/nrf_edgeai/<sample>
+
+If the model sources are provided as a generated C library, ensure they are
+placed under the application source tree (for example
+``samples/nrf_edgeai/<sample>/src/nrf_edgeai_generated``) so CMake discovers
+and builds them together with the application.

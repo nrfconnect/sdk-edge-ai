@@ -1,0 +1,21 @@
+* ``CONFIG_EDGEAI`` -- Enables the Nordic Edge AI Lab wrapper (nrf_edgeai) and its
+  components in the build system.
+
+* ``CONFIG_NEWLIB_LIBC`` -- When enabled, uses the Newlib C library. NRF Edge AI
+  models and runtime may require a fuller libc implementation; the samples
+  in this repository enable Newlib when required.
+
+* ``CONFIG_NEWLIB_LIBC_FLOAT_PRINTF`` -- Enable floating-point support for
+  printf in Newlib when the model output or logging relies on floating point.
+
+* ``CONFIG_FPU`` -- If the target hardware has an FPU, enabling the FPU will
+  speed up floating-point inference operations.
+
+Notes
+-----
+
+* The exact symbol names may differ between releases. Check the library
+  Kconfig (`lib/nrf_edgeai/Kconfig`) for the most accurate and up-to-date
+  option names.
+* Some symbols are provided by the sample `prj.conf` files to guarantee a
+  reproducible build configuration for the reference samples.
