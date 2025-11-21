@@ -1,0 +1,60 @@
+.. code-block:: c
+
+    #include <nrf_edgeai/nrf_edgeai.h>
+    #include <nrf_edgeai_generated/nrf_edgeai_user_model.h>
+    #include <assert.h>
+    #include <stdio.h>
+    // In this example, our raw features is a window of N elements with 3 accelerometer axis values
+    // The number of raw features and their order should be the same as in the training dataset file
+    int16_t raw_features[] = 
+    {
+        Accelerometer_X0,
+        Accelerometer_Y0,
+        Accelerometer_Z0,
+        /* ... */
+        Accelerometer_Xn,
+        Accelerometer_Yn,
+        Accelerometer_Zn,
+    };
+    // Pointer to user model
+    static nrf_edgeai_t* p_edgeai = NULL;
+    
+    void user_init_edegeai_model(void)
+    {
+        // Get user model pointer
+        p_edgeai = nrf_edgeai_user_model();
+        // Init EdgeAI library based on user solution, should be called once!
+        nrf_edgeai_err_t res = nrf_edgeai_init(p_edgeai);
+        // Optional check for success, #include <assert.h> required
+        assert(res == NRF_EDGEAI_ERR_SUCCESS);
+    }
+    //
+    // ....
+    //
+    void user_feed_data_to_model(void)
+    {
+        // Feed and prepare raw inputs for the model inference
+        nrf_edgeai_err_t res = nrf_edgeai_feed_inputs(p_edgeai, raw_features, 
+                                                nrf_edgeai_uniq_inputs_num(p_edgeai) * 
+                                                nrf_edgeai_input_window_size(p_edgeai));
+    
+        // Check if input data is prepared and ready for model inference
+        if (res == NRF_EDGEAI_ERR_SUCCESS)
+        {
+            // Run model inference
+            res = nrf_edgeai_run_inference(p_edgeai);
+            // Check if model inference is ready and successful
+            if (res == NRF_EDGEAI_ERR_SUCCESS)
+            {
+                uint16_t predicted_class = p_edgeai->decoded_output.classif.predicted_class;
+                size_t num_classes = p_edgeai->decoded_output.classif.num_classes;
+                // Get probability depending on model quantization: f32, q16, q8. Here is an example for f32 model
+                const flt32_t* p_probabilities = p_edgeai->decoded_output.classif.probabilities.p_f32;
+    
+                printf("Predicted class %u with probability %f, in %u classes\r\n", predicted_class, 
+                                                                                    p_probabilities[predicted_class],
+                                                                                    num_classes);
+            }
+        }
+        
+    }
