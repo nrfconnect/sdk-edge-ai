@@ -20,3 +20,4 @@
 .. ### TODO replace with new URLS when available
 .. _`Neuton`: https://neuton.ai/
 .. _`Nordic Edge AI Lab`: https://neuton.ai/st/90-about-neuton-tinyml.html
+.. _`EdgeAI Inference Runner`: https://neuton.ai/st/111-desktop-executable-prediction.html
