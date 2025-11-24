@@ -4,7 +4,7 @@ nRF Edge AI samples
 ####################
 
 This page contains an overview of the example applications that demonstrate
-how to use the nRF Edge AI add-on with the nRF Connect SDK.
+how to use the nRF Edge AI Add-on with the nRF Connect SDK.
 
 .. contents::
    :local:
@@ -24,6 +24,13 @@ Samples
 * ``regression`` - Demonstrates running a regression model (numeric prediction).
 * ``classification`` - Demonstrates multi-class classification and result handling.
 * ``anomaly`` - Demonstrates anomaly-detection workflows and thresholding.
+
+.. toctree::
+   :maxdepth: 1
+
+   nrf_edgeai/regression
+   nrf_edgeai/classification
+   nrf_edgeai/anomaly
 
 Building and running
 --------------------
