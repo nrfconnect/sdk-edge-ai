@@ -19,11 +19,11 @@ Edge AI (embedded or on-device AI) brings machine learning inference to constrai
 Typical Edge AI workflows include data collection, feature extraction (DSP), on-device inference and result handling (telemetry, actuation, or local UI). Models are often quantized and optimized for limited RAM/flash and CPU/FPU capabilities.
 
 Add-on goals
-###########
+############
 
-The NRF Edge AI add-on provides an opinionated, production-oriented toolkit for integrating on-device models into the nRF Connect SDK ecosystem. The primary goals are:
+The nRF Edge AI add-on provides an opinionated, production-oriented toolkit for integrating on-device models into the nRF Connect SDK ecosystem. The primary goals are:
 
-* Provide a compact, portable C runtime (the Nordic Edge AI Lab runtime) that initializes models, prepares inputs, runs inference, and exposes decoded outputs.
+* Provide a compact, portable C runtime (the `Nordic Edge AI Lab`_ runtime) that initializes models, prepares inputs, runs inference, and exposes decoded outputs.
 * Deliver a collection of DSP primitives (windowing, spectral transforms, statistical features) which are commonly required by ML solutions on sensor data.
 * Offer sample applications and CI-friendly examples that show how to package generated model sources, configure Kconfig options, and build with `west`.
 * Simplify integration with external platforms and toolchains (model generation workflows, Edge AI Lab tooling, wrappers for third-party ML toolchains).

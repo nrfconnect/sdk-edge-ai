@@ -1,15 +1,15 @@
 .. _nrf_edgeai_lib:
 
-NRF Edge AI Library
+nRF Edge AI Library
 ###################
 
 .. contents::
    :local:
    :depth: 2
 
-The NRF Edge AI library provides a lightweight C-based runtime for deploying machine learning models on Nordic Semiconductor devices.
-Models are generated using the Nordic Edge AI Lab web tooling and distributed as C source files that integrate seamlessly with the nRF Connect SDK build system.
-For more information about integrating NRF Edge AI models, see :ref:`ug_nrf_edgeai`.
+The nRF Edge AI library provides a lightweight C-based runtime for deploying machine learning models on Nordic Semiconductor devices.
+Models are generated using the `Nordic Edge AI Lab`_ web tooling and distributed as C source files that integrate seamlessly with the nRF Connect SDK build system.
+For more information about integrating nRF Edge AI models, see :ref:`ug_nrf_edgeai`.
 
 Overview
 ********
@@ -73,7 +73,7 @@ Configuration and Kconfig
 The library is configured through Kconfig in the nRF Connect SDK build system.
 Enable support by setting:
 
-* :kconfig:option:`CONFIG_EDGEAI` — Enables the NRF Edge AI library and integration.
+* :kconfig:option:`CONFIG_EDGEAI` — Enables the nRF Edge AI library and integration.
 
 Related options include:
 
@@ -179,7 +179,7 @@ The build system:
 
 1. Locates the precompiled static library for your target architecture (e.g., ``libnrf_edgeai_cortex-m4.a``).
 2. Includes the header files from :file:`include/nrf_edgeai/`.
-3. Compiles and liks your Nordic Edge AI Lab-generated model sources with the your application. (e.g., :file:`nrf_edgeai_user_model.c`)
+3. Compiles and liks your `Nordic Edge AI Lab`_-generated model sources with the your application. (e.g., :file:`nrf_edgeai_user_model.c`)
 4. Compiles and links your firmware application with the library.
 
 API documentation

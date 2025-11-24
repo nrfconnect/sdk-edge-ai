@@ -1,29 +1,44 @@
 .. _ug_nrf_edgeai:
 
-NRF Edge AI integration
+nRF Edge AI integration
 #######################
 
 .. contents::
    :local:
    :depth: 2
 
-The NRF Edge AI add-on provides a lightweight wrapper that enables deploying
-machine learning models on Nordic devices using the Nordic Edge AI Lab runtime. 
-In this documentation the underlying platform is referred to as "Nordic Edge AI Lab".
+The nRF Edge AI add-on provides a lightweight wrapper that enables deploying
+machine learning models on Nordic devices using the `Nordic Edge AI Lab`_ runtime. 
+In this documentation the underlying platform is referred to as `Nordic Edge AI Lab`_.
 
 Integration prerequisites
 *************************
 
-Before you start using the NRF Edge AI integration, ensure the following are in place:
+Before you start using the nRF Edge AI integration, ensure the following are in place:
 
 * Installation of the nRF Connect SDK and the corresponding Zephyr toolchain.
-* A supported development board (see :ref:`Requirements` in the project docs).
+* A supported development board. The reference samples are exercised for the
+   following Zephyr board targets (use the board ID with `west build -b`):
+
+   - ``nrf52dk/nrf52832``
+   - ``nrf52840dk/nrf52840``
+   - ``nrf5340dk/nrf5340/cpuapp``
+   - ``nrf5340dk/nrf5340/cpuapp/ns``
+   - ``nrf54l15dk/nrf54l05/cpuapp``
+   - ``nrf54l15dk/nrf54l10/cpuapp``
+   - ``nrf54l15dk/nrf54l15/cpuapp``
+   - ``nrf54h20dk/nrf54h20/cpuapp``
+   - ``thingy53/nrf5340/cpuapp``
+
+   See the individual samples' ``sample.yaml`` files under
+   ``samples/nrf_edgeai/<sample>/sample.yaml`` for exact supported platforms
+   and CI test coverage.
 
 Solution architecture
 *********************
 
 The integration is implemented as a wrapper library (`lib/nrf_edgeai`) that
-adapts models and runtime helpers from the Nordic Edge AI Lab to the nRF
+adapts models and runtime helpers from the `Nordic Edge AI Lab`_ to the nRF
 Connect SDK build system. Models are typically distributed as generated C
 sources (header + C files) which are consumed by the sample applications.
 
@@ -43,7 +58,7 @@ Integration overview
 
 Typical integration steps:
 
-1. Prepare or generate a model using the Nordic Edge AI Lab web tooling.
+1. Prepare or generate a model using the `Nordic Edge AI Lab`_ web tooling.
 2. Place the generated source files into the application (for example
    ``samples/nrf_edgeai/<sample>/src/nrf_edgeai_generated``).
 3. Replace samples user data, feeding and result handling code with application-specific
@@ -85,7 +100,7 @@ summary and guidance:
 Library support
 ***************
 
-The following libraries in this repository support the NRF Edge AI integration:
+The following libraries in this repository support the nRF Edge AI integration:
 
 * :file:`lib/nrf_edgeai` — the wrapper and runtime glue.
 

@@ -8,4 +8,4 @@ Applications
    :glob:
    :caption: Subpages:
 
-   /../applications/*/README
+   *

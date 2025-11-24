@@ -19,4 +19,4 @@
 
 .. ### TODO replace with new URLS when available
 .. _`Neuton`: https://neuton.ai/
-.. _`Neuton platform`: https://lab.neuton.ai/
+.. _`Nordic Edge AI Lab`: https://neuton.ai/st/90-about-neuton-tinyml.html

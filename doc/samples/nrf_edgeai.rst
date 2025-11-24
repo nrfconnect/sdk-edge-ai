@@ -1,10 +1,10 @@
 .. _samples_nrf_edgeai:
 
-NRF Edge AI samples
+nRF Edge AI samples
 ####################
 
 This page contains an overview of the example applications that demonstrate
-how to use the NRF Edge AI add-on with the nRF Connect SDK.
+how to use the nRF Edge AI add-on with the nRF Connect SDK.
 
 .. contents::
    :local:

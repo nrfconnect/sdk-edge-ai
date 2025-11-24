@@ -1,11 +1,11 @@
 This sample can be found under :file:`samples/nrf_edgeai`.
 
 .. note::
-   Before you flash your NRF Edge AI sample, make sure you have completed the
+   Before you flash your nRF Edge AI sample, make sure you have completed the
    following:
 
-   * You have set up the nRF Connect SDK workspace as described in the main
-     documentation :ref:`setting_up_sdk` page.
+   * You have set up the nRF Connect SDK workspace as described in the nRF Connect SDK installation guide: `nRF Connect SDK installation guide <https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html>`_.
+   
    * You have installed the required toolchain (Zephyr SDK) and `west`.
 
 To build the sample, use a command similar to the following (adjust the board):
