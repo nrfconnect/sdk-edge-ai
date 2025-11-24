@@ -58,7 +58,7 @@ Integration overview
 
 Typical integration steps:
 
-1. Prepare or generate a model using the `Nordic Edge AI Lab`_ web tooling.
+1. Generate a model using the `Nordic Edge AI Lab`_ web tooling and place generated folders in your workspace.
 2. Place the generated source files into the application (for example
    ``samples/nrf_edgeai/<sample>/src/nrf_edgeai_generated``).
 3. Replace samples user data, feeding and result handling code with application-specific
@@ -66,6 +66,29 @@ Typical integration steps:
 4. Enable the integration in the application configuration (see the
    Kconfig options) and, if required, select a full libc implementation.
 5. Build the application using the standard `west build` flow.
+
+CMake integration steps:
+
+1. Generate a model using the `Nordic Edge AI Lab`_ web tooling and place generated folders in your workspace.
+2. Link library ``nrf_edgeai/lib/`` to your application, e.g. ``nrf_edgeai/lib/libnrf_edgeai_cortex-m33.a``
+   ``CMakeLists.txt`` file:
+   
+   .. code-block:: cmake
+
+      zephyr_link_libraries(${CMAKE_CURRENT_LIST_DIR}/src/nrf_edgeai/lib/libnrf_edgeai_cortex-m33.a)
+
+3. Include ``nrf_edgeai/include/`` path to your application INCLUDE PATH, e.g. in ``CMakeLists.txt`` file:
+   
+   .. code-block:: cmake
+
+      target_include_directories(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/nrf_edgeai/include)
+
+4. Include header files from ``nrf_edgeai/include/`` and from ``nrf_edgeai/nrf_edgeai_generated`` in your application source files:
+   
+   .. code-block:: c
+
+      #include <nrf_edgeai/nrf_edgeai.h>
+      #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 
 Building and running
 ********************
