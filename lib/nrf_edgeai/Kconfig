@@ -4,14 +4,14 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-menuconfig EDGEAI
+menuconfig NRF_EDGEAI
     bool "Enable Edge AI"
     depends on FPU
     depends on NEWLIB_LIBC
     help
       Enable Edge AI library.
 
-if EDGEAI
+if NRF_EDGEAI
 
 # General
 config MAIN_STACK_SIZE
@@ -19,4 +19,4 @@ config MAIN_STACK_SIZE
     help
       Set the main stack size for Edge AI applications. It's recommended value, but could be adjusted for specific user solution. 
 
-endif # EDGEAI
+endif # NRF_EDGEAI
