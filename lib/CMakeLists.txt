@@ -4,6 +4,6 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-if (CONFIG_EDGEAI)
+if (CONFIG_NRF_EDGEAI)
     add_subdirectory(nrf_edgeai)
-endif(CONFIG_EDGEAI)
+endif(CONFIG_NRF_EDGEAI)
