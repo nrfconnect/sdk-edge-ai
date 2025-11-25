@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-menu "Edge AI add-on"
+menu "Edge AI Add-on"
 
-source "$(ZEPHYR_EDGE_AI_MODULE_DIR)/lib/Kconfig"
+source "C:/main/workspace/code/github/sdk-edge-ai/lib/Kconfig"
 
 endmenu
