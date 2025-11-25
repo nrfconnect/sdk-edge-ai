@@ -2,7 +2,7 @@ Anomaly detection sample
 =========================
 
 Mechanical Gear Anomaly Detection Model
---------------------------------------
+---------------------------------------
 
 Description
 ~~~~~~~~~~~
