@@ -9,15 +9,11 @@ Overview
 
 The DSP module implements the following categories of functionality:
 
-- Fast-math helpers
-- Time-domain statistics (mean, RMS, variance, min/max, zero-crossings, etc.)
-- Spectral transforms (FFT, RFHT) and derived spectral features (centroid, spread)
-- Peak finding and frequency-domain utilities (SNR, THD)
-- Windowing, quantization and scaling helpers
-
-The API is intentionally small and self-contained so it can be used directly by
-model preprocessing code (for example: feature extraction pipelines that feed
-inputs to the Edge AI runtime).
+- **Fast Math** — Basic mathematical operations.
+- **Spectral Analysis** — FFT, frequency-domain processing, spectral features.
+- **Statistic** — Statistical measures (mean, variance, RMS, entropy, etc.).
+- **Transform** — Signal transformations (FFT, RFHT, Mel-spectrogram, etc.).
+- **Support** — Utility functions (windowing, quantization, scaling, clipping).
 
 Module structure
 ----------------
@@ -107,15 +103,3 @@ See also
 
 - Header files: :file:`include/nrf_edgeai/dsp/` (all included headers are documented)
 - Example usage in samples: :ref:`samples_nrf_edgeai`
-nRF Edge AI DSP
-===============
-
-**DSP Module** (:file:`include/nrf_edgeai/dsp/`)
-
-Provides signal processing functions organized by category:
-
-- **Fast Math** — Basic mathematical operations.
-- **Spectral Analysis** — FFT, frequency-domain processing, spectral features.
-- **Statistic** — Statistical measures (mean, variance, RMS, entropy, etc.).
-- **Transform** — Signal transformations (FFT, RFHT, Mel-spectrogram, etc.).
-- **Support** — Utility functions (windowing, quantization, scaling, clipping).
