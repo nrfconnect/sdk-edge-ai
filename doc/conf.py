@@ -49,7 +49,7 @@ except Exception:
 
 # -- Project information -----------------------------------------------------
 
-project = "nRF Connect SDK - Edge AI add-on"
+project = "nRF Connect SDK - Edge AI Add-on"
 copyright = "2025, Nordic Semiconductor"
 author = "Nordic Semiconductor"
 

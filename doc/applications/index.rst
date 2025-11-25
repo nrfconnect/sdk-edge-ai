@@ -7,5 +7,3 @@ Applications
    :maxdepth: 1
    :glob:
    :caption: Subpages:
-
-   *

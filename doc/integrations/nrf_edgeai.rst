@@ -1,22 +1,21 @@
 .. _ug_nrf_edgeai:
 
-nRF Edge AI integration
-#######################
+nRF Edge AI Library
+###################
 
 .. contents::
    :local:
    :depth: 2
 
-The nRF Edge AI add-on provides a lightweight wrapper that enables deploying
-machine learning models on Nordic devices using the Nordic Edge AI Lab runtime. 
-In this documentation the underlying platform is referred to as `Nordic Edge AI Lab`_.
+The nRF Edge AI Add-on provides a lightweight library that enables deploying
+Edge AI applications on Nordic Semiconductor devices. 
 
 Integration prerequisites
 *************************
 
 Before you start using the nRF Edge AI integration, ensure the following are in place:
 
-* Installation of the nRF Connect SDK and the corresponding Zephyr toolchain.
+* `Installation <https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation.html>`__ of the nRF Connect SDK and the corresponding Zephyr toolchain.
 * A supported development board. The reference samples are exercised for the
    following Zephyr board targets (use the board ID with `west build -b`):
 
@@ -37,12 +36,12 @@ Before you start using the nRF Edge AI integration, ensure the following are in 
 Solution architecture
 *********************
 
-The integration is implemented as a wrapper library (`lib/nrf_edgeai`) that
-adapts models and runtime helpers from the `Nordic Edge AI Lab`_ to the nRF
+The integration is implemented as a C library (`lib/nrf_edgeai`) that
+adapts signal processing premitives, models and runtime helpers from the `Nordic Edge AI Lab`_ to the nRF
 Connect SDK build system. Models are typically distributed as generated C
 sources (header + C files) which are consumed by the sample applications.
 
-The wrapper exposes a small API that abstracts model initialization, input
+The library exposes a small API that abstracts model initialization, input
 feeding and inference execution so that applications can remain model-agnostic.
 
 Kconfig and common options
@@ -53,8 +52,8 @@ include file. It lists the most important Kconfig options and their purpose:
 
 .. include:: ../includes/include_kconfig_edgeai.txt
 
-Integration overview
-*********************
+Runtime and Nordic Edge AI Lab models integration
+*************************************************
 
 Typical integration steps:
 

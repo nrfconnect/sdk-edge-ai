@@ -1,0 +1,33 @@
+@startuml
+allowmixing
+
+skinparam object {
+    BackgroundColor #0032A0
+    BorderColor #0032A0
+    FontColor white
+}
+skinparam rectangle {
+    BackgroundColor #6AD1E3
+    BorderColor #0077C8
+    FontColor #000000
+}
+
+' Main container
+object "**nRF Edge AI library**" as LIB {
+}
+
+' Submodules
+rectangle "**Runtime**\n---\nCompute engine for Nordic Edge AI Lab models" as Runtime #00ABD1
+rectangle "**DSP**\n---\nSignal processing primitives" as DSP #6AD1E3
+rectangle "**NN**\n---\nInference engine for neural networks" as NN #6AD1E3
+
+' Composition: library contains modules
+LIB *-- Runtime
+LIB *-- DSP
+LIB *-- NN
+
+' Usage relationships
+Runtime --> DSP : uses for feature extraction\n and processing
+Runtime --> NN : uses for \nneural network inference
+
+@enduml

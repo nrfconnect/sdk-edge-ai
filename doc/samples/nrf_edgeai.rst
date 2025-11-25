@@ -1,7 +1,7 @@
 .. _samples_nrf_edgeai:
 
-nRF Edge AI samples
-####################
+nRF Edge AI Library
+###################
 
 This page contains an overview of the example applications that demonstrate
 how to use the nRF Edge AI Add-on with the nRF Connect SDK.
@@ -13,39 +13,18 @@ how to use the nRF Edge AI Add-on with the nRF Connect SDK.
 Overview
 --------
 
-The samples demonstrate typical workflows for deploying a generated model to
-an nRF device by using the `nrf_edgeai` wrapper. Each sample includes a small
-set of generated model sources under ``src/nrf_edgeai_generated`` (or a
-reference to how to include them).
+The samples demostrate typical workflows using the nRF Edge AI components such as DSP primitives,
+neural network engines and runtime for `Nordic Edge AI Lab`_` generated models.
 
 Samples
 -------
 
-* ``regression`` - Demonstrates running a regression model (numeric prediction).
-* ``classification`` - Demonstrates multi-class classification and result handling.
-* ``anomaly`` - Demonstrates anomaly-detection workflows and thresholding.
+* ``Runtime`` - Demonstrates using the nRF Edge AI runtime to initialize and run inference with a `Nordic Edge AI Lab`_ generated model.
+* ``DSP`` - Demonstrates using the nRF Edge AI DSP primitives for signal processing.
+* ``NN`` - Demonstrates using the nRF Edge AI NN engine for running neural network standalone models.
 
 .. toctree::
    :maxdepth: 1
 
-   nrf_edgeai/regression
-   nrf_edgeai/classification
-   nrf_edgeai/anomaly
-
-Building and running
---------------------
-
-See the sample-level build instructions in each sample folder. General build
-and run notes are included here:
-
-.. include:: ../includes/include_building_and_running_edgeai.txt
-
-Examples
---------
-
-Basic integration and usage examples (model init, feeding inputs and running
-inference) are available in the integration guide. For quick reference the
-examples are also included here:
-
-.. include:: ../includes/include_integration_examples_edgeai.txt
+   nrf_edgeai/nrf_edgeai_rt
 

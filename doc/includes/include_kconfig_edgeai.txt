@@ -1,4 +1,4 @@
-* ``CONFIG_EDGEAI`` -- Enables the Nordic Edge AI Lab wrapper (nrf_edgeai) and its
+* ``CONFIG_NRF_EDGEAI`` -- Enables the nRF Edge AI library (nrf_edgeai) and its
   components in the build system.
 
 * ``CONFIG_NEWLIB_LIBC`` -- When enabled, uses the Newlib C library. nRF Edge AI
