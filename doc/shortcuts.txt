@@ -1,0 +1,4 @@
+.. |NCS| replace:: nRF Connect SDK
+.. |EAI| replace:: Edge AI Add-on
+.. |nRFVSC| replace:: nRF Connect for VS Code extension
+.. |config| replace:: See `Configuring and building`_ for information about how to permanently or temporarily change the configuration.

@@ -1,0 +1,5 @@
+This sample can be found under :file:`samples/nrf_edgeai`.
+To build the sample, follow the instructions in `Building an application`_ for your preferred building environment.
+See also `Programming`_ for programming steps and `Testing and optimization`_ for general information about testing and debugging in the |NCS|.
+
+If the model sources are provided as a generated C library, ensure they are placed under the application source tree (for example, :file:`samples/nrf_edgeai/<sample>/src/nrf_edgeai_generated`) so CMake discovers and builds them together with the application.
