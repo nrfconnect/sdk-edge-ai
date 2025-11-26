@@ -1,0 +1,6 @@
+See the following descriptions of the enabled Kconfig options:
+
+* The ``CONFIG_NRF_EDGEAI`` Kconfig option enables the nRF Edge AI library and its components in the build system.
+* The ``CONFIG_NEWLIB_LIBC`` Kconfig option enables Newlib, which is required for nRF Edge AI models and runtime operations.
+* The ``CONFIG_NEWLIB_LIBC_FLOAT_PRINTF`` Kconfig option enables printing of floating-point values (required for model output/logging).
+* The ``CONFIG_FPU`` Kconfig option enables the hardware floating-point unit (FPU), if present, to accelerate inference when using floating-point models.

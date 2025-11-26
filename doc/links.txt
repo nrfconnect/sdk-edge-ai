@@ -1,0 +1,49 @@
+.. ### This page lists links used in NCS docs.
+       Links are grouped by source URL if three or more have the same source URL.
+       Otherwise, they are placed in "Source: other".
+       Links not separated by blank line are related to one another.
+
+.. ### Source: www.nordicsemi.com
+
+.. _`nRF Connect for Mobile`: https://www.nordicsemi.com/Software-and-Tools/Development-Tools/nRF-Connect-for-mobile
+.. _`nRF52 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
+.. _`nRF53 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
+.. _`nRF54 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
+
+.. ### Source: docs.nordicsemi.com
+
+.. _`nRF Connect SDK`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/index.html
+.. _`nRF Connect SDK installation guide`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html>`_
+.. _`Serial Terminal app`: https://docs.nordicsemi.com/bundle/nrf-connect-serial-terminal/page/index.html
+.. _`Power Profiler Kit II (PPK2)`: https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html
+.. _`Power Profiler app`: https://docs.nordicsemi.com/bundle/nrf-connect-ppk/page/index.html
+.. _`nRF Connect for Visual Studio Code: Thread Viewer`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/reference/ui_panel.html#thread-viewer
+
+.. _`nRF54H20 DK`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_gs.html#ug-nrf54h20-gs
+.. _`nrf54h20dk`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/nrf54h20dk/doc/index.html#nrf54h20dk
+
+.. _`nRF54L15 DK`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54l/index.html#ug-nrf54l
+.. _`nrf54l15dk`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk
+.. _`nRF54L15 emulation`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk-nrf54l10
+
+.. _`nRF5340 DK`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf53/index.html#ug-nrf5340
+.. _`nrf5340dk`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/nrf5340dk/doc/index.html#nrf5340dk
+
+.. _`Thingy:53`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/thingy53/index.html#ug-thingy53
+.. _`thingy53`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/thingy53/doc/index.html#thingy53
+
+.. _`nRF52 DK`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf52/index.html#ug-nrf52
+.. _`nrf52dk`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/nrf52dk/doc/index.html#nrf52dk
+.. _`nrf52840dk`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/nrf52840dk/doc/index.html#nrf52840dk
+
+.. _`Configuring and building`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/config_and_build/index.html#configure-application
+.. _`Building an application`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/config_and_build/building.html#building
+.. _`Programming`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/programming.html#programming
+.. _`Testing and optimization`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/test_and_optimize.html#testing
+
+.. ### Source: other (2 links or less from the same URL)
+
+.. ### TODO replace with new URLS when available
+.. _`Nordic Edge AI Lab`: https://neuton.ai/st/90-about-neuton-tinyml.html
+.. _`EdgeAI Inference Runner`: https://neuton.ai/st/111-desktop-executable-prediction.html
+.. _`Signal Processing Block`: https://neuton.ai/st/98-digital-signal-processing.html

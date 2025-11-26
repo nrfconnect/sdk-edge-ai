@@ -1,0 +1,25 @@
+.. code-block:: c
+
+   #include <nrf_edgeai/nrf_edgeai.h>
+   #include <nrf_edgeai_generated/nrf_edgeai_user_model.h>
+
+   static nrf_edgeai_t* p_edgeai = NULL;
+
+   /* Initialize at startup */
+   void init_model(void)
+   {
+       p_edgeai = nrf_edgeai_user_model();
+       nrf_edgeai_init(p_edgeai);
+   }
+
+   /* Feed data and run inference */
+   void process_sensor_data(int16_t* sensor_readings, uint32_t count)
+   {
+       nrf_edgeai_err_t res = nrf_edgeai_feed_inputs(p_edgeai, sensor_readings, count);
+       if (res == NRF_EDGEAI_ERR_SUCCESS) {
+           res = nrf_edgeai_run_inference(p_edgeai);
+           if (res == NRF_EDGEAI_ERR_SUCCESS) {
+               /* Access results via p_edgeai->decoded_output */
+           }
+       }
+   }
