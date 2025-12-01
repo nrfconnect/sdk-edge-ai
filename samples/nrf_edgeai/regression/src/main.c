@@ -312,7 +312,7 @@ int main(void)
     while (1)
     {
         printk("\n========== All test cases completed ==========\r\n");
-        k_sleep(K_MSEC(1000));
+        k_sleep(K_MSEC(5000));
     }
 
     return 0;
