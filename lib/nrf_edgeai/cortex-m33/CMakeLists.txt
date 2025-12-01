@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-set(SID_LIB_DIR ${ZEPHYR_BASE}/../sdk-edge-ai/lib/nrf_edgeai/cortex-m33)
+set(SID_LIB_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 
 zephyr_library_link_libraries(
