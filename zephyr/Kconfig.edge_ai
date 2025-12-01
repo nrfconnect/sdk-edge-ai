@@ -6,6 +6,6 @@
 
 menu "Edge AI Add-on"
 
-source "C:/main/workspace/code/github/sdk-edge-ai/lib/Kconfig"
+rsource "../lib/Kconfig"
 
 endmenu
