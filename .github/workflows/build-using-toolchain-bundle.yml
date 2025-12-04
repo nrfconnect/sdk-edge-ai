@@ -1,0 +1,83 @@
+name: Build and test app in toolchain bundle environment
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  build-and-test-in-toolchain-bundle:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository with Edge-ai AddOn
+        uses: actions/checkout@v4
+        with:
+          path: edge-ai
+
+      - name: Prepare west project
+        run: |
+          python3 -m pip install west
+          west init -l edge-ai
+          west update -o=--depth=1 -n
+
+      - name: Install nrfutil and toolchain manager
+        run: |
+          wget -q https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
+          chmod +x nrfutil
+          ./nrfutil install toolchain-manager
+
+      - name: Find proper toolchain bundle
+        id: set-tb-id
+        run: echo "TOOLCHAIN_BUNDLE_NAME=ncs-toolchain-x86_64-linux-$(./nrf/scripts/print_toolchain_checksum.sh).tar.gz" >> $GITHUB_OUTPUT
+
+      - name: Restore toolchain bundle from cache
+        id: restore-cached-tb
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{steps.set-tb-id.outputs.TOOLCHAIN_BUNDLE_NAME}}
+          key: ${{steps.set-tb-id.outputs.TOOLCHAIN_BUNDLE_NAME}}
+
+      - name: Download toolchain bundle if not cached
+        if: steps.restore-cached-tb.outputs.cache-hit != 'true'
+        run: wget https://files.nordicsemi.com/artifactory/NCS/external/bundles/v3/${{steps.set-tb-id.outputs.TOOLCHAIN_BUNDLE_NAME}}
+
+      - name: Save toolchain bundle to cache
+        if: steps.restore-cached-tb.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{steps.set-tb-id.outputs.TOOLCHAIN_BUNDLE_NAME}}
+          key: ${{steps.set-tb-id.outputs.TOOLCHAIN_BUNDLE_NAME}}
+
+      - name: Install proper toolchain bundle
+        run: ./nrfutil toolchain-manager install --toolchain-bundle ${{steps.set-tb-id.outputs.TOOLCHAIN_BUNDLE_NAME}}
+
+      - name: Build firmware
+        run: |
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832
+
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840
+
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp
+
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns
+
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp
+
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp
+
+#      - name: Store hex files
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: built-applications
+#          path: edge-ai/samples/nrf_edgeai/*/build_*/*.hex

@@ -1,0 +1,82 @@
+name: Build and test app in NCS docker container
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  set-image-tag:
+    runs-on: ubuntu-24.04
+    outputs:
+      IMAGE_TAG: ${{ steps.set-output.outputs.IMAGE_TAG }}
+    steps:
+      - name: Checkout repository with Edge-ai AddOn
+        uses: actions/checkout@v4
+        with:
+          path: edge-ai
+
+      - name: Prepare west project
+        run: |
+          python3 -m pip install west
+          west init -l edge-ai
+          west update -o=--depth=1 -n nrf
+
+      - name: Find toolchain bundle id
+        id: set-output
+        run: echo "IMAGE_TAG=$(./nrf/scripts/print_toolchain_checksum.sh)" >> $GITHUB_OUTPUT
+
+  build-and-test-in-docker:
+    needs: set-image-tag
+    runs-on: ubuntu-24.04
+    container: ghcr.io/nrfconnect/sdk-nrf-toolchain:${{ needs.set-image-tag.outputs.IMAGE_TAG }}
+    defaults:
+      run:
+        # Bash shell is needed to set toolchain related environment variables in docker container
+        # It is a workaround for GitHub Actions limitation https://github.com/actions/runner/issues/1964
+        shell: bash
+    steps:
+      - name: Checkout repository with Edge-ai AddOn
+        uses: actions/checkout@v4
+        with:
+          path: edge-ai
+
+      - name: Prepare west project
+        run: |
+          west init -l edge-ai
+          west update -o=--depth=1 -n
+
+      - name: Build anomaly sample
+        working-directory: edge-ai/samples/nrf_edgeai/anomaly
+        run: |
+          west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832
+          west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840
+          west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp
+          west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns
+          west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp
+          west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp
+
+      - name: Build classification sample
+        working-directory: edge-ai/samples/nrf_edgeai/classification
+        run: |
+          west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832
+          west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840
+          west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp
+          west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns
+          west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp
+          west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp
+
+      - name: Build regression sample
+        working-directory: edge-ai/samples/nrf_edgeai/regression
+        run: |
+          west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832
+          west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840
+          west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp
+          west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns
+          west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp
+          west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp
+
+      - name: Store hex files
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-applications
+          path: edge-ai/samples/nrf_edgeai/*/build*/*.hex
