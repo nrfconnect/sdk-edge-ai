@@ -38,7 +38,12 @@
 #define NRF_EDGEAI_UNUSED(x) ((void)(x))
 #define NRF_EDGEAI_VOID_VALUE
 
-#define __UNUSED     NRF_EDGEAI_UNUSED
+#ifndef __UNUSED_ARG
+#define __UNUSED_ARG NRF_EDGEAI_UNUSED
+#endif // __UNUSED_ARG
+
+#ifndef __VOID_VALUE
 #define __VOID_VALUE NRF_EDGEAI_VOID_VALUE
+#endif // __VOID_VALUE
 
 #endif /* _NRF_EDGEAI_PLATFORM_H_ */
