@@ -1,6 +1,6 @@
 sample:
-  description: Sample showing NRF Edge AI Anomaly Detection model usage and results interpretation.
-  name: NRF Edge AI Anomaly Detection Sample
+  description: Sample showing nRF Edge AI Anomaly Detection model usage and results interpretation.
+  name: nRF Edge AI Anomaly Detection Sample
 tests:
   sample.edgeai_anomaly_detection:
     sysbuild: true
