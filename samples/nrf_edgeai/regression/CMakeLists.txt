@@ -13,6 +13,6 @@ project(nrf_edgeai_regression_sample)
 # Source files
 target_include_directories(app PRIVATE include)
 target_sources(app PRIVATE
-src/main.c
-src/nrf_edgeai_generated/nrf_edgeai_user_model.c
+    src/main.c
+    src/nrf_edgeai_generated/nrf_edgeai_user_model.c
 )

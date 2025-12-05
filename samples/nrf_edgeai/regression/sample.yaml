@@ -1,6 +1,6 @@
 sample:
-  description: Sample showing NRF Edge AI regression model usage and results interpretation.
-  name: NRF Edge AI Regression Sample
+  description: Sample showing nRF Edge AI regression model usage and results interpretation.
+  name: nRF Edge AI Regression Sample
 tests:
   sample.edgeai_regression:
     sysbuild: true

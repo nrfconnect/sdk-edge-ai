@@ -1,6 +1,6 @@
 sample:
-  description: Sample showing NRF Edge AI classification model usage and results interpretation.
-  name: NRF Edge AI Classification Sample
+  description: Sample showing nRF Edge AI classification model usage and results interpretation.
+  name: nRF Edge AI Classification Sample
 tests:
   sample.edgeai_classification:
     sysbuild: true
