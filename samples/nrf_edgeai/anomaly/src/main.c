@@ -257,6 +257,7 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_
 			if (res == NRF_EDGEAI_ERR_SUCCESS) {
 				/* Extract anomaly score from model's decoded output */
 				anomaly_score = p_user_model->decoded_output.anomaly.score;
+				break;
 			}
 		}
 	}
@@ -309,6 +310,7 @@ int main(void)
 {
 	/*  Get user generated model pointer */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
+	assert(p_user_model != NULL);
 
 	/* Validate that the loaded model matches our expected configuration */
 	assert(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
