@@ -250,7 +250,7 @@ flt32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_data, s
 		res = nrf_edgeai_feed_inputs(p_user_model, input_sample, 1 * USER_UNIQ_INPUTS_NUM);
 
 		if (res == NRF_EDGEAI_ERR_SUCCESS) {
-			/* Input buffer has reached 128 samples—run inference on the complete window
+			/* Input buffer has reached 128 samples - run inference on the complete window
 			 */
 			res = nrf_edgeai_run_inference(p_user_model);
 
