@@ -49,15 +49,10 @@
  *   must correctly distinguish between states to confirm proper anomaly detection.
  */
 
-// ///////////////////////// Package Header Files ////////////////////////////
-// ////////////////////// Package Group Header Files /////////////////////////
 #include <nrf_edgeai/nrf_edgeai.h>
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
-// /////////////////// Application Global Header Files ///////////////////////
-// /////////////////// 3rd Party Software Header Files ///////////////////////
+
 #include <zephyr/kernel.h>
-// ////////////////////// Standard C++ Header Files //////////////////////////
-// /////////////////////// Standard C Header Files ///////////////////////////
 #include <stdio.h>
 #include <assert.h>
 
@@ -75,6 +70,7 @@
 #define USER_WINDOW_SIZE       128	 /* Samples per inference window */
 #define USER_UNIQ_INPUTS_NUM   2	 /* 2 vibration sensors: axis X and Y */
 #define USER_ANOMALY_THRESHOLD 0.000025f /* Anomaly score threshold, high sensitivity */
+#define INVALID_ANOMALY_SCORE  10000.0f	 /* Invalid score for test validation */
 
 /**
  *  Healthy Gear Vibration Baseline Data
@@ -233,11 +229,13 @@ static const flt32_t ANOMALOUS_GEAR_MECH_VIBRATION_DATA_2AXIS[USER_WINDOW_SIZE *
  *     score < USER_ANOMALY_THRESHOLD -> Healthy gear (pass maintenance check)
  *     score >= USER_ANOMALY_THRESHOLD > Anomalous gear (schedule maintenance alert)
  */
-flt32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_data, size_t data_len)
+static flt32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_data,
+			     size_t data_len)
 {
 	nrf_edgeai_err_t res;
 
-	flt32_t anomaly_score = 10000.0f; /* Initialize with high value (indicates failure) */
+	/* Initialize with high value (indicates failure) */
+	flt32_t anomaly_score = INVALID_ANOMALY_SCORE;
 
 	/* Feed vibration samples to Edge AI runtime in streaming mode */
 	for (size_t i = 0; i < data_len; i += USER_UNIQ_INPUTS_NUM) {
@@ -250,7 +248,8 @@ flt32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_data, s
 		res = nrf_edgeai_feed_inputs(p_user_model, input_sample, 1 * USER_UNIQ_INPUTS_NUM);
 
 		if (res == NRF_EDGEAI_ERR_SUCCESS) {
-			/* Input buffer has reached 128 samples - run inference on the complete window
+			/* Input buffer has reached 128 samples - run inference on the complete
+			 * window
 			 */
 			res = nrf_edgeai_run_inference(p_user_model);
 
@@ -320,7 +319,7 @@ int main(void)
 	assert(res == NRF_EDGEAI_ERR_SUCCESS);
 
 	flt32_t anomaly_score;
-	size_t DATA_LEN = USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM;
+	const size_t DATA_LEN = USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM;
 
 	/* ---- TEST 1: Healthy Gear ---- */
 	printk("\n--- Testing GOOD gear vibration data ---\r\n");

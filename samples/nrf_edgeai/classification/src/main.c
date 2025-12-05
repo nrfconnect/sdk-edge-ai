@@ -41,15 +41,10 @@
  *   Classification accuracy and confidence scores are reported for each test case.
  */
 
-// ///////////////////////// Package Header Files ////////////////////////////
-// ////////////////////// Package Group Header Files /////////////////////////
 #include <nrf_edgeai/nrf_edgeai.h>
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
-// /////////////////// Application Global Header Files ///////////////////////
-// /////////////////// 3rd Party Software Header Files ///////////////////////
+
 #include <zephyr/kernel.h>
-// ////////////////////// Standard C++ Header Files //////////////////////////
-// /////////////////////// Standard C Header Files ///////////////////////////
 #include <stdio.h>
 #include <assert.h>
 
