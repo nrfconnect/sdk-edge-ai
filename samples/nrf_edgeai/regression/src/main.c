@@ -274,6 +274,7 @@ int main(void)
 {
 	/* Retrieve the generated neural network model for air quality prediction */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
+	assert(p_user_model != NULL);
 
 	/* Validate model configuration: ensure the generated model matches expected parameters */
 	assert(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);

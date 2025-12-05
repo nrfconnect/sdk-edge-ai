@@ -392,6 +392,7 @@ int main(void)
 {
 	/* Get user generated model pointer */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
+	assert(p_user_model != NULL);
 
 	/** Validate model parameters against expected configuration */
 	assert(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
