@@ -52,29 +52,29 @@ jobs:
 
       - name: Build firmware
         run: |
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832 -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832 -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf52dk/nrf52832 --build-dir build_nrf52dk_nrf52832 -o=-j2
 
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840 -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840 -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf52840dk/nrf52840 --build-dir build_nrf52840dk_nrf52840 -o=-j2
 
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf5340dk/nrf5340/cpuapp --build-dir build_nrf5340dk_nrf5340_cpuapp -o=-j2
 
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf5340dk/nrf5340/cpuapp/ns --build-dir build_nrf5340dk_nrf5340_cpuapp_ns -o=-j2
 
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf54l15dk/nrf54l15/cpuapp --build-dir build_nrf54l15dk_nrf54l15_cpuapp -o=-j2
 
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp
-          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/anomaly/ -- west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/classification/ -- west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp -o=-j2
+          ./nrfutil toolchain-manager launch --chdir edge-ai/samples/nrf_edgeai/regression/ -- west build --board nrf54h20dk/nrf54h20/cpuapp --build-dir build_nrf54h20dk_nrf54h20_cpuapp -o=-j2
 
 #      - name: Store hex files
 #        uses: actions/upload-artifact@v4
