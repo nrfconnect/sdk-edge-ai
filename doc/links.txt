@@ -41,9 +41,6 @@
 .. _`Programming`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/programming.html#programming
 .. _`Testing and optimization`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/test_and_optimize.html#testing
 
-.. ### Source: other (2 links or less from the same URL)
-
-.. ### TODO replace with new URLS when available
-.. _`Nordic Edge AI Lab`: https://neuton.ai/st/90-about-neuton-tinyml.html
-.. _`EdgeAI Inference Runner`: https://neuton.ai/st/111-desktop-executable-prediction.html
-.. _`Signal Processing Block`: https://neuton.ai/st/98-digital-signal-processing.html
+.. _`Nordic Edge AI Lab`: https://docs.nordicsemi.com/bundle/edge-ai-lab-latest/page/overview_of_nordic_edge_ai_lab.html
+.. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/bundle/edge-ai-lab-latest/page/run_inference_on_the_desktop.html
+.. _`Signal Processing Block`: https://docs.nordicsemi.com/bundle/edge-ai-lab-latest/page/signal_processing.html
