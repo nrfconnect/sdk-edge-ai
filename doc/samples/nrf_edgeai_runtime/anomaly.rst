@@ -74,7 +74,7 @@ Configuration
 
 |config|
 
-The project configuration for this sample is provided in :file:`samples/nrf_edgeai/regression/prj.conf`.
+The project configuration for this sample is provided in :file:`samples/nrf_edgeai/anomaly/prj.conf`.
 
 Configuration options
 =====================
