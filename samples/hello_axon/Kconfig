@@ -1,0 +1,15 @@
+#
+# Copyright (c) 2025 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+source "Kconfig.zephyr"
+
+menu "Hello AXON"
+
+config ASYNC_INFERENCE
+	bool "Run inference asynchronously"
+	default y
+
+endmenu
