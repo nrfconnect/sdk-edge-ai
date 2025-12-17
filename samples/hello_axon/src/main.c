@@ -29,7 +29,6 @@ static float dequantitize(const int8_t value, const nrf_axon_nn_compiled_model_s
 static void sync_flow(void)
 {
 	nrf_axon_result_e result;
-	int err;
 
 	result = nrf_axon_nn_model_validate(&model_hello_axon);
 	if (result != NRF_AXON_RESULT_SUCCESS) {
@@ -37,15 +36,9 @@ static void sync_flow(void)
 		return;
 	}
 
-	/* hello_axon model don't use persistent vars, but initialize them anyway */
-	err = nrf_axon_nn_model_init_vars(&model_hello_axon);
-	if (err) {
-		LOG_ERR("AXON model init vars, err %u", result);
-		return;
-	}
-
 #if IS_ENABLED(CONFIG_AVOID_DOUBLE_BUFFER)
-	/* This path requires to know that no other model is running or will be running */
+	/* This path requires to know that no other model is running or will be running as we access
+	 * internal buffer. */
 	int8_t *input_buffer = model_hello_axon.inputs[0].ptr;
 	int8_t *input = NULL;
 #else
@@ -55,6 +48,8 @@ static void sync_flow(void)
 	int8_t output_buffer[1];
 
 	for (float value = 0.0f; value < 4.0f; value += 0.1f) {
+		/* Simulate wait for new data from sensor. */
+		k_msleep(50);
 
 		input_buffer[0] = quantitize(value, &model_hello_axon.inputs[0]);
 
@@ -81,9 +76,7 @@ static void inference_callback(nrf_axon_result_e result, void *callback_context)
 static void async_flow(void)
 {
 	static nrf_axon_nn_model_async_inference_wrapper_s async_wrapper;
-
 	nrf_axon_result_e result;
-	int err;
 
 	result = nrf_axon_nn_model_async_init(&async_wrapper, &model_hello_axon);
 	if (result != NRF_AXON_RESULT_SUCCESS) {
@@ -91,16 +84,11 @@ static void async_flow(void)
 		return;
 	}
 
-	/* hello_axon model don't use persistent vars, but initialize them anyway */
-	err = nrf_axon_nn_model_init_vars(&model_hello_axon);
-	if (err) {
-		LOG_ERR("AXON model init vars, err %u", result);
-		return;
-	}
-
 	int8_t input[1], output[1];
 
 	for (float value = 0.0f; value < 4.0f; value += 0.1f) {
+		/* Simulate wait for new data from sensor. */
+		k_msleep(50);
 
 		input[0] = quantitize(value, &model_hello_axon.inputs[0]);
 
@@ -122,6 +110,7 @@ static void async_flow(void)
 int main(void)
 {
 	nrf_axon_result_e result;
+	int err;
 
 	LOG_INF("Hello AXON sample");
 	LOG_INF("Initializing AXON");
@@ -129,6 +118,13 @@ int main(void)
 	result = nrf_axon_platform_init();
 	if (result != NRF_AXON_RESULT_SUCCESS) {
 		LOG_ERR("AXON platform init failed, err %u", result);
+		return -1;
+	}
+
+	/* hello_axon model don't use persistent vars, but initialize them anyway. */
+	err = nrf_axon_nn_model_init_vars(&model_hello_axon);
+	if (err) {
+		LOG_ERR("AXON model init vars, err %u", result);
 		return -1;
 	}
 

@@ -9,7 +9,7 @@ manifest:
 
   remotes:
     - name: ncs
-      url-base: https://github.com/nrfconnect
+      url-base: git@github.com:nrfconnect
 
   projects:
     - name: nrf
@@ -17,6 +17,12 @@ manifest:
       repo-path: sdk-nrf
       revision: v3.2.0-rc2
       import: true
+
+    - name: axon
+      remote: ncs
+      repo-path: sdk-axons-ml-lib
+      revision: AXONS-ML-RELEASE-0P5P0
+      import: false
 
   self:
     path: edge-ai
