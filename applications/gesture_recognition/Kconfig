@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 Nordic Semiconductor
+# Copyright (c) 2026 Nordic Semiconductor
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
@@ -8,4 +8,4 @@ source "Kconfig.zephyr"
 
 config DATA_COLLECTION_MODE
 	bool "Enble Data Collection Mode (no inference run)"
-	default n
+
