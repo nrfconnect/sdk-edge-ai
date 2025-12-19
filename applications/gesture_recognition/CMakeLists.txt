@@ -11,10 +11,8 @@ file(GLOB_RECURSE APP_SOURCE_FILES
         "${CMAKE_CURRENT_LIST_DIR}/src/**")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/bsp) 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_lib/nrf_edgeai/include)        
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_lib)      
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_lib)
 
 target_sources(app PRIVATE ${APP_SOURCE_FILES})
 
 zephyr_library_include_directories(${ZEPHYR_BASE}/samples/bluetooth)
-zephyr_link_libraries(${CMAKE_CURRENT_LIST_DIR}/src/nrf_edgeai_lib/nrf_edgeai/lib/libnrf_edgeai_cortex-m33.a)
