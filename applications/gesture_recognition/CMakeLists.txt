@@ -1,4 +1,8 @@
-# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright (c) 2024 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
 
 cmake_minimum_required(VERSION 3.20.0)
 

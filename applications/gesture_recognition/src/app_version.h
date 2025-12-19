@@ -33,7 +33,7 @@ applicable.
 
 #define APP_VERSION_MAJOR    3
 #define APP_VERSION_MINOR    0
-#define APP_VERSION_PATCH    0
+#define APP_VERSION_PATCH    1
 
 
 #endif /* __APPLICATION_VERSION_H__ */
