@@ -6,17 +6,20 @@ The nRF EdgeAI library is static C library, written in accordance with the C99 s
 
 # How to integrate library into your firmware project 
 
+Enable in prj.conf:
+
+# nRF Edge AI
+CONFIG_NRF_EDGEAI=y
+# nRF Edge AI dependencies
+CONFIG_NEWLIB_LIBC=y
+CONFIG_FPU=y
+
 ## nRF EdgeAI folder structure
 
-There are only two folders that should be added to your project for integrating library:
- * `nrf_edgeai` - main framework folder with all source code and binaries:
-    * `nrf_edgeai/lib` -  folder with precompiled libraries for different architectures, e.g. `libnrf_edgeai_cortex-m33.a`.
-    * `nrf_edgeai/include` - folder with all header files and interfaces for library usage.
+There is only one folder that should be added to your project for integrating library:
  * `nrf_edgeai_generated` - folder containing all user solution-specific files (`nrf_edgeai_user_model.c/h`).
 
-1. Link nRF EdgeAI C static library for your CPU architecture to your firmware project.
-2. Add `./nrf_edgeai/include` folder to your project global INCLUDE paths.
-3. **Optional** Add folder where  `./nrf_edgeai_generated` **is located** (not this folder itself) to your project global INCLUDE paths.
+**Optional** Add folder where  `./nrf_edgeai_generated` **is located** (not this folder itself) to your project global INCLUDE paths.
 
 ## Use nRF EdgeAI in your project
 
