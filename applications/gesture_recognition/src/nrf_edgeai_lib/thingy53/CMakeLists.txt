@@ -1,3 +1,9 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
 cmake_minimum_required(VERSION 3.13)
 
 project(NRF_EdgeAI_User_Model
