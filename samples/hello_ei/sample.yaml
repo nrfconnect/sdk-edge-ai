@@ -1,6 +1,6 @@
 sample:
-  description: Sample showing Edge Impulse wrapper usage
-  name: Edge Impulse wrapper sample
+  description: Sample showing basic Edge Impulse usage
+  name: Hello Edge Impulse sample
 common:
   harness: console
   harness_config:
