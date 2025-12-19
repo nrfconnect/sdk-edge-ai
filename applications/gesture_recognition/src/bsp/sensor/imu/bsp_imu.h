@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
 /**
  *
  * @defgroup bsp_imu Inertial Measurement Unit (IMU)
@@ -34,43 +40,44 @@ extern "C" {
  */
 typedef struct bsp_imu_config_s
 {
-    /** Accelerometer full scale in G */
-    int32_t accel_fs_g;
+	/** Accelerometer full scale in G */
+	int32_t accel_fs_g;
 
-     /** Gyroscope full scale in DPS */
-    int32_t gyro_fs_dps;
+	 /** Gyroscope full scale in DPS */
+	int32_t gyro_fs_dps;
 
-    /** IMU data rate in Hz */
-    int32_t data_rate_hz;
+	/** IMU data rate in Hz */
+	int32_t data_rate_hz;
 } bsp_imu_config_t;
 
 /** Inertial sensor data */
 typedef struct bsp_imu_data_s
 {
-    /** Accelerometer data */
-    struct
-    {
-        int16_t raw;
-        float phys;
-    } accel[3];
-    /** Gyroscope data */
-    struct
-    {
-        int16_t raw;
-        float phys;
-    } gyro[3];
+	/** Accelerometer data */
+	struct
+	{
+		int16_t raw;
+		float phys;
+	} accel[3];
+	/** Gyroscope data */
+	struct
+	{
+		int16_t raw;
+		float phys;
+	} gyro[3];
 } bsp_imu_data_t;
 
 /**
  * @brief Initialize and start generation of IMU sensor data
  * 
  * @param p_config          IMU configuration settings @ref bsp_imu_config_t
- * @param data_ready_cb     Data ready callback, provided callback will be called when new data sample is ready for reading
+ * @param data_ready_cb     Data ready callback, provided callback will be
+ *                          called when new data sample is ready for reading
  * 
  * @return Operation status @ref bsp_status_t 
  */
-bsp_status_t bsp_imu_init(const bsp_imu_config_t* p_config,
-                            bsp_generic_cb_t data_ready_cb);
+bsp_status_t bsp_imu_init(const bsp_imu_config_t *p_config,
+			  bsp_generic_cb_t data_ready_cb);
 
 /**
  * @brief Read IMU sensor data 
@@ -79,7 +86,7 @@ bsp_status_t bsp_imu_init(const bsp_imu_config_t* p_config,
  *  
  * @return Operation status @ref bsp_status_t 
  */
-bsp_status_t bsp_imu_read(bsp_imu_data_t* const p_data);
+bsp_status_t bsp_imu_read(bsp_imu_data_t *const p_data);
 
 #ifdef __cplusplus
 }

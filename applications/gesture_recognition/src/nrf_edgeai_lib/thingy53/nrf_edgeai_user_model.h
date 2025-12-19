@@ -1,9 +1,8 @@
-/* 2025-12-03T11:23:19.062720 */
-
 /*
-* Copyright (c) 2021 Nordic Semiconductor ASA
-* SPDX-License-Identifier: Apache-2.0
-*/
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
 
 #ifndef _NRF_EDGEAI_USER_MODEL_H_
 #define _NRF_EDGEAI_USER_MODEL_H_

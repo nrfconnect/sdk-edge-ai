@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
 /**
  *
  * @defgroup bsp_common Common
@@ -113,27 +119,28 @@ extern "C" {
  *
  */
 #define BSP_NULL_CHECK(x)                               \
-    do                                                  \
-    {                                                   \
-        if ( (x) == NULL )                              \
-        {                                               \
-            return BSP_STATUS_NULL_ARGUMENT;            \
-        }                                               \
-    } while(0)
+	do                                                  \
+	{                                                   \
+		if ( (x) == NULL )                              \
+		{                                               \
+			return BSP_STATUS_NULL_ARGUMENT;            \
+		}                                               \
+	} while(0)
 
 /**
- * @brief Macro for verifying that the provided status is BSP_STATUS_SUCCESS. It will cause the exterior
- *        function to return an error code if it is not @ref BSP_STATUS_SUCCESS.
+ * @brief Macro for verifying that the provided status is BSP_STATUS_SUCCESS.
+ *        It will cause the exterior function to return an error code if it is
+ *        not @ref BSP_STATUS_SUCCESS.
  *
  * @param[in] status     Status to check vs BSP_STATUS_SUCCESS.
  */
 #define BSP_VERIFY_SUCCESS(status) \
 do                                                      \
 {                                                       \
-    if ((status) != BSP_STATUS_SUCCESS)                 \
-    {                                                   \
-        return (status);                                \
-    }                                                   \
+	if ((status) != BSP_STATUS_SUCCESS)                 \
+	{                                                   \
+		return (status);                                \
+	}                                                   \
 } while(0)
 
 /**
@@ -145,10 +152,10 @@ do                                                      \
 #define BSP_VERIFY_VALID_ARG(is_valid)                  \
 do                                                      \
 {                                                       \
-    if (!(is_valid))                                    \
-    {                                                   \
-        return BSP_STATUS_INVALID_ARGUMENT;             \
-    }                                                   \
+	if (!(is_valid))                                    \
+	{                                                   \
+		return BSP_STATUS_INVALID_ARGUMENT;             \
+	}                                                   \
 } while(0)
 
 /**
@@ -167,14 +174,14 @@ do                                                      \
  */
 #ifndef __RETURN_CONDITIONAL
 #    define __RETURN_CONDITIONAL(expr, ret_val) \
-        do                                      \
-        {                                       \
-            if ((expr) == true)                 \
-            {                                   \
-                return ret_val;                 \
-            }                                   \
-        }                                       \
-        while (0)
+		do                                      \
+		{                                       \
+			if ((expr) == true)                 \
+			{                                   \
+				return ret_val;                 \
+			}                                   \
+		}                                       \
+		while (0)
 #endif
 
 /** Generic callback type */
@@ -189,7 +196,7 @@ typedef bsp_generic_cb_t bsp_irq_handler_t;
  * @param[in] data        A pointer to the data buffer that was passed to the async function
  * @param[in] data_size   Size of data that was passed to the async function, in bytes
  */
-typedef void(*bsp_async_drdy_cb_t)(void* data, uint32_t data_size);
+typedef void(*bsp_async_drdy_cb_t)(void *data, uint32_t data_size);
 
 /**
  * Generic bsp operation status code
@@ -200,36 +207,36 @@ typedef void(*bsp_async_drdy_cb_t)(void* data, uint32_t data_size);
  */
 typedef enum bsp_status_e
 {
-    /** Operation successful */
-    BSP_STATUS_SUCCESS,
+	/** Operation successful */
+	BSP_STATUS_SUCCESS,
 
-    /** The operation failed because the module is already in the
-     * requested mode */
-    BSP_STATUS_ALREADY_IN_MODE,
+	/** The operation failed because the module is already in the
+	 * requested mode */
+	BSP_STATUS_ALREADY_IN_MODE,
 
-    /** There was an error communicating with hardware */
-    BSP_STATUS_HARDWARE_ERROR,
+	/** There was an error communicating with hardware */
+	BSP_STATUS_HARDWARE_ERROR,
 
-    /** The operation failed with an unspecified error */
-    BSP_STATUS_UNSPECIFIED_ERROR,
+	/** The operation failed with an unspecified error */
+	BSP_STATUS_UNSPECIFIED_ERROR,
 
-    /** The argument supplied to the operation was invalid */
-    BSP_STATUS_INVALID_ARGUMENT,
+	/** The argument supplied to the operation was invalid */
+	BSP_STATUS_INVALID_ARGUMENT,
 
-    /** The argument supplied to the operation was NULL */
-    BSP_STATUS_NULL_ARGUMENT,
+	/** The argument supplied to the operation was NULL */
+	BSP_STATUS_NULL_ARGUMENT,
 
-    /** The operation failed because the module was busy */
-    BSP_STATUS_BUSY,
+	/** The operation failed because the module was busy */
+	BSP_STATUS_BUSY,
 
-    /** The requested operation was not available */
-    BSP_STATUS_UNAVAILABLE,
+	/** The requested operation was not available */
+	BSP_STATUS_UNAVAILABLE,
 
-    /** The operation or service not supported */
-    BSP_STATUS_NOT_SUPPORTED,
+	/** The operation or service not supported */
+	BSP_STATUS_NOT_SUPPORTED,
 
-    /** The requested operation timeout */
-    BSP_STATUS_TIMEOUT,
+	/** The requested operation timeout */
+	BSP_STATUS_TIMEOUT,
 } bsp_status_t;
 
 #ifdef __cplusplus
