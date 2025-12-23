@@ -1,0 +1,36 @@
+#
+# Copyright (c) 2025 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+mainmenu "Hello Edge Impulse sample application"
+
+config EDGE_IMPULSE_URI
+	string "Edge Impulse library URI"
+	default ''
+	help
+	  Specify URI used to access archive with Edge Impulse library.
+	  The library will be downloaded into the build directory. You can specify
+	  more than one URI separated by a semicolon.
+	  Make sure to specify the HTTP API key header as EI_API_KEY_HEADER
+	  variable during build if the HTTP server uses it.
+	  You can also specify the absolute file path of a local file. In that
+	  case, only one URI has to be defined.
+
+config EDGE_IMPULSE_DEBUG_MODE
+	bool "Run Edge Impulse library in debug mode"
+    default n
+	imply NEWLIB_LIBC_FLOAT_PRINTF
+	help
+	  Enables additional log information from Edge Impulse library.
+
+config HELLO_EI_DATA_BUF_SIZE
+	int "Size of input data buffer"
+	default 512
+	help
+	  The buffer is used to store input data for the Edge Impulse library.
+	  Size of the buffer is expressed as number of floats.
+
+# This must be at the end to include Zephyr's Kconfig tree
+source "Kconfig.zephyr"
