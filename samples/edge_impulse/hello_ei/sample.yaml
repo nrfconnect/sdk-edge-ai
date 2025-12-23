@@ -1,0 +1,83 @@
+sample:
+  description: Sample showing basic Edge Impulse usage
+  name: Hello Edge Impulse sample
+tests:
+  sample.edge_impulse.hello_ei:
+    sysbuild: true
+    build_only: false
+    harness: console
+    harness_config:
+      ordered: true
+      regex:
+        - "=== Inference result ==="
+        - "idle => 0\\.0\\d+"
+        - "sine => (1\\.0\\d+)|(0\\.9\\d+)"
+        - "triangle => 0\\.0\\d+"
+        - "anomaly: (-\\d+\\.\\d+)|(0\\.0\\d+)"
+        - "=== Inference time profiling ==="
+        - "Full inference completed in \\d+ ms"
+        - "Classification completed in \\d+ ms"
+        - "DSP operations completed in \\d+ ms"
+        - "Anomaly detection completed in \\d+ ms"
+        - "=== Inference result ==="
+        - "idle => 0\\.0\\d+"
+        - "sine => (1\\.0\\d+)|(0\\.9\\d+)"
+        - "triangle => 0\\.0\\d+"
+        - "anomaly: (-\\d+\\.\\d+)|(0\\.0\\d+)"
+        - "=== Inference time profiling ==="
+        - "Full inference completed in \\d+ ms"
+        - "Classification completed in \\d+ ms"
+        - "DSP operations completed in \\d+ ms"
+        - "Anomaly detection completed in \\d+ ms"
+        - "=== Inference result ==="
+        - "idle => 0\\.0\\d+"
+        - "sine => (1\\.0\\d+)|(0\\.9\\d+)"
+        - "triangle => 0\\.0\\d+"
+        - "anomaly: (-\\d+\\.\\d+)|(0\\.0\\d+)"
+        - "=== Inference time profiling ==="
+        - "Full inference completed in \\d+ ms"
+        - "Classification completed in \\d+ ms"
+        - "DSP operations completed in \\d+ ms"
+        - "Anomaly detection completed in \\d+ ms"
+        - "=== Inference result ==="
+        - "idle => 0\\.0\\d+"
+        - "sine => 0\\.0\\d+"
+        - "triangle => (1\\.0\\d+)|(0\\.9\\d+)"
+        - "anomaly: (-\\d+\\.\\d+)|(0\\.0\\d+)"
+        - "=== Inference time profiling ==="
+        - "Full inference completed in \\d+ ms"
+        - "Classification completed in \\d+ ms"
+        - "DSP operations completed in \\d+ ms"
+        - "Anomaly detection completed in \\d+ ms"
+        - "=== Inference result ==="
+        - "idle => 0\\.0\\d+"
+        - "sine => 0\\.0\\d+"
+        - "triangle => (1\\.0\\d+)|(0\\.9\\d+)"
+        - "anomaly: (-\\d+\\.\\d+)|(0\\.0\\d+)"
+        - "=== Inference time profiling ==="
+        - "Full inference completed in \\d+ ms"
+        - "Classification completed in \\d+ ms"
+        - "DSP operations completed in \\d+ ms"
+        - "Anomaly detection completed in \\d+ ms"
+        - "=== Inference result ==="
+        - "idle => 0\\.0\\d+"
+        - "sine => 0\\.0\\d+"
+        - "triangle => (1\\.0\\d+)|(0\\.9\\d+)"
+        - "anomaly: (-\\d+\\.\\d+)|(0\\.0\\d+)"
+        - "=== Inference time profiling ==="
+        - "Full inference completed in \\d+ ms"
+        - "Classification completed in \\d+ ms"
+        - "DSP operations completed in \\d+ ms"
+        - "Anomaly detection completed in \\d+ ms"
+      type: multi_line
+    platform_allow:
+      - nrf54l15dk/nrf54l15/cpuapp
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    integration_platforms:
+      - nrf54l15dk/nrf54l15/cpuapp
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    timeout: 10
+    tags:
+      - ci_build
+      - sysbuild
+      - ci_samples_edge_impulse
