@@ -1,10 +1,8 @@
 /*
- * Copyright (c) 2021 Nordic Semiconductor ASA
+ * Copyright (c) 2026 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-
-#include <zephyr/kernel.h>
 
 const static float input_data_sine[] = {
 	0.4100, 0.5600, 0.5100, 0.5200, 0.4700, 0.4700, 0.4900, 0.5300, 0.4200, 0.3900, 0.3300, 0.3300,

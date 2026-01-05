@@ -15,9 +15,9 @@
 
 #include "ei_wrapper.h"
 
-#define DEBUG_MODE		IS_ENABLED(CONFIG_EI_WRAPPER_DEBUG_MODE)
+#define DEBUG_MODE    IS_ENABLED(CONFIG_EI_WRAPPER_DEBUG_MODE)
 
-get_data_callback_t get_data_cbk = nullptr;
+static get_data_callback_t get_data_cbk = nullptr;
 
 int ei_wrapper_init(get_data_callback_t cbk)
 {
@@ -29,7 +29,7 @@ int ei_wrapper_run_inference(ei_impulse_result_t *ei_result, size_t window_size)
 {
 	signal_t features_signal;
 
-	__ASSERT(ei_result != nullptr, "ei_result pointer is null");
+	__ASSERT_NO_MSG(ei_result != nullptr);
 
 	features_signal.get_data = get_data_cbk;
 	features_signal.total_length = window_size;
