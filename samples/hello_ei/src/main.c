@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2021 Nordic Semiconductor ASA
+ * Copyright (c) 2026 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/__assert.h>
 
 #include "ei_classifier_types.h"
 #include "model-parameters/model_metadata.h"
@@ -18,6 +17,9 @@ LOG_MODULE_REGISTER(hello_ei);
 
 #define INPUT_WINDOW_SIZE    EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE
 #define LABEL_COUNT          EI_CLASSIFIER_LABEL_COUNT
+
+BUILD_ASSERT(INPUT_WINDOW_SIZE <= CONFIG_HELLO_EI_DATA_BUF_SIZE,
+	"Size of data buffer is smaller than input window size");
 
 static struct {
 	float data[CONFIG_HELLO_EI_DATA_BUF_SIZE];
@@ -32,7 +34,7 @@ static void print_inference_result(const ei_impulse_result_t *result, int64_t du
 
 	for (size_t i = 0; i < LABEL_COUNT; i++) {
 		LOG_INF("%s => %.5f", result->classification[i].label,
-		       result->classification[i].value);
+		        result->classification[i].value);
 	}
 
 #if EI_CLASSIFIER_HAS_ANOMALY
@@ -68,25 +70,38 @@ static void clear_sample_buffer(void)
 static void collect_sample(float val)
 {
 	sample_buffer.data[sample_buffer.current_index] = val;
-	sample_buffer.current_index++;
+
+	// Move to the next index in circular buffer.
+	if (sample_buffer.current_index < (CONFIG_HELLO_EI_DATA_BUF_SIZE - 1)) {
+		sample_buffer.current_index++;
+	} else {
+		sample_buffer.current_index = 0;
+	}
 }
 
 static int get_samples_from_buffer(size_t offset, size_t length, float *out_ptr)
 {
+	__ASSERT_NO_MSG(length <= CONFIG_HELLO_EI_DATA_BUF_SIZE);
+	__ASSERT_NO_MSG(out_ptr != NULL);
+
+	// Calculate start and end indices in the circular buffer.
 	size_t buffer_size = ARRAY_SIZE(sample_buffer.data);
 	size_t start_index = (inference_cnt + offset) % buffer_size;
 	size_t end_index = start_index + length;
 
 	if (end_index <= buffer_size) {
-		// Data fits without wrapping
-		memcpy(out_ptr, sample_buffer.data + start_index, length * sizeof(float));
+		// Data fits without wrapping.
+		memcpy(out_ptr, sample_buffer.data + start_index,
+		       length * sizeof(float));
 	} else {
-		// Data wraps around to the beginning of the buffer
+		// Data wraps around to the beginning of the buffer.
 		size_t first_part_len = buffer_size - start_index;
 		size_t second_part_len = length - first_part_len;
 
-		memcpy(out_ptr, sample_buffer.data + start_index, first_part_len * sizeof(float));
-		memcpy(out_ptr + first_part_len, sample_buffer.data, second_part_len * sizeof(float));
+		memcpy(out_ptr, sample_buffer.data + start_index,
+		       first_part_len * sizeof(float));
+		memcpy(out_ptr + first_part_len, sample_buffer.data,
+		       second_part_len * sizeof(float));
 	}
 
 	return 0;
@@ -94,8 +109,8 @@ static int get_samples_from_buffer(size_t offset, size_t length, float *out_ptr)
 
 static int run_model(const float *input_data, size_t input_data_size)
 {
-	__ASSERT(input_data != NULL, "Input data pointer is NULL");
-	__ASSERT(input_data_size >= INPUT_WINDOW_SIZE, "Not enough input data");
+	__ASSERT_NO_MSG(input_data != NULL);
+	__ASSERT_NO_MSG(input_data_size >= INPUT_WINDOW_SIZE);
 
 	size_t sample_cnt = 0;
 	int64_t start_time, delta;
@@ -106,6 +121,7 @@ static int run_model(const float *input_data, size_t input_data_size)
 	inference_cnt = 0;
 
 	while (sample_cnt < input_data_size) {
+		// Collect new sample (in this case: from compiled input data).
 		collect_sample(input_data[sample_cnt]);
 		sample_cnt++;
 
@@ -124,7 +140,7 @@ static int run_model(const float *input_data, size_t input_data_size)
 			print_inference_result(&inference_result, delta);
 
 			// Keep track of how many inferences have been performed
-			// to know the offset in the input data.
+			// to know the offset in the buffered data.
 			inference_cnt++;
 		}
 	}
