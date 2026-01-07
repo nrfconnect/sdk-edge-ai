@@ -34,13 +34,21 @@ config HELLO_EI_DATA_BUF_SIZE
 
 config EDGE_IMPULSE_DOWNLOAD_ALWAYS
 	bool "Download Edge Impulse library on each build"
-	default y
+	default n
 	help
 	  Request the build system to download the Edge Impulse library on each
 	  build. This results in the build target to always be considered out
 	  of date.
 	  If the re-downloaded zip has no code changes, then no re-building of
 	  source is performed and only download of zip file will be done.
+
+config EDGE_IMPULSE_COMPILE_INTO_APP
+	bool "Compile Edge Impulse library into application"
+	default y
+	help
+	  If enabled, the Edge Impulse library will be compiled directly into
+	  the application binary. If disabled, the library will be built as
+	  a separate static library and linked to the application.
 
 # This must be at the end to include Zephyr's Kconfig tree
 source "Kconfig.zephyr"

@@ -3,62 +3,37 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-# Edge Impulse library
 
+###############################################################################
+# Directory Configuration
+###############################################################################
 set(EDGE_IMPULSE_DIR ${CMAKE_BINARY_DIR}/edge_impulse)
 set(EDGE_IMPULSE_SOURCE_DIR ${EDGE_IMPULSE_DIR}/src/edge_impulse_project)
 set(EDGE_IMPULSE_BINARY_DIR ${EDGE_IMPULSE_DIR}/src/edge_impulse_project-build)
 set(EDGE_IMPULSE_STAMP_DIR ${EDGE_IMPULSE_DIR}/src/edge_impulse_project-stamp)
 set(EDGE_IMPULSE_LIBRARY ${EDGE_IMPULSE_BINARY_DIR}/libedge_impulse.a)
 
+# Generate compile options file for Edge Impulse external build
 file(GENERATE OUTPUT ${EDGE_IMPULSE_DIR}/compile_options.$<COMPILE_LANGUAGE>.cmake CONTENT
   "set(EI_$<COMPILE_LANGUAGE>_COMPILE_OPTIONS \"$<TARGET_PROPERTY:zephyr_interface,INTERFACE_COMPILE_OPTIONS>\")"
 )
 
-if(CONFIG_EDGE_IMPULSE_URI STREQUAL "")
-  message(FATAL_ERROR "CONFIG_EDGE_IMPULSE_URI must be specified")
-endif()
+###############################################################################
+# Configuration
+###############################################################################
 
-# Match first and any URI in the middle of input string.
-# URI can be separated by space, new line or hyphen.
-string(REGEX MATCHALL ".+[ \r\n;]" EI_URI_PREPARE_LIST "${CONFIG_EDGE_IMPULSE_URI}")
-# Match the last URI in input string
-string(REGEX MATCH "[^ \n\r;].+$" EI_URI_LIST_END "${CONFIG_EDGE_IMPULSE_URI}")
-
-list(APPEND EI_URI_PREPARE_LIST ${EI_URI_LIST_END})
-
-foreach(EI_URI IN LISTS EI_URI_PREPARE_LIST)
-  # Remove trailing spaces
-  string(STRIP ${EI_URI} EI_URI_STRING)
-
-  # # If URI is NOT a URL (http://, https://, file://), treat it as a local path
-  if(NOT ${EI_URI_STRING} MATCHES "^[a-z]+://")
-    # Expand any ${VARIABLES} in the path
-    string(CONFIGURE ${EI_URI_STRING} EI_URI_STRING)
-    if(NOT IS_ABSOLUTE ${EI_URI_STRING})
-      # Using application source directory as base directory for relative path.
-      set(EI_URI_STRING ${APPLICATION_SOURCE_DIR}/${EI_URI_STRING})
-    endif()
-  endif()
-
-  list(APPEND EI_URI_LIST ${EI_URI_STRING})
-endforeach()
-
-# Remove duplicated URIs from list
-list(REMOVE_DUPLICATES EI_URI_LIST)
-
+# Collect all Edge Impulse header files for dependency tracking
 file(GLOB_RECURSE edge_impulse_all_headers "${EDGE_IMPULSE_SOURCE_DIR}/*.h")
-if(COMMAND zephyr_get)
-  zephyr_get(EI_API_KEY_HEADER SYSBUILD GLOBAL)
-else()
-  set(EI_API_KEY_HEADER "")
-endif()
 
-# Enable linkage of Edge Impulse library from C code
+# Enable C linkage for Edge Impulse library (allows calling from C code)
 target_compile_definitions(zephyr_interface INTERFACE
   EI_C_LINKAGE=1
   EIDSP_SIGNAL_C_FN_POINTER=1
 )
+
+###############################################################################
+# External Project: build Edge Impulse library
+###############################################################################
 
 include(ExternalProject)
 ExternalProject_Add(edge_impulse_project
@@ -89,13 +64,26 @@ ExternalProject_Add(edge_impulse_project
   BUILD_ALWAYS True
   USES_TERMINAL_BUILD True
 )
-add_dependencies(edge_impulse_project zephyr_generated_headers)
-add_library(edge_impulse_imported STATIC IMPORTED)
-set_target_properties(edge_impulse_imported PROPERTIES IMPORTED_LOCATION ${EDGE_IMPULSE_LIBRARY})
-target_link_libraries(edge_impulse_imported INTERFACE kernel)
 
-# This targets remove the `edge_impulse_project-download` stamp file, which
-# causes the Edge impulse library to be fetched on each build invocation.
+##############################################################################
+# Imported Library target
+###############################################################################
+
+# Create imported library target pointing to built libedge_impulse.a
+add_library(edge_impulse_imported STATIC IMPORTED)
+set_target_properties(edge_impulse_imported PROPERTIES
+  IMPORTED_LOCATION ${EDGE_IMPULSE_LIBRARY}
+)
+
+add_dependencies(edge_impulse_project zephyr_generated_headers)
+
+###############################################################################
+# Force re-download on every build (optional)
+###############################################################################
+
+# This targets remove the `edge_impulse_project-download` stamp file created by
+# ExternalProject, which causes the Edge impulse library to be fetched on each
+# build invocation.
 # Note: This also results in the `ALL` target to always be considered out-of-date.
 if(CONFIG_EDGE_IMPULSE_DOWNLOAD_ALWAYS)
   if(${CMAKE_VERSION} VERSION_LESS "3.17")
@@ -111,36 +99,28 @@ if(CONFIG_EDGE_IMPULSE_DOWNLOAD_ALWAYS)
   )
 endif()
 
+##############################################################################
+# Interface Library: application-facing API
+###############################################################################
+
+# Create interface library that bundles everything needed to use Edge Impulse
+# from the application
 zephyr_interface_library_named(edge_impulse)
+
+# Provide include paths to Edge Impulse headers
 target_include_directories(edge_impulse INTERFACE
   ${EDGE_IMPULSE_SOURCE_DIR}
-  ${EDGE_IMPULSE_SOURCE_DIR}/tflite-model
-  ${EDGE_IMPULSE_SOURCE_DIR}/model-parameters
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/third_party/ruy
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/third_party/gemmlowp
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/third_party/flatbuffers/include
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/third_party
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/tensorflow
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/dsp
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/classifier
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/anomaly
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/CMSIS/NN/Include
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/CMSIS/DSP/PrivateInclude
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/CMSIS/DSP/Include
-  ${EDGE_IMPULSE_SOURCE_DIR}/edge-impulse-sdk/CMSIS/Core/Include
 )
 
+# Link the actual library
 target_link_libraries(edge_impulse INTERFACE edge_impulse_imported)
 
+# Ensure proper build order
 add_dependencies(edge_impulse
   zephyr_interface
   edge_impulse_project
   edge_impulse_project_download
 )
 
-# Suppress known build warnings for Edge Impulse library header files.
-target_compile_options(edge_impulse
-  INTERFACE -Wno-double-promotion
-  INTERFACE -Wno-unused
-)
+# Link Edge Impulse library to application
+target_link_libraries(app PRIVATE edge_impulse)
