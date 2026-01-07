@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Nordic Semiconductor ASA
+# Copyright (c) 2026 Nordic Semiconductor ASA
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
@@ -31,7 +31,9 @@ foreach(EI_URI IN LISTS EI_URI_PREPARE_LIST)
   # Remove trailing spaces
   string(STRIP ${EI_URI} EI_URI_STRING)
 
+  # # If URI is NOT a URL (http://, https://, file://), treat it as a local path
   if(NOT ${EI_URI_STRING} MATCHES "^[a-z]+://")
+    # Expand any ${VARIABLES} in the path
     string(CONFIGURE ${EI_URI_STRING} EI_URI_STRING)
     if(NOT IS_ABSOLUTE ${EI_URI_STRING})
       # Using application source directory as base directory for relative path.
@@ -51,6 +53,12 @@ if(COMMAND zephyr_get)
 else()
   set(EI_API_KEY_HEADER "")
 endif()
+
+# Enable linkage of Edge Impulse library from C code
+target_compile_definitions(zephyr_interface INTERFACE
+  EI_C_LINKAGE=1
+  EIDSP_SIGNAL_C_FN_POINTER=1
+)
 
 include(ExternalProject)
 ExternalProject_Add(edge_impulse_project
@@ -136,9 +144,3 @@ target_compile_options(edge_impulse
   INTERFACE -Wno-double-promotion
   INTERFACE -Wno-unused
 )
-
-if(CONFIG_EI_WRAPPER)
-  zephyr_library_named(ei_wrapper)
-  zephyr_library_sources(ei_wrapper.cpp)
-  zephyr_library_link_libraries(edge_impulse)
-endif()

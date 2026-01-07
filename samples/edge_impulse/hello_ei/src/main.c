@@ -7,10 +7,9 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-#include "ei_classifier_types.h"
-#include "model-parameters/model_metadata.h"
+#include "edge-impulse-sdk/dsp/numpy_types.h"
+#include "edge-impulse-sdk/classifier/ei_classifier_types.h"
 
-#include "ei_wrapper.h"
 #include "input_data.h"
 
 #define LOG_MODULE_NAME hello_ei
@@ -27,6 +26,12 @@ static struct {
 } sample_buffer;
 
 static size_t inference_cnt;
+
+/* External function declaration needed because the function is declared in
+ * edge-impulse-sdk/classifier/ei_run_classifier.h which includes some
+ * C++ source code files thus cannot be included in this C file.
+ */
+extern EI_IMPULSE_ERROR run_classifier(signal_t *signal, ei_impulse_result_t *result, bool debug);
 
 static void print_inference_result(const ei_impulse_result_t *result, int64_t duration)
 {
@@ -110,6 +115,17 @@ static int get_samples_from_buffer(size_t offset, size_t length, float *out_ptr)
 	return 0;
 }
 
+static EI_IMPULSE_ERROR run_ei_classification(ei_impulse_result_t *ei_result, size_t window_size)
+{
+	signal_t features_signal = {
+		.get_data = get_samples_from_buffer,
+		.total_length = window_size
+	};
+
+	return run_classifier(&features_signal, ei_result,
+		IS_ENABLED(CONFIG_EI_WRAPPER_DEBUG_MODE));
+}
+
 static int run_model(const float *input_data, size_t input_data_size)
 {
 	__ASSERT_NO_MSG(input_data != NULL);
@@ -118,7 +134,7 @@ static int run_model(const float *input_data, size_t input_data_size)
 	size_t sample_cnt = 0;
 	int64_t start_time, delta;
 	ei_impulse_result_t inference_result;
-	int err;
+	EI_IMPULSE_ERROR err;
 
 	clear_sample_buffer();
 	inference_cnt = 0;
@@ -133,11 +149,11 @@ static int run_model(const float *input_data, size_t input_data_size)
 		 */
 		if (sample_cnt >= EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE) {
 			start_time = k_uptime_get();
-			err = ei_wrapper_run_inference(&inference_result, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
+			err = run_ei_classification(&inference_result, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
 			delta = k_uptime_delta(&start_time);
 
-			if (err != 0) {
-				LOG_ERR("Inference failed with error code: %d", err);
+			if (err != EI_IMPULSE_OK) {
+				LOG_ERR("Classification failed with error code: %d", err);
 				return -1;
 			}
 
@@ -157,8 +173,6 @@ static int run_model(const float *input_data, size_t input_data_size)
 int main(void)
 {
 	print_model_info();
-
-	ei_wrapper_init(&get_samples_from_buffer);
 
 	LOG_INF("Running inference on sine wave input data");
 	LOG_SEPARATOR();
