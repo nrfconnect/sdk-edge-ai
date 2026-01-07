@@ -38,11 +38,11 @@ static void print_inference_result(const ei_impulse_result_t *result, int64_t du
 
 	for (size_t i = 0; i < EI_CLASSIFIER_LABEL_COUNT; i++) {
 		LOG_INF("%s => %.5f", result->classification[i].label,
-		        result->classification[i].value);
+			(double)result->classification[i].value);
 	}
 
 #if EI_CLASSIFIER_HAS_ANOMALY
-	LOG_INF("anomaly: %.5f", result->anomaly);
+	LOG_INF("anomaly: %.5f", (double)result->anomaly);
 #endif
 
 	LOG_INF("=== Inference time profiling ===");
