@@ -11,6 +11,6 @@
 	};
 
 	chosen {
-		ncs,ei-uart = &uart0;
+		ncs,ei-uart = &uart20;
 	};
 };
