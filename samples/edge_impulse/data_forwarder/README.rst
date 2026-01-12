@@ -27,8 +27,7 @@ The sample periodically performs the following operations:
 * Forwards the data through UART using the protocol specified by `Edge Impulse's data forwarder`_.
 
 .. note::
-   The sample uses UART only to forward the sensor data.
-   For this reason, sample logs are provided through RTT, unlike in other samples.
+   The sample uses 2 separate UARTs to forward the sensor data and to provide console output (logs) at the same time.
 
 See `Edge Impulse`_ website for more information about the Edge Impulse platform.
 
@@ -59,6 +58,7 @@ After programming the sample to your development kit, test it by performing the 
 
 1. Run the ``edge-impulse-data-forwarder`` Edge Impulse command line tool.
    The tool connects the device to your Edge Impulse project.
+   When prompted about UART port, provide the port on which the sensor data is forwarded, not the one containing console logs.
    See `Edge Impulse's data forwarder`_ documentation for a guide.
 #. Trigger sampling data from the device using Edge Impulse studio:
 
