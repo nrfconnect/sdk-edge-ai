@@ -8,6 +8,10 @@
 #include <stdio.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/uart.h>
+#include <zephyr/logging/log.h>
+
+#define LOG_MODULE_NAME data_forwarder
+LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 #define SAMPLE_PERIOD_MS	100
 
@@ -20,7 +24,7 @@ const static enum sensor_channel sensor_channels[] = {
 };
 
 static const struct device *sensor_dev = DEVICE_DT_GET(DT_NODELABEL(sensor_sim));
-static const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(ncs_ei_uart));
+static const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(ncs_ei_data_forwarder_uart));
 static atomic_t uart_busy;
 
 
@@ -35,19 +39,19 @@ static void uart_cb(const struct device *dev, struct uart_event *evt,
 static int init(void)
 {
 	if (!device_is_ready(sensor_dev)) {
-		printk("Sensor device not ready\n");
+		LOG_ERR("Sensor device not ready");
 		return -ENODEV;
 	}
 
 	if (!device_is_ready(uart_dev)) {
-		printk("UART device not ready\n");
+		LOG_ERR("UART device not ready");
 		return -ENODEV;
 	}
 
 	int err = uart_callback_set(uart_dev, uart_cb, NULL);
 
 	if (err) {
-		printk("Cannot set UART callback (err %d)\n", err);
+		LOG_ERR("Cannot set UART callback (err %d)", err);
 	}
 
 	return err;
@@ -68,7 +72,7 @@ static int provide_sensor_data(void)
 	}
 
 	if (err) {
-		printk("Sensor sampling error (err %d)\n", err);
+		LOG_ERR("Sensor sampling error (err %d)", err);
 		return err;
 	}
 
@@ -76,31 +80,31 @@ static int provide_sensor_data(void)
 	static uint8_t buf[UART_BUF_SIZE];
 
 	if (!atomic_cas(&uart_busy, false, true)) {
-		printk("UART not ready\n");
-		printk("Please use lower sampling frequency\n");
+		LOG_ERR("UART not ready - please use lower sampling frequency");
 		return -EBUSY;
 	}
 
+	/* Prepare format expected by edge-impulse-data-forwarder. */
 	int res = snprintf((char *)buf, sizeof(buf), "%.2f,%.2f,%.2f\r\n",
 			   sensor_value_to_double(&data[0]),
 			   sensor_value_to_double(&data[1]),
 			   sensor_value_to_double(&data[2]));
 
 	if (res < 0) {
-		printk("snprintf returned error (err %d)\n", res);
+		LOG_ERR("snprintf returned error (err %d)", res);
 		return res;
 	} else if (res >= sizeof(buf)) {
-		printk("UART_BUF_SIZE is too small to store the data\n");
-		printk("%d bytes are required\n", res);
+		LOG_ERR("UART_BUF_SIZE is too small to store the data - %d bytes are required",
+			res);
 		return -ENOMEM;
 	}
 
 	err = uart_tx(uart_dev, buf, res, SYS_FOREVER_MS);
 
 	if (err) {
-		printk("Cannot send data over UART (err %d)\n", err);
+		LOG_ERR("Cannot send data over UART (err %d)", err);
 	} else {
-		printk("Sent data: %s", buf);
+		LOG_DBG("Sent data: %s", buf);
 	}
 
 	return err;
@@ -108,10 +112,14 @@ static int provide_sensor_data(void)
 
 int main(void)
 {
-	if (init()) {
-		return 0;
+	int err;
+
+	err = init();
+	if (err) {
+		return err;
 	}
-	printk("Initialized\n");
+
+	LOG_INF("Initialization done. Starting data forwarding...");
 
 	int64_t uptime = k_uptime_get();
 	int64_t next_timeout = uptime + SAMPLE_PERIOD_MS;
@@ -124,7 +132,7 @@ int main(void)
 		uptime = k_uptime_get();
 
 		if (next_timeout <= uptime) {
-			printk("Sampling frequency is too high for sensor\n");
+			LOG_ERR("Sampling frequency is too high for sensor");
 			break;
 		}
 

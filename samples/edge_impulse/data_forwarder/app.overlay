@@ -11,6 +11,15 @@
 	};
 
 	chosen {
-		ncs,ei-uart = &uart20;
+		ncs,ei-data-forwarder-uart = &uart20;
+		zephyr,console = &uart30;
 	};
+};
+
+&uart20 {
+	status = "okay";
+};
+
+&uart30 {
+	status = "okay";
 };
