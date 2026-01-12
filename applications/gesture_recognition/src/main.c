@@ -16,13 +16,13 @@
 #include <zephyr/usb/usb_device.h>
 
 #include <nrf_edgeai/nrf_edgeai.h>
-#include <nrf_edgeai_generated/nrf_edgeai_user_model.h>
+#include <nrf_edgeai_user_model.h>
 
 #include <button/bsp_button.h>
 #include <led/bsp_led.h>
 #include <sensor/imu/bsp_imu.h>
 
-#include "ble/hid/ble_hid.h"
+#include <hid/ble_hid.h>
 #include "inference_postprocessing.h"
 
 //////////////////////////////////////////////////////////////////////////////
