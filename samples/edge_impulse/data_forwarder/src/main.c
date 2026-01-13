@@ -14,8 +14,13 @@
 LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 #define SAMPLE_PERIOD_MS	100
-
 #define UART_BUF_SIZE		64
+
+static void sensor_timer_handler(struct k_timer *timer_id);
+static void sensor_read_work_handler(struct k_work *work);
+
+K_WORK_DEFINE(sensor_read_work, sensor_read_work_handler);
+K_TIMER_DEFINE(sensor_timer, sensor_timer_handler, NULL);
 
 const static enum sensor_channel sensor_channels[] = {
 	SENSOR_CHAN_ACCEL_X,
@@ -110,6 +115,18 @@ static int provide_sensor_data(void)
 	return err;
 }
 
+static void sensor_read_work_handler(struct k_work *work)
+{
+	ARG_UNUSED(work);
+	provide_sensor_data();
+}
+
+static void sensor_timer_handler(struct k_timer *timer_id)
+{
+	ARG_UNUSED(timer_id);
+	k_work_submit(&sensor_read_work);
+}
+
 int main(void)
 {
 	int err;
@@ -121,24 +138,8 @@ int main(void)
 
 	LOG_INF("Initialization done. Starting data forwarding...");
 
-	int64_t uptime = k_uptime_get();
-	int64_t next_timeout = uptime + SAMPLE_PERIOD_MS;
-
-	while (1) {
-		if (provide_sensor_data()) {
-			break;
-		}
-
-		uptime = k_uptime_get();
-
-		if (next_timeout <= uptime) {
-			LOG_ERR("Sampling frequency is too high for sensor");
-			break;
-		}
-
-		k_sleep(K_MSEC(next_timeout - uptime));
-		next_timeout += SAMPLE_PERIOD_MS;
-	}
+	/* Start the timer to provide sensor data every SAMPLE_PERIOD_MS milliseconds */
+	k_timer_start(&sensor_timer, K_MSEC(SAMPLE_PERIOD_MS), K_MSEC(SAMPLE_PERIOD_MS));
 
 	return 0;
 }
