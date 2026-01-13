@@ -14,8 +14,12 @@
 LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 #define SAMPLE_PERIOD_MS	100
-
 #define UART_BUF_SIZE		64
+
+static void sensor_timer_handler(struct k_timer *timer_id);
+
+K_TIMER_DEFINE(sensor_timer, sensor_timer_handler, NULL);
+K_SEM_DEFINE(sensor_sem, 0, 1);
 
 const static enum sensor_channel sensor_channels[] = {
 	SENSOR_CHAN_ACCEL_X,
@@ -26,6 +30,7 @@ const static enum sensor_channel sensor_channels[] = {
 static const struct device *sensor_dev = DEVICE_DT_GET(DT_NODELABEL(sensor_sim));
 static const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(ncs_ei_data_forwarder_uart));
 static atomic_t uart_busy;
+static atomic_t processing_sensor_data;
 
 
 static void uart_cb(const struct device *dev, struct uart_event *evt,
@@ -38,6 +43,9 @@ static void uart_cb(const struct device *dev, struct uart_event *evt,
 
 static int init(void)
 {
+	atomic_set(&uart_busy, false);
+	atomic_set(&processing_sensor_data, false);
+
 	if (!device_is_ready(sensor_dev)) {
 		LOG_ERR("Sensor device not ready");
 		return -ENODEV;
@@ -79,6 +87,7 @@ static int provide_sensor_data(void)
 	/* Send data over UART. */
 	static uint8_t buf[UART_BUF_SIZE];
 
+	/* Protect UART and buffer access. */
 	if (!atomic_cas(&uart_busy, false, true)) {
 		LOG_ERR("UART not ready - please use lower sampling frequency");
 		return -EBUSY;
@@ -110,6 +119,17 @@ static int provide_sensor_data(void)
 	return err;
 }
 
+static void sensor_timer_handler(struct k_timer *timer_id)
+{
+	ARG_UNUSED(timer_id);
+
+	if (atomic_get(&processing_sensor_data)) {
+		LOG_ERR("Previous sensor read still pending - missed sample!");
+	}
+
+	k_sem_give(&sensor_sem);
+}
+
 int main(void)
 {
 	int err;
@@ -121,23 +141,14 @@ int main(void)
 
 	LOG_INF("Initialization done. Starting data forwarding...");
 
-	int64_t uptime = k_uptime_get();
-	int64_t next_timeout = uptime + SAMPLE_PERIOD_MS;
+	/* Start the timer to provide sensor data every SAMPLE_PERIOD_MS milliseconds. */
+	k_timer_start(&sensor_timer, K_MSEC(SAMPLE_PERIOD_MS), K_MSEC(SAMPLE_PERIOD_MS));
 
 	while (1) {
-		if (provide_sensor_data()) {
-			break;
-		}
-
-		uptime = k_uptime_get();
-
-		if (next_timeout <= uptime) {
-			LOG_ERR("Sampling frequency is too high for sensor");
-			break;
-		}
-
-		k_sleep(K_MSEC(next_timeout - uptime));
-		next_timeout += SAMPLE_PERIOD_MS;
+		k_sem_take(&sensor_sem, K_FOREVER);
+		atomic_set(&processing_sensor_data, true);
+		provide_sensor_data();
+		atomic_set(&processing_sensor_data, false);
 	}
 
 	return 0;
