@@ -15,6 +15,7 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 #define SAMPLE_PERIOD_MS	100
 #define UART_BUF_SIZE		64
+#define NUM_OF_SENSOR_CHANNELS	ARRAY_SIZE(sensor_channels)
 
 static void sensor_timer_handler(struct k_timer *timer_id);
 
@@ -67,11 +68,11 @@ static int init(void)
 
 static int provide_sensor_data(void)
 {
-	struct sensor_value data[ARRAY_SIZE(sensor_channels)];
+	struct sensor_value data[NUM_OF_SENSOR_CHANNELS];
 	int err = 0;
 
 	/* Sample simulated sensor. */
-	for (size_t i = 0; (!err) && (i < ARRAY_SIZE(sensor_channels)); i++) {
+	for (size_t i = 0; (!err) && (i < NUM_OF_SENSOR_CHANNELS); i++) {
 		err = sensor_sample_fetch_chan(sensor_dev, sensor_channels[i]);
 		if (!err) {
 			err = sensor_channel_get(sensor_dev, sensor_channels[i],
@@ -93,6 +94,9 @@ static int provide_sensor_data(void)
 		return -EBUSY;
 	}
 
+	BUILD_ASSERT(3 == NUM_OF_SENSOR_CHANNELS,
+		     "Output format of snprintf assumes 3 sensor channels");
+
 	/* Prepare format expected by edge-impulse-data-forwarder. */
 	int res = snprintf((char *)buf, sizeof(buf), "%.2f,%.2f,%.2f\r\n",
 			   sensor_value_to_double(&data[0]),
@@ -112,6 +116,7 @@ static int provide_sensor_data(void)
 
 	if (err) {
 		LOG_ERR("Cannot send data over UART (err %d)", err);
+		atomic_set(&uart_busy, false);
 	} else {
 		LOG_DBG("Sent data: %s", buf);
 	}
@@ -132,9 +137,7 @@ static void sensor_timer_handler(struct k_timer *timer_id)
 
 int main(void)
 {
-	int err;
-
-	err = init();
+	int err = init();
 	if (err) {
 		return err;
 	}
