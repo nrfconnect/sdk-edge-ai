@@ -1,47 +1,23 @@
 sample:
   description: Sample showing basic Edge Impulse usage
   name: Hello Edge Impulse sample
-common:
-  harness: console
-  harness_config:
-    ordered: true
-    regex:
-      - "Classification results"
-      - "Value: (1[.]0[0-9]+)|(0[.]9[0-9]+)\tLabel: sine"
-      - "Value: 0[.]0[0-9]+\tLabel: triangle"
-      - "Value: 0[.]0[0-9]+\tLabel: idle"
-      - "Anomaly: (-[0-9]+[.][0-9]+)|(0[.]0[0-9]+)"
-    type: multi_line
-  platform_allow:
-    - nrf52dk/nrf52832
-    - nrf52840dk/nrf52840
-    - nrf5340dk/nrf5340/cpuapp
-    - nrf5340dk/nrf5340/cpuapp/ns
-    - nrf54l15dk/nrf54l05/cpuapp
-    - nrf54l15dk/nrf54l10/cpuapp
-    - nrf54l15dk/nrf54l15/cpuapp
-    - nrf54h20dk/nrf54h20/cpuapp
-    - nrf9160dk/nrf9160/ns
-    - qemu_cortex_m3
-    - thingy91x/nrf9151/ns
-  integration_platforms:
-    - nrf52dk/nrf52832
-    - nrf52840dk/nrf52840
-    - nrf5340dk/nrf5340/cpuapp
-    - nrf5340dk/nrf5340/cpuapp/ns
-    - nrf54l15dk/nrf54l05/cpuapp
-    - nrf54l15dk/nrf54l10/cpuapp
-    - nrf54l15dk/nrf54l15/cpuapp
-    - nrf54h20dk/nrf54h20/cpuapp
-    - nrf9160dk/nrf9160/ns
-    - qemu_cortex_m3
-  platform_exclude:
-    - native_sim
-    - qemu_x86
 tests:
-  sample.edge_impulse.wrapper:
+  sample.edge_impulse.hello_ei:
     sysbuild: true
     build_only: false
-    tags:
-      - sysbuild
-      - ci_samples_edge_impulse
+    harness: console
+    harness_config:
+      ordered: true
+      regex:
+        - "=== Inference result ==="
+        - "idle => 0[.]0[0-9]+"
+        - "sine => (1[.]0[0-9]+)|(0[.]9[0-9]+)"
+        - "triangle => 0[.]0[0-9]+"
+        - "Anomaly: (-[0-9]+[.][0-9]+)|(0[.]0[0-9]+)"
+      type: multi_line
+    platform_allow:
+      - nrf54l15dk/nrf54l15/cpuapp
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    integration_platforms:
+      - nrf54l15dk/nrf54l15/cpuapp
+      - nrf54lm20dk/nrf54lm20a/cpuapp
