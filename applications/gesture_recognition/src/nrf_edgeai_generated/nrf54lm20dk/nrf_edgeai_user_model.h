@@ -1,0 +1,25 @@
+/* 2026-01-23T11:10:10.318409 */
+
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+#ifndef _NRF_EDGEAI_USER_MODEL_H_
+#define _NRF_EDGEAI_USER_MODEL_H_
+
+#include <nrf_edgeai/rt/nrf_edgeai_types.h>
+
+#ifdef __cplusplus 
+extern "C" {
+#endif
+
+nrf_edgeai_t* nrf_edgeai_user_model(void);
+uint32_t nrf_edgeai_user_model_size(void);
+
+#ifdef __cplusplus 
+}
+#endif 
+
+#endif /* _NRF_EDGEAI_USER_MODEL_H_ */
