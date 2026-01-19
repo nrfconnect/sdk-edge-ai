@@ -236,8 +236,8 @@ static void led_update_work_handler(struct k_work *work)
 {
 	static const led_set_func_t LED_VS_KEYBOARD_MODE[] = 
 	{
-		[APP_REMOTECTRL_MODE_PRESENTATION] = bsp_led_set_blue,
-		[APP_REMOTECTRL_MODE_MUSIC] = bsp_led_set_green,
+		[APP_REMOTECTRL_MODE_PRESENTATION] = bsp_led_set_led2,
+		[APP_REMOTECTRL_MODE_MUSIC] = bsp_led_set_led1,
 	};
 
 	static bool rising = true;
@@ -250,7 +250,7 @@ static void led_update_work_handler(struct k_work *work)
 	}
 	else
 	{
-		bsp_led_set_red(brightness);
+		bsp_led_set_led0(brightness);
 	}
 
 	if (rising) {
