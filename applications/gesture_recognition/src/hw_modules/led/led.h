@@ -6,17 +6,17 @@
 
 /**
  *
- * @defgroup bsp_led LEDs control functions
+ * @defgroup led LEDs control functions
  * @{
  * @ingroup bsp
  *
  * @brief This module provides LEDs control functions.
  *
  */
-#ifndef __BSP_LED_H__
-#define __BSP_LED_H__
+#ifndef __LED_H__
+#define __LED_H__
 
-#include "../bsp_common.h"
+#include "../common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,7 +28,7 @@ extern "C" {
  * 
  * @return Operation status, 0 for success 
  */
-int bsp_led_init(void);
+int led_init(void);
 
 /**
  * @brief Turn on LED channel 0 (red on RGB boards, LED0 on discrete boards)
@@ -37,7 +37,7 @@ int bsp_led_init(void);
  *
  * @return Operation status, 0 for success
  */
-int bsp_led_set_led0(float brightness);
+int led_set_led0(float brightness);
 
 /**
  * @brief Turn on LED channel 1 (green on RGB boards, LED1 on discrete boards)
@@ -46,7 +46,7 @@ int bsp_led_set_led0(float brightness);
  *
  * @return Operation status, 0 for success
  */
-int bsp_led_set_led1(float brightness);
+int led_set_led1(float brightness);
 
 /**
  * @brief Turn on LED channel 2 (blue on RGB boards, LED2 on discrete boards)
@@ -55,7 +55,7 @@ int bsp_led_set_led1(float brightness);
  *
  * @return Operation status, 0 for success
  */
-int bsp_led_set_led2(float brightness);
+int led_set_led2(float brightness);
 
 /**
  * @brief Turn on LED channels 0..2 with specific brightness
@@ -66,14 +66,14 @@ int bsp_led_set_led2(float brightness);
  * 
  * @return Operation status, 0 for success 
  */
-int bsp_led_set_leds(float led0_brightness, float led1_brightness, float led2_brightness);
+int led_set_leds(float led0_brightness, float led1_brightness, float led2_brightness);
 
 /**
  * @brief Turn off all LEDs
  * 
  * @return Operation status, 0 for success  
  */
-int bsp_led_off(void);
+int led_off(void);
 
 /**
  * @brief Blink LED channel 0 (red on RGB boards, LED0 on discrete boards)
@@ -86,7 +86,7 @@ int bsp_led_off(void);
  *
  * @return Operation status, 0 for success
  */
-int bsp_led_blink_led0(float brightness, int32_t on_ms, int32_t off_ms);
+int led_blink_led0(float brightness, int32_t on_ms, int32_t off_ms);
 
 /**
  * @brief Blink LED channel 1 (green on RGB boards, LED1 on discrete boards)
@@ -99,7 +99,7 @@ int bsp_led_blink_led0(float brightness, int32_t on_ms, int32_t off_ms);
  *
  * @return Operation status, 0 for success
  */
-int bsp_led_blink_led1(float brightness, int32_t on_ms, int32_t off_ms);
+int led_blink_led1(float brightness, int32_t on_ms, int32_t off_ms);
 
 /**
  * @brief Blink LED channel 2 (blue on RGB boards, LED2 on discrete boards)
@@ -112,7 +112,7 @@ int bsp_led_blink_led1(float brightness, int32_t on_ms, int32_t off_ms);
  *
  * @return Operation status, 0 for success
  */
-int bsp_led_blink_led2(float brightness, int32_t on_ms, int32_t off_ms);
+int led_blink_led2(float brightness, int32_t on_ms, int32_t off_ms);
 
 /**
  * @brief Blink LED channels 0..2 with specific brightness
@@ -127,14 +127,14 @@ int bsp_led_blink_led2(float brightness, int32_t on_ms, int32_t off_ms);
  * 
  * @return Operation status, 0 for success
  */
-int bsp_led_blink_leds(float led0_brightness, float led1_brightness, float led2_brightness, int32_t on_ms, int32_t off_ms);
+int led_blink_leds(float led0_brightness, float led1_brightness, float led2_brightness, int32_t on_ms, int32_t off_ms);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 
-#endif /* __BSP_LED_H__ */
+#endif /* __LED_H__ */
 
 /**
  * @}

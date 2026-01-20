@@ -19,9 +19,9 @@
 #include <nrf_edgeai/nrf_edgeai.h>
 #include <nrf_edgeai_user_model.h>
 
-#include <button/bsp_button.h>
-#include <led/bsp_led.h>
-#include <sensor/imu/bsp_imu.h>
+#include <button/button.h>
+#include <led/led.h>
+#include <sensor/imu/imu.h>
 
 #include <hid/ble_hid.h>
 #include "inference_postprocessing.h"
@@ -120,7 +120,7 @@ int main(void)
 	LOG_INF("nRF Edge AI Lab Solution id: %s",
 		nrf_edgeai_solution_id_str(p_model_));
 
-	bsp_imu_data_t imu_data = {0};
+	imu_data_t imu_data = {0};
 	int16_t input_data[NRF_EDGEAI_INPUT_DATA_LEN];
 
 	for (;;)
@@ -129,7 +129,7 @@ int main(void)
 		k_sem_take(&imu_data_ready_sem_, K_FOREVER);
 
 		/** Read IMU sensor data sample */
-		if (bsp_imu_read(&imu_data) != BSP_STATUS_SUCCESS) {
+		if (imu_read(&imu_data) != STATUS_SUCCESS) {
 			continue;
 		}
 
@@ -187,7 +187,7 @@ static void board_support_init_(void)
 	k_work_init(&button_work, button_work_handler);
 
 	/** Initialize LEDs */
-	ret = bsp_led_init();
+	ret = led_init();
 	if (ret != 0) {
 		LOG_ERR("Failed to initialize LEDs module, error = %d", ret);
 	}
@@ -195,22 +195,22 @@ static void board_support_init_(void)
 		      K_MSEC(BLINK_LED_TIMER_PERIOD_MS));
 
 	/** Initialize user button */
-	ret = bsp_button_init();
+	ret = button_init();
 	if (ret != 0) {
 		LOG_ERR("Failed to initialize user button, error = %d", ret);
 	}
-	bsp_button_reg_click_handler(button_click_handler_);
+	button_reg_click_handler(button_click_handler_);
 
 	/** Initialize IMU sensor  */
-	bsp_imu_config_t imu_config = 
+	imu_config_t imu_config = 
 	{
-		.accel_fs_g = BSP_IMU_ACCEL_SCALE_4G,
-		.gyro_fs_dps = BSP_IMU_ACCEL_SCALE_1000DPS,
+		.accel_fs_g = IMU_ACCEL_SCALE_4G,
+		.gyro_fs_dps = IMU_ACCEL_SCALE_1000DPS,
 		.data_rate_hz = 100
 	};
 
-	bsp_status_t status = bsp_imu_init(&imu_config, imu_data_ready_cb_);
-	if (status != BSP_STATUS_SUCCESS) {
+	status_t status = imu_init(&imu_config, imu_data_ready_cb_);
+	if (status != STATUS_SUCCESS) {
 		LOG_ERR("Failed to initialize IMU sensor, error = %d", (int)status);
 	}
 	k_sem_init(&imu_data_ready_sem_, 0, 1); /* Initial count 0, max count 1 */
@@ -236,8 +236,8 @@ static void led_update_work_handler(struct k_work *work)
 {
 	static const led_set_func_t LED_VS_KEYBOARD_MODE[] = 
 	{
-		[APP_REMOTECTRL_MODE_PRESENTATION] = bsp_led_set_led2,
-		[APP_REMOTECTRL_MODE_MUSIC] = bsp_led_set_led1,
+		[APP_REMOTECTRL_MODE_PRESENTATION] = led_set_led2,
+		[APP_REMOTECTRL_MODE_MUSIC] = led_set_led1,
 	};
 
 	static bool rising = true;
@@ -250,7 +250,7 @@ static void led_update_work_handler(struct k_work *work)
 	}
 	else
 	{
-		bsp_led_set_led0(brightness);
+		led_set_led0(brightness);
 	}
 
 	if (rising) {
@@ -270,7 +270,7 @@ static void button_work_handler(struct k_work *work)
 {
 	/* Handle button logic in thread context */
 	keyboard_ctrl_mode_ ^= 1;
-	bsp_led_off();
+	led_off();
 }
 
 static void button_click_handler_(bool pressed)
@@ -284,7 +284,7 @@ static void button_click_handler_(bool pressed)
 static void ble_connection_cb_(bool connected)
 {
 	ble_connected_ = connected;
-	bsp_led_off();
+	led_off();
 }
 
 static void imu_data_ready_cb_(void)

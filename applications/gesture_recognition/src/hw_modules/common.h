@@ -6,15 +6,15 @@
 
 /**
  *
- * @defgroup bsp_common Common
+ * @defgroup common Common
  * @{
  * @ingroup bsp
  *
  * @brief BSP common useful utils, types and macro.
  *
  */
-#ifndef __BSP_COMMON_H__
-#define __BSP_COMMON_H__
+#ifndef __COMMON_H__
+#define __COMMON_H__
 
 #include <stdint.h>
 #include <string.h>
@@ -113,31 +113,31 @@ extern "C" {
 
 /**
  * @brief Macro for checking argument for NULL.
- *        Macro will call return with the status BSP_STATUS_NULL_ARGUMENT.
+ *        Macro will call return with the status STATUS_NULL_ARGUMENT.
  *
  * @param[in]   x  Argument to be checked.
  *
  */
-#define BSP_NULL_CHECK(x)                               \
+#define NULL_CHECK(x)                               \
 	do                                                  \
 	{                                                   \
 		if ( (x) == NULL )                              \
 		{                                               \
-			return BSP_STATUS_NULL_ARGUMENT;            \
+			return STATUS_NULL_ARGUMENT;            \
 		}                                               \
 	} while(0)
 
 /**
- * @brief Macro for verifying that the provided status is BSP_STATUS_SUCCESS.
+ * @brief Macro for verifying that the provided status is STATUS_SUCCESS.
  *        It will cause the exterior function to return an error code if it is
- *        not @ref BSP_STATUS_SUCCESS.
+ *        not @ref STATUS_SUCCESS.
  *
- * @param[in] status     Status to check vs BSP_STATUS_SUCCESS.
+ * @param[in] status     Status to check vs STATUS_SUCCESS.
  */
-#define BSP_VERIFY_SUCCESS(status) \
+#define VERIFY_SUCCESS(status) \
 do                                                      \
 {                                                       \
-	if ((status) != BSP_STATUS_SUCCESS)                 \
+	if ((status) != STATUS_SUCCESS)                 \
 	{                                                   \
 		return (status);                                \
 	}                                                   \
@@ -145,16 +145,16 @@ do                                                      \
 
 /**
  * @brief Macro for verifying that the provided argumets is valid. It will cause the exterior
- *        function to return an error code if it is not @ref BSP_STATUS_INVALID_ARGUMENT.
+ *        function to return an error code if it is not @ref STATUS_INVALID_ARGUMENT.
  *
  * @param[in] is_valid     boolean comparison on the validity of the argument.
  */
-#define BSP_VERIFY_VALID_ARG(is_valid)                  \
+#define VERIFY_VALID_ARG(is_valid)                  \
 do                                                      \
 {                                                       \
 	if (!(is_valid))                                    \
 	{                                                   \
-		return BSP_STATUS_INVALID_ARGUMENT;             \
+		return STATUS_INVALID_ARGUMENT;             \
 	}                                                   \
 } while(0)
 
@@ -164,7 +164,7 @@ do                                                      \
  * @param[in] err_cond    boolean condition to be checked.
  * @param[in] err         Return status if condition failed.
  */
-#define BSP_RETURN_IF(err_cond, err) __RETURN_CONDITIONAL(err_cond, err)
+#define HW_RETURN_IF(err_cond, err) __RETURN_CONDITIONAL(err_cond, err)
 
 /**
  * @brief Return if expr == true.
@@ -185,10 +185,10 @@ do                                                      \
 #endif
 
 /** Generic callback type */
-typedef void(*bsp_generic_cb_t)(void);
+typedef void(*generic_cb_t)(void);
 
 /** Base interrupt request handler type */
-typedef bsp_generic_cb_t bsp_irq_handler_t;
+typedef generic_cb_t irq_handler_t;
 
 /**
  * @brief Base async data ready callback type
@@ -196,7 +196,7 @@ typedef bsp_generic_cb_t bsp_irq_handler_t;
  * @param[in] data        A pointer to the data buffer that was passed to the async function
  * @param[in] data_size   Size of data that was passed to the async function, in bytes
  */
-typedef void(*bsp_async_drdy_cb_t)(void *data, uint32_t data_size);
+typedef void(*async_drdy_cb_t)(void *data, uint32_t data_size);
 
 /**
  * Generic bsp operation status code
@@ -205,46 +205,46 @@ typedef void(*bsp_async_drdy_cb_t)(void *data, uint32_t data_size);
  * information on their status. It may also be used by functions as a
  * return code.
  */
-typedef enum bsp_status_e
+typedef enum status_e
 {
 	/** Operation successful */
-	BSP_STATUS_SUCCESS,
+	STATUS_SUCCESS,
 
 	/** The operation failed because the module is already in the
 	 * requested mode */
-	BSP_STATUS_ALREADY_IN_MODE,
+	STATUS_ALREADY_IN_MODE,
 
 	/** There was an error communicating with hardware */
-	BSP_STATUS_HARDWARE_ERROR,
+	STATUS_HARDWARE_ERROR,
 
 	/** The operation failed with an unspecified error */
-	BSP_STATUS_UNSPECIFIED_ERROR,
+	STATUS_UNSPECIFIED_ERROR,
 
 	/** The argument supplied to the operation was invalid */
-	BSP_STATUS_INVALID_ARGUMENT,
+	STATUS_INVALID_ARGUMENT,
 
 	/** The argument supplied to the operation was NULL */
-	BSP_STATUS_NULL_ARGUMENT,
+	STATUS_NULL_ARGUMENT,
 
 	/** The operation failed because the module was busy */
-	BSP_STATUS_BUSY,
+	STATUS_BUSY,
 
 	/** The requested operation was not available */
-	BSP_STATUS_UNAVAILABLE,
+	STATUS_UNAVAILABLE,
 
 	/** The operation or service not supported */
-	BSP_STATUS_NOT_SUPPORTED,
+	STATUS_NOT_SUPPORTED,
 
 	/** The requested operation timeout */
-	BSP_STATUS_TIMEOUT,
-} bsp_status_t;
+	STATUS_TIMEOUT,
+} status_t;
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 
-#endif /* __BSP_COMMON_H__ */
+#endif /* __COMMON_H__ */
 
 /**
  * @}

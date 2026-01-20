@@ -6,18 +6,18 @@
 
 /**
  *
- * @defgroup bsp_button Button control functions
+ * @defgroup button Button control functions
  * @{
  * @ingroup bsp
  *
  *
  */
-#ifndef __BSP_BUTTON_H__
-#define __BSP_BUTTON_H__
+#ifndef __BUTTON_H__
+#define __BUTTON_H__
 
-#include <bsp_common.h>
+#include <common.h>
 
-typedef void (*bsp_button_click_handler_t)(bool is_pressed);
+typedef void (*button_click_handler_t)(bool is_pressed);
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,21 +28,21 @@ extern "C" {
  * 
  * @return Operation status result, 0 for success
  */
-int bsp_button_init(void);
+int button_init(void);
 
 /**
  * @brief Register button click handler
  * 
  * @param click_handler Button click handler
  */
-void bsp_button_reg_click_handler(bsp_button_click_handler_t click_handler);
+void button_reg_click_handler(button_click_handler_t click_handler);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 
-#endif /* __BSP_BUTTON_H__ */
+#endif /* __BUTTON_H__ */
 
 /**
  * @}
