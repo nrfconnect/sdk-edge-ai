@@ -15,46 +15,7 @@ Requirements
 
 The sample supports the following development kits:
 
-.. list-table::
-   :header-rows: 1
-
-   * - Hardware platforms
-     - PCA
-     - Board name
-     - Board target
-   * - `nRF54H20 DK`_
-     - PCA10175
-     - `nrf54h20dk`_
-     - ``nrf54h20dk/nrf54h20/cpuapp``
-   * - `nRF54L15 DK`_
-     - PCA10156
-     - `nrf54l15dk`_
-     - ``nrf54l15dk/nrf54l15/cpuapp``
-   * - `nRF54L15 DK (emulating nRF54L10) <nRF54L15 DK_>`_
-     - PCA10156
-     - `nrf54l15dk <nRF54L10 emulation_>`_
-     - ``nrf54l15dk/nrf54l10/cpuapp``
-   * - `nRF54L15 DK (emulating nRF54L05) <nRF54L15 DK_>`_
-     - PCA10156
-     - `nrf54l15dk <nRF54L05 emulation_>`_
-     - ``nrf54l15dk/nrf54l05/cpuapp``
-   * - `nRF5340 DK`_
-     - PCA10095
-     - `nrf5340dk`_
-     - | ``nrf5340dk/nrf5340/cpuapp``
-       | ``nrf5340dk/nrf5340/cpuapp/ns``
-   * - `Thingy:53`_
-     - PCA20053
-     - `thingy53`_
-     - ``thingy53/nrf5340/cpuapp``
-   * - `nRF52 DK`_
-     - PCA10040
-     - `nrf52dk`_
-     - ``nrf52dk/nrf52832``
-   * - `nRF52840 DK <nRF52 DK_>`_
-     - PCA10059
-     - `nrf52840dk`_
-     - ``nrf52840dk/nrf52840``
+.. table-from-sample-yaml::
 
 Overview
 ********
@@ -91,12 +52,12 @@ In your :file:`prj.conf` file, the following settings are applied to ensure the 
    CONFIG_RTT_CONSOLE=n
    CONFIG_NEWLIB_LIBC_FLOAT_PRINTF=y
 
-.. include:: ../../includes/include_kconfig_edgeai.txt
+.. include:: /includes/include_kconfig_edgeai.txt
 
 Building and running
 ********************
 
-.. include:: ../../includes/include_building_and_running_edgeai.txt
+.. include:: /includes/include_building_and_running_edgeai.txt
 
 Testing
 =======

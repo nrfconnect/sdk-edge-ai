@@ -21,6 +21,6 @@ For detailed instructions, refer to the following pages:
 .. toctree::
    :maxdepth: 1
 
-   regression
-   classification
-   anomaly
+   /../samples/nrf_edgeai/regression/README.rst
+   /../samples/nrf_edgeai/classification/README.rst
+   /../samples/nrf_edgeai/anomaly/README.rst
