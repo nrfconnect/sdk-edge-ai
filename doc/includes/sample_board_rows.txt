@@ -1,0 +1,51 @@
+.. heading
+
+| Hardware platforms | PCA | Board name | Board target |
+
+
+
+.. nrf52dk_nrf52832
+
+| `nRF52 DK`_ | PCA10040 | `nrf52dk`_ | ``nrf52dk/nrf52832`` |
+
+.. nrf52840dk_nrf52840
+
+| `nRF52840 DK <nRF52 DK_>`_ | PCA10056 | `nrf52840dk`_ | ``nrf52840dk/nrf52840`` |
+
+
+
+.. nrf5340dk_nrf5340_cpuapp
+
+| `nRF5340 DK`_ | PCA10095 | `nrf5340dk`_ | ``nrf5340dk/nrf5340/cpuapp`` |
+
+
+
+.. thingy53_nrf5340_cpuapp
+
+| `Thingy:53`_ | PCA20053 | `thingy53`_ | ``thingy53/nrf5340/cpuapp`` |
+
+
+
+.. nrf54l15dk_nrf54l15_cpuapp
+
+| `nRF54L15 DK`_ | PCA10156 | `nrf54l15dk`_ | ``nrf54l15dk/nrf54l15/cpuapp`` |
+
+.. nrf54l15dk_nrf54l10_cpuapp
+
+| `nRF54L15 DK (emulating nRF54L10) <nRF54L15 DK_>`_ | PCA10156 | `nrf54l15dk <nRF54L10 emulation_>`_ | ``nrf54l15dk/nrf54l10/cpuapp`` |
+
+.. nrf54l15dk_nrf54l05_cpuapp
+
+| `nRF54L15 DK (emulating nRF54L05) <nRF54L15 DK_>`_ | PCA10156 | `nrf54l15dk <nRF54L05 emulation_>`_ | ``nrf54l15dk/nrf54l05/cpuapp`` |
+
+
+
+.. nrf54h20dk_nrf54h20_cpuapp
+
+| `nRF54H20 DK`_ | PCA10175 | `nrf54h20dk`_ | ``nrf54h20dk/nrf54h20/cpuapp`` |
+
+
+
+.. nrf54lm20dk_nrf54lm20a_cpuapp
+
+| `nRF54LM20 DK <nRF54L15 DK_>`_ | PCA10184 | `nrf54lm20dk`_ | ``nrf54lm20dk/nrf54lm20a/cpuapp`` |

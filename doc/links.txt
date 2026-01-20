@@ -30,7 +30,10 @@
 
 .. _`nRF54L15 DK`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/app_dev/device_guides/nrf54l/index.html#ug-nrf54l
 .. _`nrf54l15dk`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk
-.. _`nRF54L15 emulation`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk-nrf54l10
+.. _`nRF54L10 emulation`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk-nrf54l10
+.. _`nRF54L05 emulation`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk-nrf54l05
+
+.. _`nrf54lm20dk`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/boards/nordic/nrf54lm20dk/doc/index.html#nrf54lm20dk
 
 .. _`nRF5340 DK`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/app_dev/device_guides/nrf53/index.html#ug-nrf5340
 .. _`nrf5340dk`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/boards/nordic/nrf5340dk/doc/index.html#nrf5340dk

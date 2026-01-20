@@ -14,6 +14,22 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import sys
+from pathlib import Path
+
+import west.manifest
+
+manifest = west.manifest.Manifest.from_topdir()
+
+EDGE_AI_BASE = Path(manifest.repo_abspath)
+NRF_BASE = Path(manifest.get_projects(['nrf'])[0].abspath)
+ZEPHYR_BASE = Path(manifest.get_projects(['zephyr'])[0].abspath)
+
+sys.path.insert(0, str(NRF_BASE / 'doc' / '_extensions'))
+sys.path.insert(0, str(ZEPHYR_BASE / 'doc' / '_extensions'))
+
+# Needed by options_from_kconfig extension which is not self contained
+sys.path.insert(0, str(ZEPHYR_BASE / 'scripts'))
 
 # -- Project information -----------------------------------------------------
 
@@ -32,7 +48,10 @@ release = '2025'
 # ones.
 extensions = [
     'sphinx_tabs.tabs',
-    'sphinx_copybutton'
+    'sphinx_copybutton',
+    'options_from_kconfig',
+    'table_from_rows',
+    'zephyr.external_content',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -43,6 +62,23 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+# Options for external_content -------------------------------------------------
+
+external_content_contents = [
+    (EDGE_AI_BASE / "doc", "[!_]*"),
+    (EDGE_AI_BASE, "applications/**/*.rst"),
+    (EDGE_AI_BASE, "samples/**/*.rst"),
+]
+
+# Options for table_from_rows --------------------------------------------------
+
+table_from_rows_base_dir = EDGE_AI_BASE
+table_from_sample_yaml_board_reference = "/includes/sample_board_rows.txt"
+
+# Options for options_from_kconfig ---------------------------------------------
+
+options_from_kconfig_base_dir = EDGE_AI_BASE
+options_from_kconfig_zephyr_dir = ZEPHYR_BASE
 
 # -- Options for HTML output -------------------------------------------------
 
