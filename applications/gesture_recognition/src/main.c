@@ -24,7 +24,6 @@
 
 #include "ble/hid/ble_hid.h"
 #include "inference_postprocessing.h"
-#include "app_version.h"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -123,10 +122,11 @@ int main(void)
     
     nrf_edgeai_rt_version_t version = nrf_edgeai_runtime_version();
 
-    printk("nRF Edge AI Gestures Recognition Demo: \r\n");
-    printk("\t Application version: %d.%d.%d\r\n", APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_PATCH);
-    printk("\t nRF Edge AI Runtime Version: %d.%d.%d\r\n", version.field.major, version.field.minor, version.field.patch);
-    printk("\t nRF Edge AI Lab Solution id: %s\r\n", nrf_edgeai_solution_id_str(p_model_));
+	LOG_INF("nRF Edge AI Gestures Recognition Demo:");
+	LOG_INF("nRF Edge AI Runtime Version: %d.%d.%d",
+		version.field.major, version.field.minor, version.field.patch);
+	LOG_INF("nRF Edge AI Lab Solution id: %s",
+		nrf_edgeai_solution_id_str(p_model_));
 
     bsp_imu_data_t imu_data = {0};
     int16_t input_data[NRF_EDGEAI_INPUT_DATA_LEN];
