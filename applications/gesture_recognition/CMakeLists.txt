@@ -13,7 +13,7 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(gesture_recognition)
 
 # Check if platform-specific neural network model file exists
-set(NN_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_lib/${BOARD}")
+set(NN_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/${BOARD}")
 set(NN_PATH "${NN_SOURCE}/nrf_edgeai_user_model.c")
 if(EXISTS "${NN_PATH}")
     message(STATUS "Using Edge AI model for board: ${BOARD}")
@@ -25,7 +25,7 @@ else()
 endif()
 
 target_include_directories(app PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/hw_modules
   ${CMAKE_CURRENT_SOURCE_DIR}/src/ble
   ${NN_SOURCE}
 )
@@ -34,8 +34,8 @@ target_sources(app PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/inference_postprocessing.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/ble/hid/ble_hid.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/button/bsp_button.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/led/bsp_led.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/sensor/imu/bsp_imu.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/hw_modules/button/button.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/hw_modules/led/led.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/hw_modules/sensor/imu/imu.c
   ${NN_PATH}
 )

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include "bsp_led.h"
+#include "led.h"
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pwm.h>
@@ -12,7 +12,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(bsp_led, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(led, CONFIG_LOG_DEFAULT_LEVEL);
 
 
 /*
@@ -130,7 +130,7 @@ int led_init(void)
 	return led_init_(led2_);
 }
 
-int bsp_led_set_led0(float brightness)
+int led_set_led0(float brightness)
 {
 	int ret = 0;
 
@@ -144,7 +144,7 @@ int bsp_led_set_led0(float brightness)
 
 }
 
-int bsp_led_set_led1(float brightness)
+int led_set_led1(float brightness)
 {
 	int ret = 0;
 
@@ -157,7 +157,7 @@ int bsp_led_set_led1(float brightness)
 	return led_set_(&led1_, brightness);
 }
 
-int bsp_led_set_led2(float brightness)
+int led_set_led2(float brightness)
 {
 	int ret = 0;
 
@@ -170,7 +170,7 @@ int bsp_led_set_led2(float brightness)
 	return led_set_(&led2_, brightness);
 }
 
-int bsp_led_set_leds(float led0_brightness, float led1_brightness, float led2_brightness)
+int led_set_leds(float led0_brightness, float led1_brightness, float led2_brightness)
 {
 	int ret = 0;
 
@@ -183,7 +183,7 @@ int bsp_led_set_leds(float led0_brightness, float led1_brightness, float led2_br
 	return led_set_(&led2_, led2_brightness);
 }
 
-int bsp_led_off(void)
+int led_off(void)
 {
 	int ret = 0;
 
@@ -196,62 +196,62 @@ int bsp_led_off(void)
 	return led_set_(&led2_, 0);
 }
 
-int bsp_led_blink_led0(float brightness, int32_t on_ms, int32_t off_ms)
+int led_blink_led0(float brightness, int32_t on_ms, int32_t off_ms)
 {
 	int ret = 0;
 
-	ret = bsp_led_set_led0(brightness);
-	BSP_RETURN_IF(ret != 0, ret);
+	ret = led_set_led0(brightness);
+	HW_RETURN_IF(ret != 0, ret);
 
 	k_msleep(on_ms);
 
-	ret = bsp_led_off();
+	ret = led_off();
 
 	k_msleep(off_ms);
 	return ret;
 }
 
-int bsp_led_blink_led1(float brightness, int32_t on_ms, int32_t off_ms)
+int led_blink_led1(float brightness, int32_t on_ms, int32_t off_ms)
 {
 	int ret;
 
-	ret = bsp_led_set_led1(brightness);
-	BSP_RETURN_IF(ret != 0, ret);
+	ret = led_set_led1(brightness);
+	HW_RETURN_IF(ret != 0, ret);
 
 	k_msleep(on_ms);
 
-	ret = bsp_led_off();
+	ret = led_off();
 
 	k_msleep(off_ms);
 	return ret;
 }
 
-int bsp_led_blink_led2(float brightness, int32_t on_ms, int32_t off_ms)
+int led_blink_led2(float brightness, int32_t on_ms, int32_t off_ms)
 {
 	int ret;
 
-	ret = bsp_led_set_led2(brightness);
-	BSP_RETURN_IF(ret != 0, ret);
+	ret = led_set_led2(brightness);
+	HW_RETURN_IF(ret != 0, ret);
 
 	k_msleep(on_ms);
 
-	ret = bsp_led_off();
+	ret = led_off();
 
 	k_msleep(off_ms);
 	return ret;
 }
 
-int bsp_led_blink_leds(float led0, float led1, float led2, int32_t on_ms, int32_t off_ms)
+int led_blink_leds(float led0, float led1, float led2, int32_t on_ms, int32_t off_ms)
 {
 	int ret;
 
-	ret = bsp_led_set_leds(led0, led1, led2);
+	ret = led_set_leds(led0, led1, led2);
 
-	BSP_RETURN_IF(ret != 0, ret);
+	HW_RETURN_IF(ret != 0, ret);
 
 	k_msleep(on_ms);
 
-	ret = bsp_led_off();
+	ret = led_off();
 
 	k_msleep(off_ms);
 	return ret;
