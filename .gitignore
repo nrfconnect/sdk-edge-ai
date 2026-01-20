@@ -31,7 +31,6 @@ hardware-map.yaml*
 coverage.info
 
 doc/_build
-doc/nrf/_doxygen/
-doc/nrf/_samples/
+doc/**/README.rst
 doc/*_warnings.txt
 doc/*_doc.log

@@ -32,11 +32,11 @@ The sample supports the following development kits:
      - ``nrf54l15dk/nrf54l15/cpuapp``
    * - `nRF54L15 DK (emulating nRF54L10) <nRF54L15 DK_>`_
      - PCA10156
-     - `nrf54l15dk <nRF54L15 emulation_>`_
+     - `nrf54l15dk <nRF54L10 emulation_>`_
      - ``nrf54l15dk/nrf54l10/cpuapp``
    * - `nRF54L15 DK (emulating nRF54L05) <nRF54L15 DK_>`_
      - PCA10156
-     - `nrf54l15dk <nRF54L15 emulation_>`_
+     - `nrf54l15dk <nRF54L05 emulation_>`_
      - ``nrf54l15dk/nrf54l05/cpuapp``
    * - `nRF5340 DK`_
      - PCA10095
