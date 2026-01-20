@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include "bsp_button.h"
+#include "button.h"
 #include <inttypes.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
@@ -12,7 +12,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 
-LOG_MODULE_REGISTER(bsp_button, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(button, CONFIG_LOG_DEFAULT_LEVEL);
 
 
 #define SW0_NODE DT_ALIAS(sw0)
@@ -23,7 +23,7 @@ LOG_MODULE_REGISTER(bsp_button, CONFIG_LOG_DEFAULT_LEVEL);
 
 static const struct gpio_dt_spec button_sw0_ = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios, {0});
 static struct gpio_callback button_cb_data_;
-static bsp_button_click_handler_t button_click_handler_ = NULL;
+static button_click_handler_t button_click_handler_ = NULL;
 
 
 static bool is_pressed_(void)
@@ -42,7 +42,7 @@ void button_interrupt(const struct device *dev, struct gpio_callback *cb, uint32
 	}
 }
 
-int bsp_button_init(void)
+int button_init(void)
 {
 	int ret;
 
@@ -73,7 +73,7 @@ int bsp_button_init(void)
 	return ret;
 }
 
-void bsp_button_reg_click_handler(bsp_button_click_handler_t click_handler)
+void button_reg_click_handler(button_click_handler_t click_handler)
 {
 	button_click_handler_ = click_handler;
 }
