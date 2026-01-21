@@ -2,6 +2,7 @@
 .. |EAI| replace:: Edge AI Add-on
 .. |nRFVSC| replace:: nRF Connect for VS Code extension
 .. |EI| replace:: Edge Impulse
+.. |EIS| replace:: Edge Impulse Studio
 
 .. ### Configuration and testing shortcuts
 

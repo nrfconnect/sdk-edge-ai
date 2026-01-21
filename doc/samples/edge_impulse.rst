@@ -10,3 +10,4 @@ This section lists the available |EAI| samples presenting integration with `Edge
    :caption: Subpages
 
    /../samples/edge_impulse/data_forwarder/README.rst
+   /../samples/edge_impulse/hello_ei/README.rst
