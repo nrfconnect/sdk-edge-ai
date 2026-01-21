@@ -76,10 +76,9 @@ static void ble_connection_cb_(bool connected);
 static void button_click_handler_(bool pressed);
 #ifndef CONFIG_DATA_COLLECTION_MODE
 static void send_bt_keyboard_key_(const class_label_t class_label);
-static void model_prediction_handler_(const class_label_t class_label,
-				      const float probability,
-				      const char *class_name,
-				      const bool is_raw);
+static bool log_prediction(const class_label_t class_label,
+			   const float probability,
+			   const char *class_name);
 #endif
 /* Work queue processing function declarations */
 static void led_update_work_handler(struct k_work *work);
@@ -150,7 +149,6 @@ int main(void)
 		if (res == NRF_EDGEAI_ERR_SUCCESS) {
 			uint16_t predicted_target;
 			const flt32_t *p_probabilities;
-			bool do_postprocessing = true;
 
 			/** Run Neuton model inference */
 			res = nrf_edgeai_run_inference(p_model_);
@@ -166,10 +164,17 @@ int main(void)
 				p_probabilities =
 					p_model_->decoded_output.classif.probabilities.p_f32;
 
-				inference_postprocess(predicted_target,
-						      p_probabilities[predicted_target],
-						      do_postprocessing,
-						      model_prediction_handler_);
+				prediction_ctx_t result =
+					inference_postprocess(predicted_target,
+							      p_probabilities[predicted_target]);
+				const char *class_name =
+					inference_get_class_name((class_label_t)result.target);
+
+				if (log_prediction((class_label_t)result.target,
+						   result.probability,
+						   class_name)) {
+					send_bt_keyboard_key_((class_label_t)result.target);
+				}
 			}
 		}
 #endif /* CONFIG_DATA_COLLECTION_MODE */
@@ -294,35 +299,35 @@ static void imu_data_ready_cb_(void)
 
 
 #ifndef CONFIG_DATA_COLLECTION_MODE
-static void model_prediction_handler_(const class_label_t class_label,
-				      const float probability,
-				      const char *class_name,
-				      const bool is_raw)
+static bool log_prediction(const class_label_t class_label,
+			   const float probability,
+			   const char *class_name)
 {
 	static const uint32_t PREDICTION_TIMEOUT_MS = 800U;
 	static uint32_t last_prediction_time_ms_ = 0;
 	uint32_t current_time_ms;
 
-	if (is_raw) {
-		LOG_INF("RAW Prediction %s %d %%", class_name, (int8_t)(probability * 100.0f));
-	} else if (class_label > CLASS_LABEL_UNKNOWN) {
-		current_time_ms = k_uptime_get();
-
-		/** For classes CLASS_LABEL_ROTATION_RIGHT &
-		 * CLASS_LABEL_ROTATION_LEFT there is no timeout,
-		 * since the movements must be repetitive in time
-		 */
-		if ((class_label == CLASS_LABEL_ROTATION_RIGHT) ||
-			(class_label == CLASS_LABEL_ROTATION_LEFT) ||
-			(current_time_ms - last_prediction_time_ms_) > PREDICTION_TIMEOUT_MS) {
-			last_prediction_time_ms_ = current_time_ms;
-
-			LOG_INF("Predicted class: %s, with probability %d %%",
-				class_name, (int)(100 * probability));
-
-			send_bt_keyboard_key_(class_label);
-		}
+	if (class_label <= CLASS_LABEL_UNKNOWN) {
+		return false;
 	}
+
+	current_time_ms = k_uptime_get();
+
+	/** For classes CLASS_LABEL_ROTATION_RIGHT &
+	 * CLASS_LABEL_ROTATION_LEFT there is no timeout,
+	 * since the movements must be repetitive in time
+	 */
+	if ((class_label == CLASS_LABEL_ROTATION_RIGHT) ||
+	    (class_label == CLASS_LABEL_ROTATION_LEFT) ||
+	    (current_time_ms - last_prediction_time_ms_) > PREDICTION_TIMEOUT_MS) {
+		last_prediction_time_ms_ = current_time_ms;
+
+		LOG_INF("Predicted class: %s, with probability %d %%",
+			class_name, (int)(100 * probability));
+		return true;
+	}
+
+	return false;
 }
 
 
