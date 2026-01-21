@@ -49,6 +49,7 @@
 .. _`Building an application`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/app_dev/config_and_build/building.html#building
 .. _`Programming`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/app_dev/programming.html#programming
 .. _`Testing and optimization`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/test_and_optimize.html#testing
+.. _`Providing CMake options`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/app_dev/config_and_build/cmake/index.html#providing_cmake_options
 
 .. _`Simulated sensor driver`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/drivers/sensor_sim.html
 
@@ -68,6 +69,9 @@
 .. _`nRF Connect SDK simulated sensor machine learning model`: https://studio.edgeimpulse.com/public/18121/latest
 .. _`nRF Connect SDK hardware accelerometer machine learning model`: https://studio.edgeimpulse.com/public/33129/latest
 .. _`Nordic Semi nRF54L15 DK page`: https://docs.edgeimpulse.com/docs/nordic-semi-nrf54L15-dk
+.. _`Edge Impulse Zephyr Module Deployment`: https://docs.edgeimpulse.com/hardware/deployments/run-zephyr-module
+.. _`Automated Deployment with West Commands`: https://docs.edgeimpulse.com/hardware/deployments/run-zephyr-module#automated-deployment-with-west-commands-early-access-preview
+.. _`Using the library from C`: https://docs.edgeimpulse.com/hardware/deployments/run-cpp-desktop#using-the-library-from-c
 
 .. ### Source: github.com
 

@@ -19,6 +19,11 @@ The samples demonstrate typical workflows using the nRF Edge AI components such 
 * DSP - Demonstrates using the nRF Edge AI Digital Signal Processing (DSP) primitives for signal processing.
 * NN - Demonstrates using the nRF Edge AI Neural Network (NN) engine for running its standalone models.
 
+There are also additional samples demonstrating the integration of `Edge Impulse`_ with |EAI|:
+
+* |EI|: Data forwarder - Demonstrates using `Edge Impulse's data forwarder`_.
+* |EI|: Hello Edge Impulse - Demonstrates deployment of models in |EI| and usage of the inference engine provided by |EI| SDK.
+
 .. toctree::
    :maxdepth: 2
 
