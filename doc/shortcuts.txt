@@ -1,4 +1,24 @@
 .. |NCS| replace:: nRF Connect SDK
 .. |EAI| replace:: Edge AI Add-on
 .. |nRFVSC| replace:: nRF Connect for VS Code extension
+
+.. ### Configuration and testing shortcuts
+
 .. |config| replace:: See `Configuring and building`_ for information about how to permanently or temporarily change the configuration.
+
+.. |sample_kconfig| replace:: The following sample-specific Kconfig options are used in this sample:
+
+.. |application_kconfig| replace:: The following application-specific Kconfig options are used in this application:
+
+.. |test_sample| replace:: After programming the sample to your development kit, complete the following steps to test it:
+
+.. |test_application| replace:: After programming the application to your development kit, complete the following steps to test it:
+
+.. |connect_kit| replace:: Connect the kit to the computer using a USB cable.
+   The kit is assigned a serial port.
+   Serial ports are referred to as COM ports on Windows, /dev/ttyACM devices on Linux, and /dev/tty devices on macOS.
+   To list Nordic Semiconductor devices connected to your computer together with their serial ports, open a terminal and run the ``nrfutil device list`` command.
+   Alternatively, check your operating system's device manager or its equivalent.
+
+.. |connect_terminal_kit| replace:: Connect to the kit with a terminal emulator (for example, the `Serial Terminal app`_).
+   See `Testing and optimization`_ for the required settings and steps.
