@@ -12,15 +12,6 @@
 #define PREVIOUS_PREDICTION_NUM                 (3)
 
 
-typedef struct prediction_ctx_s
-{
-	/** Prediction target */
-	uint16_t target;
-
-	/** Prediction probability */
-	float probability;
-} prediction_ctx_t;
-
 typedef struct prediction_tracer_s
 {
 	/** Current prediction index */
@@ -83,64 +74,65 @@ static const class_prediction_condition_t *get_class_condition_(uint8_t predicte
 	return (predicted_target < LABELS_CNT) ? &LABEL_VS_CONFIG[predicted_target] : NULL;
 }
 
-void inference_postprocess(const uint16_t predicted_target,
-							const float prob,
-							const bool do_postprocessing,
-							inference_postprocess_cb_t callback)
+prediction_ctx_t inference_postprocess(const uint16_t predicted_target,
+				       const float prob)
 {
 	uint16_t target = predicted_target;
 	float probability = prob;
+	prediction_ctx_t result = {
+		.target = CLASS_LABEL_UNKNOWN,
+		.probability = 0.0f,
+	};
 	
 	static prediction_tracer_t tracer_ = {0U};
 
-	if (do_postprocessing) {
-		if ((target == CLASS_LABEL_UNKNOWN) || (target == CLASS_LABEL_IDLE)) {
-			/** Reset tracer for UNKNOWN and IDLE classes */
+	if ((target == CLASS_LABEL_UNKNOWN) || (target == CLASS_LABEL_IDLE)) {
+		/** Reset tracer for UNKNOWN and IDLE classes */
+		tracer_.index = 0;
+		tracer_.target = target;
+	} else {
+		if (tracer_.index >= PREVIOUS_PREDICTION_NUM) {
+			tracer_.index = 0;
+		}
+
+		/** Reset tracer if predicted class is not the same as previous */
+		if (tracer_.target != target) {
 			tracer_.index = 0;
 			tracer_.target = target;
-		} else {
-			if (tracer_.index >= PREVIOUS_PREDICTION_NUM) {
-				tracer_.index = 0;
-			}
+		}
 
-			/** Reset tracer if predicted class is not the same as previous */
-			if (tracer_.target != target) {
-				tracer_.index = 0;
-				tracer_.target = target;
-			}
+		tracer_.prev[tracer_.index].probability = probability;
+		tracer_.index++;
 
-			tracer_.prev[tracer_.index].probability = probability;
-			tracer_.index++;
+		const class_prediction_condition_t *class_condition =
+			get_class_condition_(target);
+		if (class_condition == NULL) {
+			return result;
+		}
 
-			const class_prediction_condition_t *class_condition =
-				get_class_condition_(target);
-			if (class_condition == NULL) {
-				return;
-			}
+		/** Сlass is labled as CLASS_LABEL_UNKNOWN if the number of
+		 * repetitions does not exceed the threshold
+		 */
+		if (tracer_.index >= class_condition->min_repeat_count) {
+			float average_prob = 0.0f;
+			int i;
 
-			/** Сlass is labled as CLASS_LABEL_UNKNOWN if the number of
-			 * repetitions does not exceed the threshold
+			/** Calculate average probability for last N
+			 * predictions of the same class
 			 */
-			if (tracer_.index >= class_condition->min_repeat_count) {
-				float average_prob = 0.0f;
-				int i;
+			for (i = 0; i < tracer_.index; ++i) {
+				average_prob += tracer_.prev[i].probability;
+			}
 
-				/** Calculate average probability for last N
-				 * predictions of the same class
-				 */
-				for (i = 0; i < tracer_.index; ++i) {
-					average_prob += tracer_.prev[i].probability;
-				}
+			average_prob = average_prob / tracer_.index;
 
-				average_prob = average_prob / tracer_.index;
-
-				/** If average probability is less the class probability threshold,
-				 * the class is labled as CLASS_LABEL_UNKNOWN */
-				if (average_prob < class_condition->probability_threshold) {
-					target = CLASS_LABEL_UNKNOWN;
-				} else {
-					probability = average_prob;
-				}
+			/** If average probability is less the class probability threshold,
+			 * the class is labled as CLASS_LABEL_UNKNOWN */
+			if (average_prob < class_condition->probability_threshold) {
+				target = CLASS_LABEL_UNKNOWN;
+			} else {
+				probability = average_prob;
+			}
 
 			/** Reset tracer index for non-repetative classes */
 			if ((target != CLASS_LABEL_ROTATION_RIGHT) &&
