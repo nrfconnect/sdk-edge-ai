@@ -1,0 +1,12 @@
+*
+!Dockerfile
+!bin
+!include
+!scripts/utility 
+!scripts/requirements.txt
+!scripts/tflite_converter.py
+!scripts/user_handler_functions.py
+!scripts/compare_models.py
+!scripts/compile_model_helper.py
+!scripts/axons_ml_nn_compiler_executor.py
+!scripts/model_wrapper.py
