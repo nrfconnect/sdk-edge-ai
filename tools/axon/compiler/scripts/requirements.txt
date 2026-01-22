@@ -1,0 +1,7 @@
+numpy
+tensorflow==2.15.1
+tflite
+pyyaml
+cffi
+scikit-learn
+matplotlib

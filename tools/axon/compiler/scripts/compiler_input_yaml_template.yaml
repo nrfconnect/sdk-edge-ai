@@ -1,0 +1,29 @@
+unique_test_name:
+  #NOTE : params that are not available or not needed should be left empty in the yaml file
+  #Primary Parameters
+  model_name: #model name used in naming the various output files
+  tflite_model: #relative or absolute path+filename to the tflite model
+  float_model: #relative or absolute path+filename to the floating point model
+  train_data: #relative or absolute path+filename to the numpy train data set
+  test_data: #relative or absolute path+filename to the numpy test data set
+  test_labels: #relative or absolute path+filename to the numpy test labels
+  test_labels_format: #the format of the test labels from "just_labels","last_layer_vector","edge_impulse_labels" or "custom", if custom, also provide the user_handle_test_labels
+  classification_labels: #list of strings of classification labels in the test labels, e.g.["silence", "unknown", "yes", "no" ,"up", "down" ,"left" ,"right" ,"on", "off" ,"stop","go"], ["person", "non_person"]
+  test_vectors: # ranges or indices in the test data set for which the user wants to run the inference e.g. all, [1-20], [3,4,9,23]
+  header_file_test_vector_cnt: #count of the first n vectors the compiler lib will generate in the test_vectors_ file
+  #Variant Parameters    
+  disable_op_quantization: #bool value to disable the output quantization, e.g. True
+  transpose_kernel: #bool value that transposes the kernel/filters which swaps the height/width, default False
+  run_all_variants: #bool value that gives the user an option to run all possible variants on a given input model
+  #Advanced Parameters
+  interlayer_buffer_size: #user assigned interlayer buffer size. The compiler uses this to size the input output buffers, throws an error when the size is less than the model requires. e.g. 125000
+  psum_buffer_size: #user assigned psum buffer size.The compiler uses this to size the internal psum buffers. This is used when the psum buffer is placed in a dedicated memory inside the compiler  e.g. 180000
+  op_radix: # sets the output radix to be used when disabling the output quantization
+  user_handle_accuracy_results: # for the user to provide a user handler function to get the accuracy results e.g user_handler_functions.<user_handler_function_name> 
+  user_handle_test_labels: # for the user to provide a user handler function to handle the test labels and change it in the expected format when providing a custom test_label_format
+  log_level: # for the user to set the log level of the results and other messages being printed from the python executor, can have values {debug, info, warn, error, critical}
+  precision_threshold: #a floating point value between 0 and 1, which is the minimum precision_threshold below which a label will be classified as 'inconclusive', default value is 0
+  precision_margin: #an integer % value, which defines the precision_margin between the label and the 2nd highest label, if the precision_margin is less than this given value, the classification will be inconclusive, gives a sense of confidence of the result, default value is 0
+  reshape_input: #bool value to allow for reshaping the test data input to match the model input shape, default False
+
+
