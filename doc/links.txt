@@ -49,3 +49,19 @@
 .. _`Building an application`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/app_dev/config_and_build/building.html#building
 .. _`Programming`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/app_dev/programming.html#programming
 .. _`Testing and optimization`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/test_and_optimize.html#testing
+
+.. _`Simulated sensor driver`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/drivers/sensor_sim.html
+
+.. ### Source: edgeimpulse.com
+
+.. _`Edge Impulse`: https://www.edgeimpulse.com/
+.. _`Edge Impulse studio`: https://studio.edgeimpulse.com/login
+.. _`Edge Impulse studio signup`: https://studio.edgeimpulse.com/signup
+.. _`Edge Impulse getting started guide`: https://docs.edgeimpulse.com/docs/getting-started
+.. _`embedded machine learning`: https://docs.edgeimpulse.com/docs/what-is-embedded-machine-learning-anyway
+.. _`Continuous motion recognition tutorial`: https://docs.edgeimpulse.com/docs/continuous-motion-recognition
+.. _`Edge Impulse's data forwarder`: https://docs.edgeimpulse.com/docs/cli-data-forwarder
+.. _`Edge Impulse CLI installation guide`: https://docs.edgeimpulse.com/docs/cli-installation
+.. _`nRF Connect SDK simulated sensor machine learning model`: https://studio.edgeimpulse.com/public/18121/latest
+.. _`nRF Connect SDK hardware accelerometer machine learning model`: https://studio.edgeimpulse.com/public/33129/latest
+.. _`Nordic Semi nRF54L15 DK page`: https://docs.edgeimpulse.com/docs/nordic-semi-nrf54L15-dk

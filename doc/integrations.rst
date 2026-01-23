@@ -12,3 +12,4 @@ The following user guides describe the available integrations:
    :caption: Subpages:
 
    integrations/nrf_edgeai
+   integrations/edge_impulse
