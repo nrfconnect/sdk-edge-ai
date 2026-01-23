@@ -6,4 +6,5 @@
 
 zephyr_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/include)
 
+add_subdirectory(${ZEPHYR_CURRENT_MODULE_DIR}/drivers drivers)
 add_subdirectory(${ZEPHYR_CURRENT_MODULE_DIR}/lib lib)

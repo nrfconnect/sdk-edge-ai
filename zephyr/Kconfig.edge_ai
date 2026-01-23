@@ -6,6 +6,7 @@
 
 menu "Edge AI Add-on"
 
+rsource "../drivers/Kconfig"
 rsource "../lib/Kconfig"
 
 endmenu

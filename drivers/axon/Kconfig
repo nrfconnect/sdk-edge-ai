@@ -1,18 +1,11 @@
 #
-# Copyright (c) 2024 Nordic Semiconductor ASA
+# Copyright (c) 2026 Nordic Semiconductor
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
 config NRF_AXON
 	bool "Enable Axon Neural Processing Unit"
-
-config NRF_AXON_FULL_SOURCE
-	bool "Build from full source"
-	default "n"
-	help
-	  Internal to Nordic. Compiles from source code only; no precompiled libraries are linked.
-
 
 config NRF_AXON_INTERLAYER_BUFFER_SIZE
 	int "Axon Interlayer buffer size (in bytes)"
@@ -29,7 +22,7 @@ config NRF_AXON_INTERLAYER_BUFFER_MEMREGION_NAME
 	depends on NRF_AXON
 	help
 	  Use this to specify which memory section/region to placed the interlayer buffer. It is recommended
-	  that this be fastest memory available to the Axon NPU peripheral. By default, this is 
+	  that this be fastest memory available to the Axon NPU peripheral. By default, this is
 	  .bss. Users may change from the default if the .bss region is not mapped to local memory
 	  (on systems that support it) or if the .bss region is too small to accomodate the interlayer
 	  buffer.
@@ -43,10 +36,7 @@ config NRF_AXON_PSUM_BUFFER_SIZE
 	  used on specific operations. The default neural network compiler settings are to not use a partial sum
 	  so this should be left at 0. It will need to be populated if the model was compiled to use the
 	  partial sum buffer. See the model header file for the size needed.
-  
+
 config NRF_AXON_MODEL_NAME
 	string "Name of the model to use in single model examples"
 	depends on NRF_AXON
-	
-orsource "../axon_utilities/zephyr/Kconfig.nrf_axon"
-orsource "../internal/zephyr/Kconfig.nrf_axon"

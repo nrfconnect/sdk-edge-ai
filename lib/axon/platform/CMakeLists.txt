@@ -1,9 +1,7 @@
 #
-# Copyright (c) 2024, Nordic Semiconductor ASA. All Rights Reserved.
+# Copyright (c) 2026 Nordic Semiconductor
 #
-# The information contained herein is confidential property of Nordic Semiconductor ASA.
-# The use, copying, transfer or disclosure of such information is prohibited except by
-# express written agreement with Nordic Semiconductor ASA.
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
 message(STATUS ${CMAKE_CURRENT_SOURCE_DIR} " not zephyr? " ${NOT_A_ZEPHYR_BUILD})
@@ -20,7 +18,7 @@ endif()
 
 
 if (${NOT_A_ZEPHYR_BUILD})
-  set(PLATFORM_DEFAULT_COMPILE_DEFS 
+  set(PLATFORM_DEFAULT_COMPILE_DEFS
     NRF_AXON_INTERLAYER_BUFFER_SIZE=${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE}
     NRF_AXON_PSUM_BUFFER_SIZE=${CONFIG_NRF_AXON_PSUM_BUFFER_SIZE}
   )
@@ -28,12 +26,13 @@ if (${NOT_A_ZEPHYR_BUILD})
   add_library(nrf-axon-platform EXCLUDE_FROM_ALL)
 	set_target_properties(nrf-axon-platform PROPERTIES LINKER_LANGUAGE C)
 
+  add_library(nrf-axon-platform-interface INTERFACE)
+
   target_include_directories(nrf-axon-platform-interface
     INTERFACE
-      include
-      src/simulator/include
-
+      ../../../include/axon
   )
+
   target_sources(nrf-axon-platform
     PRIVATE
       src/nrf_axon_logging.c
@@ -42,10 +41,10 @@ if (${NOT_A_ZEPHYR_BUILD})
   )
 
   message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
-  
+
   if(CMAKE_SYSTEM_NAME STREQUAL "Generic")
     # no operating system platform specific source files to include
-  elseif (MSVC OR WIN32) 
+  elseif (MSVC OR WIN32)
     target_sources(nrf-axon-platform
       PRIVATE
         src/simulator/nrf_axon_platform_simulator_windows.c
@@ -74,23 +73,21 @@ if (${NOT_A_ZEPHYR_BUILD})
 
   target_compile_definitions(nrf-axon-platform-interface
     INTERFACE
-      ${PLATFORM_DEFAULT_COMPILE_DEFS}  
+      ${PLATFORM_DEFAULT_COMPILE_DEFS}
   )
-  # if this wasn't a full internal build, need to supply the nrf-axon-simulator-internal library here.
-  if (${CONFIG_NRF_AXON_FULL_SOURCE})
-  else()
-		# CMAKE_HOST_SYSTEM_NAME will be Linux, Windows, or Darwin (for MacOS)
-		message(STATUS  "linking imported library " ${CMAKE_CURRENT_SOURCE_DIR}/bin/simulator/${CMAKE_HOST_SYSTEM_NAME}/${CMAKE_STATIC_LIBRARY_PREFIX}nrf-axon-simulator-internal${CMAKE_STATIC_LIBRARY_SUFFIX})
-		add_library(nrf-axon-simulator-internal STATIC IMPORTED GLOBAL)
-		# Add the dependency for the pre-built library
-		if(UNIX AND NOT APPLE)
-			target_link_libraries(nrf-axon-simulator-internal INTERFACE m)
-		endif()    
-		set_property(
-			TARGET nrf-axon-simulator-internal
-			PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/bin/simulator/${CMAKE_HOST_SYSTEM_NAME}/${CMAKE_STATIC_LIBRARY_PREFIX}nrf-axon-simulator-internal${CMAKE_STATIC_LIBRARY_SUFFIX}
-		)
-	endif()  
+
+  # CMAKE_HOST_SYSTEM_NAME will be Linux, Windows, or Darwin (for MacOS)
+  message(STATUS  "linking imported library " ${CMAKE_CURRENT_SOURCE_DIR}/bin/simulator/${CMAKE_HOST_SYSTEM_NAME}/${CMAKE_STATIC_LIBRARY_PREFIX}nrf-axon-simulator-internal${CMAKE_STATIC_LIBRARY_SUFFIX})
+  add_library(nrf-axon-simulator-internal STATIC IMPORTED GLOBAL)
+  # Add the dependency for the pre-built library
+  if(UNIX AND NOT APPLE)
+    target_link_libraries(nrf-axon-simulator-internal INTERFACE m)
+  endif()
+  set_property(
+    TARGET nrf-axon-simulator-internal
+    PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/bin/simulator/${CMAKE_HOST_SYSTEM_NAME}/${CMAKE_STATIC_LIBRARY_PREFIX}nrf-axon-simulator-internal${CMAKE_STATIC_LIBRARY_SUFFIX}
+  )
+
 else()
   # else a zephyr build
   message(STATUS "CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE " ${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE})
@@ -102,24 +99,24 @@ else()
   endif()
   if(NOT CONFIG_NRF_AXON_PSUM_BUFFER_SIZE)
     # psum buffer is not in use
-	  set(CONFIG_NRF_AXON_PSUM_BUFFER_SIZE 0) 
+	  set(CONFIG_NRF_AXON_PSUM_BUFFER_SIZE 0)
   endif()
 
   zephyr_include_directories(
-    include
+    ../../../include/axon
   )
   zephyr_sources(
     src/nrf_axon_logging.c
     src/nrf_axon_vector_compare.c
     src/zephyr/nrf_axon_platform_zephyr.c
   )
-  set(PLATFORM_DEFAULT_COMPILE_DEFS 
+  set(PLATFORM_DEFAULT_COMPILE_DEFS
     NRF_AXON_INTERLAYER_BUFFER_SIZE=${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE}
     NRF_AXON_PSUM_BUFFER_SIZE=${CONFIG_NRF_AXON_PSUM_BUFFER_SIZE}
   )
 
   zephyr_compile_definitions(
-      ${PLATFORM_DEFAULT_COMPILE_DEFS}  
+      ${PLATFORM_DEFAULT_COMPILE_DEFS}
       NRF_AXON_INTERLAYER_BUFFER_MEMREGION="\""${CONFIG_NRF_AXON_INTERLAYER_BUFFER_MEMREGION_NAME}"\""
   )
 
