@@ -7,5 +7,15 @@
 source "Kconfig.zephyr"
 
 config DATA_COLLECTION_MODE
-	bool "Enble Data Collection Mode (no inference run)"
+	bool "Enable Data Collection Mode (no inference run)"
+
+config DATA_COLLECTION_BLE_NUS
+	bool "Send data collection samples over BLE NUS"
+	depends on DATA_COLLECTION_MODE
+	depends on BT
+	select BT_NUS
+	help
+	  Forward the raw IMU samples over Nordic UART Service (NUS) in addition
+	  to the serial output. A second development kit running the Bluetooth
+	  Central UART sample is needed to receive the data.
 
