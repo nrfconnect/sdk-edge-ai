@@ -35,11 +35,18 @@ else()
 
   message(STATUS  "linking imported library" ${CMAKE_CURRENT_SOURCE_DIR}/bin/${CMAKE_SYSTEM_PROCESSOR}/${CMAKE_STATIC_LIBRARY_PREFIX}${INTERNAL_DRIVER_LIB_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX} )
 
-  # cmake_system_processor will be either arm or riscv
-  set_property(
-    TARGET nrf-axon-driver-internal
-    PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/bin/${CMAKE_SYSTEM_PROCESSOR}/${CMAKE_STATIC_LIBRARY_PREFIX}${INTERNAL_DRIVER_LIB_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX}
-  )
+  if(NOT CONFIG_BOARD_NATIVE_SIM)
+    # cmake_system_processor will be either arm or riscv
+    set_property(
+      TARGET nrf-axon-driver-internal
+      PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/bin/${CMAKE_SYSTEM_PROCESSOR}/${CMAKE_STATIC_LIBRARY_PREFIX}${INTERNAL_DRIVER_LIB_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX}
+    )
+  else()
+    set_property(
+      TARGET nrf-axon-driver-internal
+      PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/bin/${CMAKE_HOST_SYSTEM_NAME}/${CMAKE_STATIC_LIBRARY_PREFIX}nrf-axon-driver-internal${CMAKE_STATIC_LIBRARY_SUFFIX}
+    )
+  endif()
 
   zephyr_link_libraries(nrf-axon-driver-internal)
 endif()

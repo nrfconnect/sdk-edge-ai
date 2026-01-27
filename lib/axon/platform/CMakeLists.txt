@@ -108,8 +108,27 @@ else()
   zephyr_sources(
     src/nrf_axon_logging.c
     src/nrf_axon_vector_compare.c
-    src/zephyr/nrf_axon_platform_zephyr.c
   )
+
+  if(NOT CONFIG_BOARD_NATIVE_SIM)
+    zephyr_sources(
+      src/zephyr/nrf_axon_platform_zephyr.c
+    )
+  else()
+    zephyr_sources(
+      src/simulator/nrf_axon_platform_simulator.c
+    )
+
+    target_sources(native_simulator PUBLIC
+      src/simulator/nrf_axon_platform_simulator_linux.c
+      src/simulator/nrf_axon_platform_simulator_native_part.c
+    )
+
+    set_property(TARGET native_simulator APPEND PROPERTY RUNNER_LINK_LIBRARIES
+      ${CMAKE_CURRENT_SOURCE_DIR}/bin/simulator/${CMAKE_HOST_SYSTEM_NAME}/${CMAKE_STATIC_LIBRARY_PREFIX}nrf-axon-simulator-internal${CMAKE_STATIC_LIBRARY_SUFFIX}
+    )
+  endif()
+
   set(PLATFORM_DEFAULT_COMPILE_DEFS
     NRF_AXON_INTERLAYER_BUFFER_SIZE=${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE}
     NRF_AXON_PSUM_BUFFER_SIZE=${CONFIG_NRF_AXON_PSUM_BUFFER_SIZE}

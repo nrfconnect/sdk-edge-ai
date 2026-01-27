@@ -19,33 +19,15 @@
 uint32_t nrf_axon_interlayer_buffer[NRF_AXON_INTERLAYER_BUFFER_SIZE/sizeof(uint32_t)];
 uint32_t nrf_axon_psum_buffer[NRF_AXON_PSUM_BUFFER_SIZE/sizeof(uint32_t)];
 
-AxonCoreSatCntLogSt axon_core_saturation_cnt = {0};
-AxonFuncSatLogSt axon_function_saturation_log = {0};
-
-
-uint8_t* axon_nn_system_memory_ptr = NULL;
-
-
 void delay_us(uint32_t delay) {
 }
 
 // #define MY_LOG_LEVEL LOG_LEVEL_NONE
 #define MY_LOG_LEVEL LOG_LEVEL_DBG
 
-
-void nrf_axon_platform_printf(const char* fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  char tempstring[512]; //increased the buffer length from 255 to 512 to accommodate larger strings
-  vsnprintf(tempstring, sizeof(tempstring), fmt, args);
-  va_end(args);
-  printf("%s", tempstring);
-  fflush(NULL);
-}
-
 // assume 100Mhz
 uint32_t nrf_axon_platform_get_clk_hz() {
-  return 100000000;	
+  return 100000000;
 }
 
 uint32_t nrf_axon_platform_disable_interrupts() {
@@ -72,31 +54,22 @@ void nrf_axon_platform_generate_user_event(){
     }
 }
 
-/*
- * Registered ISR for axonpro interrupt
- * In our simple application we handle IRQs directly
- */
-void host_irq_handler(void * data) {
-  /* Axon ISR will invoke nrf_axon_platform_generate_driver_event() if further processing is needed. */
-  nrf_axon_handle_interrupt();
-}
-
 /**
  * Simulator is "bare metal". There is 1 user thread and the driver runs in the "interrupt"
  * context (a separate thread).
  * To have contention between synchronous and asychronous modes, the user thread would need
  * to start an async operation (submit a queue of command buffers) then immediately reserve the hardware.
  * Either way, it is only the user thread that will ever request to reserve the hardware for
- * either party (driver or user), so we don't have to worry about race conditions when accessing 
+ * either party (driver or user), so we don't have to worry about race conditions when accessing
  * variables.
- * 
+ *
  * In the case of calling intrinsics from cpu ops in the command buffer, the request will be made to
  * reserve hardware for the current "user", which happens to be the driver.
  */
 #define AXONS_OWNER_ID_NOONE 0
 #define AXONS_OWNER_ID_DRIVER 1
 #define AXONS_OWNER_ID_USER 2
-static volatile int axons_owner_id = AXONS_OWNER_ID_NOONE; 
+static volatile int axons_owner_id = AXONS_OWNER_ID_NOONE;
 
 /**
  * Increments the power vote. If this is the 1st 1, axon is powered on.
@@ -161,7 +134,7 @@ void nrf_axon_platform_free_reservation_from_driver() {
   axons_owner_id = AXONS_OWNER_ID_NOONE;
 }
 
-volatile bool axon_simulator_ints_enabled = false;
+// volatile bool axon_simulator_ints_enabled = false;
 static void disable_axon_interrupt() {
   axon_simulator_ints_enabled = false;
 }
@@ -176,7 +149,7 @@ nrf_axon_result_e nrf_axon_platform_init() {
   if (NRF_AXON_RESULT_SUCCESS != (result = nrf_axon_driver_init(axon_base_address))) {
     return result;
   }
-  
+
   enable_axon_interrupt();
 
   return NRF_AXON_RESULT_SUCCESS;
@@ -227,79 +200,9 @@ int read_in_test_vector_int16(FILE* src_file, int16_t* test_vector_buffer, uint3
   return result;
 }
 
-/**
- * Simulator only code.
- * Log the overflow counts together with corrsponding function name
-*/
-void axon_simulator_log_function_saturation(const char* funcName) {
-  AxonCoreSatCntLogSt sat = {0};
-  axon_simulator_read_saturation_cnt(&sat);
-  size_t funcName_len = strnlen(funcName, 255); //assume max function name length is 255
-  for (int i = 0; i < axon_function_saturation_log.functionCount; i++) {
- 	  size_t name_in_table_len = strnlen(axon_function_saturation_log.functionTable[i].name, 255);
- 	  size_t cmp_len = funcName_len > name_in_table_len ? funcName_len : name_in_table_len;
-      if (strncmp(axon_function_saturation_log.functionTable[i].name, funcName, cmp_len) == 0) {
-          axon_function_saturation_log.functionTable[i].cnts.overflow_cnt += sat.overflow_cnt;
-          axon_function_saturation_log.functionTable[i].cnts.underflow_cnt += sat.underflow_cnt;
-          axon_function_saturation_log.functionTable[i].cnts.total_ops_cnt += sat.total_ops_cnt;
-          return;
-      }
-  }
-  if (axon_function_saturation_log.functionCount < MAX_FUNCTIONS_LOG) {
-      //combines two operations: memory allocation and string copying. Remember to free later
-      axon_function_saturation_log.functionTable[axon_function_saturation_log.functionCount].name = strdup(funcName);
-      memcpy(&axon_function_saturation_log.functionTable[axon_function_saturation_log.functionCount].cnts, &sat, sizeof(AxonCoreSatCntLogSt));
-      axon_function_saturation_log.functionCount++;
-  } else {
-      nrf_axon_platform_printf("Error: Function saturation logging table is full % entries!\n", MAX_FUNCTIONS_LOG);
-  }
-}
 
-/**
- * Simulator only code.
- * Print out saturation statistics per function to console.
-*/
-void axon_simulator_print_saturation_statistics() {
-  if (axon_function_saturation_log.functionCount > 0) {
-	  nrf_axon_platform_printf("-------------------------------------------------------------------------------------------------------------\n");
-	  nrf_axon_platform_printf("%-40s %20s %20s %20s\n", "axon instrinsics:", "overflowCnt", "underflowCnt", "totalOpsCnt");
-	  for (uint16_t i=0; i<axon_function_saturation_log.functionCount; i++) {
-      nrf_axon_platform_printf("%-40s %20lu, %20lu, %20lu\n", 
-        axon_function_saturation_log.functionTable[i].name, 
-        axon_function_saturation_log.functionTable[i].cnts.overflow_cnt, 
-        axon_function_saturation_log.functionTable[i].cnts.underflow_cnt, 
-        axon_function_saturation_log.functionTable[i].cnts.total_ops_cnt);
-      free(axon_function_saturation_log.functionTable[i].name);
-	  }
-	  nrf_axon_platform_printf("------------------------------------------------------------------------------------------------------------\n");
-  }
-}
 
 void nrf_axon_platform_set_profiling_gpio()
 {}
 void nrf_axon_platform_clear_profiling_gpio()
 {}
-
-volatile static bool axon_perfmodel_enabled = false;
-uint64_t nn_o_cycles = 0;
-uint64_t dsp_o_cycles = 0;
-void nrf_axon_simulator_perfmodel_init() {
-  nn_o_cycles = 0;
-  dsp_o_cycles = 0;
-}
-
-uint64_t nrf_axon_simulator_perfmodel_get_cycles() 
-{
- return nn_o_cycles + dsp_o_cycles;
-}
-
-void nrf_axon_simulator_perfmodel_disable() {
-  axon_perfmodel_enabled = false;
-}
-void nrf_axon_simulator_perfmodel_enable() {
-  axon_perfmodel_enabled = true;
-}
-
-bool nrf_axon_simulator_perfmodel_is_enabled() {
-  return axon_perfmodel_enabled;
-}
