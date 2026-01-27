@@ -1,0 +1,20 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+source "Kconfig.zephyr"
+
+menu "Hello Axon"
+
+config ASYNC_INFERENCE
+	bool "Run inference asynchronously"
+	default y
+
+config AVOID_INPUT_DOUBLE_BUFFER
+	bool "Avoid double buffer of input data in synchronous inference mode"
+	depends on !ASYNC_INFERENCE
+	default y
+
+endmenu

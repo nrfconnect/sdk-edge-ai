@@ -1,4 +1,4 @@
-.. _axon_samples:
+.. _ei_samples:
 
 |EI| samples
 ###########################

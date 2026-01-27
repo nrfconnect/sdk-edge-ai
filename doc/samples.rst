@@ -30,3 +30,4 @@ There are also additional samples demonstrating the integration of `Edge Impulse
 
    samples/nrf_edgeai_runtime/index
    samples/edge_impulse
+   samples/axon.rst
