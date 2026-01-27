@@ -99,6 +99,14 @@ To build this version, the following option must be enabled in the `prj.conf` fi
 CONFIG_DATA_COLLECTION_MODE=y
 ```
 
+To forward the same data over BLE using Nordic UART Service (NUS), also enable:
+
+```
+CONFIG_DATA_COLLECTION_BLE_NUS=y
+```
+
+This mode requires an additional development kit running the Bluetooth: Central UART sample to receive the NUS data.
+
 The project must be build and flashed again as described in the step **(9)**.
 
 No inference will be performed in this mode, it's just intended to simplify the capture of new datasets
