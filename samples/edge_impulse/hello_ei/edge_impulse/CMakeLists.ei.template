@@ -49,6 +49,12 @@ foreach(option ${EI_CXX_COMPILE_OPTIONS})
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${option}>)
 endforeach()
 
+# Fix for LTO: Add assembler include path for .incbin directives
+# When LTO is enabled, the working directory context changes during linking,
+# causing relative paths in .incbin directives to fail. We need to add the
+# current source directory as an include path for the assembler.
+add_compile_options(-Wa,-I${CMAKE_CURRENT_LIST_DIR})
+
 if(NOT TARGET app)
   add_library(app STATIC)
 endif()

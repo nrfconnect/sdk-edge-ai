@@ -8,6 +8,19 @@
 
 set(FETCH_CONTENT_NAME edge_impulse)
 
+# Fix for LTO: Add assembler include path for .incbin directives
+# When LTO is enabled, the working directory context changes during linking,
+# causing relative paths in .incbin directives to fail. Adding the source
+# directory as an include path for the assembler resolves this issue.
+if(CONFIG_LTO)
+  # The Edge Impulse library will be fetched to this location
+  set(EI_SOURCE_DIR "${CMAKE_BINARY_DIR}/_deps/edge_impulse-src")
+
+  # Add the Edge Impulse source directory to assembler include paths
+  # This allows .incbin to find files using relative paths
+  zephyr_compile_options(-Wa,-I${EI_SOURCE_DIR})
+endif()
+
 # Enable C linkage for Edge Impulse library (allows calling from C code)
 target_compile_definitions(app PRIVATE
   EI_C_LINKAGE=1

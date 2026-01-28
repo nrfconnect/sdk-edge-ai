@@ -32,6 +32,18 @@ process_edge_impulse_uri("${CONFIG_EDGE_IMPULSE_URI}" EI_URI_LIST)
 # Get Edge Impulse API key header if specified
 get_edge_impulse_api_key(EI_API_KEY_HEADER)
 
+zephyr_compile_definitions(
+  EI_C_LINKAGE=1
+  EIDSP_SIGNAL_C_FN_POINTER=1
+)
+
+# zephyr_compile_options(
+#   -Wno-double-promotion
+#   -Wno-unused
+#   -Wno-sign-compare
+#   -Wno-maybe-uninitialized
+# )
+
 # Include Edge Impulse library integration
 if(CONFIG_EDGE_IMPULSE_COMPILE_IN_TREE)
   message(STATUS "Compiling Edge Impulse library into application binary")

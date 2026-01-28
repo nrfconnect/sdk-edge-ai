@@ -112,6 +112,12 @@ target_include_directories(edge_impulse INTERFACE
   ${EDGE_IMPULSE_SOURCE_DIR}
 )
 
+# Fix for LTO: Add assembler include path for .incbin directives during final linking
+# When LTO is enabled, the linker invokes the assembler and needs to find .tflite files
+if(CONFIG_LTO)
+  target_link_options(edge_impulse INTERFACE -Wa,-I${EDGE_IMPULSE_SOURCE_DIR})
+endif()
+
 # Link the actual library
 target_link_libraries(edge_impulse INTERFACE edge_impulse_imported)
 
