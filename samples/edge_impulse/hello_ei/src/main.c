@@ -33,7 +33,7 @@ static size_t inference_cnt;
  */
 extern EI_IMPULSE_ERROR run_classifier(signal_t *signal, ei_impulse_result_t *result, bool debug);
 
-static void print_inference_result(const ei_impulse_result_t *result, int64_t duration)
+static void print_inference_result(const ei_impulse_result_t *result, uint32_t duration_us)
 {
 	LOG_INF("=== Inference result ===");
 
@@ -47,12 +47,12 @@ static void print_inference_result(const ei_impulse_result_t *result, int64_t du
 #endif
 
 	LOG_INF("=== Inference time profiling ===");
-	LOG_INF("Full inference completed in %lld ms", duration);
-	LOG_INF("Classification completed in %d ms", result->timing.classification);
-	LOG_INF("DSP operations completed in %d ms", result->timing.dsp);
+	LOG_INF("Full inference completed in %u us", duration_us);
+	LOG_INF("Classification completed in %lld us", result->timing.classification_us);
+	LOG_INF("DSP operations completed in %lld us", result->timing.dsp_us);
 
 #if EI_CLASSIFIER_HAS_ANOMALY
-	LOG_INF("Anomaly detection completed in %d ms", result->timing.anomaly);
+	LOG_INF("Anomaly detection completed in %lld us", result->timing.anomaly_us);
 #endif
 
 	LOG_SEPARATOR();
@@ -132,7 +132,7 @@ static int run_model(const float *input_data, size_t input_data_size)
 	__ASSERT_NO_MSG(input_data_size >= EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
 
 	size_t sample_cnt = 0;
-	int64_t start_time, delta;
+	uint32_t start_cycles, delta_us;
 	ei_impulse_result_t inference_result;
 	EI_IMPULSE_ERROR err;
 
@@ -148,16 +148,16 @@ static int run_model(const float *input_data, size_t input_data_size)
 		 * in a sliding window fashion.
 		 */
 		if (sample_cnt >= EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE) {
-			start_time = k_uptime_get();
+			start_cycles = k_cycle_get_32();
 			err = run_ei_classification(&inference_result, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
-			delta = k_uptime_delta(&start_time);
+			delta_us = k_cyc_to_us_floor32(k_cycle_get_32() - start_cycles);
 
 			if (err != EI_IMPULSE_OK) {
 				LOG_ERR("Classification failed with error code: %d", err);
 				return -1;
 			}
 
-			print_inference_result(&inference_result, delta);
+			print_inference_result(&inference_result, delta_us);
 
 			/* Keep track of how many inferences have been performed
 			 * to know the offset in the buffered data.
