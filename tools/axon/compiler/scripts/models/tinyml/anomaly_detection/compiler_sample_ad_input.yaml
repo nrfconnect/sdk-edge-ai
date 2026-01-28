@@ -1,0 +1,47 @@
+default_values : ##FOR TESTING##
+  get_quantized_data: &get_quantized_data False
+  interlayer_buffer_size: &interlayer_buffer_size 120000
+  psum_buffer_size: &psum_buffer_size 180000
+  constants_location: &constants_location NVM
+  no_striping: &no_striping False
+  test_vectors_list: &test_vector_list [0-10] #all # [1-3] # [2670] [1-50] # 
+  op_radix: &op_radix 0
+  cpu_op_codes_list: &cpu_op_codes_list { 25: 100}
+  log_level : &log_level debug #info, warn, error, critical
+  run_all_variants : &run_all_variants False #, softmax, conv2d_settings, normalized_scaleshifts, op_quantization
+  #default variant settings  
+  conv2d_setting: &conv2d_setting local_psum #local_psum, inner, outer
+  psum_buffer_placement : &psum_buffer_placement interlayer_buffer #dedicated_memory, interlayer_buffer
+  normalize_scaleshift: &normalize_scaleshift True
+  disable_op_quantization: &disable_op_quantization True
+  skip_softmax_op: &skip_softmax_op False
+
+#NOTE : the compiler_sample_ad_input.yaml file can only be used if the instructions to get the data set and model files are followed from the readme.rst files 
+#       and the files are kept in the exact locations the yaml file expects them to be
+tinyml_ad_model:
+  tflite_model: ad01_int8.tflite
+  model_name: TINYML_AD
+  float_model: #ad01.h5
+  train_data: 
+  test_data: #data/x_test_ad.npy
+  test_labels: #data/y_test_ad.npy
+  test_labels_format: #"edge_impulse_labels","just_labels","last_layer_vector","custom", if custom, also provide the user_handle_test_labels
+  test_vectors: *test_vector_list #[0 ,18 ,89 ,153 ,176]
+  header_file_test_vector_cnt: 3
+  get_quantized_data: False
+  interlayer_buffer_size: 120000
+  psum_buffer_size: 180000
+  constants_location: NVM
+  no_striping: False
+  classification_labels: 
+  op_radix: 0
+  cpu_op_codes_list: { 25: 100}
+  user_handle_accuracy_results: user_handler_functions.user_handle_anomaly_detection_accuracy_results
+  run_all_variants : *run_all_variants #if not "all" the user can provide the different settings and only those settings will be executed
+  #individual variants settings  
+  conv2d_setting : *conv2d_setting #[inner, outer]
+  skip_softmax_op : *skip_softmax_op #[False, True]
+  normalize_scaleshift: *normalize_scaleshift #[False, True] 
+  disable_op_quantization: *disable_op_quantization #[False, True]
+  log_level : *log_level
+  psum_buffer_placement : *psum_buffer_placement
