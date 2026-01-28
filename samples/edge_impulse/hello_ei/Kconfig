@@ -6,17 +6,11 @@
 
 mainmenu "Hello Edge Impulse sample application"
 
-config EDGE_IMPULSE_URI
-	string "Edge Impulse library URI"
-	default 'edge_impulse/nrf_accel_sim-v35.zip'
+config EDGE_IMPULSE_PATH
+	string "Edge Impulse library path"
+	default 'ei_model_nrf_accel_sim_v39.zip'
 	help
-	  Specify URI used to access archive with Edge Impulse library.
-	  The library will be downloaded into the build directory. You can specify
-	  more than one URI separated by a semicolon.
-	  Make sure to specify the HTTP API key header as EI_API_KEY_HEADER
-	  variable during build if the HTTP server uses it.
-	  You can also specify the absolute file path of a local file. In that
-	  case, only one URI has to be defined.
+	  Specifies local file path of an archive containing Edge Impulse library.
 
 config EDGE_IMPULSE_DEBUG_MODE
 	bool "Run Edge Impulse library in debug mode"

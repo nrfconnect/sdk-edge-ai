@@ -7,8 +7,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-#include "edge-impulse-sdk/dsp/numpy_types.h"
-#include "edge-impulse-sdk/classifier/ei_classifier_types.h"
+#include <edge-impulse-sdk/dsp/numpy_types.h>
+#include <edge-impulse-sdk/classifier/ei_classifier_types.h>
 
 #include "input_data.h"
 
