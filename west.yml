@@ -18,5 +18,11 @@ manifest:
       revision: v3.2.0
       import: true
 
+    - name: edge-impulse-sdk-zephyr
+      url: https://github.com/edgeimpulse/edge-impulse-sdk-zephyr
+      path: modules/edge-impulse-sdk-zephyr
+      revision: v1.82.3
+      west-commands: west/west-commands.yml
+
   self:
     path: edge-ai
