@@ -16,7 +16,7 @@
 #ifndef __SENSOR_IMU_H__
 #define __SENSOR_IMU_H__
 
-#include <common.h>
+#include "../../common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,21 +29,29 @@ extern "C" {
 #define IMU_ACCEL_SCALE_16G     (16)
 
 /** Gyroscope full scale variants */
-#define IMU_ACCEL_SCALE_125DPS  (125)
-#define IMU_ACCEL_SCALE_250DPS  (250)
-#define IMU_ACCEL_SCALE_500DPS  (500)
-#define IMU_ACCEL_SCALE_1000DPS (1000)
-#define IMU_ACCEL_SCALE_2000DPS (2000)
+#define IMU_GYRO_SCALE_125DPS  (125)
+#define IMU_GYRO_SCALE_250DPS  (250)
+#define IMU_GYRO_SCALE_500DPS  (500)
+#define IMU_GYRO_SCALE_1000DPS (1000)
+#define IMU_GYRO_SCALE_2000DPS (2000)
+
+/** Number of axes */
+#define IMU_NUM_AXES (3U)
+
+/** Number of accelerometer axes */
+#define ACCEL_AXIS_NUM (IMU_NUM_AXES)
+
+/** Number of gyroscope axes */
+#define GYRO_AXIS_NUM (IMU_NUM_AXES)
 
 /**
  * @brief IMU sensor configurations
  */
-typedef struct imu_config_s
-{
+typedef struct imu_config_s {
 	/** Accelerometer full scale in G */
 	int32_t accel_fs_g;
 
-	 /** Gyroscope full scale in DPS */
+	/** Gyroscope full scale in DPS */
 	int32_t gyro_fs_dps;
 
 	/** IMU data rate in Hz */
@@ -51,40 +59,36 @@ typedef struct imu_config_s
 } imu_config_t;
 
 /** Inertial sensor data */
-typedef struct imu_data_s
-{
+typedef struct imu_data_s {
 	/** Accelerometer data */
-	struct
-	{
+	struct {
 		int16_t raw;
 		float phys;
-	} accel[3];
+	} accel[ACCEL_AXIS_NUM];
 	/** Gyroscope data */
-	struct
-	{
+	struct {
 		int16_t raw;
 		float phys;
-	} gyro[3];
+	} gyro[GYRO_AXIS_NUM];
 } imu_data_t;
 
 /**
  * @brief Initialize and start generation of IMU sensor data
- * 
+ *
  * @param p_config          IMU configuration settings @ref imu_config_t
  * @param data_ready_cb     Data ready callback, provided callback will be
  *                          called when new data sample is ready for reading
- * 
- * @return Operation status @ref status_t 
+ *
+ * @return Operation status @ref status_t
  */
-status_t imu_init(const imu_config_t *p_config,
-			  generic_cb_t data_ready_cb);
+status_t imu_init(const imu_config_t *p_config, generic_cb_t data_ready_cb);
 
 /**
- * @brief Read IMU sensor data 
- * 
+ * @brief Read IMU sensor data
+ *
  * @param p_data        Pointer to data to be filled @ref imu_data_t
- *  
- * @return Operation status @ref status_t 
+ *
+ * @return Operation status @ref status_t
  */
 status_t imu_read(imu_data_t *const p_data);
 

@@ -21,8 +21,7 @@ typedef enum {
 	CLASS_LABEL_COUNT,
 } class_label_t;
 
-typedef struct prediction_ctx_s
-{
+typedef struct prediction_ctx_s {
 	/** Prediction target */
 	uint16_t target;
 
@@ -32,7 +31,7 @@ typedef struct prediction_ctx_s
 
 /**
  * @brief Postprocess the Neuton library RAW inference output
- * 
+ *
  * @param[in] predicted_target  Predicted target(class)
  * @param[in] probability       Predicted probability of the target
  *

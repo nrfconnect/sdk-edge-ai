@@ -17,5 +17,4 @@ tests:
     tags:
       - ci_build
       - sysbuild
-      - ci_applications_machine_learning
-    tags: introduction
+      - ci_applications_gesture_recognition

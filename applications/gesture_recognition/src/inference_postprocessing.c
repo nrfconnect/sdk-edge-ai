@@ -13,8 +13,7 @@
 #define PREVIOUS_PREDICTION_NUM                 (3)
 
 
-typedef struct prediction_tracer_s
-{
+typedef struct prediction_tracer_s {
 	/** Current prediction index */
 	int index;
 
@@ -27,10 +26,9 @@ typedef struct prediction_tracer_s
 
 /**
  * @brief Class prediction conditions for postprocessing
- * 
+ *
  */
-typedef struct class_prediction_condition_s
-{
+typedef struct class_prediction_condition_s {
 	/* Minimum number of repetitions of a class for prediction */
 	uint16_t min_repeat_count;
 
@@ -38,7 +36,7 @@ typedef struct class_prediction_condition_s
 	float probability_threshold;
 } class_prediction_condition_t;
 
-static const char *get_name_by_target_(uint8_t predicted_target)
+static const char *get_name_by_target(uint8_t predicted_target)
 {
 	static const char * const LABEL_VS_NAME[] = {
 		[CLASS_LABEL_IDLE]           = "IDLE",
@@ -52,12 +50,13 @@ static const char *get_name_by_target_(uint8_t predicted_target)
 	};
 
 	static const uint8_t LABELS_CNT = ARRAY_SIZE(LABEL_VS_NAME);
+
 	__ASSERT_NO_MSG(LABELS_CNT == CLASS_LABEL_COUNT);
 
 	return (predicted_target < LABELS_CNT) ? LABEL_VS_NAME[predicted_target] : NULL;
 }
 
-static const class_prediction_condition_t *get_class_condition_(uint8_t predicted_target)
+static const class_prediction_condition_t *get_class_condition(uint8_t predicted_target)
 {
 	static const class_prediction_condition_t LABEL_VS_CONFIG[] = {
 		[CLASS_LABEL_IDLE]           = {0, 0.0},
@@ -75,14 +74,14 @@ static const class_prediction_condition_t *get_class_condition_(uint8_t predicte
 	return (predicted_target < LABELS_CNT) ? &LABEL_VS_CONFIG[predicted_target] : NULL;
 }
 
-static void reset_tracer_(prediction_tracer_t *tracer, uint16_t target)
+static void reset_tracer(prediction_tracer_t *tracer, uint16_t target)
 {
 	__ASSERT_NO_MSG(tracer != NULL);
 	tracer->index = 0;
 	tracer->target = target;
 }
 
-static void reset_tracer_if_index_overflow_(prediction_tracer_t *tracer)
+static void reset_tracer_if_index_overflow(prediction_tracer_t *tracer)
 {
 	__ASSERT_NO_MSG(tracer != NULL);
 	if (tracer->index >= PREVIOUS_PREDICTION_NUM) {
@@ -90,15 +89,15 @@ static void reset_tracer_if_index_overflow_(prediction_tracer_t *tracer)
 	}
 }
 
-static void reset_tracer_if_target_changed_(prediction_tracer_t *tracer, uint16_t target)
+static void reset_tracer_if_target_changed(prediction_tracer_t *tracer, uint16_t target)
 {
 	__ASSERT_NO_MSG(tracer != NULL);
 	if (tracer->target != target) {
-		reset_tracer_(tracer, target);
+		reset_tracer(tracer, target);
 	}
 }
 
-static void record_prediction_(prediction_tracer_t *tracer, float probability)
+static void record_prediction(prediction_tracer_t *tracer, float probability)
 {
 	__ASSERT_NO_MSG(tracer != NULL);
 	__ASSERT_NO_MSG(tracer->index < PREVIOUS_PREDICTION_NUM);
@@ -106,7 +105,7 @@ static void record_prediction_(prediction_tracer_t *tracer, float probability)
 	tracer->index++;
 }
 
-static float average_probability_(const prediction_tracer_t *tracer)
+static float average_probability(const prediction_tracer_t *tracer)
 {
 	float average_prob = 0.0f;
 
@@ -119,13 +118,13 @@ static float average_probability_(const prediction_tracer_t *tracer)
 	return average_prob / tracer->index;
 }
 
-static bool is_repetitive_class_(uint16_t target)
+static bool is_repetitive_class(uint16_t target)
 {
 	return (target == CLASS_LABEL_ROTATION_RIGHT) ||
 	       (target == CLASS_LABEL_ROTATION_LEFT);
 }
 
-static bool apply_conditions_(const class_prediction_condition_t *condition,
+static bool apply_conditions(const class_prediction_condition_t *condition,
 			      const prediction_tracer_t *tracer,
 			      uint16_t *target,
 			      float *probability)
@@ -140,7 +139,8 @@ static bool apply_conditions_(const class_prediction_condition_t *condition,
 		return false;
 	}
 
-	float average_prob = average_probability_(tracer);
+	float average_prob = average_probability(tracer);
+
 	if (average_prob < condition->probability_threshold) {
 		*target = CLASS_LABEL_UNKNOWN;
 		*probability = 0.0f;
@@ -157,28 +157,28 @@ prediction_ctx_t inference_postprocess(uint16_t target, float probability)
 		.target = CLASS_LABEL_UNKNOWN,
 		.probability = 0.0f,
 	};
-	
-	static prediction_tracer_t tracer_;
+
+	static prediction_tracer_t tracer;
 
 	if ((target == CLASS_LABEL_UNKNOWN) || (target == CLASS_LABEL_IDLE)) {
 		/* Reset tracer for UNKNOWN and IDLE classes */
-		reset_tracer_(&tracer_, target);
+		reset_tracer(&tracer, target);
 	} else {
-		reset_tracer_if_index_overflow_(&tracer_);
-		reset_tracer_if_target_changed_(&tracer_, target);
-		record_prediction_(&tracer_, probability);
+		reset_tracer_if_index_overflow(&tracer);
+		reset_tracer_if_target_changed(&tracer, target);
+		record_prediction(&tracer, probability);
 
 		const class_prediction_condition_t *class_condition =
-			get_class_condition_(target);
+			get_class_condition(target);
 		if (class_condition == NULL) {
 			return result;
 		}
 
-		bool evaluated = apply_conditions_(class_condition, &tracer_, &target, &probability);
+		bool evaluated = apply_conditions(class_condition, &tracer, &target, &probability);
 
 		/* Reset tracer index for non-repetitive classes */
-		if (evaluated && !is_repetitive_class_(target)) {
-			tracer_.index = 0;
+		if (evaluated && !is_repetitive_class(target)) {
+			tracer.index = 0;
 		}
 	}
 
@@ -189,5 +189,5 @@ prediction_ctx_t inference_postprocess(uint16_t target, float probability)
 
 const char *inference_get_class_name(const class_label_t class_label)
 {
-	return get_name_by_target_((uint8_t)class_label);
+	return get_name_by_target((uint8_t)class_label);
 }

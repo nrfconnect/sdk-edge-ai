@@ -7,8 +7,8 @@
 #include <soc.h>
 #include <stddef.h>
 #include <string.h>
-#include <assert.h>
 #include <zephyr/types.h>
+#include <zephyr/sys/util.h>
 
 #include <stdio.h>
 #include <errno.h>
@@ -20,11 +20,11 @@
 #include <nrf_edgeai/nrf_edgeai.h>
 #include <nrf_edgeai_user_model.h>
 
-#include <button/button.h>
-#include <led/led.h>
-#include <sensor/imu/imu.h>
+#include "hw_modules/button/button.h"
+#include "hw_modules/led/led.h"
+#include "hw_modules/sensor/imu/imu.h"
 
-#include <hid/ble_hid.h>
+#include "ble/hid/ble_hid.h"
 #include "inference_postprocessing.h"
 
 #include <zephyr/bluetooth/bluetooth.h>
@@ -33,9 +33,6 @@
 #include <bluetooth/services/nus.h>
 #include <zephyr/settings/settings.h>
 
-
-#define ACCEL_AXIS_NUM (3U)
-#define GYRO_AXIS_NUM (3U)
 #define NRF_EDGEAI_INPUT_DATA_LEN (ACCEL_AXIS_NUM + GYRO_AXIS_NUM)
 
 #define BLINK_LED_TIMER_PERIOD_MS (30)
@@ -76,29 +73,29 @@ typedef enum app_remotectrl_mode_e {
 
 typedef int (*led_set_func_t)(float brightness);
 
-static void board_support_init_(void);
-static void led_glowing_timer_handler_(struct k_timer *timer);
-static void imu_data_ready_cb_(void);
-static void ble_connection_cb_(bool connected);
-static void button_click_handler_(bool pressed);
+static void hw_modules_init(void);
+static void led_glowing_timer_handler(struct k_timer *timer);
+static void imu_data_ready_cb(void);
+static void ble_connection_cb(bool connected);
+static void button_click_handler(bool pressed);
 
-static void send_bt_keyboard_key_(const class_label_t class_label);
-static bool log_prediction(const class_label_t class_label,
-			   const float probability,
-			   const char *class_name);
-static int data_collection_ble_init_(void);
-static int data_collection_ble_send_(const int16_t *input_data);
+static void send_bt_keyboard_key(const class_label_t class_label);
+static bool should_act_on_prediction(const class_label_t class_label, const char *class_name);
+static void log_prediction_message(const char *class_name, const float probability);
+static void handle_inference_result(nrf_edgeai_t *model);
+static int data_collection_ble_init(void);
+static int data_collection_ble_send(const int16_t *input_data);
 
 /* Work queue processing function declarations */
 static void led_update_work_handler(struct k_work *work);
 static void button_work_handler(struct k_work *work);
 
-static bool ble_connected_ = false;
-static app_remotectrl_mode_t keyboard_ctrl_mode_ = APP_REMOTECTRL_MODE_MUSIC;
-static struct k_sem imu_data_ready_sem_;
+static bool ble_connected;
+static app_remotectrl_mode_t keyboard_ctrl_mode = APP_REMOTECTRL_MODE_MUSIC;
+static struct k_sem imu_data_ready_sem;
 
-static struct bt_conn *nus_conn_;
-static bool nus_send_enabled_;
+static struct bt_conn *nus_conn;
+static bool nus_send_enabled;
 
 static const struct bt_data nus_ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -112,25 +109,25 @@ static const struct bt_data nus_sd[] = {
 /* Work queue items for deferring interrupt context LED operations to thread context */
 static struct k_work led_update_work;
 static struct k_work button_work;
-static nrf_edgeai_t *p_model_;
+static nrf_edgeai_t *p_model;
 
-K_TIMER_DEFINE(led_timer_, led_glowing_timer_handler_, NULL);
+K_TIMER_DEFINE(led_timer, led_glowing_timer_handler, NULL);
 
 int main(void)
 {
-	/** Initialize Board Support Package */
-	board_support_init_();
+	/* Initialize Board Support Package */
+	hw_modules_init();
 
-	/** Get generated user model runtime context */
-	p_model_ = nrf_edgeai_user_model();
-	assert(p_model_ != NULL);
-	assert(nrf_edgeai_is_runtime_compatible(p_model_));
+	/* Get generated user model runtime context */
+	p_model = nrf_edgeai_user_model();
+	__ASSERT_NO_MSG(p_model != NULL);
+	__ASSERT_NO_MSG(nrf_edgeai_is_runtime_compatible(p_model));
 
-	/** Initialize nRF Edge AI library */
+	/* Initialize nRF Edge AI library */
 	nrf_edgeai_err_t res;
 
-	res = nrf_edgeai_init(p_model_);
-	assert(res == NRF_EDGEAI_ERR_SUCCESS);
+	res = nrf_edgeai_init(p_model);
+	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
 
 	nrf_edgeai_rt_version_t version = nrf_edgeai_runtime_version();
 
@@ -138,17 +135,16 @@ int main(void)
 	LOG_INF("nRF Edge AI Runtime Version: %d.%d.%d",
 		version.field.major, version.field.minor, version.field.patch);
 	LOG_INF("nRF Edge AI Lab Solution id: %s",
-		nrf_edgeai_solution_id_str(p_model_));
+		nrf_edgeai_solution_id_str(p_model));
 
 	imu_data_t imu_data = {0};
 	int16_t input_data[NRF_EDGEAI_INPUT_DATA_LEN];
 
-	for (;;)
-	{
-		/** Wait for the semaphore to be released by IMU data ready interrupt */
-		k_sem_take(&imu_data_ready_sem_, K_FOREVER);
+	for (;;) {
+		/* Wait for the semaphore to be released by IMU data ready interrupt */
+		k_sem_take(&imu_data_ready_sem, K_FOREVER);
 
-		/** Read IMU sensor data sample */
+		/* Read IMU sensor data sample */
 		if (imu_read(&imu_data) != STATUS_SUCCESS) {
 			continue;
 		}
@@ -159,47 +155,25 @@ int main(void)
 		input_data[3] = imu_data.gyro[0].raw;
 		input_data[4] = imu_data.gyro[1].raw;
 		input_data[5] = imu_data.gyro[2].raw;
-		/** Feed and prepare raw sensor inputs for the model inference */
+		/* Feed and prepare raw sensor inputs for the model inference */
 		if (IS_ENABLED(CONFIG_DATA_COLLECTION_MODE)) {
 			if (IS_ENABLED(CONFIG_DATA_COLLECTION_BLE_NUS)) {
-				(void)data_collection_ble_send_(input_data);
+				(void)data_collection_ble_send(input_data);
 			} else {
 				printk("%d,%d,%d,%d,%d,%d\r\n", input_data[0], input_data[1],
 					input_data[2], input_data[3], input_data[4], input_data[5]);
 			}
 		} else {
-			res = nrf_edgeai_feed_inputs(p_model_, input_data, NRF_EDGEAI_INPUT_DATA_LEN);
+			res = nrf_edgeai_feed_inputs(p_model, input_data, NRF_EDGEAI_INPUT_DATA_LEN);
 
-			/** Check if input data window is ready for inference */
+			/* Check if input data window is ready for inference */
 			if (res == NRF_EDGEAI_ERR_SUCCESS) {
-				uint16_t predicted_target;
-				const flt32_t *p_probabilities;
+				/* Run Neuton model inference */
+				res = nrf_edgeai_run_inference(p_model);
 
-				/** Run Neuton model inference */
-				res = nrf_edgeai_run_inference(p_model_);
-
-				/** Handle Neuton inference results if the prediction was
-				* successful */
+				/* Handle inference results if the prediction was successful */
 				if (res == NRF_EDGEAI_ERR_SUCCESS) {
-					/** Predicted class */
-					predicted_target = p_model_->decoded_output.classif.predicted_class;
-					/** Probabilities pointer depend on model output
-					* quantization setting
-					*/
-					p_probabilities =
-						p_model_->decoded_output.classif.probabilities.p_f32;
-
-					prediction_ctx_t result =
-						inference_postprocess(predicted_target,
-								p_probabilities[predicted_target]);
-					const char *class_name =
-						inference_get_class_name((class_label_t)result.target);
-
-					if (log_prediction((class_label_t)result.target,
-							result.probability,
-							class_name)) {
-						send_bt_keyboard_key_((class_label_t)result.target);
-					}
+					handle_inference_result(p_model);
 				}
 			}
 		}
@@ -208,58 +182,59 @@ int main(void)
 	return 0;
 }
 
-static void board_support_init_(void)
+static void hw_modules_init(void)
 {
 	int ret;
 
-	/** Initialize work queues */
+	/* Initialize work queues */
 	k_work_init(&led_update_work, led_update_work_handler);
 	k_work_init(&button_work, button_work_handler);
 
-	/** Initialize LEDs */
+	/* Initialize LEDs */
 	ret = led_init();
 	if (ret != 0) {
 		LOG_ERR("Failed to initialize LEDs module, error = %d", ret);
 	}
-	k_timer_start(&led_timer_, K_MSEC(BLINK_LED_TIMER_PERIOD_MS),
+	k_timer_start(&led_timer, K_MSEC(BLINK_LED_TIMER_PERIOD_MS),
 		      K_MSEC(BLINK_LED_TIMER_PERIOD_MS));
 
-	/** Initialize user button */
+	/* Initialize user button */
 	ret = button_init();
 	if (ret != 0) {
 		LOG_ERR("Failed to initialize user button, error = %d", ret);
 	}
-	button_reg_click_handler(button_click_handler_);
+	button_reg_click_handler(button_click_handler);
 
-	/** Initialize IMU sensor  */
-	imu_config_t imu_config = 
-	{
+	/* Initialize IMU sensor  */
+	imu_config_t imu_config = {
 		.accel_fs_g = IMU_ACCEL_SCALE_4G,
-		.gyro_fs_dps = IMU_ACCEL_SCALE_1000DPS,
+		.gyro_fs_dps = IMU_GYRO_SCALE_1000DPS,
 		.data_rate_hz = 100
 	};
 
-	status_t status = imu_init(&imu_config, imu_data_ready_cb_);
+	status_t status = imu_init(&imu_config, imu_data_ready_cb);
+
 	if (status != STATUS_SUCCESS) {
 		LOG_ERR("Failed to initialize IMU sensor, error = %d", (int)status);
+		__ASSERT_NO_MSG(false);
 	}
-	k_sem_init(&imu_data_ready_sem_, 0, 1); /* Initial count 0, max count 1 */
+	k_sem_init(&imu_data_ready_sem, 0, 1); /* Initial count 0, max count 1 */
 
-	/** Initialize BLE HID profile */
+	/* Initialize BLE HID profile */
 	if (IS_ENABLED(CONFIG_DATA_COLLECTION_BLE_NUS)) {
-		ret = data_collection_ble_init_();
+		ret = data_collection_ble_init();
 		if (ret != 0) {
 			LOG_ERR("Failed to initialize BLE NUS service");
 		}
 	} else {
-		ret = ble_hid_init(ble_connection_cb_);
+		ret = ble_hid_init(ble_connection_cb);
 		if (ret != 0) {
 			LOG_ERR("Failed to initialize BLE HID service");
 		}
 	}
 }
 
-static void led_glowing_timer_handler_(struct k_timer *timer)
+static void led_glowing_timer_handler(struct k_timer *timer)
 {
 	(void)timer;
 
@@ -271,22 +246,21 @@ static void led_glowing_timer_handler_(struct k_timer *timer)
 
 static void led_update_work_handler(struct k_work *work)
 {
-	static const led_set_func_t LED_VS_KEYBOARD_MODE[] = 
-	{
+	static const led_set_func_t LED_VS_KEYBOARD_MODE[] = {
 		[APP_REMOTECTRL_MODE_PRESENTATION] = led_set_led2,
 		[APP_REMOTECTRL_MODE_MUSIC] = led_set_led1,
 	};
 
 	static bool rising = true;
-	static float brightness = 0;
+	static float brightness;
 
-	if (ble_connected_)
-	{
-		led_set_func_t led_set = LED_VS_KEYBOARD_MODE[keyboard_ctrl_mode_];
+	if (ble_connected) {
+		__ASSERT_NO_MSG(keyboard_ctrl_mode < ARRAY_SIZE(LED_VS_KEYBOARD_MODE));
+		led_set_func_t led_set = LED_VS_KEYBOARD_MODE[keyboard_ctrl_mode];
+
+		__ASSERT_NO_MSG(led_set != NULL);
 		led_set(brightness);
-	}
-	else
-	{
+	} else {
 		led_set_led0(brightness);
 	}
 
@@ -306,11 +280,11 @@ static void led_update_work_handler(struct k_work *work)
 static void button_work_handler(struct k_work *work)
 {
 	/* Handle button logic in thread context */
-	keyboard_ctrl_mode_ ^= 1;
+	keyboard_ctrl_mode ^= 1;
 	led_off();
 }
 
-static void button_click_handler_(bool pressed)
+static void button_click_handler(bool pressed)
 {
 	if (pressed) {
 		/* In interrupt context, only submit work to queue */
@@ -318,23 +292,23 @@ static void button_click_handler_(bool pressed)
 	}
 }
 
-static void ble_connection_cb_(bool connected)
+static void ble_connection_cb(bool connected)
 {
-	ble_connected_ = connected;
+	ble_connected = connected;
 	led_off();
 }
 
-static void imu_data_ready_cb_(void)
+static void imu_data_ready_cb(void)
 {
-	k_sem_give(&imu_data_ready_sem_); /* Release the semaphore */
+	k_sem_give(&imu_data_ready_sem);
 }
 
-static void nus_send_enabled_cb_(enum bt_nus_send_status status)
+static void nus_send_enabled_cb(enum bt_nus_send_status status)
 {
-	nus_send_enabled_ = (status == BT_NUS_SEND_STATUS_ENABLED);
+	nus_send_enabled = (status == BT_NUS_SEND_STATUS_ENABLED);
 }
 
-static void nus_connected_(struct bt_conn *conn, uint8_t err)
+static void nus_connected(struct bt_conn *conn, uint8_t err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
 
@@ -345,16 +319,16 @@ static void nus_connected_(struct bt_conn *conn, uint8_t err)
 		return;
 	}
 
-	if (!nus_conn_) {
-		nus_conn_ = bt_conn_ref(conn);
+	if (!nus_conn) {
+		nus_conn = bt_conn_ref(conn);
 	}
 
-	ble_connected_ = true;
+	ble_connected = true;
 	led_off();
 	LOG_INF("NUS connected %s", addr);
 }
 
-static void nus_disconnected_(struct bt_conn *conn, uint8_t reason)
+static void nus_disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
 	int err;
@@ -362,13 +336,13 @@ static void nus_disconnected_(struct bt_conn *conn, uint8_t reason)
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 	LOG_INF("NUS disconnected from %s (reason 0x%02x)", addr, reason);
 
-	if (nus_conn_ == conn) {
-		bt_conn_unref(nus_conn_);
-		nus_conn_ = NULL;
+	if (nus_conn == conn) {
+		bt_conn_unref(nus_conn);
+		nus_conn = NULL;
 	}
 
-	nus_send_enabled_ = false;
-	ble_connected_ = false;
+	nus_send_enabled = false;
+	ble_connected = false;
 	led_off();
 
 	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, nus_ad, ARRAY_SIZE(nus_ad),
@@ -378,16 +352,16 @@ static void nus_disconnected_(struct bt_conn *conn, uint8_t reason)
 	}
 }
 
-static struct bt_nus_cb nus_cb_ = {
-	.send_enabled = nus_send_enabled_cb_,
+static struct bt_nus_cb nus_cb = {
+	.send_enabled = nus_send_enabled_cb,
 };
 
-static struct bt_conn_cb nus_conn_callbacks_ = {
-	.connected = nus_connected_,
-	.disconnected = nus_disconnected_,
+static struct bt_conn_cb nus_conn_callbacks = {
+	.connected = nus_connected,
+	.disconnected = nus_disconnected,
 };
 
-static int data_collection_ble_init_(void)
+static int data_collection_ble_init(void)
 {
 	int err;
 
@@ -401,13 +375,13 @@ static int data_collection_ble_init_(void)
 		settings_load();
 	}
 
-	err = bt_nus_init(&nus_cb_);
+	err = bt_nus_init(&nus_cb);
 	if (err) {
 		LOG_ERR("NUS init failed (err %d)", err);
 		return err;
 	}
 
-	bt_conn_cb_register(&nus_conn_callbacks_);
+	bt_conn_cb_register(&nus_conn_callbacks);
 
 	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, nus_ad, ARRAY_SIZE(nus_ad),
 			      nus_sd, ARRAY_SIZE(nus_sd));
@@ -420,13 +394,15 @@ static int data_collection_ble_init_(void)
 	return 0;
 }
 
-static int data_collection_ble_send_(const int16_t *input_data)
+static int data_collection_ble_send(const int16_t *input_data)
 {
 	char buffer[64];
 	int len;
 	uint32_t mtu;
 
-	if (!nus_conn_ || !nus_send_enabled_) {
+	__ASSERT_NO_MSG(input_data != NULL);
+
+	if (!nus_conn || !nus_send_enabled) {
 		return -ENOTCONN;
 	}
 
@@ -437,20 +413,46 @@ static int data_collection_ble_send_(const int16_t *input_data)
 		return -EINVAL;
 	}
 
-	mtu = bt_nus_get_mtu(nus_conn_);
+	mtu = bt_nus_get_mtu(nus_conn);
 	if (len > mtu) {
 		return -EMSGSIZE;
 	}
 
-	return bt_nus_send(nus_conn_, (const uint8_t *)buffer, (uint16_t)len);
+	return bt_nus_send(nus_conn, (const uint8_t *)buffer, (uint16_t)len);
 }
 
-static bool log_prediction(const class_label_t class_label,
-			   const float probability,
-			   const char *class_name)
+static void handle_inference_result(nrf_edgeai_t *model)
+{
+	uint16_t predicted_target;
+	const flt32_t *p_probabilities;
+
+	__ASSERT_NO_MSG(model != NULL);
+
+	/* Predicted class */
+	predicted_target = model->decoded_output.classif.predicted_class;
+	/* Probabilities pointer depend on model output quantization setting */
+	p_probabilities = model->decoded_output.classif.probabilities.p_f32;
+	__ASSERT_NO_MSG(p_probabilities != NULL);
+
+	LOG_DBG("Predicted target: %d, Probability: %f",
+		predicted_target, (double)p_probabilities[predicted_target]);
+
+	prediction_ctx_t result =
+		inference_postprocess(predicted_target,
+				      p_probabilities[predicted_target]);
+	const char *class_name =
+		inference_get_class_name((class_label_t)result.target);
+
+	if (should_act_on_prediction((class_label_t)result.target, class_name)) {
+		log_prediction_message(class_name, result.probability);
+		send_bt_keyboard_key((class_label_t)result.target);
+	}
+}
+
+static bool should_act_on_prediction(const class_label_t class_label, const char *class_name)
 {
 	static const uint32_t PREDICTION_TIMEOUT_MS = 800U;
-	static uint32_t last_prediction_time_ms_ = 0;
+	static uint32_t last_prediction_time_ms;
 	uint32_t current_time_ms;
 
 	if (class_label <= CLASS_LABEL_UNKNOWN) {
@@ -465,45 +467,50 @@ static bool log_prediction(const class_label_t class_label,
 	 */
 	if ((class_label == CLASS_LABEL_ROTATION_RIGHT) ||
 	    (class_label == CLASS_LABEL_ROTATION_LEFT) ||
-	    (current_time_ms - last_prediction_time_ms_) > PREDICTION_TIMEOUT_MS) {
-		last_prediction_time_ms_ = current_time_ms;
-
-		LOG_INF("Predicted class: %s, with probability %d %%",
-			class_name, (int)(100 * probability));
+	    (current_time_ms - last_prediction_time_ms) > PREDICTION_TIMEOUT_MS) {
+		last_prediction_time_ms = current_time_ms;
 		return true;
 	}
 
 	return false;
 }
 
-
-static void send_bt_keyboard_key_(const class_label_t class_label)
+static void log_prediction_message(const char *class_name, const float probability)
 {
-	static const ble_hid_key_t LABEL_VS_KEY_BY_MODE[2][8] = 
-	{
-		[APP_REMOTECTRL_MODE_PRESENTATION] = 
-		{
-			[CLASS_LABEL_IDLE] = BLE_HID_KEYS_count, /* No key */
-			[CLASS_LABEL_UNKNOWN] = BLE_HID_KEYS_count, /* No key */
-			[CLASS_LABEL_SWIPE_RIGHT] = BLE_HID_KEY_ARROW_RIGHT, /* Next slide */
-			[CLASS_LABEL_SWIPE_LEFT] = BLE_HID_KEY_ARROW_LEFT, /* Previous slide */
-			[CLASS_LABEL_DOUBLE_SHAKE] = BLE_HID_KEY_F5, /* Fullscreen mode */
-			[CLASS_LABEL_DOUBLE_THUMB] = BLE_HID_KEY_ESC, /* Exit Fullscreen mode */
-			[CLASS_LABEL_ROTATION_RIGHT] = BLE_HID_KEYS_count, /* No key */
-			[CLASS_LABEL_ROTATION_LEFT] = BLE_HID_KEYS_count, /* No key */
+	__ASSERT_NO_MSG(class_name != NULL);
+	LOG_INF("Predicted class: %s, with probability %d %%", class_name,
+							       (int)(100 * probability));
+}
+
+
+static void send_bt_keyboard_key(const class_label_t class_label)
+{
+	static const ble_hid_key_t LABEL_VS_KEY_BY_MODE[2][8] = {
+		[APP_REMOTECTRL_MODE_PRESENTATION] = {
+			/* In case no key is supposed to be send BLE_HID_KEYS_count is used */
+			[CLASS_LABEL_IDLE] = BLE_HID_KEYS_count,
+			[CLASS_LABEL_UNKNOWN] = BLE_HID_KEYS_count,
+			[CLASS_LABEL_SWIPE_RIGHT] = BLE_HID_KEY_ARROW_RIGHT,
+			[CLASS_LABEL_SWIPE_LEFT] = BLE_HID_KEY_ARROW_LEFT,
+			[CLASS_LABEL_DOUBLE_SHAKE] = BLE_HID_KEY_F5,
+			[CLASS_LABEL_DOUBLE_THUMB] = BLE_HID_KEY_ESC,
+			[CLASS_LABEL_ROTATION_RIGHT] = BLE_HID_KEYS_count,
+			[CLASS_LABEL_ROTATION_LEFT] = BLE_HID_KEYS_count,
 		},
-		[APP_REMOTECTRL_MODE_MUSIC] = 
-		{
-			[CLASS_LABEL_IDLE] = BLE_HID_KEYS_count, /* No key */
-			[CLASS_LABEL_UNKNOWN] = BLE_HID_KEYS_count, /* No key */
-			[CLASS_LABEL_SWIPE_RIGHT] = BLE_HID_KEY_MEDIA_NEXT_TRACK, /* Next */
-			[CLASS_LABEL_SWIPE_LEFT] = BLE_HID_KEY_MEDIA_PREV_TRACK, /* Previous */
-			[CLASS_LABEL_DOUBLE_SHAKE] = BLE_HID_KEY_MEDIA_PLAY_PAUSE, /* Play-pause */
-			[CLASS_LABEL_DOUBLE_THUMB] = BLE_HID_KEY_MEDIA_MUTE, /* Mute stream */
-			[CLASS_LABEL_ROTATION_RIGHT] = BLE_HID_KEY_MEDIA_VOLUME_UP, /* Vol up */
-			[CLASS_LABEL_ROTATION_LEFT] = BLE_HID_KEY_MEDIA_VOLUME_DOWN, /* Vol down */
+		[APP_REMOTECTRL_MODE_MUSIC] = {
+			/* In case no key is supposed to be send BLE_HID_KEYS_count is used */
+			[CLASS_LABEL_IDLE] = BLE_HID_KEYS_count,
+			[CLASS_LABEL_UNKNOWN] = BLE_HID_KEYS_count,
+			[CLASS_LABEL_SWIPE_RIGHT] = BLE_HID_KEY_MEDIA_NEXT_TRACK,
+			[CLASS_LABEL_SWIPE_LEFT] = BLE_HID_KEY_MEDIA_PREV_TRACK,
+			[CLASS_LABEL_DOUBLE_SHAKE] = BLE_HID_KEY_MEDIA_PLAY_PAUSE,
+			[CLASS_LABEL_DOUBLE_THUMB] = BLE_HID_KEY_MEDIA_MUTE,
+			[CLASS_LABEL_ROTATION_RIGHT] = BLE_HID_KEY_MEDIA_VOLUME_UP,
+			[CLASS_LABEL_ROTATION_LEFT] = BLE_HID_KEY_MEDIA_VOLUME_DOWN,
 		},
 	};
 
-	ble_hid_send_key(LABEL_VS_KEY_BY_MODE[keyboard_ctrl_mode_][class_label]);
+	__ASSERT_NO_MSG(class_label < CLASS_LABEL_COUNT);
+	__ASSERT_NO_MSG(keyboard_ctrl_mode < ARRAY_SIZE(LABEL_VS_KEY_BY_MODE));
+	ble_hid_send_key(LABEL_VS_KEY_BY_MODE[keyboard_ctrl_mode][class_label]);
 }
