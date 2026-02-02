@@ -25,8 +25,8 @@ extern "C" {
 
 /**
  * @brief Initialize LEDs
- * 
- * @return Operation status, 0 for success 
+ *
+ * @return Operation status, 0 for success
  */
 int led_init(void);
 
@@ -59,19 +59,19 @@ int led_set_led2(float brightness);
 
 /**
  * @brief Turn on LED channels 0..2 with specific brightness
- * 
+ *
  * @param led0_brightness    LED0 (red on RGB boards) brightness in range 0 - 1
  * @param led1_brightness    LED1 (green on RGB boards) brightness in range 0 - 1
  * @param led2_brightness    LED2 (blue on RGB boards) brightness in range 0 - 1
- * 
- * @return Operation status, 0 for success 
+ *
+ * @return Operation status, 0 for success
  */
 int led_set_leds(float led0_brightness, float led1_brightness, float led2_brightness);
 
 /**
  * @brief Turn off all LEDs
- * 
- * @return Operation status, 0 for success  
+ *
+ * @return Operation status, 0 for success
  */
 int led_off(void);
 
@@ -116,7 +116,7 @@ int led_blink_led2(float brightness, int32_t on_ms, int32_t off_ms);
 
 /**
  * @brief Blink LED channels 0..2 with specific brightness
- * 
+ *
  * @note This function uses sleep internally and should not be called from ISR context.
  *
  * @param led0        LED0 (red on RGB boards) brightness in range 0 - 1
@@ -124,7 +124,7 @@ int led_blink_led2(float brightness, int32_t on_ms, int32_t off_ms);
  * @param led2        LED2 (blue on RGB boards) brightness in range 0 - 1
  * @param on_ms       RGB LED turns on time in milliseconds
  * @param off_ms      RGB LED turns off time in milliseconds
- * 
+ *
  * @return Operation status, 0 for success
  */
 int led_blink_leds(float led0_brightness, float led1_brightness, float led2_brightness, int32_t on_ms, int32_t off_ms);

@@ -87,10 +87,10 @@ static struct hids_report input_consumer = {
 	.type = HIDS_INPUT,
 };
 
-static bool ble_connected_ = false;
-static ble_connection_cb_t user_conn_callback_ = NULL;
+static bool ble_connected;
+static ble_connection_cb_t user_conn_callback;
 
-static bool ccc_enabled_ = false;
+static bool ccc_enabled;
 static uint8_t ctrl_point;
 static uint8_t consumer_report;
 
@@ -189,7 +189,7 @@ static void input_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value)
 	LOG_INF("Input CCCD %s", value == BT_GATT_CCC_NOTIFY ? "enabled" : "disabled");
 	LOG_INF("Input attribute handle: %d", attr->handle);
 
-	ccc_enabled_ = (value == BT_GATT_CCC_NOTIFY);
+	ccc_enabled = (value == BT_GATT_CCC_NOTIFY);
 }
 
 static ssize_t read_input_report(struct bt_conn *conn,
@@ -276,10 +276,10 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		LOG_ERR("Failed to set security");
 	}
 
-	ble_connected_ = true;
+	ble_connected = true;
 
-	if (user_conn_callback_) {
-		user_conn_callback_(ble_connected_);
+	if (user_conn_callback) {
+		user_conn_callback(ble_connected);
 	}
 }
 
@@ -292,11 +292,11 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	LOG_INF("Disconnected from %s (reason 0x%02x)", addr, reason);
 
-	ble_connected_ = false;
-	ccc_enabled_ = false;
+	ble_connected = false;
+	ccc_enabled = false;
 
-	if (user_conn_callback_) {
-		user_conn_callback_(ble_connected_);
+	if (user_conn_callback) {
+		user_conn_callback(ble_connected);
 	}
 
 	/* If disconnected due to authentication failure, clear all pairing info */
@@ -393,7 +393,7 @@ int ble_hid_init(ble_connection_cb_t cb)
 		return err;
 	}
 
-	user_conn_callback_ = cb;
+	user_conn_callback = cb;
 
 	if (IS_ENABLED(CONFIG_SAMPLE_BT_USE_AUTHENTICATION)) {
 		bt_conn_auth_cb_register(&auth_cb_display);
@@ -409,7 +409,7 @@ int ble_hid_send_key(ble_hid_key_t key)
 	size_t report_len = sizeof(report);
 	int attr_index = 5;
 
-	if (!ble_connected_ || !ccc_enabled_) {
+	if (!ble_connected || !ccc_enabled) {
 		return -1;
 	}
 

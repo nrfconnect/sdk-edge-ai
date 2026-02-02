@@ -28,20 +28,20 @@ LOG_MODULE_REGISTER(led, CONFIG_LOG_DEFAULT_LEVEL);
 		       DT_NODE_HAS_STATUS(DT_ALIAS(led2), okay))
 
 #if HAS_PWM_LEDS
-static const struct pwm_dt_spec led0_ = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led0));
-static const struct pwm_dt_spec led1_ = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led1));
-static const struct pwm_dt_spec led2_ = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led2));
+static const struct pwm_dt_spec led0 = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led0));
+static const struct pwm_dt_spec led1 = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led1));
+static const struct pwm_dt_spec led2 = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led2));
 
-#define led_init_   init_led_pwm_
-#define led_set_    set_led_pwm_
+#define led_backend_init init_led_pwm
+#define led_backend_set  set_led_pwm
 
 #elif HAS_GPIO_LEDS
-static const struct gpio_dt_spec led0_ = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios, {0});
-static const struct gpio_dt_spec led1_ = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios, {0});
-static const struct gpio_dt_spec led2_ = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led2), gpios, {0});
+static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios, {0});
+static const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios, {0});
+static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led2), gpios, {0});
 
-#define led_init_   init_led_gpio_
-#define led_set_    set_led_gpio_
+#define led_backend_init init_led_gpio
+#define led_backend_set  set_led_gpio
 
 #else
 
@@ -53,7 +53,7 @@ static const struct gpio_dt_spec led2_ = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led2), gpi
 #define PWM_PERIOD PWM_MSEC(20)
 
 
-__unused static int init_led_pwm_(const struct pwm_dt_spec pwm_led)
+__unused static int init_led_pwm(const struct pwm_dt_spec pwm_led)
 {
 	int ret = 0;
 
@@ -70,7 +70,7 @@ __unused static int init_led_pwm_(const struct pwm_dt_spec pwm_led)
 	return ret;
 }
 
-__unused static int init_led_gpio_(const struct gpio_dt_spec gpio_led)
+__unused static int init_led_gpio(const struct gpio_dt_spec gpio_led)
 {
 	int ret = 0;
 
@@ -89,7 +89,7 @@ __unused static int init_led_gpio_(const struct gpio_dt_spec gpio_led)
 	return ret;
 }
 
-__unused static int set_led_pwm_(const struct pwm_dt_spec *pwm_led, float brightness)
+__unused static int set_led_pwm(const struct pwm_dt_spec *pwm_led, float brightness)
 {
 	int ret = 0;
 	float pwm_brightness = CLAMP(brightness, 0.0f, 1.0f);
@@ -103,7 +103,7 @@ __unused static int set_led_pwm_(const struct pwm_dt_spec *pwm_led, float bright
 	return ret;
 }
 
-__unused static int set_led_gpio_(const struct gpio_dt_spec *gpio_led, float brightness)
+__unused static int set_led_gpio(const struct gpio_dt_spec *gpio_led, float brightness)
 {
 	int ret = 0;
 	int on = brightness > 0.0f;
@@ -121,26 +121,26 @@ int led_init(void)
 {
 	int ret = 0;
 
-	ret = led_init_(led0_);
+	ret = led_backend_init(led0);
 	HW_RETURN_IF(ret != 0, ret);
 
-	ret = led_init_(led1_);
+	ret = led_backend_init(led1);
 	HW_RETURN_IF(ret != 0, ret);
 
-	return led_init_(led2_);
+	return led_backend_init(led2);
 }
 
 int led_set_led0(float brightness)
 {
 	int ret = 0;
 
-	ret = led_set_(&led1_, 0);
+	ret = led_backend_set(&led1, 0);
 	HW_RETURN_IF(ret != 0, ret);
 
-	ret = led_set_(&led2_, 0);
+	ret = led_backend_set(&led2, 0);
 	HW_RETURN_IF(ret != 0, ret);
 
-	return led_set_(&led0_, brightness);
+	return led_backend_set(&led0, brightness);
 
 }
 
@@ -148,52 +148,52 @@ int led_set_led1(float brightness)
 {
 	int ret = 0;
 
-	ret = led_set_(&led0_, 0);
+	ret = led_backend_set(&led0, 0);
 	HW_RETURN_IF(ret != 0, ret);
 
-	ret = led_set_(&led2_, 0);
+	ret = led_backend_set(&led2, 0);
 	HW_RETURN_IF(ret != 0, ret);
 
-	return led_set_(&led1_, brightness);
+	return led_backend_set(&led1, brightness);
 }
 
 int led_set_led2(float brightness)
 {
 	int ret = 0;
 
-	ret = led_set_(&led0_, 0);
+	ret = led_backend_set(&led0, 0);
 	HW_RETURN_IF(ret != 0, ret);
 
-	ret = led_set_(&led1_, 0);
+	ret = led_backend_set(&led1, 0);
 	HW_RETURN_IF(ret != 0, ret);
 
-	return led_set_(&led2_, brightness);
+	return led_backend_set(&led2, brightness);
 }
 
 int led_set_leds(float led0_brightness, float led1_brightness, float led2_brightness)
 {
 	int ret = 0;
 
-	ret = led_set_(&led0_, led0_brightness);
+	ret = led_backend_set(&led0, led0_brightness);
 	HW_RETURN_IF(ret != 0, ret);
 
-	ret = led_set_(&led1_, led1_brightness);
+	ret = led_backend_set(&led1, led1_brightness);
 	HW_RETURN_IF(ret != 0, ret);
 
-	return led_set_(&led2_, led2_brightness);
+	return led_backend_set(&led2, led2_brightness);
 }
 
 int led_off(void)
 {
 	int ret = 0;
 
-	ret = led_set_(&led0_, 0);
+	ret = led_backend_set(&led0, 0);
 	HW_RETURN_IF(ret != 0, ret);
 
-	ret = led_set_(&led1_, 0);
+	ret = led_backend_set(&led1, 0);
 	HW_RETURN_IF(ret != 0, ret);
 
-	return led_set_(&led2_, 0);
+	return led_backend_set(&led2, 0);
 }
 
 int led_blink_led0(float brightness, int32_t on_ms, int32_t off_ms)

@@ -24,93 +24,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-/**
- * @brief Macro for performing rounded integer division (as opposed to truncating the result).
- *
- * @param[in]   A   Numerator.
- * @param[in]   B   Denominator.
- *
- * @return      Rounded (integer) result of dividing A by B.
- */
-#ifndef ROUNDED_DIV
-#define ROUNDED_DIV(A, B) (((A) + ((B) / 2)) / (B))
-#endif
-
-/**
- * @brief Macro for counting items in an object.
- *
- * @param[in]   x   An object for which the counting will be made.
- *
- * @return      A number of items in an object.
- */
-#ifndef COUNT_OF
-#define COUNT_OF(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
-#endif
-
-/**
- * @brief Macro for getting offset for a field in the provided type.
- *
- * @param[in]   type   Provided type.
- * @param[in]   field  Field in the provided type.
- *
- * @return         Offset of a field in the provided type.
- */
-#ifndef OFFSET_OF
-#define OFFSET_OF(type, field)    ((unsigned long) &(((type *) 0)->field))
-#endif
-
-/**
- * @brief Macro for obtaining the minimum value of two.
- *
- * @param[in]   A  First value.
- * @param[in]   B  Second value.
- *
- * @return     Minimum value of two set values.
- */
-#ifndef MIN
-#define MIN(A, B) (( (A) < (B) ) ? (A) : (B))
-#endif
-
-/**
- * @brief Macro for obtaining the maximum value of two.
- *
- * @param[in]   A  First value.
- * @param[in]   B  Second value.
- *
- * @return     Maximum value of two set values.
- */
-#ifndef MAX
-#define MAX(A, B) (( (A) > (B) ) ? (A) : (B))
-#endif
-
-/**
- * @brief Macro for obtaining the constraint value between min and max values.
- *
- * @param[in]   val  input value.
- * @param[in]   vmin lower border.
- * @param[in]   vmax higher border.
- *
- * @return     Constraint value between min and max.
- */
-#ifndef CONSTRAIN
-#define CONSTRAIN(val, vmin, vmax) ((val)>(vmax)?(vmax):(val)<(vmin)?(vmin):(val))
-#endif
-
-/**
- * @brief Macro for unused argument.
- *
- * @param[in]   x  Unused argument.
- *
- * @return     None.
- */
-#ifndef UNUSED
-#define UNUSED(x) ((void)(x))
-#endif
-
-/** @brief Void value using for returns or argument for void-argument functions. */
-#define VOID_VALUE
-
 /**
  * @brief Macro for checking argument for NULL.
  *        Macro will call return with the status STATUS_NULL_ARGUMENT.
@@ -118,30 +31,12 @@ extern "C" {
  * @param[in]   x  Argument to be checked.
  *
  */
-#define NULL_CHECK(x)                               \
-	do                                                  \
-	{                                                   \
-		if ( (x) == NULL )                              \
-		{                                               \
-			return STATUS_NULL_ARGUMENT;            \
-		}                                               \
-	} while(0)
-
-/**
- * @brief Macro for verifying that the provided status is STATUS_SUCCESS.
- *        It will cause the exterior function to return an error code if it is
- *        not @ref STATUS_SUCCESS.
- *
- * @param[in] status     Status to check vs STATUS_SUCCESS.
- */
-#define VERIFY_SUCCESS(status) \
-do                                                      \
-{                                                       \
-	if ((status) != STATUS_SUCCESS)                 \
-	{                                                   \
-		return (status);                                \
-	}                                                   \
-} while(0)
+#define NULL_CHECK(x)					\
+	do {						\
+		if ((x) == NULL) {			\
+			return STATUS_NULL_ARGUMENT;	\
+		}					\
+	} while (0)
 
 /**
  * @brief Macro for verifying that the provided argumets is valid. It will cause the exterior
@@ -149,14 +44,12 @@ do                                                      \
  *
  * @param[in] is_valid     boolean comparison on the validity of the argument.
  */
-#define VERIFY_VALID_ARG(is_valid)                  \
-do                                                      \
-{                                                       \
-	if (!(is_valid))                                    \
-	{                                                   \
-		return STATUS_INVALID_ARGUMENT;             \
-	}                                                   \
-} while(0)
+#define VERIFY_VALID_ARG(is_valid)			\
+do {							\
+	if (!(is_valid)) {				\
+		return STATUS_INVALID_ARGUMENT;		\
+	}						\
+} while (0)
 
 /**
  * @brief Macro for verifying any boolean condition and returning status if condition failed
@@ -173,14 +66,12 @@ do                                                      \
  * @param[in]   ret_val Returning value.
  */
 #ifndef __RETURN_CONDITIONAL
-#    define __RETURN_CONDITIONAL(expr, ret_val) \
-		do                                      \
-		{                                       \
-			if ((expr) == true)                 \
-			{                                   \
-				return ret_val;                 \
-			}                                   \
-		}                                       \
+#    define __RETURN_CONDITIONAL(expr, ret_val)		\
+		do {					\
+			if ((expr) == true) {		\
+				return ret_val;		\
+			}				\
+		}					\
 		while (0)
 #endif
 
@@ -205,13 +96,11 @@ typedef void(*async_drdy_cb_t)(void *data, uint32_t data_size);
  * information on their status. It may also be used by functions as a
  * return code.
  */
-typedef enum status_e
-{
+typedef enum status_e {
 	/** Operation successful */
 	STATUS_SUCCESS,
 
-	/** The operation failed because the module is already in the
-	 * requested mode */
+	/** The operation failed because the module is already in the requested mode */
 	STATUS_ALREADY_IN_MODE,
 
 	/** There was an error communicating with hardware */
