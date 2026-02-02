@@ -42,9 +42,15 @@ See the following documentation:
    :glob:
    :caption: Subpages:
 
+   solution_comparison.rst
+   quick_start.rst
    setting_up_environment.rst
+   applications.rst
    samples.rst
+   tests.rst
    integrations.rst
+   drivers.rst
+   axon_compiler.rst
    libraries.rst
    release_notes.rst
    known_issues.rst

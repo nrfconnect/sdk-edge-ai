@@ -1,4 +1,4 @@
-.. _nrf_edgeai_requirements:
+.. _setup_nrf_edgeai_lib:
 
 nRF Edge AI Library requirements
 ################################

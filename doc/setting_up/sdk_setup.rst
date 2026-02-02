@@ -1,4 +1,4 @@
-.. _nrf_edgeai_setting_up_sdk:
+.. _setup_sdk:
 
 Setting up the SDK
 ##################

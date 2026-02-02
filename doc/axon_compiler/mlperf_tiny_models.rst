@@ -1,5 +1,11 @@
-MLPerf™ Tiny Models Documentation
-================================
+.. _axon_compiler_tiny_models:
+
+MLPerf™ Tiny Models
+###################
+
+.. contents::
+   :local:
+   :depth: 2
 
 Overview
 --------
@@ -42,3 +48,16 @@ Notes
 -----
 
 - Setting up the Python environment and installing the necessary dependencies are vital for getting the dataset and performing the necessary functions to pre-process the dataset in the right format.
+
+Available models
+----------------
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+   :caption: Subpages:
+
+   mlperf_tiny_models_anomaly_detection.rst
+   mlperf_tiny_models_image_classification.rst
+   mlperf_tiny_models_kws.rst
+   mlperf_tiny_models_vww.rst

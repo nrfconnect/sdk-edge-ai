@@ -1,4 +1,4 @@
-.. _axon_samples:
+.. _edge_impulse_samples:
 
 |EI| samples
 ###########################
