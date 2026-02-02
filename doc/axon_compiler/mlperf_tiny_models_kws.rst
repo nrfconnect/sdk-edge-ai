@@ -1,5 +1,11 @@
+.. _axon_compiler_kws:
+
 TinyML Keyword Spotting (KWS)
-=============================
+#############################
+
+.. contents::
+   :local:
+   :depth: 2
 
 Overview
 --------
@@ -45,7 +51,7 @@ NOTES
 - Ensure that you have the correct dataset and test data to evaluate the model's performance accurately.
 
 ** *EXPERIMENTAL* ** : KWS_MODEL_SCRIPT 
-----------------
+---------------------------------------
 
 The *kws_model_script.py* is shared as an example for users to generate their own model scripts as needed.
 

@@ -1,5 +1,11 @@
+.. _axon_compiler_vww:
+
 TinyML Visual Wake Word (VWW)
-=============================
+#############################
+
+.. contents::
+   :local:
+   :depth: 2
 
 Overview
 --------

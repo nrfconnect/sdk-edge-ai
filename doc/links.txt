@@ -65,3 +65,12 @@
 .. _`nRF Connect SDK simulated sensor machine learning model`: https://studio.edgeimpulse.com/public/18121/latest
 .. _`nRF Connect SDK hardware accelerometer machine learning model`: https://studio.edgeimpulse.com/public/33129/latest
 .. _`Nordic Semi nRF54L15 DK page`: https://docs.edgeimpulse.com/docs/nordic-semi-nrf54L15-dk
+
+.. ### Source: github.com
+
+.. _`MLPerf Tiny anomaly detection`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/README.md
+.. _`Pre-trained anomaly detection model`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/anomaly_detection/trained_models
+.. _`Anomaly detection script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/get_dataset.sh
+.. _`Anomaly detection training`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/anomaly_detection
+.. _`Anomaly score calculation script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/01_test.py
+.. _`Axon samples`: https://github.com/nrfconnect/sdk-axons-ml/tree/main/samples

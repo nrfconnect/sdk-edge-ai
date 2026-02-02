@@ -1,5 +1,11 @@
+.. _axon_compiler_image_classification:
+
 TinyML Image Classification (IC)
-================================
+################################
+
+.. contents::
+   :local:
+   :depth: 2
 
 Overview
 --------
