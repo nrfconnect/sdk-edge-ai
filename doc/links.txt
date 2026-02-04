@@ -52,6 +52,9 @@
 
 .. _`Simulated sensor driver`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/drivers/sensor_sim.html
 
+.. _`Logging`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/services/logging/index.html#logging-api
+.. _`TensorFlow Lite for Microcontrollers: Hello World`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/samples/modules/tflite-micro/hello_world/README.html#tflite-hello-world
+
 .. ### Source: edgeimpulse.com
 
 .. _`Edge Impulse`: https://www.edgeimpulse.com/
