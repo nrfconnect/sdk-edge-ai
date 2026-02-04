@@ -1,0 +1,23 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+source "Kconfig.zephyr"
+
+menu "Hello Axon"
+
+config ASYNC_INFERENCE
+	bool "Run inference asynchronously"
+	default y
+
+config AVOID_INPUT_DOUBLE_COPY
+	bool "Avoid copying of input data twice in synchronous inference mode"
+	depends on !ASYNC_INFERENCE
+	default y
+	help
+	  This option removes unnecessary copying of input data between buffers, but it requires
+	  exclusive access to the Axon NPU interlayer buffer to preserve consistency.
+
+endmenu
