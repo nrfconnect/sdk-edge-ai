@@ -11,5 +11,6 @@ The following user guides describe the available integrations:
    :glob:
    :caption: Subpages:
 
+   integrations/axon
    integrations/nrf_edgeai
    integrations/edge_impulse

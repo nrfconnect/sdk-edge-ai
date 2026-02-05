@@ -34,11 +34,11 @@ sys.path.insert(0, str(ZEPHYR_BASE / 'scripts'))
 # -- Project information -----------------------------------------------------
 
 project = 'nRF Connect SDK - Edge AI Add-on'
-copyright = '2025, Nordic Semiconductor'
+copyright = '2026, Nordic Semiconductor'
 author = 'Nordic Semiconductor'
 
 # The full version, including alpha/beta/rc tags
-release = '2025'
+release = '2026'
 
 
 # -- General configuration ---------------------------------------------------
@@ -66,8 +66,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 external_content_contents = [
     (EDGE_AI_BASE / "doc", "[!_]*"),
-    (EDGE_AI_BASE, "applications/**/*.rst"),
-    (EDGE_AI_BASE, "samples/**/*.rst"),
 ]
 
 # Options for table_from_rows --------------------------------------------------
