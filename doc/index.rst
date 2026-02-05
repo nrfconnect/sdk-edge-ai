@@ -47,10 +47,10 @@ See the following documentation:
    setting_up_environment.rst
    applications.rst
    samples.rst
-   tests.rst
    integrations.rst
    drivers.rst
    axon_compiler.rst
    libraries.rst
+   glossary.rst
    release_notes.rst
    known_issues.rst

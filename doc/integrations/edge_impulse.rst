@@ -25,7 +25,7 @@ Integration overview
 Before integrating the Edge Impulse machine learning model into an |EAI| application, you must prepare and deploy the machine learning model for your embedded device.
 This model is prepared using the `Edge Impulse studio`_ external web tool.
 It relies on sensor data that can be provided by different sources, for example data forwarder.
-Check the :ref:`ei_data_forwarder_sample` sample for a demonstration of how you can send sensor data to Edge Impulse studio using `Edge Impulse's data forwarder`_.
+Check the :ref:`include_ei_data_forwarder_sample` sample for a demonstration of how you can send sensor data to Edge Impulse studio using `Edge Impulse's data forwarder`_.
 
 The machine learning model is distributed as a single :file:`zip` archive that includes C++ library sources.
 This file is used by the |NCS| build system to build the Edge Impulse library.
@@ -53,7 +53,7 @@ This tutorial will guide you through the following steps:
 
    .. note::
      You can use one of the development boards supported directly by Edge Impulse or your mobile phone to collect the data.
-     You can also modify the :ref:`ei_data_forwarder_sample` application and use it to forward data from a sensor that is connected to any board available in the |NCS|.
+     You can also modify the :ref:`include_ei_data_forwarder_sample` application and use it to forward data from a sensor that is connected to any board available in the |NCS|.
 
 #. Designing your machine learning model (an *impulse*).
 #. Deploying the machine learning model to use it on an embedded device.
@@ -87,4 +87,4 @@ Applications and samples
 
 The following samples demonstrate the Edge Impulse integration in the |EAI|:
 
-* :ref:`ei_data_forwarder_sample` sample - demonstrates how you can send sensor data to Edge Impulse studio using `Edge Impulse's data forwarder`_.
+* :ref:`include_ei_data_forwarder_sample` sample - demonstrates how you can send sensor data to Edge Impulse studio using `Edge Impulse's data forwarder`_.

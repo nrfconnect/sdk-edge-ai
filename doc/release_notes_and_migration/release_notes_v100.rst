@@ -24,9 +24,9 @@ This release is based on the |NCS| release v3.2.0.
   * Support for Cortex-M4 and Cortex-M33 architectures with precompiled libraries.
   * Three reference samples:
 
-    * :ref:`Classification <runtime_classification_sample>`
-    * :ref:`Regression <runtime_regression_sample>`
-    * :ref:`Anomaly detection <runtime_anomaly_sample>`
+    * :ref:`Classification <include_runtime_classification_sample>`
+    * :ref:`Regression <include_runtime_regression_sample>`
+    * :ref:`Anomaly detection <include_runtime_anomaly_sample>`
 
   * Comprehensive documentation, including :ref:`integration <integrations>` guide, :ref:`library API references<libraries>`, and :ref:`samples overview <samples_nrf_edge_ai>`.
   * Kconfig options for enabling and configuring the library.

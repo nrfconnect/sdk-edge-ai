@@ -1,7 +1,7 @@
 .. _test_nn_inference:
 
-Test NN Inference
-#################
+Test: NN Inference
+##################
 
 .. contents::
    :local:
