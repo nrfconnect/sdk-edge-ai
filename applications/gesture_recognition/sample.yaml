@@ -1,6 +1,5 @@
 sample:
   description: Gesture Recognition application
-    application
   name: gesture recognition
 tests:
   applications.gesture_recognition.zdebug:
@@ -18,3 +17,17 @@ tests:
       - ci_build
       - sysbuild
       - ci_applications_gesture_recognition
+  # This configuration is not working yet.
+  # It's added so that shield is correctly rendered in the documentation.
+  applications.gesture_recognition.nrf54lm20a.zdebug:
+    sysbuild: true
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    tags:
+      - ci_build
+      - sysbuild
+      - ci_applications_gesture_recognition
+    extra_args:
+      - gesture_recognition_SHIELD=pca63568

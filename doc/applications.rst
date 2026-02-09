@@ -16,4 +16,4 @@ This section provides information about various applications that can be built u
    :caption: Subpages:
 
    applications/kws.rst
-   applications/gesture_recognition.rst
+   /../applications/gesture_recognition/README.rst
