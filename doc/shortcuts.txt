@@ -1,5 +1,6 @@
 .. |NCS| replace:: nRF Connect SDK
 .. |EAI| replace:: Edge AI Add-on
+.. |EAILib| replace:: nRF Edge AI Library
 .. |nRFVSC| replace:: nRF Connect for VS Code extension
 .. |EI| replace:: Edge Impulse
 .. |EIS| replace:: Edge Impulse Studio

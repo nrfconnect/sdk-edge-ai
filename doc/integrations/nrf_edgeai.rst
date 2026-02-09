@@ -114,7 +114,7 @@ The total memory footprint consists of the runtime engine and context, the user-
 The runtime engine and its associated context typically require about 2 kB of FLASH and 0.5–1 kB of SRAM.
 The size of the user-generated model, which is trained for a specific dataset, depends on your selected settings and overall model complexity.
 In most cases, the requirement is between 1 and 10 kB.
-Memory usage for the signal-processing pipeline is determined by the configuration parameters specified in the `Signal Processing Block`_ of `Nordic Edge AI Lab`_.
+Memory usage for the signal-processing pipeline is determined by the configuration parameters specified in the `Signal Processing Block`_ of `Nordic Edge AI Lab documentation`_.
 
 This variability results from the library including only those algorithms and processing blocks that you explicitly select.
 Unused modules are not included in the deployed solution, which helps ensure that memory is used efficiently and without unnecessary overhead.
