@@ -13,11 +13,7 @@ You can use this platform to collect data from sensors, train a machine learning
 Integration prerequisites
 *************************
 
-Before you start the |EAI| integration with Edge Impulse, make sure that the following prerequisites are completed:
-
-* :ref:`setup_sdk`
-* Setup of the required Development Kit (DK).
-* Creation of an `Edge Impulse studio account <Edge Impulse studio signup_>`_ and an Edge Impulse project.
+Before you start working with |EI|, make sure that you complete :ref:`setup_edge_impulse`.
 
 Solution architecture
 *********************

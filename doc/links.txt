@@ -9,24 +9,25 @@
 .. _`nRF52 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
 .. _`nRF53 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
 .. _`nRF54 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
-.. _`Nordic Edge AI Lab platform`: https://ai.lab.nordicsemi.com/
 .. _`training dataset`: https://files.nordicsemi.com/ui/native/edge-ai/external/
 .. _`Nordic Thingy:53 Multi-protocol IoT prototyping platform`: https://www.nordicsemi.com/Products/Development-hardware/Nordic-Thingy-53
 .. _`nRF54LM20A`: https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK/Hardware-files
-.. _`Nordic Edge AI Lab`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/overview_of_nordic_edge_ai_lab.html
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/signal_processing.html
-
+.. _`nRF54LM20B`: https://www.nordicsemi.com/Products/nRF54LM20B
+.. _`Nordic Edge AI Lab platform`: https://ai.lab.nordicsemi.com/
+.. _`Nordic Edge AI Lab`: http://ai.lab.nordicsemi.com/
+.. _`Nordic Edge AI Lab documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
 
 .. ### Source: docs.nordicsemi.com (do not update)
 
 .. _`nRF Connect SDK`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/index.html
-.. _`nRF Connect SDK installation guide`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html>`_
+.. _`nRF Connect SDK installation guide`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html
 .. _`Serial Terminal app`: https://docs.nordicsemi.com/bundle/nrf-connect-serial-terminal/page/index.html
 .. _`Power Profiler Kit II (PPK2)`: https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html
 .. _`Power Profiler app`: https://docs.nordicsemi.com/bundle/nrf-connect-ppk/page/index.html
+.. _`nRF Connect for Visual Studio Code`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/index.html
 .. _`nRF Connect for Visual Studio Code: Thread Viewer`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/reference/ui_panel.html#thread-viewer
-.. _`Nordic Edge AI Lab documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
 .. _`Nordic central UART sample`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/samples/bluetooth/central_uart/README.html
 .. _`nRF54L15TAG`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/nrf54l15tag/doc/index.html
 
@@ -103,8 +104,8 @@
 
 .. ## External sources:
 
-.. _`Miniforge`: https://conda-forge.org/miniforge/#latest-release 
-.. _`A beginner’s guide to Docker`: https://www.freecodecamp.org/news/a-beginners-guide-to-docker-how-to-create-your-first-docker-application-cc03de9b639f
+.. _`Miniforge`: https://conda-forge.org/miniforge/#latest-release
+.. _`A beginner's guide to Docker`: https://www.freecodecamp.org/news/a-beginners-guide-to-docker-how-to-create-your-first-docker-application-cc03de9b639f
 .. _`Creating the Dockerfile`: https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/#creating-the-dockerfile>
 .. _`Intro Guide to Dockerfile Best Practices`: https://www.docker.com/blog/intro-guide-to-dockerfile-best-practices/
 .. _`Podman installation guide`: https://podman.io/docs/installation?
@@ -113,4 +114,7 @@
 .. _`Keyword spotting trained model`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/keyword_spotting/trained_models
 .. _`Keyword spotting`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/keyword_spotting
 .. _`Visual wake word trained model`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/visual_wake_words/trained_models
-.. _`Visual wake word`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/visual_wake_words 
+.. _`Visual wake word`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/visual_wake_words
+.. _`Setting up Podman container`: https://github.com/containers/podman/blob/main/docs/tutorials/podman_tutorial.md#running-a-sample-container
+.. _`Visual Studio Code`: https://code.visualstudio.com
+.. _`Configure VS Code for Microsoft C++`: https://code.visualstudio.com/docs/cpp/config-msvc

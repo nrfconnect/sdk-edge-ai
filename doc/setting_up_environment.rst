@@ -10,5 +10,7 @@ The documentation will guide you through the setup of your nRF Edge AI environme
    :glob:
    :caption: Subpages:
 
-   setting_up/edge_ai_lib_setup.rst
    setting_up/sdk_setup.rst
+   setting_up/edge_ai_lib_setup.rst
+   setting_up/axon_setup.rst
+   setting_up/edge_impulse_setup.rst
