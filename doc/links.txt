@@ -9,6 +9,10 @@
 .. _`nRF52 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
 .. _`nRF53 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
 .. _`nRF54 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
+.. _`Nordic Edge AI Lab platform`: https://ai.lab.nordicsemi.com/
+.. _`training dataset`: https://files.nordicsemi.com/ui/native/edge-ai/external/
+.. _`Nordic Thingy:53 Multi-protocol IoT prototyping platform`: https://www.nordicsemi.com/Products/Development-hardware/Nordic-Thingy-53
+.. _`nRF54LM20A`: https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK/Hardware-files
 .. _`Nordic Edge AI Lab`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/overview_of_nordic_edge_ai_lab.html
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/signal_processing.html
@@ -22,6 +26,9 @@
 .. _`Power Profiler Kit II (PPK2)`: https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html
 .. _`Power Profiler app`: https://docs.nordicsemi.com/bundle/nrf-connect-ppk/page/index.html
 .. _`nRF Connect for Visual Studio Code: Thread Viewer`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/reference/ui_panel.html#thread-viewer
+.. _`Nordic Edge AI Lab documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
+.. _`Nordic central UART sample`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/samples/bluetooth/central_uart/README.html
+.. _`nRF54L15TAG`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/nrf54l15tag/doc/index.html
 
 .. ### Source: docs.nordicsemi.com (update for each release)
 
@@ -54,6 +61,8 @@
 .. _`Simulated sensor driver`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/drivers/sensor_sim.html
 
 .. _`Logging`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/services/logging/index.html#logging-api
+.. _`Sensor`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/hardware/peripherals/sensor/index.html#sensor
+.. _`Nordic UART Service (NUS)`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/libraries/bluetooth/services/nus.html
 .. _`TensorFlow Lite for Microcontrollers: Hello World`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/samples/modules/tflite-micro/hello_world/README.html#tflite-hello-world
 
 .. ### Source: edgeimpulse.com
@@ -81,3 +90,8 @@
 .. _`Anomaly detection training`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/anomaly_detection
 .. _`Anomaly score calculation script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/01_test.py
 .. _`Axon samples`: https://github.com/nrfconnect/sdk-axons-ml/tree/main/samples
+
+.. ### Source: other
+
+.. _`Gesture recognition use-case demo video`: https://youtu.be/qDFdxapLbrA
+.. _`Bosch BMI270`: https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi270/

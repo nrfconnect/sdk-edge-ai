@@ -30,6 +30,10 @@
 
 | `nRF54L15 DK`_ | PCA10156 | `nrf54l15dk`_ | ``nrf54l15dk/nrf54l15/cpuapp`` |
 
+.. nrf54l15tag_nrf54l15_cpuapp
+
+| `nRF54L15TAG`_ | PCA20072 | `nrf54l15tag`_ | ``nrf54l15tag/nrf54l15/cpuapp`` |
+
 .. nrf54l15dk_nrf54l10_cpuapp
 
 | `nRF54L15 DK (emulating nRF54L10) <nRF54L15 DK_>`_ | PCA10156 | `nrf54l15dk <nRF54L10 emulation_>`_ | ``nrf54l15dk/nrf54l10/cpuapp`` |
