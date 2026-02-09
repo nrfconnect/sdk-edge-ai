@@ -16,17 +16,17 @@ Application overview
 
    Currently, the gesture recognition application supports only Neuton CPU-based neural network models.
 
-The gesture recognition application demonstrates how to use an nRF Edge AI model to recognize hand gestures from motion sensor data and expose them as standard HID inputs over Bluetooth® Low Energy. 
+The gesture recognition application demonstrates how to use an nRF Edge AI model to recognize hand gestures from motion sensor data and expose them as standard HID inputs over Bluetooth® Low Energy.
 When connected to a PC, the device appears as a Bluetooth LE HID device, allowing recognized gestures to control media playback or presentation slides.
 Based on accelerometer and gyroscope data, the nRF Edge AI model recognizes eight gesture classes:
 
-* Swipe right 
+* Swipe right
 * Swipe left
-* Double shake 
-* Double tap 
-* Rotation clockwise 
+* Double shake
+* Double tap
+* Rotation clockwise
 * Rotation counter-clockwise
-* No gestures (IDLE) 
+* No gestures (IDLE)
 * Unknown gesture
 
 The neural network model is trained using the `Nordic Edge AI Lab platform`_.
@@ -68,7 +68,7 @@ Development kits
 
          * - .. figure:: images/sensor_EB_top.jpeg
                 :alt: Sensor Evaluation Board top view
-    
+
            - .. figure:: images/sensor_EB_bottom.jpeg
                 :alt: Sensor Evaluation Board bottom view
 
@@ -212,7 +212,7 @@ The output consists of 16-bit integers separated by a comma, in the following or
 
    <acc_x>,<acc_y>,<acc_z>,<gyro_x>,<gyro_y>,<gyro_z>
 
-Column headers are not included. 
+Column headers are not included.
 The output rate is the configured sampling frequency (default 100 Hz).
 
 You can find raw datasets used for model training on the `training dataset`_ page.

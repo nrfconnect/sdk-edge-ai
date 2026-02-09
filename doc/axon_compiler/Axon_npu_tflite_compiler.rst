@@ -64,6 +64,8 @@ You should not modify the tools directory structure, as the executor expects the
 
 You must activate the Python environment from this directory to run the executor.
 
+.. _axon_npu_tflite_compiler_setup_executor:
+
 Setting up the executor
 ***********************
 

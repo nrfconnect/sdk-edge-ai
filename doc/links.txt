@@ -14,10 +14,13 @@
 .. _`nRF54LM20A`: https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK/Hardware-files
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/signal_processing.html
-.. _`nRF54LM20B`: https://www.nordicsemi.com/Products/nRF54LM20B
 .. _`Nordic Edge AI Lab platform`: https://ai.lab.nordicsemi.com/
 .. _`Nordic Edge AI Lab`: http://ai.lab.nordicsemi.com/
-.. _`Nordic Edge AI Lab documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
+.. _`nRF54LM20B`: https://www.nordicsemi.com/Products/nRF54LM20B
+.. _`Axon NPU`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Axon-NPU
+.. _`Neuton models`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Neuton-models
+.. _`nRF Edge Impulse`: https://www.nordicsemi.com/Products/Development-tools/nRF-Edge-Impulse
+.. _`nRF Programmer`: https://www.nordicsemi.com/Products/Development-tools/nRF-Programmer
 
 .. ### Source: docs.nordicsemi.com (do not update)
 
@@ -30,6 +33,14 @@
 .. _`nRF Connect for Visual Studio Code: Thread Viewer`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/reference/ui_panel.html#thread-viewer
 .. _`Nordic central UART sample`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/samples/bluetooth/central_uart/README.html
 .. _`nRF54L15TAG`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/nrf54l15tag/doc/index.html
+.. _`Nordic Edge AI Lab documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/index.html
+.. _`Nordic Edge AI Lab Quick Start Guide`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
+.. _`Nordic Edge AI Lab Model Creating Pipeline`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline.html
+.. _`Nordic Edge AI Lab Model Dataset Requirements`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/dataset_requirements.html
+.. _`Nordic Edge AI Lab Model Dataset Uploading`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/data_uploading_and_setup.html
+.. _`Nordic Edge AI Lab preloaded datasets`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/data_uploading_and_setup.html#selecting_an_uploaded_or_preloaded_dataset
+.. _`Nordic Edge AI Lab Analytics Tools`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/analytics_tools.html
+.. _`Nordic Edge AI Lab Anomaly detection`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/anomaly_detection.html
 
 .. ### Source: docs.nordicsemi.com (update for each release)
 
@@ -82,6 +93,9 @@
 .. _`Edge Impulse Zephyr Module Deployment`: https://docs.edgeimpulse.com/hardware/deployments/run-zephyr-module
 .. _`Automated Deployment with West Commands`: https://docs.edgeimpulse.com/hardware/deployments/run-zephyr-module#automated-deployment-with-west-commands-early-access-preview
 .. _`Using the library from C`: https://docs.edgeimpulse.com/hardware/deployments/run-cpp-desktop#using-the-library-from-c
+.. _`Edge Impulse data acquisition`: https://docs.edgeimpulse.com/studio/projects/data-acquisition
+.. _`Edge Impulse C++ SDK`: https://docs.edgeimpulse.com/tools/libraries/sdks/inference/cpp
+.. _`Edge Impulse Datasets`: https://docs.edgeimpulse.com/datasets
 
 .. ### Source: github.com
 

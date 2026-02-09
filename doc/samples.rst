@@ -4,10 +4,6 @@
 Samples and tests
 #################
 
-.. contents::
-   :local:
-   :depth: 2
-
 The |EAI| repository provides several samples showcasing its functionality.
 You can build the samples for a variety of board targets and configure them for different usage scenarios.
 
