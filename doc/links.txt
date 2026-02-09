@@ -12,7 +12,8 @@
 .. _`Nordic Edge AI Lab`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/overview_of_nordic_edge_ai_lab.html
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/signal_processing.html
-
+.. _`nRF54LM20B`: https://www.nordicsemi.com/Products/nRF54LM20B
+.. _`Nordic Edge AI Lab signup`: https://ai.lab.nordicsemi.com
 
 .. ### Source: docs.nordicsemi.com (do not update)
 
@@ -21,6 +22,7 @@
 .. _`Serial Terminal app`: https://docs.nordicsemi.com/bundle/nrf-connect-serial-terminal/page/index.html
 .. _`Power Profiler Kit II (PPK2)`: https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html
 .. _`Power Profiler app`: https://docs.nordicsemi.com/bundle/nrf-connect-ppk/page/index.html
+.. _`nRF Connect for Visual Studio Code`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/index.html
 .. _`nRF Connect for Visual Studio Code: Thread Viewer`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/reference/ui_panel.html#thread-viewer
 
 .. ### Source: docs.nordicsemi.com (update for each release)
@@ -81,3 +83,14 @@
 .. _`Anomaly detection training`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/anomaly_detection
 .. _`Anomaly score calculation script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/01_test.py
 .. _`Axon samples`: https://github.com/nrfconnect/sdk-axons-ml/tree/main/samples
+.. _`Setting up Podman container`: https://github.com/containers/podman/blob/main/docs/tutorials/podman_tutorial.md#running-a-sample-container
+
+.. ### External sources:
+
+.. _`Miniforge`: https://conda-forge.org/miniforge/#latest-release
+.. _`A beginner's guide to Docker`: https://www.freecodecamp.org/news/a-beginners-guide-to-docker-how-to-create-your-first-docker-application-cc03de9b639f
+.. _`Creating the Dockerfile`: https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/#creating-the-dockerfile>
+.. _`Intro Guide to Dockerfile Best Practices`: https://www.docker.com/blog/intro-guide-to-dockerfile-best-practices/
+.. _`Podman installation guide`: https://podman.io/docs/installation?
+.. _`Visual Studio Code`: https://code.visualstudio.com
+.. _`Configure VS Code for Microsoft C++`: https://code.visualstudio.com/docs/cpp/config-msvc

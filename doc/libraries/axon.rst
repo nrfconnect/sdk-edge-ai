@@ -15,6 +15,14 @@ The Axon NPU accelerates neural networks.
 This repository contains the driver, sample, simulator, and tool chain files to support Axon NPU.
 Applications can be created to target the SoC (running zephyr) or a software simulator running on the host machine.
 
+Prerequisites
+*************
+
+Complete :ref:`Setting up Axon <setup_axon>` before starting to work with the Axon NPU:
+
+* :ref:`Setting up Axon TFlite Compiler <axon_setup_compiler>` if you want to compile your neural network models.
+* :ref:`Setting up Axon Simulator <axon_setup_simulator>` if you want to run software simulations of the Axon NPU on your host machine.
+
 Neural Net Workflow
 *******************
 
@@ -41,8 +49,10 @@ Building Applications
 All applications under :file:`samples` can target zephyr or the simulator. 
 The simulator is simply a static library that is compiled into a console application. It is not cycle exact with hardware, but is bit exact and provides performance estimates.
 
-Zephyr Applications
--------------------
+.. _lib_axon_zephyr:
+
+Building Zephyr Applications
+----------------------------
 
 Kconfig dependencies
 ====================
@@ -54,32 +64,48 @@ Kconfig dependencies
 
 To build the zephyr application, execute "west build..." in the application's root.
 
-Simulator Applications
-----------------------
+.. _lib_axon_simulator:
 
-To build a simulator application, use the CMakeLists.txt file under <application>/simulator. The simulator application links with various pre-compiled libraries, so it is required to install the same toolchain the pre-compiled libraries were compiled with.
+Building Simulator Applications
+-------------------------------
 
+Follow the instructions below to build the simulator application.
 
-* For Windows, install and use the MSVC tool chain with CMake extensions in VS Code.
-* For Linux, install and use the GCC tool chain.
-  
-  * Create a folder under simulator build_cli_linux and move to this directory.
-  * Generate the Cmake files: cmake -DCMAKE_C_COMPILER:FILEPATH=gcc -DCMAKE_CXX_COMPILER:FILEPATH=g++ -DCMAKE_C_FLAGS:STRING=-fPIC -S.. -B. -G Ninja
-  * Build the image: 
+.. tabs::
 
-::
+   .. group-tab:: Windows
 
-   cmake --build .
+      1. TBA
 
-* For MacOS, install and use the AppleClang tool chain.
-  
-  * Create a folder under simulator build_cli_macos and move to this directory.
-  * Generate the Cmake files: cmake -DCMAKE_C_COMPILER:FILEPATH=clang -DCMAKE_CXX_COMPILER:FILEPATH=clang++ -DCMAKE_C_FLAGS:STRING=-fPIC -S.. -B. -G Ninja
-  * Build the image: 
+   .. group-tab:: Linux
 
-:: 
+      1. Create a folder under simulator :file:`build_cli_linux` and move to this directory.
+      #. Generate CMake files:
 
-   cmake --build .
+         .. code-block:: console
+
+            cmake -DCMAKE_C_COMPILER:FILEPATH=gcc -DCMAKE_CXX_COMPILER:FILEPATH=g++ -DCMAKE_C_FLAGS:STRING=-fPIC -S.. -B. -G Ninja
+
+      #. Build the image:
+
+         .. code-block:: console
+
+            cmake --build .
+
+   .. group-tab:: MacOS
+
+      1. Create a folder under simulator :file:`build_cli_macos` and move to this directory.
+      #. Generate CMake files:
+
+         .. code-block:: console
+
+            cmake -DCMAKE_C_COMPILER:FILEPATH=clang -DCMAKE_CXX_COMPILER:FILEPATH=clang++ -DCMAKE_C_FLAGS:STRING=-fPIC -S.. -B. -G Ninja
+
+      #. Build the image:
+
+         .. code-block:: console
+
+            cmake --build .
 
 Each application's CMakeList.txt file adds the repos root directory. 
 At each directory level, CMakeList.txt files add local subdirectories, conditioned on kconfig variables.

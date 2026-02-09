@@ -40,82 +40,7 @@ The conda environment must be executed from this directory in order to execute t
 Setting up the Executor
 ***********************
 
-The current python projects support python version 3.11.8. 
-
-NOTE:  The various commands in the following explanation are used on windows command line. If you are using a different command line interface like PS or Linux bash, modify the commands accordingly.
-
-Setting up the Virtual environment
-----------------------------------
-
-It is advised to set up a virtual environment to run python projects. The virtual environment provides an abstraction for the different python packages installed for running executor successfully. 
-
-There are different ways you can set up an environment. An example using the miniconda is explained below.
-
-Install Miniforge3
-==================
-
-Miniforge is a lightweight and community driven command line tool for package and environment management.
-Follow the link to install miniforge3.
-
-- `Miniforge <https://conda-forge.org/miniforge/#latest-release>`_
-
-NOTE: Make sure to add the conda scripts path to SYSTEM Path. This may look something like, **PATH = C:/Users/<user_name>/AppData/Local/miniforge3/Scripts**
-
-Create an environment
-======================
-
-Use the following link to create an environment and set it up with the required python version.
-- `Miniforge : Usage <https://github.com/conda-forge/miniforge/blob/main/README.md#usage>`_
-
-Create the environment and install the exact python version supported:
-
-.. code-block:: console
-
-    conda create -n <environment_name> python=<_version_>
-
-Activate the environment
-========================
-All the commands to install packages and to run the executor scripts must be performed from within the activated environment.
-
-.. code-block:: console
-
-    conda activate <environment_name>
-
-
-
-Installing Python Packages
---------------------------
-
-Use the requirements.txt file and pip to install the necessary packages.
-
-Windows:
-(from the root directory of the project.)
-
-.. code-block:: console
-
-    pip install -r requirements.txt
-
-Unix-like (Linux and MacOS):
-(from the root directory of the project.)
-
-.. code-block:: console
-
-    pip install -r requirements.txt
-
-On MacOS, the error "ERROR: No matching distribution found for tensorflow==2.15.1" may occur.
-Run this command in response:
-
-.. code-block:: console
-
-    conda install -c conda-forge tensorflow=<##.##.##>
-
-<##.##.##> is the tensorflow version specificed in requirements.txt
-for example:
-
-.. code-block:: console
-
-    conda install -c conda-forge tensorflow=2.15.1
-
+Before you can run the compiler, you need to :ref:`set up a Python environment with the required dependencies <axon_setup_compiler>`.
 
 Input Parameters
 ****************
@@ -141,7 +66,7 @@ These parameters affect the basic behavior of the compiler. Most are mandatory. 
    * - MODEL_NAME
      - STR
      - Short-hand name of the model. This is incorporated into the output file names as well as c symbols, so must not contain any character that are not allowed by either file systems or c symbols. C symobls are more restrictive, so the name can only have alpha-numerics and underscores, and cannot start with a number. 
-        
+       
        Always mandatory.
 
    * - TFLITE_MODEL
@@ -152,13 +77,13 @@ These parameters affect the basic behavior of the compiler. Most are mandatory. 
        Mandatory unless FLOAT_MODEL along with TRAIN_DATA is provided.
    * - FLOAT_MODEL
      - STR
-     - The path and name to the floating-point model file to compile for axon. Used to calculate the floating-point model accuracy when TEST_DATA is provided. 
+     - The path and name to the floating-point model file to compile for axon. Used to calculate the floating-point model accuracy when TEST_DATA is provided.
        TRAIN_DATA must be provided if TFLITE_MODEL is not provided (TRAIN_DATA is needed to calculate quantization parameters.)
        Must be a .h5 model file (i.e a keras model.)
 
        Mandatory (along with TRAIN_DATA) if TFLITE_MODEL is not provided.
    * - TRAIN_DATA
-     - STR 
+     - STR
      - The path and name of the train dataset file in floating point. Must be a numpy file and in the format supported by the respective model. Used only to convert a floating-point model into a tflite model when a TFLITE_MODEL is not provided.
 
        Mandatory if TFLITE_MODEL is not provided.
@@ -166,7 +91,7 @@ These parameters affect the basic behavior of the compiler. Most are mandatory. 
    * - TEST_DATA
      - STR
      - The path and name of the test dataset file in float (Directory + file name). Must be a numpy file and in the format supported by the model. 
-     
+
        Optional, needed if the user wants accuracy results and test vectors header file in the output.
 
    * - TEST_LABELS
@@ -294,9 +219,9 @@ Advanced Parameters
      - FLOAT
      - Specifies a confidence threshold that classifications must meet in order for the classification to not be considered "inconclusive".
        "inconclusive" is a meta classification that means none-of-the-above. This allows the user to increase precision (reduced false positives) at the cost of accuracy.
-       
+
        This can only be used when softmax is the final operation on the model.
-       
+
        Must be a number between 0 and 1. 0 disables the feature.
    * - PRECISION_MARGIN
      - FLOAT
@@ -307,12 +232,12 @@ Advanced Parameters
    * - RESHAPE_INPUT
      - BOOL
      - When true, reshapes the test data input to match the input shape of the model if the only transformation needed on the test data is a simple reshaping of the test input. Checks for the total length of the input needed from the shape and reshapes it to match the model input shape.
-
+       
        default : ``False``
-
+       
        NOTE : This only solves the mismatch in the shape of the test data and model input. Any other transformation on the test data before feeding into the model apart from a simple reshape will lead to unexpected results. The user needs to be aware of such transformation if present beforehand.
        e.g, if the model expects an input image with shape 1x96x96x3 and the test data is simply flattened to be 1x27648, the reshape_input flag will enable reshaping the test data to match the shape of the model input.
-   
+
 Running the Executor
 *********************
 
@@ -349,21 +274,15 @@ The `README file <models/tinyml/kws/README.rst>`_ for the kws model explains thi
 
 The user can write their own scripts for getting data and train models, to use the axon feature extractor and the executor to run their models using axon by referencing the *kws_model_script.py* .
 
+.. _axon_npu_tflite_compiler_docker:
+
 Using Docker
 ************
 
 
 Docker is an optional way to set up and run the compiler.
 
-Follow the links to build and run a simple docker container which runs a simple python application.
-You will have to install docker on your system and then create a Dockerfile, build and run it to test that docker is up and running.
-
-* `A beginner’s guide to Docker — how to create your first Docker application (freecodecamp.org) <https://www.freecodecamp.org/news/a-beginners-guide-to-docker-how-to-create-your-first-docker-application-cc03de9b639f/>`_
-
-Extra links for guidance on creating and defining a Dockerfile using the best practices-
-
-* `Creating the Dockerfile <https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/#creating-the-dockerfile>`_
-* `Intro Guide to Dockerfile Best Practices <https://www.docker.com/blog/intro-guide-to-dockerfile-best-practices/>`_
+Set it up using instructions in :ref:`axon_setup_docker`.
 
 Once you have a simple docker container up and running, the user can use the scripts/batch files present in the compiler directory to build and run the docker container for the executor.
 
@@ -469,6 +388,8 @@ Where,
 *user_work_directory* the user work directory as explained above, is the directory where the input yaml file is located. It is necessary that the files referenced in the input yaml file are also placed in the user work directory and the paths to those files are updated accordingly in the yaml file for the docker container to work without any errors.
 
 *input_yaml_file_name* the full name of the input yaml file present inside the user work directory along with the correct extension i.e. yml/yaml.
+
+.. _axon_npu_tflite_compiler_podman:
 
 Alternative to Docker : Using Podman
 ------------------------------------
