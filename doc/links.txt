@@ -14,10 +14,17 @@
 .. _`nRF54LM20A`: https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK/Hardware-files
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/signal_processing.html
-.. _`nRF54LM20B`: https://www.nordicsemi.com/Products/nRF54LM20B
 .. _`Nordic Edge AI Lab platform`: https://ai.lab.nordicsemi.com/
 .. _`Nordic Edge AI Lab`: http://ai.lab.nordicsemi.com/
 .. _`Nordic Edge AI Lab documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
+.. _`Nordic Edge AI Lab Model Creating Pipeline`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline.html
+.. _`Nordic Edge AI Lab Model Dataset Requirements`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/dataset_requirements.html
+.. _`Nordic Edge AI Lab Model Dataset Uploading`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/data_uploading_and_setup.html
+.. _`nRF54LM20B`: https://www.nordicsemi.com/Products/nRF54LM20B
+.. _`Axon NPU`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Axon-NPU
+.. _`Neuton models`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Neuton-models
+.. _`nRF Edge Impulse`: https://www.nordicsemi.com/Products/Development-tools/nRF-Edge-Impulse
+.. _`nRF Programmer`: https://www.nordicsemi.com/Products/Development-tools/nRF-Programmer
 
 .. ### Source: docs.nordicsemi.com (do not update)
 
@@ -82,6 +89,9 @@
 .. _`Edge Impulse Zephyr Module Deployment`: https://docs.edgeimpulse.com/hardware/deployments/run-zephyr-module
 .. _`Automated Deployment with West Commands`: https://docs.edgeimpulse.com/hardware/deployments/run-zephyr-module#automated-deployment-with-west-commands-early-access-preview
 .. _`Using the library from C`: https://docs.edgeimpulse.com/hardware/deployments/run-cpp-desktop#using-the-library-from-c
+.. _`Edge Impulse data acquisition`: https://docs.edgeimpulse.com/studio/projects/data-acquisition
+.. _`Edge Impulse C++ SDK`: https://docs.edgeimpulse.com/tools/libraries/sdks/inference/cpp
+.. _`Edge Impulse Datasets`: https://docs.edgeimpulse.com/datasets
 
 .. ### Source: github.com
 
