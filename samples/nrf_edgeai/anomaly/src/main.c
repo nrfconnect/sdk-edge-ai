@@ -328,7 +328,7 @@ int main(void)
 	printk("Expected: Low anomaly score (normal vibration pattern)\r\n");
 	anomaly_score = model_predict(p_user_model, GOOD_GEAR_MECH_VIBRATION_DATA_2AXIS, DATA_LEN);
 
-	printk("Anomaly score for GOOD gear data: %f\r\n", anomaly_score);
+	printk("Anomaly score for GOOD gear data: %f\r\n", (double)anomaly_score);
 	printk("Verdict: %s (score %s threshold)\r\n",
 	       anomaly_score < USER_ANOMALY_THRESHOLD ? "NORMAL" : "ANOMALY DETECTED",
 	       anomaly_score < USER_ANOMALY_THRESHOLD ? "<" : ">=");
@@ -340,7 +340,7 @@ int main(void)
 	anomaly_score =
 		model_predict(p_user_model, ANOMALOUS_GEAR_MECH_VIBRATION_DATA_2AXIS, DATA_LEN);
 
-	printk("Anomaly score for ANOMALOUS gear data: %f\r\n", anomaly_score);
+	printk("Anomaly score for ANOMALOUS gear data: %f\r\n", (double)anomaly_score);
 	printk("Verdict: %s (score %s threshold)\r\n",
 	       anomaly_score < USER_ANOMALY_THRESHOLD ? "NORMAL" : "ANOMALY DETECTED",
 	       anomaly_score >= USER_ANOMALY_THRESHOLD ? ">=" : "<");
