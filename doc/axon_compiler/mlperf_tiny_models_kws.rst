@@ -7,131 +7,163 @@ TinyML Keyword Spotting (KWS)
    :local:
    :depth: 2
 
+This page describes a TinyML-based keyword spotting (KWS) use case for recognizing predefined keywords from audio input using a DS-CNN model.
+
 Overview
---------
+********
 
-The **Keyword Spotting (KWS)** model is designed to recognize specific keywords from audio input. The model is trained on the **Google Speech Commands V2 dataset**. The model is a **DS-CNN** based model.
+The keyword spotting model is based on a Depthwise Separable Convolutional Neural Network (DS-CNN) architecture and follows the MLPerf Tiny keyword spotting reference implementation.
+The model is trained on the Google Speech Commands V2 dataset.
+Pre-trained model files are available in the the `MLPerf Tiny repository <Keyword spotting trained model>`_
+The Axon compiler uses the exported TFLite model as input and compiles it for execution on Axon-enabled devices.
+The pre-trained floating-point model is provided in TensorFlow SavedModel format, while the compiler expects a TFLite model.
 
-The trained model file can be found at the following location: `Key Word Spotting <https://github.com/mlcommons/tiny/tree/master/benchmark/training/keyword_spotting/trained_models>`_
+Limitations and considerations
+******************************
 
-The downloaded tflite model should be placed in the root folder i.e. *kws/<tflite_model.tflite>* where the yaml file expects it. The pre-trained floating point model is saved in TensorFlow's SavedModel format.
+When working with this model, keep the following points in mind:
 
-Raw Dataset
------------
+* Review :file:`README` and Python scripts in the reference repository to understand the complete workflow for dataset preparation, training, and evaluation.
+* Ensure that all required Python dependencies are installed before running the training or pre-processing scripts.
+* Test accuracy evaluation during compilation requires access to prepared test data and additional configuration in the compiler input file.
 
-To test the model and evaluate its performance, you'll need test data. The **TinyML repository** includes code to load the **Google Speech Commands V2 dataset** and to prepare the test data. The information to get the dataset, train the model and perform the necessary pre-processing on it can be found in the `README <https://github.com/mlcommons/tiny/blob/master/benchmark/training/keyword_spotting/README.md>`_.
+Running the model
+*****************
 
-Data Pre-processing
--------------------
+You can either train the model using the reference implementation or start from a pre-trained model.
+Place the downloaded TFLite model in the directory expected by the compiler input configuration file. 
 
-You can find all the other relevant scripts for loading and preparing the dataset in the following directory:
+Obtaining raw dataset
+=====================
 
-`Keyword Spotting Scripts <https://github.com/mlcommons/tiny/tree/master/benchmark/training/keyword_spotting>`_
+This model uses the Google Speech Commands V2 dataset.
+The MLPerf Tiny repository includes scripts to download the dataset, train the model, and prepare test data.
+Detailed instructions are provided in the `reference repository <Keyword spotting_>`_. 
 
-These scripts will guide you through the process of obtaining the necessary test data and performing the necessary pre-processing for evaluating the model's accuracy.
+Data pre-processing and model behavior
+======================================
+
+You can find all the other relevant scripts for loading and preparing the dataset in the `Keyword spotting scripts folder <Keyword spotting_>`_.
+These scripts will guide you through generating the feature data required to evaluate the model and compute test accuracy.
 
 Running the Compiler
---------------------
+********************
 
-The compiler executor can be run by using the provided example compiler_sample_input file. The compiler sample input expects the tflite model in the root folder of the *kws/*.
+This section explains how to compile the keyword spotting model using the Axon compiler.
+You run the compiler executor using a sample compiler input configuration file.
+The provided sample configuration expects the TFLite model to be located in the root of the :file:`kws/`` directory.
 
-The user can run the executor by just downloading the tflite file from the location above and using the `compiler_sample_kws_input <compiler_sample_kws_input.yaml>`_ yaml file.
+Compiling the model without test accuracy evaluation
+====================================================
 
-More advanced users who want test accuracy results must download the dataset and uncomment the test_data and test labels fields in the yaml file to be able to use the sample input yaml file.
+Complete the following steps:
 
-Once the data is downloaded and the necessary pre-processing steps have been performed on the data, the data files should be placed in the directory : kws/data/, as expected by the compiler sample input yaml file and must be renamed accordingly. The test data must be renamed *x_test_kws.npy* and the labels *y_test_kws.npy* respectively to match the input yaml file.
+#. Download the TFLite model from the :file:`kws/` directory.
+#. Use the :file:`compiler_sample_kws_input.yaml` file without modifying it.
 
-If the user decides to reference the test data files from another location, they must update the file location in the yaml file accordingly for the tinyml_kws model.
+Compiling the model with test accuracy evaluation
+=================================================
 
-NOTES
------
+Complete the following additional steps:
 
-- Be sure to go through the `README` and the Python scripts provided in the repository to fully understand the steps for obtaining the dataset, training the model, and performing pre-processing.
-- If you encounter any issues during training or environment setup, refer to the scripts and ensure the correct Python packages are installed.
-- Ensure that you have the correct dataset and test data to evaluate the model's performance accurately.
+#. Download and pre-process CIFAR-10 dataset as described in the `reference documentation <Image classification model_>`_.
+#. Uncomment the ``test_data`` and ``test_labels`` fields in the YAML file.
+#. Place the processed data files in the :file:`kws/data` directory.
+#. Rename the files as follows to match the sample configuration
 
-** *EXPERIMENTAL* ** : KWS_MODEL_SCRIPT 
----------------------------------------
+  * :file:`x_test_kws.npy`
+  * :file:`y_test_kws.npy`
 
-The *kws_model_script.py* is shared as an example for users to generate their own model scripts as needed.
+  If the test data files are stored in a different location, update the file paths in the YAML configuration accordingly.
 
-The script takes in an YAML input file with config parameters in them for the different script run modes.
+.. _axon_compiler_kws_model_script:
 
-An empty sample input yaml file `<kws_model_script_sample_input.yml>`_ is provided for the user as a reference as to how the yaml input to the *kws_model_script.py* looks like. 
+Experimental: KWS_MODEL_SCRIPT
+******************************
 
-The different script run modes are as follows:
+.. note::
+   This script is still under development and is intended for reference purposes only.
 
-- train
-- test
-- get_data
+The :file:`kws_model_script.py` file is provided as an experimental example to help you develop your own keyword spotting model and data handling scripts.
+The script accepts a YAML input file that defines configuration parameters for different execution modes.
 
-NOTE : This script is still under development and it is important to mention a few caveats involved in trying to run this script.
+An empty sample input file, :file:`kws_model_script_sample_input.yml`, is provided as a reference.
 
-- The script assumes certain directories to be present by default and may generate errors when those directories are not found. The user is advised to create directories as needed.
-- The script strictly tries to give an example for the kws model and is presented as a reference to the user to develop their own model and data handling scripts.
-- The script does not generate axon feature extractor exe/dll and the explanation for being able to generate the exe and the dll is not part of this document.
+The script currently supports the following run modes:
 
-Get Data
---------
-The `get_data` mode is used to perform the steps needed to get the data from a source. This will download the raw speech commands data from the tensorflow_datasets and save them as a csv files.
+* ``get_data``
+* ``train``
+* ``test``
 
-The csv files can be used by the axon feature extractor exe to generate features using axon.
+Limitations and notes
+=====================
 
-The config parameters for the getting data are as follows - 
+The experimental script is intended as a reference for users who want to build custom model and dataset pipelines using the utilities provided in :file:`model_data_helper_script.py` file.
 
-- *data_directory* : Directory where the raw data can be downloaded
-- *save_raw_data_csv* : saves the raw data as a csv when calling the script in get_data mode.
-- *save_raw_data_npy* : saves the raw data as a numpy when calling the script in get_data mode.
-- *train_data_fraction* : the fraction of test and validation data used when generating the csv or when training the model using raw data
-- *batch_file_size_limit* : the maximum sample size of the batches in mb
-- *enable_data_augmentation* : enables data augmentation when training with raw samples
-- *background_noise_dir* : directory to supply in background noise when training with raw samples
+It demonstrates how to:
 
-Train
-------
-This mode trains the model based on the features provided. 
+* Generate CSV files from raw audio data in batches
+* Use the Axon feature extractor externally to generate features
+* Convert feature data into NumPy format
+* Convert fixed-point features to floating-point values for training
+* Train and evaluate a keyword spotting model
 
-The train model config has different params related to the training of a KWS model and can be modified to provide extra meta information about getting the features from the raw dataset.
+The limitations of the current script include:
 
-The parameters in the train_model_config are as follows  - 
+* It assumes that certain directories already exist and may fail if they are missing. 
+  You must create the required directories before running the script.
+* It is specific to the keyword spotting use case and is meant as an example rather than a production-ready tool.
+* It does not generate Axon feature extractor executables or libraries.
 
-- *model_name* : unique name for the model files. 
-- *model_directory* : the directory of the model. user must provide a model pre-trained or a partially trained model to start training.
-- *use_raw_data* : this flag enables training using the raw data directly. 
-- *feature_type* : "mfcc" or "axon_mfcc", tells the script to either generate tensorflow mfccs or generate mfccs using an axon dll
-- *axon_fe_dll_path* : this field must be defined if the user wants to generate mfccs using the axon feature extractor and the feature type is "axon_mfcc"
-- *train/val/test_data* : paths to the csv directories containing the features generated by axon fe exe or the numpy files of the features
-- *train/val/test_label* : path the numpy files of the labels for the train, val and test data sets
-- *sampling_rate* : sampling rate of the audio samples
-- *audio_duration_ms* : audio_duration of individual raw audio samples
-- *window_size_ms* : size of the window on the raw audio samples
-- *window_stride_ms* : size of the stride on the raw audio samples for the windowing function
-- *dct_coefficient_count* : the dct coefficient count
-- *labels_count* : the count of the labels in the data sets
-- *learning_rate* : learning rate for training the models
-- *model_training_epochs* : the number of epochs for training the model
-- *batch_size* : the batch size to train the models
-- *mfcc_shift* : the radix of the feature data generated using axon feature extraction
+Get data mode
+=============
 
-NOTE : This is not an exhaustive list of the parameters a model/data script will need, this is a very basic example of an input yaml file to a user designed script. The yaml file may contain fields that are not being used in the script and are just present for demonstration as a field in the yaml file.
+The ``get_data`` mode downloads the raw Google Speech Commands data using TensorFlow Datasets and saves it to disk.
+The script can export the raw data as CSV or NumPy files, which can then be processed by the Axon feature extractor.
 
-Test
-----
-This mode simply takes in the test vector and the trained model and performs evaluation of the model on the test data. 
+The configuration parameters for this mode include:
 
-The parameters are as follows - 
+* :file:`data_directory` – Directory where the raw dataset is downloaded
+* ``save_raw_data_csv`` – Save raw data as CSV files
+* ``save_raw_data_npy`` – Save raw data as NumPy files
+* ``train_data_fraction`` – Fraction of data used for training when generating datasets
+* ``batch_file_size_limit`` – Maximum batch size, in megabytes
+* ``enable_data_augmentation`` – Enable data augmentation when training with raw samples
+* :file:`background_noise_dir` – Directory containing background noise samples
 
-- *model_directory* : the directory of the model that the user plans on testing
-- *test_feature_data* : the directory of the numpy test data file 
-- *test_feature_label* : the directory of the numpy test label file
+Train mode
+==========
 
-NOTE:
------
+The ``train mode`` trains the keyword spotting model using either raw audio data or pre-generated feature data.
+The training configuration includes parameters related to model definition, feature generation, and training behavior, such as:
 
-The above modes are not the extensive list of modes available to the user. The user can design a script based on their requirements. 
+* ``model_name`` – Unique name for the model
+* :file:`model_directory` – Directory containing a pre-trained or partially trained model
+* ``use_raw_data`` – Enable training directly from raw audio samples
+* ``feature_type`` – Feature type (mfcc or axon_mfcc)
+* :file:`axon_fe_dll_path` – Path to the Axon feature extractor library (required for axon_mfcc)
+* :file:`train/val/test_data` – Paths to feature data files
+* :file:`train/val/test_label` – Paths to label files
+* ``sampling_rate`` – Audio sampling rate
+* ``audio_duration_ms`` – Duration of audio samples
+* ``window_size_ms`` – Window size for feature extraction
+* ``window_stride_ms`` – Window stride for feature extraction
+* ``dct_coefficient_count`` – Number of DCT coefficients
+* ``labels_count`` – Number of output labels
+* ``learning_rate`` – Training learning rate
+* ``model_training_epochs`` – Number of training epochs
+* ``batch_size`` – Training batch size
+* ``mfcc_shift`` – Fixed-point radix used for Axon-generated features
 
-This script simply acts as an example to the user who intends to use the methods in the `model_data_helper_script.py <../../../utility/model_data_helper_script.py>`_ for their own model and dataset.
+This list is not exhaustive. 
+The YAML file may contain additional fields that are included for demonstration purposes and are not used by the script.
 
-The script shows how the user can use the raw data to generate a CSV file in batches and then use the `axon_fe` exe to generate the features on Axon out of band, using some command line functions, and generate feature output CSV files. 
+Test mode
+=========
 
-Once the CSV files are generated out of band, the user can use the methods in the *model_data_helper_script* to generate the numpy files, convert them from a fixed radix to floating point for training purposes, and get a trained model.
+The ``test mode`` evaluates a trained model using prepared test data.
+The configuration parameters include:
+
+* :file:`model_directory` – Directory containing the trained model
+* :file:`test_feature_data` – Path to the NumPy test data file
+* :file:`test_feature_label` – Path to the NumPy test label file

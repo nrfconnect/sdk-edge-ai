@@ -48,7 +48,6 @@ See the following documentation:
    applications.rst
    samples.rst
    integrations.rst
-   drivers.rst
    axon_compiler.rst
    libraries.rst
    glossary.rst
