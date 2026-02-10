@@ -1,7 +1,7 @@
 .. _hello_ei_sample:
 
-Edge Impulse: Hello Edge Impulse
-################################
+Hello Edge Impulse
+##################
 
 .. contents::
    :local:

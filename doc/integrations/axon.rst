@@ -1,4 +1,5 @@
-.. _axon_integration:
+.. _ug_axon_integration:
+.. _axon_driver:
 
 Axon integration
 ################
@@ -18,20 +19,31 @@ Integration prerequisites
 Integration overview
 ********************
 
-The Axon NPU can accelerate neural networks as well as some feature extraction algorithms. 
-In the source code, you can access the driver, sample, simulator, and tool chain files to support Axon NPU. 
-Applications can be created to target the SoC (running zephyr) or a software simulator running on the host machine.
+The Axon NPU is a peripheral processor that runs independently of the CPU.
+Use the Axon driver to control the Axon hardware and run inference workloads.
+The driver provides the following functionality:
 
-The work flows for neural net models and algorithms are different, even though they share many of the same components.
+* Initializing the Axon hardware and driver.
+* Submitting jobs to the hardware and handling hardware events.
+* Running inference in synchronous or asynchronous mode.
+* Executing intrinsics, which are small, pre-compiled Axon code snippets that perform limited functions.
 
-The Axon compiler incorporates the user-supplied model_name into all model-specific symbols, macros, and file names.
+The driver also includes wrapper and test functions for managing compiled AI models, which are provided in source form.
+The Axon driver is implemented as a platform-independent library, while all platform-specific behavior is handled by the nRF Axon platform component.
+This separation allows the same driver library and related components, including samples, simulator, and tool chain files, to be built and used on Zephyr, in a software simulator running on the host machine, or in bare-metal environments.
+
+The Axon NPU can accelerate neural networks as well as some feature extraction algorithms.
+Applications can target either the SoC running Zephyr or a host-based software simulator, depending on the development and testing workflow.
+The workflows for neural network models and algorithms differ, even though they share many of the same components.
+
+The Axon compiler incorporates the user-supplied ``model_name`` into all model-specific symbols, macros, and file names.
 
 Compiled model
 ==============
 
 The compiled model is placed in a header file of the name :file:`nrf_axon_model_<model_name>_h`.
 This file declares the models parameters and compiled code, then encapsulates the model in a ``nrf_axon_nn_compiled_model_s`` instance of name ``nrf_axon_model_<model_name>``.
-Structure ``nrf_axon_nn_compiled_model_s`` is declared in :file:`include/nrf_axon_nn_infer.h`.
+Structure ``nrf_axon_nn_compiled_model_s`` is declared in :file:`include/drivers/nrf_axon_nn_infer.h`.
 
 This structure provides all the model's meta data:
 
@@ -63,10 +75,40 @@ Complete the following steps:
 
 .. rst-class:: numbered-step
 
-Initializing Axon driver
-========================
+.. _axon_driver_init:
 
-Follow the initialization steps in :ref:`axon_driver_init` to initialize the Axon driver and hardware. 
+Initializing driver
+===================
+
+Follow these steps to initialize the Axon driver:
+
+1. Call the platform initialization function
+
+   .. code-block:: console 
+
+      nrf_axon_platform_init()
+
+   This function is platform-specific, but you must provide the Axon base address (``nrf_axon_driver_init(base_address``).
+   You can obtain ``base_address`` from the device tree on Zephyr.
+
+   During initialization, the driver powers on Axon by calling the ``nrf_axon_platform_vote_for_power()`` function.
+   The driver then verifies that Axon exists at the specified base address. 
+   Axon remains powered on after initialization.
+
+   .. note::
+      
+      Do not create or manage a driver handle.
+      Axon is implemented as a singleton, and the driver serializes access internally.
+
+#. Before starting a new inference session on a streaming-style model (where intermediate results are fed forward), initialize the model’s persistent variables:
+
+   .. code-block:: console 
+
+      nrf_axon_nn_model_init_vars(&my_model_wrapper);
+
+   This sets all persistent variables to their quantized zero-point values.
+
+#. Refer to further instructions on :ref:`integrating the driver into your application <ug_axon_integration>`.
 
 .. _axon_integration_init_model:
 
@@ -94,7 +136,7 @@ Asynchronous model inference
 
 Compiled models need to be initialized prior to asynchronous inference. 
 The initialization binds the static, compiled model stored in non-volatile memory (NVM) to a RAM wrapper struct that the driver then manages.
-First, you must declare a static (not on the stack) instance of ``nrf_axon_nn_model_async_inference_wrapper_s`` (included in :file:`include/nrf_axon_infer.h`), and then invoke the model by initializing the ``nrf_axon_nn_model_async_init()`` function:
+First, you must declare a static (not on the stack) instance of ``nrf_axon_nn_model_async_inference_wrapper_s`` (included in :file:`include/drivers/nrf_axon_infer.h`), and then invoke the model by initializing the ``nrf_axon_nn_model_async_init()`` function:
 
 .. code-block:: c
 
@@ -232,8 +274,8 @@ Ensure you have completed the following:
 
    .. code-block:: c
 
-      #include "nrf_axon_driver.h"
-      #include "nrf_axon_inference.h"
+      #include "drivers/axon/nrf_axon_driver.h"
+      #include "drivers/axon/nrf_axon_inference.h"
 
 #. Included the model header file :file:`nrf_axon_model_<model_name>_.h` in exactly one source file.
    The model symbols are intentionally not declared static, to avoid compiling multiple instances of the model into the application. 

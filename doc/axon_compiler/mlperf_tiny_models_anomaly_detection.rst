@@ -1,6 +1,6 @@
 .. _axon_compiler_anomaly_detection:
 
-TinyML anomaly detection
+TinyML Anomaly Detection
 ########################
 
 .. contents::
@@ -23,7 +23,7 @@ The reference implementation provides step-by-step instructions for:
 Limitations and considerations
 ******************************
 
-When working with the model, do the following:
+When working with this model, keep the following points in mind:
 
 * Review :file:`README` and Python scripts in the reference repository to understand the complete workflow for dataset preparation, training, and evaluation.
 * Ensure that all required Python dependencies are installed before running the training or pre-processing scripts.
@@ -52,7 +52,7 @@ Download it by running the :file:`get_dataset.sh` script provided in the `refere
 Data pre-processing and model behavior
 ======================================
 
-This section summarizes the data preparation steps and the model output behavior.
+This section summarizes the required data pre-processing steps and explains the model output behavior.
 
 You can find data pre-processing steps required for training and testing in the `reference repository <Anomaly detection training_>`_.
 These steps convert the raw audio data into the format expected by the anomaly detection model.
@@ -70,14 +70,20 @@ This section explains how to compile the anomaly detection model for Axon.
 You can run the compiler executor using the provided sample compiler input configuration file.
 The sample configuration expects the TFLite model to be located in the root of the :file:`anomaly_detection/` directory.
 
-To compile the model without test accuracy evaluation, complete the following steps:
+Compiling the model without test accuracy evaluation
+====================================================
+
+Complete the following steps:
 
 #. Download the TFLite model from the :file:`anomaly_detection/` directory.
-#. Use the :file:`compiler_sample_ad_input.yaml` file as provided.
+#. Use the :file:`compiler_sample_ad_input.yaml` file without modifying it.
 
-To enable test data evaluation during compilation:
+Compiling the model with test accuracy evaluation
+=================================================
 
-#. Download and pre-process the dataset as described in the reference documentation.
+Complete the following additional steps:
+
+#. Download and pre-process the dataset as described in the `reference repository documentation <Anomaly detection training_>`_.
 #. Uncomment the ``test_data`` and ``test_labels`` fields in the YAML file.
 #. Place the processed data files in the :file:`anomaly_detection/data` directory.
 #. Rename the files as follows to match the sample configuration

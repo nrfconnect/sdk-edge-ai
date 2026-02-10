@@ -86,6 +86,7 @@
 
 .. _`MLPerf Tiny anomaly detection`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/README.md
 .. _`Pre-trained anomaly detection model`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/anomaly_detection/trained_models
+.. _`Image classification model`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/image_classification
 .. _`Anomaly detection script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/get_dataset.sh
 .. _`Anomaly detection training`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/anomaly_detection
 .. _`Anomaly score calculation script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/01_test.py
@@ -95,3 +96,21 @@
 
 .. _`Gesture recognition use-case demo video`: https://youtu.be/qDFdxapLbrA
 .. _`Bosch BMI270`: https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi270/
+.. _`Setting up Podman container`: https://github.com/containers/podman/blob/main/docs/tutorials/podman_tutorial.md#running-a-sample-container
+.. _`MLPerf Tiny GitHub repository`: https://github.com/mlcommons/tiny/tree/master
+.. _`Evaluation Datasets documentation`: https://github.com/mlcommons/tiny/tree/master/benchmark/evaluation/datasets
+.. _`Training repository`: https://github.com/mlcommons/tiny/tree/master/benchmark/training
+
+.. ## External sources:
+
+.. _`Miniforge`: https://conda-forge.org/miniforge/#latest-release 
+.. _`A beginner’s guide to Docker`: https://www.freecodecamp.org/news/a-beginners-guide-to-docker-how-to-create-your-first-docker-application-cc03de9b639f
+.. _`Creating the Dockerfile`: https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/#creating-the-dockerfile>
+.. _`Intro Guide to Dockerfile Best Practices`: https://www.docker.com/blog/intro-guide-to-dockerfile-best-practices/
+.. _`Podman installation guide`: https://podman.io/docs/installation?
+.. _`Python`: https://www.python.org/
+.. _`CIFAR dataset`: https://www.cs.toronto.edu/~kriz/cifar.html
+.. _`Keyword spotting trained model`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/keyword_spotting/trained_models
+.. _`Keyword spotting`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/keyword_spotting
+.. _`Visual wake word trained model`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/visual_wake_words/trained_models
+.. _`Visual wake word`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/visual_wake_words 

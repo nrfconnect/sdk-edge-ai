@@ -9,6 +9,11 @@ Test: NN Inference
 
 The Test NN Inference application provides a simple way to run and validate a compiled neural network model on an Axon‑enabled target.
 
+Requirements
+************
+
+TBA
+
 Overview
 ********
 
@@ -29,7 +34,7 @@ This section describes how to configure, build, and run the application.
    * To build the simulator application in Visual Studio Code, install a CMake extension and add the simulator folder to your workspace.
    * To build for Zephyr, use a standard Zephyr build workflow.
 
-#. Select one of the sample models from :file:`/include_models` directory, or copy your own compiled model header files into that directory.
+#. Select one of the sample models from :file:`/compiled_models` directory, or copy your own compiled model header files into that directory.
    For information about compiling models, see :ref:`axon_npu_tflite_compiler` documentation.
 
 #. Configure the :file:`prj.conf` (for Zephyr builds) or :file:`simulator/CMakeLists.txt` (for simulator builds) with model parameters:
@@ -68,3 +73,10 @@ This section describes how to configure, build, and run the application.
         
         TEST:   test_nn_inference_tinyml_kws       COMPLETE        PASS COUNT      1       FAIL COUNT      0
         Exit Simulator!
+
+Dependencies
+************
+
+This test uses the following Edge AI Add-on libraries:
+
+* :ref:`Axon driver <axon_driver>`
