@@ -309,7 +309,7 @@ int main(void)
 		/* Display results for this test sample */
 		printk("Air quality - Predicted value: %f, Expected value: %f, absolute error "
 		       "%f\r\n",
-		       predicted_value, ground_truth, abs_err);
+		       (double)predicted_value, (double)ground_truth, (double)abs_err);
 	}
 
 	while (1) {
