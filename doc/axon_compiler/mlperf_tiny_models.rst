@@ -7,50 +7,52 @@ MLPerf™ Tiny Models
    :local:
    :depth: 2
 
+The following page describes the MLPerf™ Tiny models that are supported on Axon compiler.
+
 Overview
---------
+********
 
-**MLPerf™ Tiny** is a benchmarking suite designed for evaluating deep learning models on extremely low-power systems, such as microcontrollers. This benchmark suite includes a variety of models representing real-world deep learning applications, enabling a fair comparison of the performance of different embedded devices.
+MLPerf™ Tiny is a benchmarking suite for evaluating deep learning models on extremely low‑power systems, such as microcontrollers. 
+The suite includes multiple models that represent real‑world deep learning applications and enables fair performance comparisons across embedded devices.
 
-All the example models in this folder are part of the **MLPerf Tiny Deep Learning Benchmarks** for Embedded Devices.
+All example models in this folder are part of the MLPerf Tiny Deep Learning Benchmarks for Embedded Devices.
+For additional background and reference material, see the `MLPerf Tiny GitHub repository`_.
 
-For more details, visit the `MLPerf Tiny GitHub repository <https://github.com/mlcommons/tiny/tree/master>`_.
+The following MLPerf Tiny models from the MLCommons repository are supported on Axon:
 
-There are four different models from the ml commons website which are supported on axon-
+* `Keyword spotting (KWS) <axon_compiler_kws>`_
+* `Image classification (IC) <axon_compiler_image_classification>`_
+* `Visual wake word (VWW) <axon_compiler_vww>`_
+* `Anomaly detection (AD) <axon_compiler_anomaly_detection>`_
 
-- `keyword_spotting : kws <kws/README.rst>`_
-- `image_classification : ic <image_classification/README.rst>`_
-- `visual_wake_word : vww <vww/README.rst>`_
-- `anomaly_detection : ad  <anomaly_detection/README.rst>`_
+Evaluation datasets
+*******************
 
-Evaluation Datasets
--------------------
+Each model in the benchmark suite is evaluated using datasets that reflect the type of input data the model is designed to process.
+For detailed information about the evaluation datasets and the testing methodology used by MLPerf Tiny, refer to the `Evaluation Datasets documentation`_.
 
-Each model in the benchmark suite is evaluated against specific datasets that reflect the type of data the model is designed to process. For detailed information about the datasets used for evaluation, including how the models are tested, please refer to the `Evaluation Datasets documentation <https://github.com/mlcommons/tiny/tree/master/benchmark/evaluation/datasets>`_.
+Model setup and training
+************************
 
-Model Setup and Training
-------------------------
+Each model directory includes a :file:`README.rst` file that describes the following:
 
-Each model comes with a **README** file explaining the following:
+* Model overview, providing a high‑level description of the model.
+* Raw datasets, including instructions on how and where to obtain the training and testing data.
+* Data pre‑processing steps required to prepare the data for training and evaluation.
 
-- **Model Overview**: A simple description of the model.
-- **Raw Datasets**: Instructions on how and where to obtain the training and testing datasets.
-- **Data Pre-processing**: Guidance on how to preprocess the data to ensure it’s in the correct format for model training and evaluation.
+You can find scripts for downloading and pre‑processing the datasets in the `Training repository`_.
+These resources provide the information needed to get started with training the models.
 
-You can find the necessary scripts to get and pre-process the dataset in the `Training Repository <https://github.com/mlcommons/tiny/tree/master/benchmark/training>`_. These resources include information needed to get started with training the models.
+Setting up the Python environment
+*********************************
 
-Setting Up the Python Environment
----------------------------------
-
-To work with the MLPerf Tiny models, you may need to set up a Python environment and install the required Python packages using pip. Please note that instructions for setting up the environment might not be included in every individual model folder but will generally be found in the respective benchmark directories.
-
-Notes
------
-
-- Setting up the Python environment and installing the necessary dependencies are vital for getting the dataset and performing the necessary functions to pre-process the dataset in the right format.
+To work with the MLPerf Tiny models, you may need to set up a `Python environment <Python_>`_.
+Setting up the Python environment and installing the required dependencies is necessary for downloading datasets and performing the data pre‑processing steps in the expected format.
 
 Available models
-----------------
+****************
+
+The following sections provide detailed information about each of the supported MLPerf Tiny models, including instructions for downloading datasets, pre‑processing data, and running the compiler.
 
 .. toctree::
    :maxdepth: 1

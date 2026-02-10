@@ -9,6 +9,11 @@ Test: NN Inference
 
 The Test NN Inference application provides a simple way to run and validate a compiled neural network model on an Axon‑enabled target.
 
+Requirements
+************
+
+TBA
+
 Overview
 ********
 
@@ -68,3 +73,10 @@ This section describes how to configure, build, and run the application.
         
         TEST:   test_nn_inference_tinyml_kws       COMPLETE        PASS COUNT      1       FAIL COUNT      0
         Exit Simulator!
+
+Dependencies
+************
+
+This test uses the following Edge AI Add-on libraries:
+
+* :ref:`Axon driver <axon_driver>`
