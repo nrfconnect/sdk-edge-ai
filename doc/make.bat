@@ -7,7 +7,7 @@ REM Command file for Sphinx documentation
 if "%SPHINXBUILD%" == "" (
 	set SPHINXBUILD=sphinx-build
 )
-set SOURCEDIR=.
+set SOURCEDIR=_src
 set BUILDDIR=_build
 
 if "%1" == "" goto help
@@ -25,11 +25,13 @@ if errorlevel 9009 (
 	exit /b 1
 )
 
-%SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+if not exist %SOURCEDIR% mkdir %SOURCEDIR%
+
+%SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% --conf-dir . %SPHINXOPTS% %O%
 goto end
 
 :help
-%SPHINXBUILD% -M help %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+%SPHINXBUILD% -M help %SOURCEDIR% %BUILDDIR% --conf-dir . %SPHINXOPTS% %O%
 
 :end
 popd

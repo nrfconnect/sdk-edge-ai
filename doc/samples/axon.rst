@@ -18,4 +18,4 @@ While it is not cycle‑accurate compared to hardware, it is computationally bit
    :caption: Subpages
 
    /../samples/axon/hello_axon/README.rst
-   /../samples/axon/test_nn_inference/README.rst
+   /../tests/axon/inference/README.rst

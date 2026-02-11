@@ -31,6 +31,6 @@ hardware-map.yaml*
 coverage.info
 
 doc/_build
-doc/**/README.rst
+doc/_src
 doc/*_warnings.txt
 doc/*_doc.log
