@@ -66,6 +66,9 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 external_content_contents = [
     (EDGE_AI_BASE / "doc", "[!_]*"),
+    (EDGE_AI_BASE, "applications/**/*.rst"),
+    (EDGE_AI_BASE, "samples/**/*.rst"),
+    (EDGE_AI_BASE, "tests/**/*.rst"),
 ]
 
 # Options for table_from_rows --------------------------------------------------

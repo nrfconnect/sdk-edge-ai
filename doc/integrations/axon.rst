@@ -220,7 +220,7 @@ These requests are queued and serviced once the synchronous execution completes.
 Integrating the model into an application
 =========================================
 
-It is recommended to first test your compiled model by using the :ref:`inference test application<include_test_nn_inference>` (:file:`/tests/test_nn_inference`).
+It is recommended to first test your compiled model by using the :ref:`inference test application<test_nn_inference>` (:file:`/tests/axon/inference`).
 Once you have verified that the model works correctly on the test application, you can integrate it into your application.
 It is your responsibility to feed data into the model, schedule inference, and respond to the model output.
 

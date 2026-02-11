@@ -30,7 +30,7 @@ The Edge Impulse integration consists of three main components:
   This is provided as a :file:`zip` archive with C and C++ source files that are compiled together with your application.
 * Application code - Your |NCS| application that collects sensor data, feeds it to the inference engine through the Edge Impulse SDK API, and processes the classification results.
 
-The typical workflow involves collecting sensor samples, running inference using a sliding window approach, and interpreting the classification results to make decisions or trigger actions (see :ref:`include_hello_ei_sample` sample).
+The typical workflow involves collecting sensor samples, running inference using a sliding window approach, and interpreting the classification results to make decisions or trigger actions (see :ref:`hello_ei_sample` sample).
 
 Integration overview
 ********************
@@ -41,7 +41,7 @@ It relies on sensor data that can be provided by different sources, for example 
 
 .. note::
    You can collect data using either a development board that is supported directly by Edge Impulse or your mobile phone.
-   Alternatively, you can modify the :ref:`include_ei_data_forwarder_sample` sample to forward data from a sensor that is connected to any board available in the |NCS|.
+   Alternatively, you can modify the :ref:`ei_data_forwarder_sample` sample to forward data from a sensor that is connected to any board available in the |NCS|.
 
 You must include the deployed machine learning model sources in your |EAI| application.
 
@@ -189,5 +189,5 @@ Applications and samples
 
 The following samples demonstrate the Edge Impulse integration in the |EAI|:
 
-* :ref:`include_ei_data_forwarder_sample` sample - Demonstrates how you can send sensor data to |EIS| using `Edge Impulse's data forwarder`_.
-* :ref:`include_hello_ei_sample` sample - Demonstrates the deployment of models in |EI| and usage of the inference engine provided by |EI| SDK.
+* :ref:`ei_data_forwarder_sample` sample - Demonstrates how you can send sensor data to |EIS| using `Edge Impulse's data forwarder`_.
+* :ref:`hello_ei_sample` sample - Demonstrates the deployment of models in |EI| and usage of the inference engine provided by |EI| SDK.
