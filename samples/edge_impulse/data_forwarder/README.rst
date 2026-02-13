@@ -41,10 +41,9 @@ Setup
 
 Before running the sample, you must complete the following steps:
 
-1. Prepare your own project using `Edge Impulse studio`_ external web tool.
+1. :ref:`Set up Edge Impulse <setup_edge_impulse>`.
+#. Prepare your own project using `Edge Impulse studio`_ external web tool.
    See :ref:`edge_impulse_integration` for more information about starting using the tool.
-2. Follow the `Edge Impulse CLI installation guide`_ to install Edge Impulse command line tools.
-   These tools are needed because the ``edge-impulse-data-forwarder`` is used to forward the data received from the device through UART to Edge Impulse studio.
 
 Building and running
 ********************
