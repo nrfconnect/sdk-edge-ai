@@ -97,7 +97,7 @@ __unused static int set_led_pwm(const struct pwm_dt_spec *pwm_led, float brightn
 
 	ret = pwm_set_pulse_dt(pwm_led, pulse);
 	if (ret < 0) {
-		LOG_ERR("LED Init error pwm_set_pulse_dt()");
+		LOG_ERR("PWM LED set error pwm_set_pulse_dt()");
 		return ret;
 	}
 	return ret;
@@ -110,7 +110,7 @@ __unused static int set_led_gpio(const struct gpio_dt_spec *gpio_led, float brig
 
 	ret = gpio_pin_set_dt(gpio_led, on);
 	if (ret < 0) {
-		LOG_ERR("LED Init error gpio_pin_set_dt()");
+		LOG_ERR("GPIO LED set error gpio_pin_set_dt()");
 		return ret;
 	}
 
