@@ -81,3 +81,6 @@
 .. _`Anomaly detection training`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/anomaly_detection
 .. _`Anomaly score calculation script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/01_test.py
 .. _`Axon samples`: https://github.com/nrfconnect/sdk-axons-ml/tree/main/samples
+
+.. ### Source: other
+.. _`Adafruit PDM MEMS Microphone`: https://www.adafruit.com/product/3492
