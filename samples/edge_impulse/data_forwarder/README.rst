@@ -96,7 +96,7 @@ Testing
    a. Go to the :guilabel:`Data acquisition` tab.
    #. In the **Collect data** panel, set the desired values and click :guilabel:`Start sampling`.
 
-      .. figure:: /images/ei_data_acquisition.png
+      .. figure:: images/ei_data_acquisition.png
          :scale: 80 %
          :alt: Sampling under Data acquisition in Edge Impulse studio
 
@@ -105,7 +105,7 @@ Testing
    #. Observe the received sample data on the raw data graph under the panel.
       For the default sample configuration, you should observe sine waves.
 
-      .. figure:: /images/ei_data_acquisition.png
+      .. figure:: images/ei_start_sampling.png
          :scale: 80 %
          :alt: Sampling example
 
