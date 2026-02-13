@@ -44,6 +44,7 @@ See the following documentation:
 
    solution_comparison.rst
    quick_start.rst
+   supported_operators.rst
    setting_up_environment.rst
    applications.rst
    samples.rst
