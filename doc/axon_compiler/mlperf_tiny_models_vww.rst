@@ -7,43 +7,74 @@ TinyML Visual Wake Word (VWW)
    :local:
    :depth: 2
 
+
+This page describes a TinyML-based visual wake word (VWW) use case for detecting the presence of a person in an image using a MobileNet-based model.
+
 Overview
---------
+********
 
-The **Visual Wake Word (VWW)** model is designed to perform binary image classification. It detects a person in an image. The model is trained on the **COCO** dataset and can be used for visual wake word detection in real-time systems. The model is based on the **MobileNet** architecture.
+The visual wake word model performs binary image classification to determine whether a person is present in an input image.
+It is based on a MobileNet architecture and follows the MLPerf Tiny visual wake word reference implementation.
 
-The trained model can be found at the following link: `Visual Wake Word Model <https://github.com/mlcommons/tiny/tree/master/benchmark/training/visual_wake_words/trained_models>`_. 
+The model is trained on the COCO dataset and is suitable for low-power, real-time visual wake word detection.
+Pre-trained model files are available from the `MLPerf Tiny repository <Visual wake word trained model_>`_
+The Axon compiler uses the exported TFLite model as input and compiles it for execution on Axon-enabled devices.
 
-The downloaded tflite and/or keras model files must be placed in the root directory of the model i.e. *vww/<tflite_model.tflite> or vww/<keras_model.h5>*
+Limitations and considerations
+******************************
 
-Raw Dataset
------------
+When working with this model, keep the following points in mind:
 
-To download the dataset and set up the training environment for the VWW model, use the script provided at the tinyl ml commons repository below:
+* Review the Python scripts provided in the reference repository to understand the full workflow for dataset download, training, and label generation.
+* Ensure that all required Python dependencies are installed before running training or data pre-processing scripts.
+* Test accuracy evaluation during compilation requires prepared test data and label files, as well as additional configuration in the compiler input file.
 
-`download_and_train_vww.sh <https://github.com/mlcommons/tiny/blob/master/benchmark/training/visual_wake_words/download_and_train_vww.sh>`_
+Running the model
+*****************
 
-Pre-processing
---------------
+You can either train the model using the reference implementation or start from a pre-trained model.
+Place the downloaded TFLite or Keras model in the directory expected by the compiler input configuration file.
 
-Once the dataset is downloaded, some data prep needs to be done before testing the model. This includes generating the test labels for the dataset. You can generate the test labels using the `generate_y_labels.py <https://github.com/mlcommons/tiny/blob/master/benchmark/training/visual_wake_words/generate_y_labels.py>`_ script.
+Obtaining raw dataset
+=====================
 
-Running the Compiler
---------------------
+The visual wake word model is trained on data derived from the COCO dataset.
+To download the dataset and set up the training environment, use the :file:`download_and_train_vww.sh` script provided in the `MLPerf Tiny repository <Visual wake word_>`_.
 
-The compiler executor can be run by using the provided example compiler_sample_input file. The compiler sample input expects the tflite model in the root folder of the *vww/*.
+Data pre-processing and model behavior
+======================================
 
-The user can run the executor by just downloading the tflite file from the location above and using the `compiler_sample_vww_input <compiler_sample_vww_input.yaml>`_ yaml file.
+After downloading the dataset, additional data preparation is required before testing the model.
+In particular, test label files must be generated for evaluation.
+You can generate the test labels by running the :file:`generate_y_labels.py` script.
 
-More advanced users who want test accuracy results must download the dataset and uncomment the test_data and test labels fields in the yaml file to be able to use the sample input yaml file.
+Running the compiler
+********************
 
-Once the data is downloaded and pre-processed they must be kept in the directory *vww/data/*. The test data set and the labels may need to be renamed to match the input of the compiler sample input yaml file.
-The name of the test data and label files are *x_test_vww.npy* and *y_test_vww.npy* respectively.
+This section explains how to compile the visual wake word model using the Axon compiler.
 
-If the user decides to reference the test data files from another location, they must update the file location in the yaml file accordingly for the tinyml_vww model.
+You run the compiler executor using a sample compiler input configuration file.
+The provided sample configuration expects the TFLite model to be located in the root of the :file:`vww/` directory.
 
-NOTE
-----
+Compiling the model without test accuracy evaluation
+====================================================
 
-- Be sure to go through the Python scripts provided in the repository to fully understand the steps for obtaining the dataset, training the model, and getting the y labels.
-- If you encounter any issues during training or environment setup, refer to the scripts and ensure the correct Python packages are installed.
+Complete the following steps:
+
+#. Download the TFLite model from the :file:`vww/` directory.
+#. Use the :file:`compiler_sample_vww_input.yaml` file without modifying it.
+
+Compiling the model with test accuracy evaluation
+=================================================
+
+Complete the following additional steps:
+
+#. Download and pre-process CIFAR-10 dataset as described in the `reference documentation <Image classification model_>`_.
+#. Uncomment the ``test_data`` and ``test_labels`` fields in the YAML file.
+#. Place the processed data files in the :file:`vww/data` directory.
+#. Rename the files as follows to match the sample configuration
+
+  * :file:`x_test_vww.npy`
+  * :file:`y_test_vww.npy`
+
+  If the test data files are stored in a different location, update the file paths in the YAML configuration accordingly.

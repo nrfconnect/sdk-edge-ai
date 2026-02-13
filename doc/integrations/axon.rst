@@ -1,4 +1,4 @@
-.. _axon_integration:
+.. _ug_axon_integration:
 
 Axon integration
 ################
