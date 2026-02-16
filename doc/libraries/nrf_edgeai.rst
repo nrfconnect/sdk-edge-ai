@@ -56,7 +56,10 @@ Once you enable the ``CONFIG_NRF_EDGEAI`` Kconfig option, the build system autom
 #. It compiles and links your `Nordic Edge AI Lab`_-generated model sources with the your application. (for example, :file:`nrf_edgeai_user_model.c`)
 #. It compiles and links your firmware application with the library.
 
-API documentation
-*****************
+API Reference
+*************
 
-| Header files: :file:`include/nrf_edgeai`
+nRF Edge AI API
+=======================
+
+.. doxygengroup:: nrf_edgeai
