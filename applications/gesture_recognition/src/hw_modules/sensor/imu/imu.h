@@ -8,7 +8,7 @@
  *
  * @defgroup imu Inertial Measurement Unit (IMU)
  * @{
- * @ingroup bsp
+ * @ingroup hw_modules
  *
  * @brief This module provides IMU sensor control functions.
  *

@@ -8,7 +8,7 @@
  *
  * @defgroup led LEDs control functions
  * @{
- * @ingroup bsp
+ * @ingroup hw_modules
  *
  * @brief This module provides LEDs control functions.
  *

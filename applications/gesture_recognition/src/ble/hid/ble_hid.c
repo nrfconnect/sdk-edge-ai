@@ -22,39 +22,35 @@ LOG_MODULE_REGISTER(ble_hid, CONFIG_BT_HIDS_LOG_LEVEL);
 #define KEY_F5 (0x3E)
 #define KEY_ESC (0x29)
 
-#define KEY_MEDIA_VOLUME_UP ( 1 << 0 )
-#define KEY_MEDIA_VOLUME_DOWN ( 1 << 1 )
-#define KEY_MEDIA_MUTE ( 1 << 2 )
-#define KEY_MEDIA_PLAY_PAUSE ( 1 << 3 )
-#define KEY_MEDIA_PREV_TRACK ( 1 << 4 )
-#define KEY_MEDIA_NEXT_TRACK ( 1 << 5 )
+#define KEY_MEDIA_VOLUME_UP (1 << 0)
+#define KEY_MEDIA_VOLUME_DOWN (1 << 1)
+#define KEY_MEDIA_MUTE (1 << 2)
+#define KEY_MEDIA_PLAY_PAUSE (1 << 3)
+#define KEY_MEDIA_PREV_TRACK (1 << 4)
+#define KEY_MEDIA_NEXT_TRACK (1 << 5)
 
 /* Require encryption. */
 #define SAMPLE_BT_PERM_READ BT_GATT_PERM_READ_ENCRYPT
 #define SAMPLE_BT_PERM_WRITE BT_GATT_PERM_WRITE_ENCRYPT
 
 
-enum
-{
+enum {
 	HIDS_REMOTE_WAKE = BIT(0),
 	HIDS_NORMALLY_CONNECTABLE = BIT(1),
 };
 
-struct hids_info
-{
+struct hids_info {
 	uint16_t version; /* version number of base USB HID Specification */
 	uint8_t code;     /* country HID Device hardware is localized for. */
 	uint8_t flags;
 } __packed;
 
-struct hids_report
-{
+struct hids_report {
 	uint8_t id;   /* report id */
 	uint8_t type; /* report type */
 } __packed;
 
-enum
-{
+enum {
 	HIDS_INPUT = 0x01,
 	HIDS_OUTPUT = 0x02,
 	HIDS_FEATURE = 0x03,
@@ -257,7 +253,8 @@ BT_GATT_SERVICE_DEFINE(hog_svc,
 		       BT_GATT_CHARACTERISTIC(BT_UUID_HIDS_CTRL_POINT,
 					      BT_GATT_CHRC_WRITE_WITHOUT_RESP,
 					      BT_GATT_PERM_WRITE,
-					      NULL, write_ctrl_point, &ctrl_point), );
+					      NULL, write_ctrl_point, &ctrl_point),
+			);
 
 static void connected(struct bt_conn *conn, uint8_t err)
 {
@@ -358,30 +355,6 @@ static void bt_ready(int err)
 	LOG_INF("Advertising successfully started");
 }
 
-static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
-{
-	char addr[BT_ADDR_LE_STR_LEN];
-
-	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
-
-	LOG_INF("Passkey for %s: %06u", addr, passkey);
-}
-
-static void auth_cancel(struct bt_conn *conn)
-{
-	char addr[BT_ADDR_LE_STR_LEN];
-
-	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
-
-	LOG_INF("Pairing cancelled: %s", addr);
-}
-
-static struct bt_conn_auth_cb auth_cb_display = {
-	.passkey_display = auth_passkey_display,
-	.passkey_entry = NULL,
-	.cancel = auth_cancel,
-};
-
 int ble_hid_init(ble_connection_cb_t cb)
 {
 	int err;
@@ -394,10 +367,6 @@ int ble_hid_init(ble_connection_cb_t cb)
 	}
 
 	user_conn_callback = cb;
-
-	if (IS_ENABLED(CONFIG_SAMPLE_BT_USE_AUTHENTICATION)) {
-		bt_conn_auth_cb_register(&auth_cb_display);
-	}
 
 	return err;
 }
@@ -465,9 +434,8 @@ int ble_hid_send_key(ble_hid_key_t key)
 	if (res) {
 		LOG_ERR("Failed to send key, error = %d", res);
 		return res;
-	} else {
-		LOG_INF("BLE HID Key %d sent successfully", report[0]);
 	}
+	LOG_INF("BLE HID Key %d sent successfully", report[0]);
 
 	/* reset report */
 	memset(report, 0, sizeof(report));
