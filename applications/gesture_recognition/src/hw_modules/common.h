@@ -4,13 +4,15 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+/** @defgroup hw_modules HW modules for GR */
+
 /**
  *
  * @defgroup common Common
  * @{
- * @ingroup bsp
+ * @ingroup hw_modules
  *
- * @brief BSP common useful utils, types and macro.
+ * @brief Common useful utils, types and macro.
  *
  */
 #ifndef __COMMON_H__
@@ -90,9 +92,9 @@ typedef generic_cb_t irq_handler_t;
 typedef void(*async_drdy_cb_t)(void *data, uint32_t data_size);
 
 /**
- * Generic bsp operation status code
+ * Generic HW modules operation status code
  *
- * This enumeration is used by various bsp subsystems to provide
+ * This enumeration is used by various HW modules to provide
  * information on their status. It may also be used by functions as a
  * return code.
  */

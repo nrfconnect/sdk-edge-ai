@@ -5,12 +5,11 @@
  */
 
 /**
- *
  * @defgroup button Button control functions
  * @{
- * @ingroup bsp
+ * @ingroup hw_modules
  *
- *
+ * @brief This module provides button control functions.
  */
 #ifndef __BUTTON_H__
 #define __BUTTON_H__

@@ -9,13 +9,52 @@ source "Kconfig.zephyr"
 config DATA_COLLECTION_MODE
 	bool "Enable Data Collection Mode (no inference run)"
 
-config DATA_COLLECTION_BLE_NUS
-	bool "Send data collection samples over BLE NUS"
+choice BLE_MODE
+	prompt "BLE mode"
+	default BLE_MODE_HID if !DATA_COLLECTION_MODE
+	default BLE_MODE_NUS if DATA_COLLECTION_MODE
+
+config BLE_MODE_NONE
+	bool "No BLE"
+	help
+	  Disable Bluetooth. Inference results and data collection use serial only.
+
+config BLE_MODE_HID
+	bool "BLE HID (keyboard emulation)"
+	depends on !DATA_COLLECTION_MODE
+	depends on BT
+	select BT_HIDS
+	select BT_DIS
+	select BT_DIS_PNP
+	select BT_BAS
+	help
+	  Use BLE HID for gesture-to-keyboard mapping (inference mode).
+
+config BLE_MODE_NUS
+	bool "BLE NUS (Nordic UART Service)"
 	depends on DATA_COLLECTION_MODE
 	depends on BT
 	select BT_NUS
+	select BT_DIS
+	select BT_DIS_PNP
+	select BT_BAS
 	help
-	  Forward the raw IMU samples over Nordic UART Service (NUS) in addition
-	  to the serial output. A second development kit running the Bluetooth
-	  Central UART sample is needed to receive the data.
+	  Forward raw IMU samples over Nordic UART Service. A second development
+	  kit running the Bluetooth Central UART sample is needed to receive
+	  the data.
 
+config BLE_MODE_GATT_CUSTOM
+	bool "BLE GATT (custom GATT service)"
+	depends on !DATA_COLLECTION_MODE
+	depends on BT
+	select BT_BAS
+	select BT_DIS
+	select BT_DIS_PNP
+	help
+	  Use custom GATT service to send inference results (class_label,probability).
+
+endchoice
+
+choice BT_HIDS_DEFAULT_PERM
+	default BT_HIDS_DEFAULT_PERM_RW_ENCRYPT if BLE_MODE_HID
+endchoice

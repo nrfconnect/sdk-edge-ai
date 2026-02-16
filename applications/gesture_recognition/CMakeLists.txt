@@ -33,9 +33,16 @@ target_include_directories(app PRIVATE
 target_sources(app PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/inference_postprocessing.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/ble/hid/ble_hid.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/hw_modules/button/button.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/hw_modules/led/led.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/hw_modules/sensor/imu/imu.c
   ${NN_PATH}
 )
+
+if(CONFIG_BLE_MODE_HID)
+  target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ble/hid/ble_hid.c)
+elseif(CONFIG_BLE_MODE_NUS)
+  target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ble/nus/ble_nus.c)
+elseif(CONFIG_BLE_MODE_GATT_CUSTOM)
+  target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ble/gatt/ble_gatt.c)
+endif()

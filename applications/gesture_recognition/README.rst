@@ -178,12 +178,34 @@ Configuration
 
 |config|
 
+Choosing Bluetooth LE mode
+==========================
+
+The application supports four mutually exclusive Bluetooth LE modes.
+Select one in the :file:`prj.conf` file or through ``menuconfig`` (Application Options → Bluetooth LE mode):
+
+* Bluetooth HID mode - Used when the ``CONFIG_BLE_MODE_HID`` Kconfig option is enabled.
+  The device is a Bluetooth keyboard that sends keystrokes based on recognized gestures.
+  It is not available in data collection mode, which is the default mode when the ``CONFIG_DATA_COLLECTION_MODE`` Kconfig option is disabled.
+* No Bluetooth LE mode - Used when the ``CONFIG_BLE_MODE_NONE`` Kconfig option is enabled.
+  In this mode, Bluetooth is disabled.
+  Inference results and data collection use serial connection only.
+* Bluetooth LE NUS mode - Used when the ``CONFIG_BLE_MODE_NUS`` Kconfig option is enabled.
+  In this mode, the device forwards raw IMU samples over the Nordic UART Service.
+  This mode is available only in data collection mode, which is the default when the ``CONFIG_DATA_COLLECTION_MODE`` Kconfig option is enabled.
+  For more information, see :ref:`building_firmware_for_data_collection`.
+* Bluetooth LE GATT mode - Used when the ``CONFIG_BLE_MODE_GATT_CUSTOM`` Kconfig option is enabled.
+  In this mode, the device exposes a custom GATT service called "neuton_gatt" that sends inference results in the format ``<class_label>,<probability>``.
+  This mode is not available in data collection mode.
+
+.. _building_firmware_for_data_collection:
+
 Building firmware for data collection
 =====================================
 
 It is possible to create a build that outputs raw data from the accelerometer and gyro sensors on the serial port.
-In this mode, you must have an additional development kit running the `Nordic central UART sample`_ to receive the NUS data. 
-This allows to capture data for training new models and to test and implement new use cases. 
+No inference is performed in this mode.
+This allows to capture data for training new models and to test and implement new use cases.
 The output consists of 16-bit integers separated by a comma, in the following order:
 
 .. code-block::
@@ -193,21 +215,21 @@ The output consists of 16-bit integers separated by a comma, in the following or
 Column headers are not included. 
 The output rate is the configured sampling frequency (default 100 Hz).
 
+You can find raw datasets used for model training on the `training dataset`_ page.
+
 1. To build this version, enable the following option in the :file:`prj.conf` file:
 
    .. code-block::
 
       CONFIG_DATA_COLLECTION_MODE=y
 
-#. To forward the same data over Bluetooth LE using `Nordic UART Service (NUS)`_, additionally enable:
+#. If you want to forward the same data over Bluetooth LE using `Nordic UART Service (NUS)`_, additionally enable:
 
    .. code-block::
 
       CONFIG_DATA_COLLECTION_BLE_NUS=y
 
-No inference is performed in this mode.
-It is intended to simplify the capture of new datasets.
-You can find raw dataset used for model training on the `training dataset`_ page.
+   In this mode, you must have an additional development kit running the `Nordic central UART sample`_ to receive the NUS data.
 
 Building and running
 ********************
