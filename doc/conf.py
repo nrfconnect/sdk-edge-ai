@@ -14,6 +14,7 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import os
 import sys
 from pathlib import Path
 
@@ -51,6 +52,8 @@ extensions = [
     'sphinx_copybutton',
     'options_from_kconfig',
     'table_from_rows',
+    'zephyr.doxyrunner',
+    'zephyr.doxybridge',
     'zephyr.external_content',
 ]
 
@@ -70,6 +73,30 @@ external_content_contents = [
     (EDGE_AI_BASE, "samples/**/*.rst"),
     (EDGE_AI_BASE, "tests/**/*.rst"),
 ]
+
+# -- Options for doxyrunner plugin ---------------------------------------------
+
+_doxyrunner_outdir = Path(sys.argv[4]) / "html" / "doxygen"
+
+doxyrunner_doxygen = os.environ.get("DOXYGEN_EXECUTABLE", "doxygen")
+doxyrunner_projects = {
+    "edge-ai": {
+        "doxyfile": EDGE_AI_BASE / "doc" / "doxyfile.in",
+        "outdir": _doxyrunner_outdir,
+        "fmt": True,
+        "fmt_vars": {
+            "NRF_BASE": str(NRF_BASE),
+            "EDGE_AI_BASE": str(EDGE_AI_BASE),
+            "DOCSET_SOURCE_BASE": str(EDGE_AI_BASE),
+            "DOCSET_BUILD_DIR": str(_doxyrunner_outdir),
+            "DOCSET_VERSION": release,
+        },
+    }
+}
+
+# -- Options for zephyr.doxybridge plugin ---------------------------------
+
+doxybridge_projects = {"edge-ai": doxyrunner_projects["edge-ai"]["outdir"]}
 
 # Options for table_from_rows --------------------------------------------------
 
