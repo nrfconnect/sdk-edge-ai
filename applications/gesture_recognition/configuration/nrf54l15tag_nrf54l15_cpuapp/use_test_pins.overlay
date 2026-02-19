@@ -1,0 +1,35 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+
+/*
+ * Use button 2 and LED 2 instead of button 1 and LED 1.
+ * Buttons numeration begins from 1 on the board, so &button1 is button 2 on board.
+ */
+/ {
+	aliases {
+		sw0 = &button1;
+		led0 = &led2_red;
+		led1 = &led2_green;
+		led2 = &led2_blue;
+	};
+};
+
+&led2_red {
+	status = "okay";
+};
+
+&led2_green {
+	status = "okay";
+};
+
+&led2_blue {
+	status = "okay";
+};
+
+&button1 {
+	status = "okay";
+};
