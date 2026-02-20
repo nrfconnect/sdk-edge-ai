@@ -1295,7 +1295,7 @@ def save_vectors_for_mass_inference(test_vector_file_name, test_vectors_ndx, qua
         elif q_input_shape.shape_size == 3:
             q_test_vector = q_test_vector.transpose(0, 2, 1)
 
-    if (q_input_shape.depth > 1):  # we have a multichannel input
+    if (q_input_shape.depth > 1) and q_input_shape.shape_size == 4:  # we have a multichannel input
         q_test_vector = q_test_vector.transpose(0, 3, 1, 2)
 
     def get_csv_text_map_func(vector):
@@ -1737,7 +1737,8 @@ def get_unit_test_model_name(test_op_info_dict):
 
     if OP_TYPE == "Mean":
         if 'MEAN_AXIS' in test_op_info_dict:
-            mean_axis_string = get_string_from_array_values(test_op_info_dict['MEAN_AXIS'])
+            mean_axis_string = get_string_from_array_values(
+                test_op_info_dict['MEAN_AXIS'])
             model_name = model_name + \
                 f"_mean_axis_{mean_axis_string}"
 
@@ -1745,10 +1746,11 @@ def get_unit_test_model_name(test_op_info_dict):
         if 'ALPHA' in test_op_info_dict:
             model_name = model_name + \
                 f"_alpha_{float_to_str(test_op_info_dict['ALPHA'])}"
-    
-    if OP_TYPE == "Multiply":
+
+    if OP_TYPE == "Multiply" or OP_TYPE == "Add":
         if 'BROADCAST_AXIS' in test_op_info_dict:
-            broadcast_axis_string = get_string_from_array_values(test_op_info_dict['BROADCAST_AXIS'])
+            broadcast_axis_string = get_string_from_array_values(
+                test_op_info_dict['BROADCAST_AXIS'])
             model_name = model_name + \
                 f"_broadcast_axis_{broadcast_axis_string}"
     return model_name.lower()

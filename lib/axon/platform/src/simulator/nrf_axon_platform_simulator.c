@@ -11,10 +11,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "nrf_axon_platform.h"
-#include "nrf_axon_platform_interface.h"
-#include "nrf_axon_driver.h"
-#include "nrf_axon_platform_simulator.h"
+#include "axon/nrf_axon_platform.h"
+#include "drivers/axon/nrf_axon_platform_interface.h"
+#include "drivers/axon/nrf_axon_driver.h"
+#include "axon/nrf_axon_platform_simulator.h"
 
 uint32_t nrf_axon_interlayer_buffer[NRF_AXON_INTERLAYER_BUFFER_SIZE/sizeof(uint32_t)];
 uint32_t nrf_axon_psum_buffer[NRF_AXON_PSUM_BUFFER_SIZE/sizeof(uint32_t)];
@@ -24,7 +24,7 @@ AxonFuncSatLogSt axon_function_saturation_log = {0};
 
 
 uint8_t* axon_nn_system_memory_ptr = NULL;
-
+bool simulator_in_threadless_mode = false;
 
 void delay_us(uint32_t delay) {
 }
@@ -171,6 +171,7 @@ static void enable_axon_interrupt() {
 
 nrf_axon_result_e nrf_axon_platform_init() {
   void *axon_base_address;
+  nrf_axon_platform_printf("simulator_in_threadless_mode = %d\n", simulator_in_threadless_mode);
   axon_base_address = start_simulator();
   nrf_axon_result_e result;
   if (NRF_AXON_RESULT_SUCCESS != (result = nrf_axon_driver_init(axon_base_address))) {
@@ -247,7 +248,13 @@ void axon_simulator_log_function_saturation(const char* funcName) {
   }
   if (axon_function_saturation_log.functionCount < MAX_FUNCTIONS_LOG) {
       //combines two operations: memory allocation and string copying. Remember to free later
+#if _WIN32 || _WIN64
+      // windows gives a warning over strdup      
+      axon_function_saturation_log.functionTable[axon_function_saturation_log.functionCount].name = _strdup(funcName);
+#else
+      // GCC gives a linker error over _strdup
       axon_function_saturation_log.functionTable[axon_function_saturation_log.functionCount].name = strdup(funcName);
+#endif
       memcpy(&axon_function_saturation_log.functionTable[axon_function_saturation_log.functionCount].cnts, &sat, sizeof(AxonCoreSatCntLogSt));
       axon_function_saturation_log.functionCount++;
   } else {

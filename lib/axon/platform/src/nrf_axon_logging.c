@@ -6,14 +6,15 @@
  * express written agreement with Nordic Semiconductor ASA.
  */
 #include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <stdio.h>
 
-#include "nrf_axon_logging.h"
-#include "nrf_axon_platform.h"
+#include "axon/nrf_axon_logging.h"
+#include "axon/nrf_axon_platform.h"
 
 
-void print_float_vector(const char *name, const float *vector_ptr, uint32_t count, uint8_t stride) {
+void nrf_axon_print_float_vector(const char *name, const float *vector_ptr, uint32_t count, uint8_t stride) {
   char printbuffer[20]; // sized big enough for longest integer.
   nrf_axon_platform_printf("float ");;
 
@@ -21,14 +22,14 @@ void print_float_vector(const char *name, const float *vector_ptr, uint32_t coun
   snprintf(printbuffer, 20, "[%d] = {\r\n", count);
   nrf_axon_platform_printf(printbuffer);
   while (count--) {
-    snprintf(printbuffer, 20, "%f,", *vector_ptr);
+    snprintf(printbuffer, 20, "%f,", (double)*vector_ptr);
     vector_ptr+=stride;
     nrf_axon_platform_printf(printbuffer);
   }
   nrf_axon_platform_printf("\r\n}\r\n");
 }
 
-void print_int32_vector(const char *name, const int32_t *vector_ptr, uint32_t count, uint8_t stride) {
+void nrf_axon_print_int32_vector(const char *name, const int32_t *vector_ptr, uint32_t count, uint8_t stride) {
   char printbuffer[20]; // sized big enough for longest integer.
 
   nrf_axon_platform_printf("int32_t ");;
@@ -43,7 +44,7 @@ void print_int32_vector(const char *name, const int32_t *vector_ptr, uint32_t co
   }
   nrf_axon_platform_printf("\r\n}\r\n");
 }
-void print_hex32_vector(const char *name, const uint32_t *vector_ptr, uint32_t count, uint8_t stride) {
+void nrf_axon_print_hex32_vector(const char *name, const uint32_t *vector_ptr, uint32_t count, uint8_t stride) {
   char printbuffer[20]; // sized big enough for longest integer.
 
   nrf_axon_platform_printf("int32_t ");;
@@ -60,10 +61,10 @@ void print_hex32_vector(const char *name, const uint32_t *vector_ptr, uint32_t c
 }
 
 
-void print_int16_vector(const char *name, const int16_t *vector_ptr, uint32_t count, uint8_t stride) {
-  print_int16_circ_buffer(name, vector_ptr, count, stride, 0);
+void nrf_axon_print_int16_vector(const char *name, const int16_t *vector_ptr, uint32_t count, uint8_t stride) {
+  nrf_axon_print_int16_circ_buffer(name, vector_ptr, count, stride, 0);
 }
-void print_int16_circ_buffer(const char *name, const int16_t *vector_ptr, uint32_t count, uint8_t stride, uint32_t start_index) {
+void nrf_axon_print_int16_circ_buffer(const char *name, const int16_t *vector_ptr, uint32_t count, uint8_t stride, uint32_t start_index) {
   char printbuffer[20]; // sized big enough for longest integer.
   uint32_t sample_ndx;
 
@@ -84,7 +85,7 @@ void print_int16_circ_buffer(const char *name, const int16_t *vector_ptr, uint32
 
 }
 
-void print_int8_vector(const char *name, const int8_t *vector_ptr, uint32_t count) {
+void nrf_axon_print_int8_vector(const char *name, const int8_t *vector_ptr, uint32_t count) {
   char printbuffer[20]; // sized big enough for longest integer.
   nrf_axon_platform_printf("int8_t ");
 
@@ -102,7 +103,7 @@ void print_int8_vector(const char *name, const int8_t *vector_ptr, uint32_t coun
 /*
  * utility for printing a vector to the debug console.
  */
-void PrintVector(const char *name, const uint8_t *vector_ptr, uint32_t count, uint8_t element_size) {
+void nrf_axon_print_vector(const char *name, const uint8_t *vector_ptr, uint32_t count, uint8_t element_size) {
   char printbuffer[20]; // sized big enough for longest integer.
   int32_t element_value = 0;
   switch (element_size) {
@@ -123,7 +124,7 @@ void PrintVector(const char *name, const uint8_t *vector_ptr, uint32_t count, ui
   nrf_axon_platform_printf("\r\n}\r\n");
 }
 
-void print_int64_vector(const char *name, const int64_t *vector_ptr, uint32_t count, uint8_t stride) {
+void nrf_axon_print_int64_vector(const char *name, const int64_t *vector_ptr, uint32_t count, uint8_t stride) {
   char printbuffer[20]; // sized big enough for longest integer.
 
   nrf_axon_platform_printf("int64_t ");;
@@ -132,13 +133,13 @@ void print_int64_vector(const char *name, const int64_t *vector_ptr, uint32_t co
   snprintf(printbuffer, 20, "[%d] = {\r\n", count);
   nrf_axon_platform_printf(printbuffer);
   while (count--) {
-    snprintf(printbuffer, 20, "%I64d,", *vector_ptr);
+    snprintf(printbuffer, 20, "%" PRId64 ",", *vector_ptr);
     vector_ptr+=stride;
     nrf_axon_platform_printf(printbuffer);
   }
   nrf_axon_platform_printf("\r\n}\r\n");
 }
-void print_hex64_vector(const char *name, const int64_t *vector_ptr, uint32_t count, uint8_t stride) {
+void nrf_axon_print_hex64_vector(const char *name, const int64_t *vector_ptr, uint32_t count, uint8_t stride) {
   char printbuffer[20]; // sized big enough for longest integer.
 
   nrf_axon_platform_printf("int64_t ");;
@@ -147,7 +148,7 @@ void print_hex64_vector(const char *name, const int64_t *vector_ptr, uint32_t co
   snprintf(printbuffer, 20, "[%d] = {\r\n", count);
   nrf_axon_platform_printf(printbuffer);
   while (count--) {
-    snprintf(printbuffer, 20, "0x%I64x,", *vector_ptr);
+    snprintf(printbuffer, 20, "0x%" PRIx64 ",", *vector_ptr);
     vector_ptr+=stride;
     nrf_axon_platform_printf(printbuffer);
   }

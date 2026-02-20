@@ -195,7 +195,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
         digit = np.argmax(output()[0])
         prediction_digits.append(digit)
 
-        if (model_ip_shape.depth > 1):  # we have a multichannel input
+        if (model_ip_shape.depth > 1) and model_ip_shape.shape_size > 3:  # we have a multichannel input
             test_ = test_.transpose(0, 3, 1, 2)
         tflite_test_file_content += util.write_array_to_file(
             test_.squeeze(), model_name.lower()+"_l0_test_input")
@@ -279,14 +279,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
 
             op_name = options.GetOperationName()
             meta_data = options.PrintAttributes()
-            if -1 in new_op['axon_ip_ops'] and new_op['axon_layer_num'] >= 0:
-                model_input_axon_layer_num = new_op['axon_layer_num']
-                model_input_tf_index = new_op['index']
-                model_input_operator_name = op_name
-            if new_op['axon_op_ops'] == [] and new_op['axon_layer_num'] >= 0:
-                model_output_axon_layer_num = new_op['axon_layer_num']
-                model_output_tf_index = new_op['index']
-                model_output_operator_name = op_name
+
             # FC layers need not be rotated. and also the layers after them should not have wrong input/output layers
             if i > 0:
                 previous_op_name = operators_detail_graph[i-1]['op_name']
@@ -309,13 +302,22 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             options_error, error_text, error_action = options.GetOptionsError()
             if (options_error):
                 if error_action == "CONTINUE":
-                    logger.warning(error_text)
+                    logger.info(error_text)
                     new_op['operator_options'] = options
                     continue
                 else:
                     raise Exception(
                         f"The operator {op_name} in the model {model_name} is not supported, {error_text}")
 
+            if -1 in new_op['axon_ip_ops'] and new_op['axon_layer_num'] >= 0:
+                model_input_axon_layer_num = new_op['axon_layer_num']
+                model_input_tf_index = new_op['index']
+                model_input_operator_name = op_name
+            if new_op['axon_op_ops'] == [] and new_op['axon_layer_num'] >= 0:
+                model_output_axon_layer_num = new_op['axon_layer_num']
+                model_output_tf_index = new_op['index']
+                model_output_operator_name = op_name
+            
             ip_shape, kernel_shape, bias_shape = options.GetInputShapes()
             op_shape = options.GetOutputShape()
 
@@ -374,7 +376,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 # model_op_zeropoint = 0
 
             if (operator_code in cpu_operator_options.cpu_operators_list):
-                logger.debug(f"{op_name} is a cpu operation!")
+                logger.info(f"{op_name} is a cpu operation!")
 
                 filter_tensor = options.GetFilterTensor()
                 if (filter_tensor.size == 0):
@@ -473,7 +475,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 if (max_psum_layer_len < (feature_length)):
                     max_psum_layer_len = (feature_length)
                     max_psum_layer_name = layer_name
-            if (test_flag):
+            if (test_flag) and False:
                 tflite_test_file_content = options.WriteTestVectorToFile(
                     tflite_test_file_content, line_info, interpreter.tensor(op_ndxs[0])(), op_datawidth, op_radix)
                 tflite_test_layer_vectors += "  " + layer_name.lower()+"_tflite_op,\n  "
@@ -542,7 +544,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                         input_operator_index = tflite_axon_graph_object.get_index_for_axon_layer_num(
                             new_op['axon_ip_ops'][input_idx])
                     elif new_op['axon_ip_ops'][input_idx] == -1:  # input to the model
-                        input_operator_index = tflite_axon_graph_object.get_index_of_input_operator()
+                        input_operator_index = tflite_axon_graph_object.get_index_of_input_operator(i)
                     input_operators = operators_detail_graph[input_operator_index]['op_tensors']
                     input_ops_shape = ops.TensorShape(
                         tensor_details[input_operators[0]]['shape'])
@@ -551,15 +553,17 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                     model_descriptor_layer_struct[0].input_ids[input_idx] = new_op['axon_ip_ops'][input_idx]
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].height = input_ops_shape.height
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].width = input_ops_shape.width
+                    shape_text = "shapes_(C,H,W,DW)"
                     if transpose_layer:
                         # FIXME Testing here transpose
                         # swap the height and width of the operators
+                        shape_text = "shapes_(C,W,H,DW)"
                         model_descriptor_layer_struct[0].input_dimensions[input_idx].height, model_descriptor_layer_struct[0].input_dimensions[
                             input_idx].width = model_descriptor_layer_struct[0].input_dimensions[input_idx].width, model_descriptor_layer_struct[0].input_dimensions[input_idx].height
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].channel_cnt = input_ops_shape.depth
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].byte_width = input_datatype_enum.value
                     model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx} = {model_descriptor_layer_struct[0].input_ids[input_idx]}, "
-                    model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_shapes_(C,H,W,DW) = {model_descriptor_layer_struct[0].input_dimensions[input_idx].channel_cnt, model_descriptor_layer_struct[0].input_dimensions[input_idx].height,model_descriptor_layer_struct[0].input_dimensions[input_idx].width,model_descriptor_layer_struct[0].input_dimensions[input_idx].byte_width}, "
+                    model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_{shape_text} = {model_descriptor_layer_struct[0].input_dimensions[input_idx].channel_cnt, model_descriptor_layer_struct[0].input_dimensions[input_idx].height,model_descriptor_layer_struct[0].input_dimensions[input_idx].width,model_descriptor_layer_struct[0].input_dimensions[input_idx].byte_width}, "
             else:
                 model_descriptor_layer_struct[0].input_ids[0] = new_op['axon_ip_ops'][0]
                 model_descriptor_layer_struct[0].input_dimensions[0].height = ops_ip_shape.height
@@ -659,7 +663,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                     raise Exception(f"{val_err.args[1]}")
         except KeyError as key_err:
             if key_err.args[0] == -901:
-                logger.warning(op_name + " operator supported but skipped!")
+                logger.info(op_name + " operator supported but skipped!")
             elif key_err.args[0] == -902:
                 # logger.error(ops_details[i]["op_name"]+" operator before softmax has an activation function, try skipping softmax op!")
                 logger.error(
@@ -669,7 +673,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 logger.error(
                     new_op["op_name"]+" operator has a fused activation function followed by a LeakyReLU Operator, cannot set leaky_relu as activation function!")
             elif key_err.args[0] == -910:
-                logger.warning(
+                logger.info(
                     f"{op_name} is supported as an Activation Function and not an operator!")
             elif key_err.args[0] == -912:
                 logger.error(
@@ -678,13 +682,13 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 # ops_combined_string = " ".join(operators_detail_graph[combined_op_ndx]['op_name'] + f"[@{combined_op_ndx}]"  for combined_op_ndx in new_op['combined_ops'])
                 ops_combined_string = " ".join(
                     ops_details[combined_op_ndx]['op_name'] + f"[@{combined_op_ndx}]" for combined_op_ndx in new_op['combined_ops'])
-                logger.warning(
+                logger.info(
                     f"{new_op['op_name']}[@{tflite_identifier}] is supported and combined with {ops_combined_string} as a PERSISTENT_VARIABLE!")
             elif key_err.args[0] == -914:
-                logger.warning(
+                logger.info(
                     f"{new_op['op_name']} was converted to {op_name} so that it can be a PASSTHROUGH Operation!")
             elif key_err.args[0] == -917:
-                logger.warning(
+                logger.info(
                     f"{new_op['op_name']} is a PASSTHROUGH Operation!")
             elif key_err.args[0] == -920:
                 logger.error(
@@ -737,7 +741,6 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     #define [@UPPER_MODEL_NAME]_LAYER_COUNT // number of descrete operations in the model.
 
     """
-    # file_content+="\n\n#define "+ model_name.upper() +"_MAX_PARALLEL_TRACKS (" +str(max_no_of_track)+ ") // maximum number of concurrent tracks in the model. Typically 1."#REMOVE
     file_content += "\n#define " + model_name.upper() + "_MIN_IO_BUFFER_LENGTH (" + \
         str(max_interior_layer_len) + \
         ") // length in bytes of the largest inner layer output"
@@ -749,14 +752,13 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
         ") // length in bytes of the output vector"
     file_content += "\n#define " + model_name.upper() + "_LAYER_COUNT (" + \
         str(axon_layer_num)+") // number of descrete operations in the model."
-
     file_content += "\n#define " + model_name.upper() + "_PSUM_NEEDED (" + \
         str(psum_needed)+") //flag to detect if we need a PSUM."
 
     # file_content+="\n#define "+ model_name.upper() +"_CMD_BUF_LEN ("+str(np.int32(command_buff_len))+") // the length of the commmand buffer"#REMOVE
     if total_layer_count != (axon_layer_num+1):
         logger.debug(
-            f"Total Layer Count {total_layer_count} does not match with Total Supported Axon Layers {axon_layer_num+1} due to skipping of layers")
+            f"total Layer Count {total_layer_count} does not match with Total Supported Axon Layers {axon_layer_num+1} due to skipping of layers")
     # model_layer_cnt_bin = bytearray(np.array([total_layer_count]))
     # get the last layer number using the output tensor index
 
@@ -866,10 +868,10 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     if (test_flag) and labels is not None:
         logger.info(f"true Classification : {labels[y_test[test_ndx]]}")
         logger.info(f"tflite Model Prediction : {labels[digit]}")
-    logger.info(f"number of ops in the model {total_layer_count}")
-    logger.info(
+    logger.debug(f"number of ops in the model {total_layer_count}")
+    logger.debug(
         f"{model_input_operator_name} at axon layer number {model_input_axon_layer_num} [@{model_input_tf_index}] is the axon input to the model")
-    logger.info(
+    logger.debug(
         f"{model_output_operator_name} at axon layer number {model_output_axon_layer_num} [@{model_output_tf_index}] is the axon output of the model")
 
     # logger.debug(f"the total command buffer length is {str(np.int32(command_buff_len))}") #REMOVE
@@ -880,7 +882,7 @@ def run_test_app(use_exe=False):
     print("NOT IMPLEMENTED")
 
 
-def run_c_compiler_lib(compiler_types_hdr_path, axon_compiler_lib, arguments_string_array, compiler_stdout_filepath=COMPILER_STDOUT_FILE_NAME):
+def run_c_compiler_lib(compiler_types_hdr_path, axon_compiler_lib, arguments_string_array, compiler_stdout_filepath=COMPILER_STDOUT_FILE_NAME, test_vectors_flag=False):
     # default error code when an exception occurs when calling the compiler library
     compiler_return_code = -903
     compiler_return_dict = {}
@@ -903,9 +905,20 @@ def run_c_compiler_lib(compiler_types_hdr_path, axon_compiler_lib, arguments_str
     compiler_return_struct_ptr = compiler_return_object.get_compiler_return_struct_np_buffer(
     ).ctypes.data_as(POINTER(compiler_return_struct_memory))
 
-    axon_compiler_lib.CompilerLibMain.argtypes = [c_int, POINTER(
+    # axon_compiler_lib.CompilerLibMain.argtypes = [c_int, POINTER(
+    #     test_array_memory), POINTER(compiler_return_struct_memory)]
+    # axon_compiler_lib.CompilerLibMain.restype = c_int
+
+    # scan/compile function lib call setup
+    axon_compiler_lib.nrf_axon_compile_model.argtypes = [c_int, POINTER(
         test_array_memory), POINTER(compiler_return_struct_memory)]
-    axon_compiler_lib.CompilerLibMain.restype = c_int
+    axon_compiler_lib.nrf_axon_compile_model.restype = c_int
+
+    # infer function lib call set up
+    axon_compiler_lib.nrf_axon_infer_test_vectors.argtypes = [c_int, POINTER(
+        test_array_memory), POINTER(compiler_return_struct_memory)]
+    axon_compiler_lib.nrf_axon_infer_test_vectors.restype = c_int
+
     try:
         if os.name == 'posix' and LOG_COMPILER_STDOUT_IN_LINUX:
             """
@@ -926,8 +939,23 @@ def run_c_compiler_lib(compiler_types_hdr_path, axon_compiler_lib, arguments_str
             for windows the stdout redirection is not working and is not populating the temp file descriptor, 
             piping the output to a seperate log file from the command line seems like the best way to get the compiler lib stdouts for windows
             """
-            compiler_return_code = axon_compiler_lib.CompilerLibMain(
+            # single call for compiling and running inference
+            # compiler_return_code = axon_compiler_lib.CompilerLibMain(
+            #     len(ip_ptr), pointer(test_array), compiler_return_struct_ptr)
+
+            compiler_return_code = axon_compiler_lib.nrf_axon_compile_model(
                 len(ip_ptr), pointer(test_array), compiler_return_struct_ptr)
+            if compiler_return_code == 0:
+                logger.info("model compiled successfully ....")
+                if test_vectors_flag:
+                    logger.info(
+                        "proceeding to run inference on test vectors ....")
+                    compiler_return_code = axon_compiler_lib.nrf_axon_infer_test_vectors(
+                        len(ip_ptr), pointer(test_array), compiler_return_struct_ptr)
+                else:
+                    logger.info(
+                        "not running inference as test vectors are not provided")
+
             """
             code that should work for windows as well but doesn't work 
             due to some differences in how the visual studio and mingw GCC compiles handles the stdouts
@@ -958,9 +986,9 @@ def read_pipe(pipe_read):
             logger.info(line.strip())
 
 
-def run_c_compiler_lib_x64(compiler_types_hdr_path, axon_compiler_lib, arguments_string_array, compiler_stdout_filepath=COMPILER_STDOUT_FILE_NAME):
+def run_c_compiler_lib_x64(compiler_types_hdr_path, axon_compiler_lib, arguments_string_array, compiler_stdout_filepath=COMPILER_STDOUT_FILE_NAME, test_vectors_flag=False):
     ret = run_c_compiler_lib(compiler_types_hdr_path, axon_compiler_lib,
-                             arguments_string_array, compiler_stdout_filepath)
+                             arguments_string_array, compiler_stdout_filepath, test_vectors_flag)
     return ret
 
 
@@ -1013,12 +1041,12 @@ def run_compiler_library(test_vectors_flag,
             print(f"executing compiler object at {AXON_COMPILER_OBJECT}")
             if COMPILER_VERBOSE:
                 subprocess_return_code, compiler_return_dict, compiler_return_codetext = run_c_compiler_lib_x64(
-                    str(COMPILER_TYPES_HDR_FILE), axons_compiler_lib, command_string_array)
+                    str(COMPILER_TYPES_HDR_FILE), axons_compiler_lib, command_string_array, test_vectors_flag=test_vectors_flag)
             else:
                 # with util.HideOutput() as stdoutput:
                 with util.HideOutput():
                     subprocess_return_code, compiler_return_dict, compiler_return_codetext = run_c_compiler_lib_x64(
-                        str(COMPILER_TYPES_HDR_FILE), axons_compiler_lib, command_string_array)
+                        str(COMPILER_TYPES_HDR_FILE), axons_compiler_lib, command_string_array, test_vectors_flag=test_vectors_flag)
                 # with util.stdout_redirected(to=compiler_stdout_filepath):
                 #   subprocess_return_code, compiler_return_dict, compiler_return_codetext = run_c_compiler_lib_x64(str(COMPILER_TYPES_HDR_FILE),axons_compiler_lib, command_string_array)
             if (subprocess_return_code != 0):

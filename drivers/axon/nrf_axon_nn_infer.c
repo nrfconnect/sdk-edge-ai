@@ -9,8 +9,8 @@
  #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include "nrf_axon_platform.h"
-#include "nrf_axon_nn_infer.h"
+#include "axon/nrf_axon_platform.h"
+#include "drivers/axon/nrf_axon_nn_infer.h"
 
 nrf_axon_nn_async_inference_status_e nrf_axon_nn_get_model_infer_status(const nrf_axon_nn_model_async_inference_wrapper_s* model_wrapper) {
   return model_wrapper->infer_status;
@@ -37,7 +37,7 @@ static void classify_complete_callback(nrf_axon_result_e result, void* callback_
   nrf_axon_nn_model_async_inference_wrapper_s* model_wrapper = (nrf_axon_nn_model_async_inference_wrapper_s*)callback_context;
 
   // invoke the caller's callback.
-  model_wrapper->infer_status = kAxonnnInferStatusInferenceComplete;
+  model_wrapper->infer_status = NRF_AXON_NN_ASYNC_INFERENCE_STATUS_COMPLETE;
   if (NULL != model_wrapper->inference_callback) {
     model_wrapper->inference_callback(result, model_wrapper->callback_context);
   }
@@ -74,11 +74,11 @@ nrf_axon_result_e nrf_axon_nn_model_infer_async(
   nrf_axon_result_e result;
   const nrf_axon_nn_compiled_model_s *compiled_model = model_wrapper->compiled_model;
   
-  if (model_wrapper->infer_status == kAxonnnInferStatusInferring) {
+  if (model_wrapper->infer_status == NRF_AXON_NN_ASYNC_INFERENCE_STATUS_ACTIVE) {
     return NRF_AXON_RESULT_NOT_FINISHED; // model still busy w/ a prior inference
   }
 
-  model_wrapper->infer_status = kAxonnnInferStatusInferring;
+  model_wrapper->infer_status = NRF_AXON_NN_ASYNC_INFERENCE_STATUS_ACTIVE;
   if (0 > (result = nrf_axon_nn_populate_input_vector(compiled_model, input_vector))) {
     return result;
   }

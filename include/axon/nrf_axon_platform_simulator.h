@@ -14,7 +14,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdio.h>
-#include "nrf_axon_driver.h"
+#include "drivers/axon/nrf_axon_driver.h"
 
 typedef struct {
   uint64_t overflow_cnt;
@@ -112,8 +112,14 @@ void axon_simulator_log_function_saturation(const char* funcName);
 void axon_simulator_print_saturation_statistics();
 void axon_simulator_read_saturation_cnt(AxonCoreSatCntLogSt *);
 void axon_simulator_clear_saturation_cnt();
-nrf_axon_result_e axon_platform_init(void);
-void axon_platform_close(void);
+
+int nrf_axon_simulator_run_test_files(
+  char* input_file_path, 
+  char* output_file_path, 
+  char* input_file_ext, 
+  char* output_file_head_str, 
+  uint32_t buffer_size,
+  int (*callback_function)(char* input_file_name, char* output_file_name, int8_t* input_vector, uint32_t buffer_size));
 
 #ifdef __cplusplus
 }

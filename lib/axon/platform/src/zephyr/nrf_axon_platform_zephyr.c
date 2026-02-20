@@ -13,8 +13,10 @@
 #include <zephyr/kernel.h>
 #include <zephyr/irq.h>
 #include <zephyr/sys_clock.h>
+#include <zephyr/sys/onoff.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/devicetree.h>
+#include <nrf_sys_event.h>
 
 #define USE_DTS_GPIO 1
 
@@ -25,9 +27,9 @@
 #endif
 
 #include <zephyr/logging/log.h>
-#include "nrf_axon_driver.h"
-#include "nrf_axon_platform_interface.h"
-#include "nrf_axon_platform.h"
+#include "drivers/axon/nrf_axon_driver.h"
+#include "drivers/axon/nrf_axon_platform_interface.h"
+#include "axon/nrf_axon_platform.h"
 
 #include <nrfx.h>
 
@@ -37,6 +39,10 @@
 #define AXONS DT_NODELABEL(axons)
 #define AXONS_IRQ_NO DT_IRQN(AXONS)
 #define AXONS_IRQ_PRIORITY DT_IRQ(AXONS, priority)
+
+static struct onoff_manager power_mgr;
+static int sys_event_handle;
+static struct k_work axon_driver_work;
 
 #if USE_DTS_GPIO
 /* The devicetree node identifier for the "axonprofilinggpio0" alias. */
@@ -74,12 +80,6 @@ void nrf_axon_platform_clear_profiling_gpio()
   nrf_gpio_pin_clear(AXONS_PROFILING_GPIO_PIN);
 #endif
 }
-
-#define AXONS_DRIVER_STACK_SIZE 2000 
-#define AXONS_DRIVER_PRIORITY 10
-
-// semaphore to signal the driver thread. Set the maximum value > 1 in case interrupts get stacked up.
-static K_SEM_DEFINE(axons_isr_sem, 0, 10);
 
 // semaphore to signal the user thread on 
 static K_SEM_DEFINE(axons_user_event_sem, 0, 1);
@@ -148,9 +148,12 @@ static void enable_axon_interrupt() {
 	irq_enable(AXONS_IRQ_NO);
 }
 
+#if 0
+// not currently used.
 static void disable_axon_interrupt() {
   irq_disable(AXONS_IRQ_NO);
 }
+#endif
 
 uint32_t nrf_axon_platform_disable_interrupts() {
   return irq_lock();
@@ -172,13 +175,6 @@ static void axon_platform_irq_handler(void * data) {
 /**
  * host function for enabling axonnn by powering it up and providing a clock.
  */
-// FIXME!!! THERE SHOULD BE SOME SYSTEM LEVEL VOTING!!!!
-#if defined RRAMC_POWER_CONFIG_POF_Pos
-static volatile uint32_t *rramc_lowpowerconfig_ptr = &NRF_RRAMC->POWER.LOWPOWERCONFIG;
-static uint32_t LOWPOWERCONFIG_RESTOREVALUE;
-static volatile uint32_t *rramc_powerstandbyconfig_ptr = &NRF_RRAMC->POWER.RESERVED;
-static uint32_t  STANDBYCONFIG_RESTOREVALUE;
-#endif
 #define AXON_REG_ENABLE_OFFSET 0x400
 static void axon_enable() {
 # if !defined(AXONS_ENABLE_EN_Pos)
@@ -190,18 +186,16 @@ static void axon_enable() {
   NRF_AXONS_Type *nrf_axons = (NRF_AXONS_Type *)((int8_t*)AXON_NN_BASE_ADDR+AXON_REG_ENABLE_OFFSET);
   nrf_axons->ENABLE |= (AXONS_ENABLE_EN_Enabled << AXONS_ENABLE_EN_Pos);
 # endif
-#if defined RRAMC_POWER_LOWPOWERCONFIG_MODE_Pos
-  uint32_t tmp = *rramc_lowpowerconfig_ptr;
-  LOWPOWERCONFIG_RESTOREVALUE = tmp;
-  tmp &= ~RRAMC_POWER_LOWPOWERCONFIG_MODE_Msk;
-  tmp |= (RRAMC_POWER_LOWPOWERCONFIG_MODE_Standby    << RRAMC_POWER_LOWPOWERCONFIG_MODE_Pos);
-  *rramc_lowpowerconfig_ptr = tmp;
 
-  tmp = *rramc_powerstandbyconfig_ptr;
-  STANDBYCONFIG_RESTOREVALUE = tmp;
-  *rramc_powerstandbyconfig_ptr = 3;
-#else
-  static_assert(0, "MISSING RRAMC!!!");
+  /* Register an event starting now to make RRAM stay in standby mode. */
+  sys_event_handle = nrf_sys_event_register(0, true);
+  /**
+   * @FIXME!!!!
+   * THE ABOVE CODE CLEARS OUT THE MAGIC BIT 0x20. LET'S RESTORE IT :)
+   * REMOVE THIS WHEN THE OFFICIAL FIX IS AVAILABLE!
+   */
+#if defined RRAMC_POWER_LOWPOWERCONFIG_MODE_Pos
+  NRF_RRAMC->POWER.LOWPOWERCONFIG |= 0x20;
 #endif
 }
 
@@ -219,77 +213,70 @@ static void axon_disable(){
   NRF_AXONS_Type *nrf_axons = (NRF_AXONS_Type *)AXON_NN_BASE_ADDR;
   nrf_axons->ENABLE &= ~(AXONS_ENABLE_EN_Enabled << AXONS_ENABLE_EN_Pos);
 #endif
-#if defined RRAMC_POWER_LOWPOWERCONFIG_MODE_Pos
-  *rramc_lowpowerconfig_ptr = LOWPOWERCONFIG_RESTOREVALUE;
-  *rramc_powerstandbyconfig_ptr = STANDBYCONFIG_RESTOREVALUE;
 
-#endif
-#if defined POWER_TASKS_LOWPWR_TASKS_LOWPWR_Pos
-  NRF_POWER_S->TASKS_LOWPWR |= (POWER_TASKS_LOWPWR_TASKS_LOWPWR_Trigger << POWER_TASKS_LOWPWR_TASKS_LOWPWR_Pos);
-#endif
+  /* Deregister the event so that RRAM can be powered off. */
+  nrf_sys_event_unregister(sys_event_handle, false);
 }
 
-/**
- * Thread that is signaled by axons interrupt
-*/
-static void axons_driver_thread(void *unused1, void *unused2, void *unused3) {
-  while (1) {
-    k_sem_take(&axons_isr_sem, K_FOREVER);
-    nrf_axon_process_driver_event();
-  }
+static void axon_driver_work_handler(struct k_work *work)
+{
+  ARG_UNUSED(work);
+
+  nrf_axon_process_driver_event();
 }
-/**
- * platform function to generate an event that will cause nrf_axon_process_event() to be invoked.
- */
+
 void nrf_axon_platform_generate_driver_event() {
-  k_sem_give(&axons_isr_sem);
+  k_work_submit(&axon_driver_work);
 }
 
-/*
-* Declares the thread at compile time with no start delay.
-*/
-K_THREAD_DEFINE(axons_driver_tid, AXONS_DRIVER_STACK_SIZE,
-                axons_driver_thread, NULL, NULL, NULL,
-                AXONS_DRIVER_PRIORITY, 0, 0);
+#define AXON_DRIVER_THREAD_ID k_work_queue_thread_get(&k_sys_work_q)
 
 // semaphore to reserve access to axon hardware. Used to regulate sync and async modes.
 static K_SEM_DEFINE(axons_reserve_sem, 1, 1);
 static volatile k_tid_t axons_owner_thread_id = NULL; // k_tid_t is a pointer
 
-/**
- * Increments the power vote. If this is the 1st 1, axon is powered on.
- * Returns the number of outstanding votes.
-*/
-static volatile int axon_power_vote_cnt = 0;
-static int vote_for_power()
+static void axon_power_on(struct onoff_manager *mgr, onoff_notify_fn notify)
 {
-  uint32_t int_state = nrf_axon_platform_disable_interrupts();
-  bool do_enable = 0==axon_power_vote_cnt++;
-  nrf_axon_platform_restore_interrupts(int_state);
-  if (do_enable) {
-      axon_enable();
-      nrf_axon_driver_power_on();
-  }
-  return axon_power_vote_cnt;
+  axon_enable();
+  nrf_axon_driver_power_on();
+
+  notify(mgr, 0);
 }
 
-/**
- * decrements the power vote. If this is the last one, axon is powered off.
- * Returns the number of outstanding votes.
-*/
-static int vote_against_power()
+static void axon_power_off(struct onoff_manager *mgr, onoff_notify_fn notify)
 {
-  uint32_t int_state = nrf_axon_platform_disable_interrupts();
-  bool do_disable = (0==--axon_power_vote_cnt);
-  if (0 > axon_power_vote_cnt)
-    axon_power_vote_cnt = 0;
-  nrf_axon_platform_restore_interrupts(int_state);
-  if (do_disable) {
-    nrf_axon_driver_power_off();
-    axon_disable();
-  }
-  return axon_power_vote_cnt;
+  nrf_axon_driver_power_off();
+  axon_disable();
+
+  notify(mgr, 0);
 }
+
+/* Requests that Axon is powered on. It will be kept powered on as long as
+ * there is at least one such request active.
+ */
+static void axon_power_request(void)
+{
+  struct onoff_client cli;
+  int rc;
+  int result;
+
+  sys_notify_init_spinwait(&cli.notify);
+  rc = onoff_request(&power_mgr, &cli);
+  __ASSERT_NO_MSG(rc == 0);
+
+  do {
+    rc = sys_notify_fetch_result(&cli.notify, &result);
+  } while (rc == -EAGAIN);
+
+  __ASSERT_NO_MSG(result == 0);
+}
+
+/* Releases Axon power requested previously with axon_power_request(). */
+static void axon_power_release(void)
+{
+  onoff_release(&power_mgr);
+}
+
 
 /**
  * Driver is asynchronous, so no waiting on the semaphore.
@@ -297,11 +284,11 @@ static int vote_against_power()
 bool nrf_axon_platform_reserve_for_driver() {
   /* vote for power here even if the reservation failed. The pending power vote will prevent
      Axon from being powered down when the user releases Axon.*/
-  vote_for_power(); 
+  axon_power_request();
 
   if (0 == k_sem_take(&axons_reserve_sem, K_NO_WAIT)) {
     /* driver will never reserve from its own thread, always from a user thread. */
-    axons_owner_thread_id = axons_driver_tid;
+    axons_owner_thread_id = AXON_DRIVER_THREAD_ID;
     return true;
   }
   return false;
@@ -322,11 +309,11 @@ bool nrf_axon_platform_reserve_for_user() {
   }
   /* if the driver thread ever requests to reserve for user it is because intrinsics are part of the command buffer
      and so axon is available*/
-  if ((NULL != axons_owner_thread_id) && (k_current_get() == axons_driver_tid)) {
+  if ((NULL != axons_owner_thread_id) && (k_current_get() == AXON_DRIVER_THREAD_ID)) {
     return true;
   }
   /* don't already own it, so need to wait. */
-  vote_for_power(); // vote for power now to avoid a glitch when it is freed.
+  axon_power_request(); // vote for power now to avoid a glitch when it is freed.
 
   k_sem_take(&axons_reserve_sem, K_FOREVER);
   axons_owner_thread_id = k_current_get();
@@ -339,11 +326,11 @@ bool nrf_axon_platform_reserve_for_user() {
  */
 void nrf_axon_platform_free_reservation_from_user() {
   /* */
-  vote_against_power();
+  axon_power_release();
 
   if (nrf_axon_queue_not_empty()) {
     // driver needs the axon hardware, so don't free the sem, just start the hardware. It will have its own power vote pending.
-    axons_owner_thread_id = axons_driver_tid;
+    axons_owner_thread_id = AXON_DRIVER_THREAD_ID;
     nrf_axon_start_queue_processing();
     return;
   }
@@ -353,15 +340,27 @@ void nrf_axon_platform_free_reservation_from_user() {
 
 void nrf_axon_platform_free_reservation_from_driver() {
   axons_owner_thread_id = NULL;
-  vote_against_power(); // power down axon
+  axon_power_release(); // power down axon
   k_sem_give(&axons_reserve_sem);
 }
 
 nrf_axon_result_e nrf_axon_platform_init() {
   LOG_DBG("AXONS_BASE_ADDR: 0x%p", AXON_NN_BASE_ADDR);
   nrf_axon_result_e result;
+  static const struct onoff_transitions transitions = {
+    .start = axon_power_on,
+    .stop  = axon_power_off,
+  };
+  int rc;
+
+  rc = onoff_manager_init(&power_mgr, &transitions);
+  if (rc < 0) {
+    return NRF_AXON_RESULT_FAILURE;
+  }
+
+  k_work_init(&axon_driver_work, axon_driver_work_handler);
+
   axon_enable();
-  nrf_axon_platform_printf("axon on");
   if (NRF_AXON_RESULT_SUCCESS != (result=nrf_axon_driver_init(AXON_NN_BASE_ADDR))) {
     return result;
   }
@@ -376,6 +375,5 @@ nrf_axon_result_e nrf_axon_platform_init() {
 
 
 void nrf_axon_platform_close() {
-  axon_power_vote_cnt=0;
   axon_disable();
 }
