@@ -119,11 +119,11 @@ int led_blink_led2(float brightness, int32_t on_ms, int32_t off_ms);
  *
  * @note This function uses sleep internally and should not be called from ISR context.
  *
- * @param led0        LED0 (red on RGB boards) brightness in range 0 - 1
- * @param led1        LED1 (green on RGB boards) brightness in range 0 - 1
- * @param led2        LED2 (blue on RGB boards) brightness in range 0 - 1
- * @param on_ms       RGB LED turns on time in milliseconds
- * @param off_ms      RGB LED turns off time in milliseconds
+ * @param led0_brightness        LED0 (red on RGB boards) brightness in range 0 - 1
+ * @param led1_brightness        LED1 (green on RGB boards) brightness in range 0 - 1
+ * @param led2_brightness        LED2 (blue on RGB boards) brightness in range 0 - 1
+ * @param on_ms                  RGB LED turns on time in milliseconds
+ * @param off_ms                 RGB LED turns off time in milliseconds
  *
  * @return Operation status, 0 for success
  */
