@@ -1,0 +1,9 @@
+#
+# Copyright (c) 2025 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+sample:
+  description: Memfault POC – 5 random numbers every 60s sent via BLE MDS to Memfault
+  name: Memfault POC (nRF54L20A)

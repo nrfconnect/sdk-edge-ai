@@ -1,0 +1,5 @@
+/* Application-specific metrics.
+ * See https://docs.memfault.com/docs/embedded/metrics-api
+ */
+
+/* None required for POC; CDR carries the random numbers. */

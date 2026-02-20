@@ -1,0 +1,5 @@
+/* Application-specific trace reasons.
+ * See https://docs.memfault.com/docs/embedded/trace-events
+ */
+
+/* None required for POC. */
