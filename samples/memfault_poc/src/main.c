@@ -3,9 +3,9 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  *
- * Memfault POC: every 60 seconds record 5 random numbers (0–256) as a Custom
- * Data Recording (CDR) and expose them via BLE MDS. A gateway (nRF Memfault app,
- * Web Bluetooth at mflt.io/mds, or nRF Python script) forwards chunks to Memfault.
+ * Memfault POC: report 5 bin counts (psi_bin_1 … psi_bin_5) as heartbeat
+ * metrics. Values are set once per heartbeat using the Memfault metrics API.
+ * Data is exposed via BLE MDS; a gateway forwards chunks to Memfault.
  */
 
 #include <zephyr/kernel.h>
@@ -16,15 +16,13 @@
 #include <zephyr/settings/settings.h>
 
 #include <bluetooth/services/mds.h>
-
-#include <memfault/core/custom_data_recording.h>
+#include <memfault/metrics/metrics.h>
 
 #define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-#define RANDOM_COUNT  5
-#define RANDOM_MAX   257   /* 0..256 inclusive */
-#define CDR_INTERVAL_SEC 60
+#define PSI_BIN_COUNT  5
+#define PSI_BIN_MAX    257   /* 0..256 inclusive */
 
 static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err);
 
@@ -38,62 +36,6 @@ static const struct bt_data sd[] = {
 
 static struct bt_conn *mds_conn;
 static struct k_work adv_work;
-static struct k_work_delayable cdr_work;
-
-/* CDR: 5 bytes, one random value 0..256 per byte */
-static uint8_t cdr_payload[RANDOM_COUNT];
-static bool cdr_ready_to_send;
-static size_t cdr_read_offset;
-
-static const char *cdr_mimetypes[] = { MEMFAULT_CDR_BINARY };
-static sMemfaultCdrMetadata cdr_metadata = {
-	.start_time = { .type = kMemfaultCurrentTimeType_Unknown },
-	.mimetypes = cdr_mimetypes,
-	.num_mimetypes = ARRAY_SIZE(cdr_mimetypes),
-	.data_size_bytes = RANDOM_COUNT,
-	.duration_ms = 0,
-	.collection_reason = "memfault_poc_random_sample",
-};
-
-static bool cdr_has_cb(sMemfaultCdrMetadata *metadata)
-{
-	*metadata = cdr_metadata;
-	return cdr_ready_to_send;
-}
-
-static bool cdr_read_cb(uint32_t offset, void *data, size_t data_len)
-{
-	if (offset != cdr_read_offset) {
-		return false;
-	}
-	size_t copy_len = (data_len < (RANDOM_COUNT - offset)) ? data_len : (RANDOM_COUNT - offset);
-	memcpy(data, &cdr_payload[offset], copy_len);
-	cdr_read_offset += copy_len;
-	return true;
-}
-
-static void cdr_mark_read_cb(void)
-{
-	cdr_ready_to_send = false;
-	cdr_read_offset = 0;
-}
-
-static const sMemfaultCdrSourceImpl cdr_source = {
-	.has_cdr_cb = cdr_has_cb,
-	.read_data_cb = cdr_read_cb,
-	.mark_cdr_read_cb = cdr_mark_read_cb,
-};
-
-static void cdr_work_handler(struct k_work *work)
-{
-	(void)work;
-	for (int i = 0; i < RANDOM_COUNT; i++) {
-		cdr_payload[i] = (uint8_t)(sys_rand32_get() % RANDOM_MAX);
-	}
-	cdr_read_offset = 0;
-	cdr_ready_to_send = true;
-	k_work_reschedule(&cdr_work, K_SECONDS(CDR_INTERVAL_SEC));
-}
 
 static void adv_work_handler(struct k_work *work)
 {
@@ -127,7 +69,6 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	if (conn == mds_conn) {
 		mds_conn = NULL;
 	}
-	/* Restart advertising only in recycled_cb() when the connection is fully torn down */
 }
 
 static void recycled_cb(void)
@@ -186,16 +127,28 @@ static const struct bt_mds_cb mds_cb = {
 	.access_enable = mds_access_enable,
 };
 
+/* Called once per heartbeat; sets psi_bin_1..5 with current bin counts. */
+void memfault_metrics_heartbeat_collect_data(void)
+{
+	uint32_t bin_counts[PSI_BIN_COUNT];
+	printk("Collecting heartbeat data\n");
+
+	for (int i = 0; i < PSI_BIN_COUNT; i++) {
+		bin_counts[i] = (uint32_t)(sys_rand32_get() % PSI_BIN_MAX);
+	}
+
+	MEMFAULT_METRIC_SET_UNSIGNED(psi_bin_1, bin_counts[0]);
+	MEMFAULT_METRIC_SET_UNSIGNED(psi_bin_2, bin_counts[1]);
+	MEMFAULT_METRIC_SET_UNSIGNED(psi_bin_3, bin_counts[2]);
+	MEMFAULT_METRIC_SET_UNSIGNED(psi_bin_4, bin_counts[3]);
+	MEMFAULT_METRIC_SET_UNSIGNED(psi_bin_5, bin_counts[4]);
+}
+
 int main(void)
 {
 	int err;
 
-	printk("Memfault POC (nRF54L20A) - BLE MDS, 5 randoms every %ds\n", CDR_INTERVAL_SEC);
-
-	if (!memfault_cdr_register_source(&cdr_source)) {
-		printk("CDR registration failed\n");
-		return 0;
-	}
+	printk("Memfault POC (nRF54L20A) - BLE MDS, 5 psi bins in heartbeat\n");
 
 	err = bt_mds_cb_register(&mds_cb);
 	if (err) {
@@ -223,11 +176,7 @@ int main(void)
 	}
 
 	k_work_init(&adv_work, adv_work_handler);
-	k_work_init_delayable(&cdr_work, cdr_work_handler);
-
 	advertising_start();
-	/* First CDR in 60 s, then every 60 s */
-	k_work_reschedule(&cdr_work, K_SECONDS(CDR_INTERVAL_SEC));
 
 	for (;;) {
 		k_sleep(K_MSEC(1000));

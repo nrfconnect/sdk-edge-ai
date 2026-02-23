@@ -1,0 +1,9 @@
+/* Application-specific metrics.
+ * See https://docs.memfault.com/docs/embedded/metrics-api
+ */
+
+MEMFAULT_METRICS_KEY_DEFINE(psi_bin_1, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(psi_bin_2, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(psi_bin_3, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(psi_bin_4, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(psi_bin_5, kMemfaultMetricType_Unsigned)

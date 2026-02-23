@@ -5,5 +5,5 @@
 #
 
 sample:
-  description: Memfault POC – 5 random numbers every 60s sent via BLE MDS to Memfault
+  description: Memfault POC – 5 psi bin counts reported as heartbeat metrics via BLE MDS to Memfault
   name: Memfault POC (nRF54L20A)
