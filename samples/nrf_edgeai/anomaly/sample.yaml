@@ -25,3 +25,28 @@ tests:
       - nrf54lm20dk/nrf54lm20a/cpuapp
     tags:
       - nrf_edgeai_sample_anomaly_detection
+  sample.edgeai_anomaly_detection.nrf54lm20dk:
+    sysbuild: true
+    build_only: false
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "--- Testing GOOD gear vibration data ---"
+        - "Expected: Low anomaly score \\(normal vibration pattern\\)"
+        - "Anomaly score for GOOD gear data:"
+        - "Verdict: NORMAL \\(score < threshold\\)"
+        - "--- Testing ANOMALOUS gear vibration data ---"
+        - "Expected: High anomaly score \\(abnormal vibration pattern\\)"
+        - "Anomaly score for ANOMALOUS gear data:"
+        - "Verdict: ANOMALY DETECTED \\(score >= threshold\\)"
+        - "The model correctly distinguishes between healthy and faulty gears"
+        - "========== All test cases completed =========="
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    timeout: 30
+    tags:
+      - nrf_edgeai_sample_anomaly_detection

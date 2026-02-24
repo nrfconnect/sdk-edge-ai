@@ -47,8 +47,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
+#include <math.h>
 #include <stdio.h>
-#include <assert.h>
 
 LOG_MODULE_REGISTER(regression, LOG_LEVEL_INF);
 
@@ -163,7 +163,7 @@ static flt32_t fill_features_buffer(flt32_t *p_buffer, const size_t buffer_size,
 				    const size_t sample_index)
 {
 	/* Verify buffer has correct capacity for all 9 input features */
-	assert(buffer_size == USER_UNIQ_INPUTS_NUM);
+	__ASSERT_NO_MSG(buffer_size == USER_UNIQ_INPUTS_NUM);
 
 	/* Extract and arrange sensor readings into the input buffer */
 	p_buffer[0] = USER_INPUT_DATA[sample_index].COGT;   /* CO sensor */
@@ -232,8 +232,8 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, flt32_t *p_input_featur
 			const flt32_t *p_output =
 				p_user_model->decoded_output.regression.p_outputs;
 
-			assert(p_user_model->decoded_output.regression.outputs_num ==
-			       USER_MODELS_OUTPUTS_NUM);
+			__ASSERT_NO_MSG(p_user_model->decoded_output.regression.outputs_num ==
+					USER_MODELS_OUTPUTS_NUM);
 
 			/* Extract the single air quality prediction value */
 			model_prediction = p_output[0];
@@ -281,17 +281,17 @@ int main(void)
 	/* Retrieve the generated neural network model for air quality prediction */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
 
-	assert(p_user_model != NULL);
+	__ASSERT_NO_MSG(p_user_model != NULL);
 
 	/* Validate model configuration: ensure the generated model matches expected parameters */
-	assert(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
-	assert(nrf_edgeai_uniq_inputs_num(p_user_model) == USER_UNIQ_INPUTS_NUM);
-	assert(nrf_edgeai_model_outputs_num(p_user_model) == USER_MODELS_OUTPUTS_NUM);
+	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
+	__ASSERT_NO_MSG(nrf_edgeai_uniq_inputs_num(p_user_model) == USER_UNIQ_INPUTS_NUM);
+	__ASSERT_NO_MSG(nrf_edgeai_model_outputs_num(p_user_model) == USER_MODELS_OUTPUTS_NUM);
 
 	/* Initialize the Edge AI runtime to prepare the model for inference execution */
 	nrf_edgeai_err_t res = nrf_edgeai_init(p_user_model);
 
-	assert(res == NRF_EDGEAI_ERR_SUCCESS);
+	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
 
 	/* Allocate buffer for holding the 9 input features before each inference */
 	flt32_t input_features[USER_UNIQ_INPUTS_NUM];
@@ -312,7 +312,7 @@ int main(void)
 		/* Calculate absolute error: magnitude of difference between prediction and truth */
 		flt32_t abs_err = fabsf(predicted_value - ground_truth);
 
-		assert(abs_err <= EXPECTED_MODEL_MAE);
+		__ASSERT_NO_MSG(abs_err <= EXPECTED_MODEL_MAE);
 
 		/* Display results for this test sample */
 		LOG_INF("Air quality - Predicted: %f, Expected: %f, absolute error %f",
