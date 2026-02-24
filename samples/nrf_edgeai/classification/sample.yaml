@@ -25,3 +25,40 @@ tests:
       - nrf54lm20dk/nrf54lm20a/cpuapp
     tags:
       - nrf_edgeai_sample_classification
+  sample.edgeai_classification.nrf54lm20dk:
+    sysbuild: true
+    build_only: false
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "--- Testing IDLE state \\(parcel at rest\\) ---"
+        - "In 7 classes, predicted 0 with probability"
+        - "Expected class IDLE - predicted Idle"
+        - "--- Testing SHAKING state \\(parcel vibrating\\) ---"
+        - "In 7 classes, predicted 1 with probability"
+        - "Expected class SHAKING - predicted Shaking"
+        - "--- Testing IMPACT event \\(collision detected\\) ---"
+        - "In 7 classes, predicted 2 with probability"
+        - "Expected class IMPACT - predicted Impact"
+        - "--- Testing FREE FALL event \\(parcel in air/unsupported\\) ---"
+        - "In 7 classes, predicted 3 with probability"
+        - "Expected class FREE FALL - predicted Free Fall"
+        - "--- Testing CARRYING \\(person carrying\\) ---"
+        - "In 7 classes, predicted 4 with probability"
+        - "Expected class CARRYING - predicted Carrying"
+        - "--- Testing IN CAR state \\(vehicle transport\\) ---"
+        - "In 7 classes, predicted 5 with probability"
+        - "Expected class IN CAR - predicted in Car"
+        - "--- Testing PLACED state \\(active placement event\\) ---"
+        - "In 7 classes, predicted 6 with probability"
+        - "Expected class PLACED - predicted Placed"
+        - "========== All test cases completed =========="
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    timeout: 30
+    tags:
+      - nrf_edgeai_sample_classification

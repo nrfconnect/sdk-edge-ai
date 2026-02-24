@@ -47,7 +47,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <stdio.h>
-#include <assert.h>
 
 LOG_MODULE_REGISTER(classification, LOG_LEVEL_INF);
 
@@ -396,17 +395,17 @@ int main(void)
 	/* Get user generated model pointer */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
 
-	assert(p_user_model != NULL);
+	__ASSERT_NO_MSG(p_user_model != NULL);
 
 	/** Validate model parameters against expected configuration */
-	assert(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
-	assert(nrf_edgeai_uniq_inputs_num(p_user_model) == USER_UNIQ_INPUTS_NUM);
-	assert(nrf_edgeai_model_outputs_num(p_user_model) == USER_MODELS_CLASS_NUM);
+	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
+	__ASSERT_NO_MSG(nrf_edgeai_uniq_inputs_num(p_user_model) == USER_UNIQ_INPUTS_NUM);
+	__ASSERT_NO_MSG(nrf_edgeai_model_outputs_num(p_user_model) == USER_MODELS_CLASS_NUM);
 
 	/** Initialize Edge AI runtime for inference execution */
 	nrf_edgeai_err_t res = nrf_edgeai_init(p_user_model);
 
-	assert(res == NRF_EDGEAI_ERR_SUCCESS);
+	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
 
 	int32_t predicted_class;
 	const size_t DATA_LEN = USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM;
@@ -415,21 +414,21 @@ int main(void)
 	LOG_INF("--- Testing IDLE state (parcel at rest) ---");
 	predicted_class = model_predict(p_user_model, CLASS_0_PARCEL_IDLE_ACCEL_DATA, DATA_LEN);
 
-	assert(predicted_class == MODEL_CLASS_IDLE);
+	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_IDLE);
 	LOG_INF("Expected class IDLE - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 2: Predict class 1 - Parcel is SHAKING */
 	LOG_INF("--- Testing SHAKING state (parcel vibrating) ---");
 	predicted_class = model_predict(p_user_model, CLASS_1_PARCEL_SHAKING_ACCEL_DATA, DATA_LEN);
 
-	assert(predicted_class == MODEL_CLASS_SHAKING);
+	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_SHAKING);
 	LOG_INF("Expected class SHAKING - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 3: Predict class 2 - Parcel IMPACT event */
 	LOG_INF("--- Testing IMPACT event (collision detected) ---");
 	predicted_class = model_predict(p_user_model, CLASS_2_PARCEL_IMPACT_ACCEL_DATA, DATA_LEN);
 
-	assert(predicted_class == MODEL_CLASS_IMPACT);
+	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_IMPACT);
 	LOG_INF("Expected class IMPACT - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 4: Predict class 3 - Parcel FREE FALL event */
@@ -437,7 +436,7 @@ int main(void)
 	predicted_class =
 		model_predict(p_user_model, CLASS_3_PARCEL_FREE_FALL_ACCEL_DATA, DATA_LEN);
 
-	assert(predicted_class == MODEL_CLASS_FREE_FALL);
+	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_FREE_FALL);
 	LOG_INF("Expected class FREE FALL - predicted %s",
 		USER_MODEL_LABELS_STR[predicted_class]);
 
@@ -445,7 +444,7 @@ int main(void)
 	LOG_INF("--- Testing CARRYING (person carrying) ---");
 	predicted_class = model_predict(p_user_model, CLASS_4_PARCEL_CARRYING_ACCEL_DATA, DATA_LEN);
 
-	assert(predicted_class == MODEL_CLASS_CARRYING);
+	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_CARRYING);
 	LOG_INF("Expected class CARRYING - predicted %s",
 		USER_MODEL_LABELS_STR[predicted_class]);
 
@@ -453,14 +452,14 @@ int main(void)
 	LOG_INF("--- Testing IN CAR state (vehicle transport) ---");
 	predicted_class = model_predict(p_user_model, CLASS_5_PARCEL_IN_CAR_ACCEL_DATA, DATA_LEN);
 
-	assert(predicted_class == MODEL_CLASS_IN_CAR);
+	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_IN_CAR);
 	LOG_INF("Expected class IN CAR - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 7: Predict class 6 - Parcel PLACED */
 	LOG_INF("--- Testing PLACED state (active placement event) ---");
 	predicted_class = model_predict(p_user_model, CLASS_6_PARCEL_PLACED_ACCEL_DATA, DATA_LEN);
 
-	assert(predicted_class == MODEL_CLASS_PLACED);
+	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_PLACED);
 	LOG_INF("Expected class PLACED - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	while (1) {

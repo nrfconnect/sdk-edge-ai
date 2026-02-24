@@ -25,3 +25,21 @@ tests:
       - nrf54lm20dk/nrf54lm20a/cpuapp
     tags:
       - nrf_edgeai_sample_regression
+  sample.edgeai_regression.nrf54lm20dk:
+    sysbuild: true
+    build_only: false
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "--- Testing Model Air Quality predictions ---"
+        - "Air quality - Predicted:.*Expected:.*absolute error"
+        - "========== All test cases completed =========="
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    timeout: 30
+    tags:
+      - nrf_edgeai_sample_regression

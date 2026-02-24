@@ -55,7 +55,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <stdio.h>
-#include <assert.h>
 
 LOG_MODULE_REGISTER(anomaly, LOG_LEVEL_INF);
 
@@ -315,16 +314,16 @@ int main(void)
 	/*  Get user generated model pointer */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
 
-	assert(p_user_model != NULL);
+	__ASSERT_NO_MSG(p_user_model != NULL);
 
 	/* Validate that the loaded model matches our expected configuration */
-	assert(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
-	assert(nrf_edgeai_uniq_inputs_num(p_user_model) == USER_UNIQ_INPUTS_NUM);
+	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
+	__ASSERT_NO_MSG(nrf_edgeai_uniq_inputs_num(p_user_model) == USER_UNIQ_INPUTS_NUM);
 
 	/* Initialize Edge AI runtime for inference execution */
 	nrf_edgeai_err_t res = nrf_edgeai_init(p_user_model);
 
-	assert(res == NRF_EDGEAI_ERR_SUCCESS);
+	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
 
 	flt32_t anomaly_score;
 	const size_t DATA_LEN = USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM;
@@ -338,7 +337,7 @@ int main(void)
 	LOG_INF("Verdict: %s (score %s threshold)",
 		anomaly_score < USER_ANOMALY_THRESHOLD ? "NORMAL" : "ANOMALY DETECTED",
 		anomaly_score < USER_ANOMALY_THRESHOLD ? "<" : ">=");
-	assert(anomaly_score < USER_ANOMALY_THRESHOLD);
+	__ASSERT_NO_MSG(anomaly_score < USER_ANOMALY_THRESHOLD);
 
 	/* ---- TEST 2: Faulty Gear ---- */
 	LOG_INF("--- Testing ANOMALOUS gear vibration data ---");
@@ -350,7 +349,7 @@ int main(void)
 	LOG_INF("Verdict: %s (score %s threshold)",
 		anomaly_score < USER_ANOMALY_THRESHOLD ? "NORMAL" : "ANOMALY DETECTED",
 		anomaly_score >= USER_ANOMALY_THRESHOLD ? ">=" : "<");
-	assert(anomaly_score >= USER_ANOMALY_THRESHOLD);
+	__ASSERT_NO_MSG(anomaly_score >= USER_ANOMALY_THRESHOLD);
 
 	LOG_INF("The model correctly distinguishes between healthy and faulty gears.");
 
