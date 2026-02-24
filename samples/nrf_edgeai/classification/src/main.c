@@ -45,8 +45,11 @@
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include <stdio.h>
 #include <assert.h>
+
+LOG_MODULE_REGISTER(classification, LOG_LEVEL_INF);
 
 /**
  * @brief Model Configuration Constants
@@ -287,7 +290,7 @@ typedef enum {
 } user_model_class_t;
 
 /* Human-readable labels for each parcel state class */
-static const char *USER_MODEL_LABELS_STR[] = {
+static const char *const USER_MODEL_LABELS_STR[] = {
 	[MODEL_CLASS_IDLE] = "Idle",	     [MODEL_CLASS_SHAKING] = "Shaking",
 	[MODEL_CLASS_IMPACT] = "Impact",     [MODEL_CLASS_FREE_FALL] = "Free Fall",
 	[MODEL_CLASS_CARRYING] = "Carrying", [MODEL_CLASS_IN_CAR] = "in Car",
@@ -321,6 +324,7 @@ static int32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_
 	for (size_t i = 0; i < data_len; i++) {
 		/* Accumulate single sample into the model's input window */
 		flt32_t input_sample = p_input_data[i];
+
 		res = nrf_edgeai_feed_inputs(p_user_model, &input_sample, 1 * USER_UNIQ_INPUTS_NUM);
 
 		if (res == NRF_EDGEAI_ERR_SUCCESS) {
@@ -334,16 +338,15 @@ static int32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_
 					p_user_model->decoded_output.classif.predicted_class;
 				uint16_t num_classes =
 					p_user_model->decoded_output.classif.num_classes;
-				/* Confidence scores (probabilities) for all classes (f32, q16, q8
-				 * depending on quantization) */
+				/* Confidence scores (probabilities) for all classes (f32, q16, q8) */
 				const flt32_t *p_probabilities =
 					p_user_model->decoded_output.classif.probabilities.p_f32;
 				/* Convert probability to percentage for easier interpretation */
 				uint16_t prob_percent =
 					(uint16_t)(p_probabilities[predicted_class] * 100.0f);
 
-				printk("In %u classes, predicted %u with probability %u %%\r\n",
-				       num_classes, predicted_class, prob_percent);
+				LOG_INF("In %u classes, predicted %u with probability %u %%",
+					num_classes, predicted_class, prob_percent);
 
 				return predicted_class;
 			}
@@ -392,6 +395,7 @@ int main(void)
 {
 	/* Get user generated model pointer */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
+
 	assert(p_user_model != NULL);
 
 	/** Validate model parameters against expected configuration */
@@ -401,65 +405,66 @@ int main(void)
 
 	/** Initialize Edge AI runtime for inference execution */
 	nrf_edgeai_err_t res = nrf_edgeai_init(p_user_model);
+
 	assert(res == NRF_EDGEAI_ERR_SUCCESS);
 
 	int32_t predicted_class;
 	const size_t DATA_LEN = USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM;
 
 	/** TEST 1: Predict class 0 - Parcel in the IDLE state */
-	printk("\n--- Testing IDLE state (parcel at rest) ---\r\n");
+	LOG_INF("--- Testing IDLE state (parcel at rest) ---");
 	predicted_class = model_predict(p_user_model, CLASS_0_PARCEL_IDLE_ACCEL_DATA, DATA_LEN);
 
 	assert(predicted_class == MODEL_CLASS_IDLE);
-	printk("Expected class IDLE - predicted %s\r\n", USER_MODEL_LABELS_STR[predicted_class]);
+	LOG_INF("Expected class IDLE - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 2: Predict class 1 - Parcel is SHAKING */
-	printk("\n--- Testing SHAKING state (parcel vibrating) ---\r\n");
+	LOG_INF("--- Testing SHAKING state (parcel vibrating) ---");
 	predicted_class = model_predict(p_user_model, CLASS_1_PARCEL_SHAKING_ACCEL_DATA, DATA_LEN);
 
 	assert(predicted_class == MODEL_CLASS_SHAKING);
-	printk("Expected class SHAKING - predicted %s\r\n", USER_MODEL_LABELS_STR[predicted_class]);
+	LOG_INF("Expected class SHAKING - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 3: Predict class 2 - Parcel IMPACT event */
-	printk("\n--- Testing IMPACT event (collision detected) ---\r\n");
+	LOG_INF("--- Testing IMPACT event (collision detected) ---");
 	predicted_class = model_predict(p_user_model, CLASS_2_PARCEL_IMPACT_ACCEL_DATA, DATA_LEN);
 
 	assert(predicted_class == MODEL_CLASS_IMPACT);
-	printk("Expected class IMPACT - predicted %s\r\n", USER_MODEL_LABELS_STR[predicted_class]);
+	LOG_INF("Expected class IMPACT - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 4: Predict class 3 - Parcel FREE FALL event */
-	printk("\n--- Testing FREE FALL event (parcel in air/unsupported) ---\r\n");
+	LOG_INF("--- Testing FREE FALL event (parcel in air/unsupported) ---");
 	predicted_class =
 		model_predict(p_user_model, CLASS_3_PARCEL_FREE_FALL_ACCEL_DATA, DATA_LEN);
 
 	assert(predicted_class == MODEL_CLASS_FREE_FALL);
-	printk("Expected class FREE FALL - predicted %s\r\n",
-	       USER_MODEL_LABELS_STR[predicted_class]);
+	LOG_INF("Expected class FREE FALL - predicted %s",
+		USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 5: Predict class 4 - Parcel TRANSPORTED BY COURIER */
-	printk("\n--- Testing CARRYING (person carrying) ---\r\n");
+	LOG_INF("--- Testing CARRYING (person carrying) ---");
 	predicted_class = model_predict(p_user_model, CLASS_4_PARCEL_CARRYING_ACCEL_DATA, DATA_LEN);
 
 	assert(predicted_class == MODEL_CLASS_CARRYING);
-	printk("Expected class CARRYING - predicted %s\r\n",
-	       USER_MODEL_LABELS_STR[predicted_class]);
+	LOG_INF("Expected class CARRYING - predicted %s",
+		USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 6: Predict class 5 - Parcel IN CAR */
-	printk("\n--- Testing IN CAR state (vehicle transport) ---\r\n");
+	LOG_INF("--- Testing IN CAR state (vehicle transport) ---");
 	predicted_class = model_predict(p_user_model, CLASS_5_PARCEL_IN_CAR_ACCEL_DATA, DATA_LEN);
 
 	assert(predicted_class == MODEL_CLASS_IN_CAR);
-	printk("Expected class IN CAR - predicted %s\r\n", USER_MODEL_LABELS_STR[predicted_class]);
+	LOG_INF("Expected class IN CAR - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 7: Predict class 6 - Parcel PLACED */
-	printk("\n--- Testing PLACED state (active placement event) ---\r\n");
+	LOG_INF("--- Testing PLACED state (active placement event) ---");
 	predicted_class = model_predict(p_user_model, CLASS_6_PARCEL_PLACED_ACCEL_DATA, DATA_LEN);
 
 	assert(predicted_class == MODEL_CLASS_PLACED);
-	printk("Expected class PLACED - predicted %s\r\n", USER_MODEL_LABELS_STR[predicted_class]);
+	LOG_INF("Expected class PLACED - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	while (1) {
-		printk("\n========== All test cases completed ==========\r\n");
+		LOG_INF("========== All test cases completed ==========");
 		k_sleep(K_MSEC(5000));
 	}
 

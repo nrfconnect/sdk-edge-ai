@@ -45,8 +45,12 @@
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/sys/util.h>
 #include <stdio.h>
 #include <assert.h>
+
+LOG_MODULE_REGISTER(regression, LOG_LEVEL_INF);
 
 /**
  * @brief Model Configuration Constants
@@ -225,7 +229,9 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, flt32_t *p_input_featur
 		/* Step 3: Extract the regression output if inference was successful */
 		if (res == NRF_EDGEAI_ERR_SUCCESS) {
 			/* Access the regression model output (continuous value prediction) */
-			const flt32_t *p_output = p_user_model->decoded_output.regression.p_outputs;
+			const flt32_t *p_output =
+				p_user_model->decoded_output.regression.p_outputs;
+
 			assert(p_user_model->decoded_output.regression.outputs_num ==
 			       USER_MODELS_OUTPUTS_NUM);
 
@@ -274,6 +280,7 @@ int main(void)
 {
 	/* Retrieve the generated neural network model for air quality prediction */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
+
 	assert(p_user_model != NULL);
 
 	/* Validate model configuration: ensure the generated model matches expected parameters */
@@ -283,14 +290,15 @@ int main(void)
 
 	/* Initialize the Edge AI runtime to prepare the model for inference execution */
 	nrf_edgeai_err_t res = nrf_edgeai_init(p_user_model);
+
 	assert(res == NRF_EDGEAI_ERR_SUCCESS);
 
 	/* Allocate buffer for holding the 9 input features before each inference */
 	flt32_t input_features[USER_UNIQ_INPUTS_NUM];
 
-	printk("\n--- Testing Model Air Quality predictions ---\r\n");
+	LOG_INF("--- Testing Model Air Quality predictions ---");
 	/* Validation loop: test the model against all 29 sample data points */
-	const size_t NUM_INPUT_SAMPLES = sizeof(USER_INPUT_DATA) / sizeof(USER_INPUT_DATA[0]);
+	const size_t NUM_INPUT_SAMPLES = ARRAY_SIZE(USER_INPUT_DATA);
 
 	for (size_t i = 0; i < NUM_INPUT_SAMPLES; i++) {
 		/* Extract sensor readings and environmental parameters from test sample i */
@@ -301,19 +309,18 @@ int main(void)
 		flt32_t predicted_value =
 			model_predict(p_user_model, input_features, USER_UNIQ_INPUTS_NUM);
 
-		/* Calculate absolute error: magnitude of difference between prediction and ground
-		 * truth */
+		/* Calculate absolute error: magnitude of difference between prediction and truth */
 		flt32_t abs_err = fabsf(predicted_value - ground_truth);
+
 		assert(abs_err <= EXPECTED_MODEL_MAE);
 
 		/* Display results for this test sample */
-		printk("Air quality - Predicted value: %f, Expected value: %f, absolute error "
-		       "%f\r\n",
-		       (double)predicted_value, (double)ground_truth, (double)abs_err);
+		LOG_INF("Air quality - Predicted: %f, Expected: %f, absolute error %f",
+			(double)predicted_value, (double)ground_truth, (double)abs_err);
 	}
 
 	while (1) {
-		printk("\n========== All test cases completed ==========\r\n");
+		LOG_INF("========== All test cases completed ==========");
 		k_sleep(K_MSEC(5000));
 	}
 
