@@ -53,8 +53,11 @@
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include <stdio.h>
 #include <assert.h>
+
+LOG_MODULE_REGISTER(anomaly, LOG_LEVEL_INF);
 
 /**
  * @brief Model Configuration Constants
@@ -241,6 +244,7 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_
 	for (size_t i = 0; i < data_len; i += USER_UNIQ_INPUTS_NUM) {
 		/* Extract one sample pair: [X_acceleration, Y_acceleration] */
 		flt32_t input_sample[USER_UNIQ_INPUTS_NUM];
+
 		input_sample[0] = p_input_data[i];     /* Sensor 1: X-axis */
 		input_sample[1] = p_input_data[i + 1]; /* Sensor 2: Y-axis */
 
@@ -310,6 +314,7 @@ int main(void)
 {
 	/*  Get user generated model pointer */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
+
 	assert(p_user_model != NULL);
 
 	/* Validate that the loaded model matches our expected configuration */
@@ -318,38 +323,39 @@ int main(void)
 
 	/* Initialize Edge AI runtime for inference execution */
 	nrf_edgeai_err_t res = nrf_edgeai_init(p_user_model);
+
 	assert(res == NRF_EDGEAI_ERR_SUCCESS);
 
 	flt32_t anomaly_score;
 	const size_t DATA_LEN = USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM;
 
 	/* ---- TEST 1: Healthy Gear ---- */
-	printk("\n--- Testing GOOD gear vibration data ---\r\n");
-	printk("Expected: Low anomaly score (normal vibration pattern)\r\n");
+	LOG_INF("--- Testing GOOD gear vibration data ---");
+	LOG_INF("Expected: Low anomaly score (normal vibration pattern)");
 	anomaly_score = model_predict(p_user_model, GOOD_GEAR_MECH_VIBRATION_DATA_2AXIS, DATA_LEN);
 
-	printk("Anomaly score for GOOD gear data: %f\r\n", (double)anomaly_score);
-	printk("Verdict: %s (score %s threshold)\r\n",
-	       anomaly_score < USER_ANOMALY_THRESHOLD ? "NORMAL" : "ANOMALY DETECTED",
-	       anomaly_score < USER_ANOMALY_THRESHOLD ? "<" : ">=");
+	LOG_INF("Anomaly score for GOOD gear data: %f", (double)anomaly_score);
+	LOG_INF("Verdict: %s (score %s threshold)",
+		anomaly_score < USER_ANOMALY_THRESHOLD ? "NORMAL" : "ANOMALY DETECTED",
+		anomaly_score < USER_ANOMALY_THRESHOLD ? "<" : ">=");
 	assert(anomaly_score < USER_ANOMALY_THRESHOLD);
 
 	/* ---- TEST 2: Faulty Gear ---- */
-	printk("\n--- Testing ANOMALOUS gear vibration data ---\r\n");
-	printk("Expected: High anomaly score (abnormal vibration pattern)\r\n");
+	LOG_INF("--- Testing ANOMALOUS gear vibration data ---");
+	LOG_INF("Expected: High anomaly score (abnormal vibration pattern)");
 	anomaly_score =
 		model_predict(p_user_model, ANOMALOUS_GEAR_MECH_VIBRATION_DATA_2AXIS, DATA_LEN);
 
-	printk("Anomaly score for ANOMALOUS gear data: %f\r\n", (double)anomaly_score);
-	printk("Verdict: %s (score %s threshold)\r\n",
-	       anomaly_score < USER_ANOMALY_THRESHOLD ? "NORMAL" : "ANOMALY DETECTED",
-	       anomaly_score >= USER_ANOMALY_THRESHOLD ? ">=" : "<");
+	LOG_INF("Anomaly score for ANOMALOUS gear data: %f", (double)anomaly_score);
+	LOG_INF("Verdict: %s (score %s threshold)",
+		anomaly_score < USER_ANOMALY_THRESHOLD ? "NORMAL" : "ANOMALY DETECTED",
+		anomaly_score >= USER_ANOMALY_THRESHOLD ? ">=" : "<");
 	assert(anomaly_score >= USER_ANOMALY_THRESHOLD);
 
-	printk("The model correctly distinguishes between healthy and faulty gears.\r\n");
+	LOG_INF("The model correctly distinguishes between healthy and faulty gears.");
 
 	while (1) {
-		printk("\n========== All test cases completed ==========\r\n");
+		LOG_INF("========== All test cases completed ==========");
 		k_sleep(K_MSEC(5000));
 	}
 
