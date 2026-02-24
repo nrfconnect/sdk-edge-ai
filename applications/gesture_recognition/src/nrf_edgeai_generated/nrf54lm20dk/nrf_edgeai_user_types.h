@@ -1,11 +1,5 @@
 /* 2026-01-23T11:10:10.322764 */
 
-/*
- * Copyright (c) 2026 Nordic Semiconductor ASA
- *
- * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
- */
-
 #ifndef _NRF_EDGEAI_USER_TYPES_H_
 #define _NRF_EDGEAI_USER_TYPES_H_
 
