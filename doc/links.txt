@@ -101,6 +101,7 @@
 .. _`MLPerf Tiny GitHub repository`: https://github.com/mlcommons/tiny/tree/master
 .. _`Evaluation Datasets documentation`: https://github.com/mlcommons/tiny/tree/master/benchmark/evaluation/datasets
 .. _`Training repository`: https://github.com/mlcommons/tiny/tree/master/benchmark/training
+.. _`Adafruit PDM MEMS Microphone`: https://www.adafruit.com/product/3492
 
 .. ## External sources:
 

@@ -1,0 +1,19 @@
+sample:
+  description: Keyword Spotting application
+  name: keyword spotting
+
+common:
+  sysbuild: true
+  build_only: true
+  tags:
+    - ci_build
+    - sysbuild
+    - ci_applications_keyword_spotting
+
+tests:
+  applications.keyword_spotting.zdebug:
+    build_only: true
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20a/cpuapp

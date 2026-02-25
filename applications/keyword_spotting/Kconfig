@@ -1,0 +1,34 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Keyword Spotting application"
+
+config WW_PROBABILITY_THRESHOLD
+	int "Wakeword probability threshold"
+	range 0 100
+	default 99
+	help
+	   Probability threshold for wakeword detection model. Value is expressed in percents.
+
+config WW_HISTORY_SIZE
+	int "Size of wakeword predictions history"
+	range 1 32
+	default 20
+	help
+	  Size of history of previous results from wakeword detection model. Each entry corresponds
+	  to 30 milliseconds of past audio.
+
+config WW_COUNT_THRESHOLD
+	int "Threshold for wakeword detection from predictions history"
+	range 1 WW_HISTORY_SIZE
+	default 15
+	help
+	  Number of predictions above threshold in predictions history required to confirm wakeword
+	  detection.
+
+endmenu
+
+source "Kconfig.zephyr"
