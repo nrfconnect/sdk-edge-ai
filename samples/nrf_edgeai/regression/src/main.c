@@ -229,8 +229,7 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, flt32_t *p_input_featur
 		/* Step 3: Extract the regression output if inference was successful */
 		if (res == NRF_EDGEAI_ERR_SUCCESS) {
 			/* Access the regression model output (continuous value prediction) */
-			const flt32_t *p_output =
-				p_user_model->decoded_output.regression.p_outputs;
+			const flt32_t *p_output = p_user_model->decoded_output.regression.p_outputs;
 
 			__ASSERT_NO_MSG(p_user_model->decoded_output.regression.outputs_num ==
 					USER_MODELS_OUTPUTS_NUM);
@@ -292,6 +291,10 @@ int main(void)
 	nrf_edgeai_err_t res = nrf_edgeai_init(p_user_model);
 
 	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
+
+	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
+	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
+		v.field.patch);
 
 	/* Allocate buffer for holding the 9 input features before each inference */
 	flt32_t input_features[USER_UNIQ_INPUTS_NUM];

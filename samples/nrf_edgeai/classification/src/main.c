@@ -337,7 +337,8 @@ static int32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_
 					p_user_model->decoded_output.classif.predicted_class;
 				uint16_t num_classes =
 					p_user_model->decoded_output.classif.num_classes;
-				/* Confidence scores (probabilities) for all classes (f32, q16, q8) */
+				/* Confidence scores (probabilities) for all classes (f32, q16, q8)
+				 */
 				const flt32_t *p_probabilities =
 					p_user_model->decoded_output.classif.probabilities.p_f32;
 				/* Convert probability to percentage for easier interpretation */
@@ -407,6 +408,10 @@ int main(void)
 
 	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
 
+	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
+	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
+		v.field.patch);
+
 	int32_t predicted_class;
 	const size_t DATA_LEN = USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM;
 
@@ -437,16 +442,14 @@ int main(void)
 		model_predict(p_user_model, CLASS_3_PARCEL_FREE_FALL_ACCEL_DATA, DATA_LEN);
 
 	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_FREE_FALL);
-	LOG_INF("Expected class FREE FALL - predicted %s",
-		USER_MODEL_LABELS_STR[predicted_class]);
+	LOG_INF("Expected class FREE FALL - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 5: Predict class 4 - Parcel TRANSPORTED BY COURIER */
 	LOG_INF("--- Testing CARRYING (person carrying) ---");
 	predicted_class = model_predict(p_user_model, CLASS_4_PARCEL_CARRYING_ACCEL_DATA, DATA_LEN);
 
 	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_CARRYING);
-	LOG_INF("Expected class CARRYING - predicted %s",
-		USER_MODEL_LABELS_STR[predicted_class]);
+	LOG_INF("Expected class CARRYING - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
 
 	/** TEST 6: Predict class 5 - Parcel IN CAR */
 	LOG_INF("--- Testing IN CAR state (vehicle transport) ---");

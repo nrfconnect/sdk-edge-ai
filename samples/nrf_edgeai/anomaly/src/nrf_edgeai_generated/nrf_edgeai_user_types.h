@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
 #ifndef _NRF_EDGEAI_USER_TYPES_H_
 #define _NRF_EDGEAI_USER_TYPES_H_
 
@@ -7,11 +12,11 @@
 extern "C" {
 #endif
 
-typedef flt32_t          nrf_user_input_t;
-typedef flt32_t          nrf_user_feature_t;
-typedef flt32_t          nrf_user_output_t;
-typedef uint16_t         nrf_user_coeff_t;
-typedef int16_t          nrf_user_weight_t;
+typedef flt32_t nrf_user_input_t;
+typedef flt32_t nrf_user_feature_t;
+typedef flt32_t nrf_user_output_t;
+typedef uint16_t nrf_user_coeff_t;
+typedef int16_t nrf_user_weight_t;
 typedef nrf_user_coeff_t nrf_user_neuron_t;
 
 #ifdef __cplusplus
