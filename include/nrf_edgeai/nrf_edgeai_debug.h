@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
@@ -43,8 +44,8 @@
 #include <assert.h>
 #define nrf_edgeai_assert(x) assert(x)
 #else
-#define nrf_edgeai_assert(x) ;
-#endif  // NRF_DSP_ASSERT_ENABLE
+#define nrf_edgeai_assert(x) ((void)(x))
+#endif  // NRF_EDGEAI_ASSERT_ENABLE
 
 #endif /* _NRF_EDGEAI_DEBUG_H_ */
 

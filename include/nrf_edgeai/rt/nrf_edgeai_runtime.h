@@ -1,12 +1,13 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
- * @defgroup nrf_edgeai NRF Edge AI Lab Runtime C-library
+ * @defgroup nrf_edgeai_runtime nRF Edge AI Lab Runtime C-library
  * @{
- *
+ * @ingroup nrf_edgeai
  * @details The interface library for Nordic EdgeAI Lab solutions processing
  *
  */
@@ -21,7 +22,7 @@ extern "C" {
 #endif
 
 /***********************************************************************************************************************
- * NRF Edge AI runtime public API
+ * nRF Edge AI runtime public API
  ***********************************************************************************************************************/
 
 /**
@@ -36,6 +37,13 @@ nrf_edgeai_err_t nrf_edgeai_init(nrf_edgeai_t* p_edgeai);
 
 /**
  * @brief  Feed raw input data to prepare it for signal processing & model inference
+ * 
+ * @note Should be called repeatedly with new input data until the input window is filled and ready for inference.
+ *      If user feed less than nrf_edgeai_input_window_size() input samples, 
+ *      the runtime will keep collecting input data and return NRF_EDGEAI_ERR_INPROGRESS until the window is filled.
+ * 
+ *      If user feed more than nrf_edgeai_input_window_size() input samples, 
+ *      the runtime will keep the first nrf_edgeai_input_window_size() samples, remainded samples will be ignored and return NRF_EDGEAI_ERR_SUCCESS.
  * 
  * @param[in, out] p_edgeai     Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  * @param[in] p_input_values    Array of the input data samples, 
@@ -99,25 +107,18 @@ uint16_t nrf_edgeai_input_window_size(const nrf_edgeai_t* p_edgeai);
 uint8_t nrf_edgeai_input_subwindows_num(const nrf_edgeai_t* p_edgeai);
 
 /**
- * @brief Get number of model neurons
- * 
- * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- */
-uint16_t nrf_edgeai_model_neurons_num(const nrf_edgeai_t* p_edgeai);
-
-/**
- * @brief Get number of model weights
- * 
- * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- */
-uint16_t nrf_edgeai_model_weights_num(const nrf_edgeai_t* p_edgeai);
-
-/**
  * @brief Get number of model outputs (predicted targets)
  * 
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  */
 uint16_t nrf_edgeai_model_outputs_num(const nrf_edgeai_t* p_edgeai);
+
+/**
+ * @brief Get model type @ref nrf_edgeai_model_type_t
+ * 
+ * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
+ */
+nrf_edgeai_model_type_t nrf_edgeai_model_type(const nrf_edgeai_t* p_edgeai);
 
 /**
  * @brief Get model task @ref nrf_edgeai_model_task_t

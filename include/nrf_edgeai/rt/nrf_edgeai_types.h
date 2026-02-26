@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #ifndef _NRF_EDGEAI_TYPES_H_
 #define _NRF_EDGEAI_TYPES_H_
@@ -21,7 +22,7 @@ struct nrf_edgeai_s;
 typedef struct nrf_edgeai_s nrf_edgeai_t;
 
 /***********************************************************************************************************************
-NRF Edge AI processing interfaces types
+nRF Edge AI processing interfaces types
 ***********************************************************************************************************************/
 
 /**
@@ -30,9 +31,9 @@ NRF Edge AI processing interfaces types
  *
  * @param[in, out] p_input_ctx     Pointer to the input processing context @ref nrf_edgeai_input_t 
  * 
- * @return NRF Edge AI operation status code @ref nrf_edgeai_err_t
+ * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
-typedef nrf_edgeai_err_t (*nrf_edgeai_iface_input_setup_t)(nrf_edgeai_input_t* p_input_ctx);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_input_init_t)(nrf_edgeai_input_t* p_input_ctx);
 
 /**
  * @brief Feed and collect input features to internal data structures for further processing
@@ -41,18 +42,31 @@ typedef nrf_edgeai_err_t (*nrf_edgeai_iface_input_setup_t)(nrf_edgeai_input_t* p
  * @param[in] p_input_values       Input features data array
  * @param[in] num_values           Number of input features in the array
  * 
- * @return NRF Edge AI operation status code @ref nrf_edgeai_err_t
+ * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
 typedef nrf_edgeai_err_t (*nrf_edgeai_iface_feed_inputs_t)(nrf_edgeai_input_t* p_input_ctx,
                                                            void*               p_input_values,
                                                            uint16_t            num_values);
+
+/**
+ * @brief Init model inference engine
+ * 
+ * @param[in, out] p_edgeai     Pointer to Edge AI Lab user context @ref nrf_edgeai_t
+ * 
+ * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
+ * 
+ */
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_init_inference_t)(nrf_edgeai_t* p_edgeai);
+
 /**
  * @brief Run model inference
  * 
  * @param[in, out] p_edgeai     Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  * 
+ * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
+ * 
  */
-typedef void (*nrf_edgeai_iface_run_inference_t)(nrf_edgeai_t* p_edgeai);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_run_inference_t)(nrf_edgeai_t* p_edgeai);
 
 /**
  * @brief Propagate raw model output neurons to the output values structure
@@ -78,7 +92,7 @@ typedef void (*nrf_edgeai_iface_decode_outputs_t)(nrf_edgeai_model_output_t*   p
  * @param[in, out] p_input        Pointer to the input processing context @ref nrf_edgeai_input_t
  * @param[in, out] p_dsp          Pointer to the DSP pipeline context @ref nrf_edgeai_dsp_pipeline_t
  * 
- * @return NRF Edge AI operation status code @ref nrf_edgeai_err_t
+ * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
 typedef nrf_edgeai_err_t (*nrf_edgeai_iface_process_features_t)(nrf_edgeai_input_t*        p_input,
                                                                 nrf_edgeai_dsp_pipeline_t* p_dsp);
@@ -88,9 +102,10 @@ typedef nrf_edgeai_err_t (*nrf_edgeai_iface_process_features_t)(nrf_edgeai_input
  */
 typedef struct nrf_edgeai_interfaces_s
 {
-    nrf_edgeai_iface_input_setup_t       input_setup;
+    nrf_edgeai_iface_input_init_t        input_init;
     nrf_edgeai_iface_feed_inputs_t       feed_inputs;
     nrf_edgeai_iface_process_features_t  process_features;
+    nrf_edgeai_iface_init_inference_t    init_inference;
     nrf_edgeai_iface_run_inference_t     run_inference;
     nrf_edgeai_iface_propagate_outputs_t propagate_outputs;
     nrf_edgeai_iface_decode_outputs_t    decode_outputs;
@@ -120,7 +135,7 @@ typedef struct nrf_edgeai_metadata_s
 } nrf_edgeai_metadata_t;
 
 /***********************************************************************************************************************
-NRF Edge AI runtime context definition
+nRF Edge AI runtime context definition
 ***********************************************************************************************************************/
 struct nrf_edgeai_s
 {

@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #ifndef _NRF_EDGEAI_PRIVATE_INTERFACES_INPUT_FEED_H_
 #define _NRF_EDGEAI_PRIVATE_INTERFACES_INPUT_FEED_H_

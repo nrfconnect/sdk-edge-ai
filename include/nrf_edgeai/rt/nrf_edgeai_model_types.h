@@ -1,18 +1,21 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #ifndef _NRF_EDGEAI_MODEL_TYPES_H_
 #define _NRF_EDGEAI_MODEL_TYPES_H_
 
 #include <nrf_edgeai/nrf_edgeai_ctypes.h>
+#include <nrf_edgeai/nn/axon/nrf_nn_axon.h>
+#include <nrf_edgeai/nn/neuton/nrf_nn_neuton.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @brief NRF Edge AI model task types
+ * @brief nRF Edge AI model task types
  */
 
 /** For preprocessor */
@@ -20,6 +23,9 @@ extern "C" {
 #define __NRF_EDGEAI_TASK_BIN_CLASS         1
 #define __NRF_EDGEAI_TASK_REGRESSION        2
 #define __NRF_EDGEAI_TASK_ANOMALY_DETECTION 3
+
+#define __NRF_EDGEAI_MODEL_NEUTON 0
+#define __NRF_EDGEAI_MODEL_AXON   1
 
 typedef enum nrf_edgeai_model_task_e
 {
@@ -47,65 +53,60 @@ typedef union nrf_edgeai_model_uses_as_input_u
 } nrf_edgeai_model_uses_as_input_t;
 
 /**
- * @brief Model parameters for 32-bit floating point precision
+ * @brief Model parameters for 32-bit floating point, 8-bit quantized, 
+ *          16-bit quantized precision
  */
-typedef struct nrf_edgeai_model_params_f32_s
-{
-    const flt32_t* p_weights;     /**< Pointer to weights array */
-    const flt32_t* p_act_weights; /**< Pointer to activation function weights */
-    flt32_t*       p_neurons;     /**< Pointer to neurons buffer */
-} nrf_edgeai_model_params_f32_t;
-
-/**
- * @brief Model parameters for 16-bit quantized precision
- */
-typedef struct nrf_edgeai_model_params_q16_s
-{
-    const int16_t*  p_weights;     /**< Pointer to weights array */
-    const uint16_t* p_act_weights; /**< Pointer to activation function weights */
-    uint16_t*       p_neurons;     /**< Pointer to neurons buffer */
-} nrf_edgeai_model_params_q16_t;
-
-/**
- * @brief Model parameters for 8-bit quantized precision
- */
-typedef struct nrf_edgeai_model_params_q8_s
-{
-    const int8_t*  p_weights;     /**< Pointer to weights array */
-    const uint8_t* p_act_weights; /**< Pointer to activation function weights */
-    uint8_t*       p_neurons;     /**< Pointer to neurons buffer */
-} nrf_edgeai_model_params_q8_t;
+typedef nrf_nn_neuton_model_params_f32_t nrf_edgeai_model_neuton_params_f32_t;
+typedef nrf_nn_neuton_model_params_q16_t nrf_edgeai_model_neuton_params_q16_t;
+typedef nrf_nn_neuton_model_params_q8_t  nrf_edgeai_model_neuton_params_q8_t;
 
 /**
  * @brief Union of model parameters for all supported types
  */
-typedef union nrf_edgeai_model_params_u
+typedef union nrf_edgeai_model_neuton_params_u
 {
-    nrf_edgeai_model_params_q8_t  q8;  /**< 8-bit quantized parameters */
-    nrf_edgeai_model_params_q16_t q16; /**< 16-bit quantized parameters */
-    nrf_edgeai_model_params_f32_t f32; /**< 32-bit floating point parameters */
-} nrf_edgeai_model_params_t;
+    nrf_edgeai_model_neuton_params_q8_t  q8;  /**< 8-bit quantized parameters */
+    nrf_edgeai_model_neuton_params_q16_t q16; /**< 16-bit quantized parameters */
+    nrf_edgeai_model_neuton_params_f32_t f32; /**< 32-bit floating point parameters */
+} nrf_edgeai_model_neuton_params_t;
 
 /**
  * @brief Model meta information structure
  */
-typedef struct nrf_edgeai_model_meta_s
+typedef nrf_nn_neuton_model_meta_t nrf_edgeai_model_neuton_meta_t;
+
+/**
+ * @brief Model context structure
+ */
+typedef struct nrf_edgeai_model_neuton_s
 {
-    /**< Number of internal links for each neuron */
-    const uint16_t* p_neuron_internal_links_num;
-    /**< Number of external links for each neuron */
-    const uint16_t* p_neuron_external_links_num;
+    const nrf_edgeai_model_neuton_meta_t   meta;   /**< Model meta information */
+    const nrf_edgeai_model_neuton_params_t params; /**< Model parameters */
+} nrf_edgeai_model_neuton_t;
 
-    const uint16_t* p_output_neurons_indices; /**< Indices of output neurons */
-    const uint16_t* p_neuron_links;           /**< Neuron links array */
-    const uint8_t*  p_neuron_act_type_mask;   /**< Activation function type mask for neurons */
-    const uint16_t  outputs_num;              /**< Number of model outputs */
-    const uint16_t  neurons_num;              /**< Number of neurons in the model */
-    const uint32_t  weights_num;              /**< Number of weights in the model */
-    const nrf_edgeai_model_task_t task;       /**< Model task type */
+/**
+ * @brief nRF Edge AI Axon model type
+ */
+typedef nrf_nn_axon_model_t nrf_edgeai_model_axon_t;
 
-    const nrf_edgeai_model_uses_as_input_t uses_as_input; /**< Model input usage type */
-} nrf_edgeai_model_meta_t;
+/**
+ * @brief nRF Edge AI model types
+ */
+typedef enum nrf_edgeai_model_type_e
+{
+    NRF_EDGEAI_MODEL_NEUTON = __NRF_EDGEAI_MODEL_NEUTON,
+    NRF_EDGEAI_MODEL_AXON   = __NRF_EDGEAI_MODEL_AXON,
+} nrf_edgeai_model_type_t;
+
+/**
+ * @brief Union of model instances for all supported types
+ */
+typedef union nrf_edgeai_model_instance_u
+{
+    const nrf_edgeai_model_neuton_t* p_neuton; /**< Neuton model instance */
+    const nrf_edgeai_model_axon_t*   p_axon;   /**< Axon model instance */
+    const void*                      p_void;   /**< Generic pointer to model instance */
+} nrf_edgeai_model_instance_t;
 
 /**
  * @brief Model output structure
@@ -123,13 +124,15 @@ typedef struct nrf_edgeai_model_output_s
 } nrf_edgeai_model_output_t;
 
 /**
- * @brief Model context structure
+ * @brief nRF Edge AI model structure
  */
 typedef struct nrf_edgeai_model_s
 {
-    nrf_edgeai_model_meta_t   meta;   /**< Model meta information */
-    nrf_edgeai_model_params_t params; /**< Model parameters */
-    nrf_edgeai_model_output_t output; /**< Model output */
+    nrf_edgeai_model_type_t          type;          /**< Model type */
+    nrf_edgeai_model_task_t          task;          /**< Model task */
+    nrf_edgeai_model_instance_t      instance;      /**< Model instance */
+    nrf_edgeai_model_output_t        output;        /**< Model output */
+    nrf_edgeai_model_uses_as_input_t uses_as_input; /**< Model input usage type */
 } nrf_edgeai_model_t;
 
 #ifdef __cplusplus

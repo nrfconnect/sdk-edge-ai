@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #ifndef _NRF_EDGEAI_DSP_PIPELINE_TYPES_H_
 #define _NRF_EDGEAI_DSP_PIPELINE_TYPES_H_
@@ -123,6 +124,17 @@ typedef enum nrf_edgeai_feature_freqdomain_e
 #define NRF_EDGEAI_FEATURE_BIT_SPECTRUM_BINS       (1U << NRF_EDGEAI_FEATURE_SPECTRUM_BINS)
 
 /**
+ * @brief Custom-domain features ID, should be kept in the same order as in nrf_edgeai_features_spectral_mask_t
+ */
+typedef enum nrf_edgeai_feature_customdomain_e
+{
+    NRF_EDGEAI_FEATURE_AUDIO_MELS, /**< Experimental audio melspectrogram features pipeline */
+} nrf_edgeai_feature_customdomain_t;
+
+/** Bit position in custom-domain feature extraction mask */
+#define NRF_EDGEAI_FEATURE_BIT_AUDIO_MELS (1U << NRF_EDGEAI_FEATURE_AUDIO_MELS)
+
+/**
  * @brief Time-domain features mask type for feature extracting API
  */
 typedef union nrf_edgeai_features_timedomain_mask_u
@@ -186,15 +198,30 @@ typedef union nrf_edgeai_features_freqdomain_mask_u
 } nrf_edgeai_features_freqdomain_mask_t;
 
 /**
+ * @brief Custom-domain features mask type for feature extracting API
+ */
+typedef union nrf_edgeai_features_customdomain_mask_u
+{
+    struct
+    {
+        bool audio_mels : 1; /**< Experimental audio melspectrogram pipeline */
+    } is;
+    uint16_t all; /**< All custom-domain features as bitmask */
+} nrf_edgeai_features_customdomain_mask_t;
+
+/**
  * @brief Mask for all avaliable features for feature extraction
  */
 typedef union nrf_edgeai_features_mask_u
 {
     struct
     {
-        nrf_edgeai_features_freqdomain_mask_t freq; /**< Frequency-domain features mask */
-        uint16_t dummy;                             /**< Dummy 2 bytes for proper memory aligment */
-        nrf_edgeai_features_timedomain_mask_t time; /**< Time-domain features mask */
+        /**< Frequency-domain features mask */
+        nrf_edgeai_features_freqdomain_mask_t freq;
+        /**< Custom-domain features mask */
+        nrf_edgeai_features_customdomain_mask_t custom;
+        /**< Time-domain features mask */
+        nrf_edgeai_features_timedomain_mask_t time;
     } domain;
     uint64_t all; /**< All features as bitmask */
 } nrf_edgeai_features_mask_t;
@@ -360,7 +387,7 @@ typedef struct nrf_edgeai_dsp_feature_extraction_s
         int16_t* p_i16;  /**< Pointer to 16-bit extracted features memory */
         int32_t* p_i32;  /**< Pointer to 32-bit extracted features memory */
         flt32_t* p_f32;  /**< Pointer to 32-bit float extracted features memory */
-    } extracted_memory;
+    } buffer;
 
     nrf_edgeai_features_meta_t meta; /**< Features meta information */
 
@@ -375,6 +402,9 @@ typedef struct nrf_edgeai_dsp_feature_extraction_s
 
     /**< Pointer to freq-domain pipeline context */
     const nrf_edgeai_features_pipeline_ctx_t* p_freqdomain_pipeline;
+
+    /**< Pointer to custom-domain pipeline context */
+    const nrf_edgeai_features_pipeline_ctx_t* p_customdomain_pipeline;
 } nrf_edgeai_dsp_feature_extraction_t;
 
 /**

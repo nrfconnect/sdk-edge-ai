@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #ifndef _NRF_EDGEAI_PRIVATE_INTERFACES_OUTPUT_PROPAGATE_H_
 #define _NRF_EDGEAI_PRIVATE_INTERFACES_OUTPUT_PROPAGATE_H_
@@ -12,7 +13,7 @@ extern "C" {
 #endif
 
 /**
- * @brief Propagate neural network outputs to the model output structure.
+ * @brief Propagate Neuton model outputs to the model output structure.
  *
  * These functions transfer the output neuron values from the internal buffer (of the corresponding data type)
  * to the model output structure. They may also apply any required post-processing such as activation or scaling.
@@ -20,16 +21,16 @@ extern "C" {
  * @param[in, out] p_model    Pointer to model context @ref nrf_edgeai_model_t
  *
  * @note
- * - Use nrf_edgeai_output_propagate_q8() for 8-bit quantized models.
- * - Use nrf_edgeai_output_propagate_q16() for 16-bit quantized models.
- * - Use nrf_edgeai_output_propagate_f32() for 32-bit floating point models.
+ * - Use nrf_edgeai_output_propagate_neuton_q8() for 8-bit quantized models.
+ * - Use nrf_edgeai_output_propagate_neuton_q16() for 16-bit quantized models.
+ * - Use nrf_edgeai_output_propagate_neuton_f32() for 32-bit floating point models.
  */
-void nrf_edgeai_output_propagate_q8(nrf_edgeai_model_t* p_model);
-void nrf_edgeai_output_propagate_q16(nrf_edgeai_model_t* p_model);
-void nrf_edgeai_output_propagate_f32(nrf_edgeai_model_t* p_model);
+void nrf_edgeai_output_propagate_neuton_q8(nrf_edgeai_model_t* p_model);
+void nrf_edgeai_output_propagate_neuton_q16(nrf_edgeai_model_t* p_model);
+void nrf_edgeai_output_propagate_neuton_f32(nrf_edgeai_model_t* p_model);
 
 /**
- * @brief Dequantize neural network outputs to 32-bit floating point.
+ * @brief Dequantize Neuton model outputs to 32-bit floating point.
  *
  * These functions convert the output values from quantized format (8-bit or 16-bit) to 32-bit floating point format,
  * using the scaling parameters defined in the model context.
@@ -37,11 +38,24 @@ void nrf_edgeai_output_propagate_f32(nrf_edgeai_model_t* p_model);
  * @param[in, out] p_model    Pointer to model context @ref nrf_edgeai_model_t
  *
  * @note
- * - Use nrf_edgeai_output_dequantize_q8_f32() for 8-bit quantized outputs.
- * - Use nrf_edgeai_output_dequantize_q16_f32() for 16-bit quantized outputs.
+ * - Use nrf_edgeai_output_dequantize_neuton_q8_f32() for 8-bit quantized models.
+ * - Use nrf_edgeai_output_dequantize_neuton_q16_f32() for 16-bit quantized models.
  */
-void nrf_edgeai_output_dequantize_q8_f32(nrf_edgeai_model_t* p_model);
-void nrf_edgeai_output_dequantize_q16_f32(nrf_edgeai_model_t* p_model);
+void nrf_edgeai_output_dequantize_neuton_q8_f32(nrf_edgeai_model_t* p_model);
+void nrf_edgeai_output_dequantize_neuton_q16_f32(nrf_edgeai_model_t* p_model);
+
+/**
+ * @brief Dequantize Axon model outputs to 32-bit floating point.
+ * 
+ * These functions convert the output values from quantized format (8-bit or 32-bit) to 32-bit floating point format,
+ * using the scaling parameters defined in the model context.
+ *
+ * @param[in, out] p_model    Pointer to model context @ref nrf_edgeai_model_t
+ * 
+ * @note
+ * - Use nrf_edgeai_output_dequantize_axon_q8_f32() for 8-bit quantized outputs.
+ */
+void nrf_edgeai_output_dequantize_axon_q8_f32(nrf_edgeai_model_t* p_model);
 
 #ifdef __cplusplus
 }

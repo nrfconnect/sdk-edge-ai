@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #ifndef _NRF_EDGEAI_PRIVATE_INTERFACES_RUN_INFERENCE_H_
 #define _NRF_EDGEAI_PRIVATE_INTERFACES_RUN_INFERENCE_H_
@@ -11,38 +12,71 @@
 extern "C" {
 #endif
 
-/**
- * @brief Run neural network inference for 8-bit quantized model.
- *
- * This function performs a forward pass (inference) of the neural network using 8-bit quantized weights,
- * activations, and neuron buffers. The function selects the input source (raw input or extracted features)
- * based on the model meta information and computes the output by propagating data through all layers.
- *
- * @param[in,out] p_edgeai Pointer to the neural network context structure (@ref nrf_edgeai_t).
+/** 
+ * @brief Initialize Neuton neural network inference engine
+ * 
+ * @param[in,out] p_edgeai Pointer to the Edge AI solution context
+ *                         (@ref nrf_edgeai_t).
+ * @return Operation status code @ref nrf_edgeai_err_t
  */
-void nrf_edgeai_run_model_inference_q8(nrf_edgeai_t* p_edgeai);
+nrf_edgeai_err_t nrf_edgeai_init_inference_neuton(nrf_edgeai_t* p_edgeai);
 
 /**
- * @brief Run neural network inference for 16-bit quantized model.
+ * @defgroup neuton_inference Neuton inference API
+ * @brief Run neural network inference for Neuton models.
+ * 
+ * These functions perform a forward pass (inference) of the neural network
+ * using Neuton models with different numeric representations for activations, and neuron buffers:
+ * - 8-bit quantized
+ * - 16-bit quantized
+ * - 32-bit floating point
  *
- * This function performs a forward pass (inference) of the neural network using 16-bit quantized weights,
- * activations, and neuron buffers. The function selects the input source (raw input or extracted features)
- * based on the model meta information and computes the output by propagating data through all layers.
+ * The input source (raw input or extracted features) is selected based on
+ * model meta information, and computes the output by propagating features through all neurons.
  *
- * @param[in,out] p_edgeai Pointer to the neural network context structure (@ref nrf_edgeai_t).
+ * @param[in,out] p_edgeai Pointer to the Edge AI solution context
+ *                         (@ref nrf_edgeai_t).
+ * 
+ *  @return Operation status code @ref nrf_edgeai_err_t
  */
-void nrf_edgeai_run_model_inference_q16(nrf_edgeai_t* p_edgeai);
 
-/**
- * @brief Run neural network inference for 32-bit floating point model.
- *
- * This function performs a forward pass (inference) of the neural network using 32-bit floating point weights,
- * activations, and neuron buffers. The function selects the input source (raw input or extracted features)
- * based on the model meta information and computes the output by propagating data through all layers.
- *
- * @param[in,out] p_edgeai Pointer to the neural network context structure (@ref nrf_edgeai_t).
+/** @ingroup neuton_inference */
+nrf_edgeai_err_t nrf_edgeai_run_inference_neuton_q8(nrf_edgeai_t* p_edgeai);
+
+/** @ingroup neuton_inference */
+nrf_edgeai_err_t nrf_edgeai_run_inference_neuton_q16(nrf_edgeai_t* p_edgeai);
+
+/** @ingroup neuton_inference */
+nrf_edgeai_err_t nrf_edgeai_run_inference_neuton_f32(nrf_edgeai_t* p_edgeai);
+
+/** 
+ * @brief Initialize Axon neural network inference engine
+ * 
+ * @param[in,out] p_edgeai Pointer to the Edge AI solution context
+ *                         (@ref nrf_edgeai_t).
+ * @return Operation status code @ref nrf_edgeai_err_t
  */
-void nrf_edgeai_run_model_inference_f32(nrf_edgeai_t* p_edgeai);
+nrf_edgeai_err_t nrf_edgeai_init_inference_axon(nrf_edgeai_t* p_edgeai);
+
+/** 
+ * @brief Run neural network inference for Axon model
+ * 
+ * @param[in,out] p_edgeai Pointer to the Edge AI solution context
+ *                         (@ref nrf_edgeai_t).
+ * 
+ * @return Operation status code @ref nrf_edgeai_err_t
+ */
+nrf_edgeai_err_t nrf_edgeai_run_inference_axon(nrf_edgeai_t* p_edgeai);
+
+/** 
+ * @brief Run neural network inference for Axon model using specialized audio mel features pipeline
+ * 
+ * @param[in,out] p_edgeai Pointer to the Edge AI solution context
+ *                         (@ref nrf_edgeai_t).
+ * 
+ * @return Operation status code @ref nrf_edgeai_err_t
+ */
+nrf_edgeai_err_t nrf_edgeai_run_inference_axon_audiomels(nrf_edgeai_t* p_edgeai);
 
 #ifdef __cplusplus
 }

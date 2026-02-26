@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #ifndef _NRF_NN_PLATFORM_TYPES_H_
 #define _NRF_NN_PLATFORM_TYPES_H_
@@ -12,7 +13,7 @@
 #include <nrf_nn_custom_platform_types.h>
 #endif  // NRF_NN_CUSTOM_PLATFORM_TYPES
 
-// Header for defining platform-specific types for NN library:
+// Header for defining platform-specific types for NN library, for example:
 // typedef float flt32_t;
 // typedef double flt64_t;
 // typedef size_t size32_t;
