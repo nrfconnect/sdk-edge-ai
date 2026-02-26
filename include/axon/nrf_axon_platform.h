@@ -6,6 +6,10 @@
  * express written agreement with Nordic Semiconductor ASA.
  */
 
+/**
+ * These functions provide host platform abstraction between the various platforms supported.
+ * This includes Zephyr, and the 3 simulator platforms Windows, Linux, and MacOS.
+ */
 #pragma once
 
 #ifdef __cplusplus
@@ -18,11 +22,22 @@ extern "C" {
 #define EXPORT_API 
 #endif
 
-#include "nrf_axon_driver.h"
+#include "drivers/axon/nrf_axon_driver.h"
 
+/**
+ * @brief Global buffer for all axon nn model intermediate results.
+ * 
+ * NRF_AXON_INTERLAYER_BUFFER_SIZE is declared through the build system, kconfig on Zephyr.
+ */
 #if NRF_AXON_INTERLAYER_BUFFER_SIZE
 extern uint32_t nrf_axon_interlayer_buffer[NRF_AXON_INTERLAYER_BUFFER_SIZE/sizeof(uint32_t)];
 #endif
+
+/**
+ * @brief Global buffer for all axon nn model partial sum and scratch buffer.
+ * 
+ * NRF_AXON_INTERLAYER_BUFFER_SIZE is declared through the build system, kconfig on Zephyr.
+ */
 #if NRF_AXON_PSUM_BUFFER_SIZE
 extern uint32_t nrf_axon_psum_buffer[NRF_AXON_PSUM_BUFFER_SIZE/sizeof(uint32_t)];
 #endif
@@ -37,6 +52,8 @@ uint32_t nrf_axon_platform_get_clk_hz();
  * @brief Returns the current time in units returned by nrf_axon_platform_get_clk_hz().
  * 
  * Used by test profiling code.
+ * 
+ * @retval Number of ticks from the clock.
  */
 uint32_t nrf_axon_platform_get_ticks();
 
@@ -46,9 +63,13 @@ uint32_t nrf_axon_platform_get_ticks();
 void nrf_axon_platform_printf(const char *fmt, ...);
 
 /**
- * Peforms necessary one-time-only platform and driver initialization code.
+ * @brief Peforms necessary one-time-only platform and driver initialization code.
 */
 nrf_axon_result_e nrf_axon_platform_init();
+
+/**
+ * @brief Peforms necessary one-time-only platform and driver clean-up code on shutdown.
+*/
 void nrf_axon_platform_close();
 
 /**

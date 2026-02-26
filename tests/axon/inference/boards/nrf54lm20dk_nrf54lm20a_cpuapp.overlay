@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2023 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+
+	// specify axon profiling gpio
+	axon_profiling_gpios {
+		compatible = "gpio-leds"; // profiling gpio acts just like an led.
+		axon_profiling_gpio0: axon_profiling_gpio_0 {
+			gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+			label = "Axon Profiling GPIO 0";
+		};
+	};
+	aliases {
+		axonprofilinggpio0 = &axon_profiling_gpio0;
+	};
+};
+
+// Include Axons
+&global_peripherals {
+	axons: axons@56000 {
+		compatible = "nordic,axons";
+		reg = <0x56000 0x1000>;
+		interrupts = <86 NRF_DEFAULT_IRQ_PRIORITY>;
+		status = "okay";
+	};
+};

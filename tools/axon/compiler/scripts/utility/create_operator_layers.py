@@ -27,6 +27,27 @@ def unit_kernel_initializer(shape, dtype=np.float32):
     return tf.convert_to_tensor(kernel, dtype=dtype)
 
 
+def default_first_unit_test_op(model_input):
+    input_shape = model_input.shape
+    channels = input_shape[-1]
+
+    # first layer performs a unit depthwise
+    depthwise0 = tf.keras.layers.DepthwiseConv2D(
+        kernel_size=1,
+        depth_multiplier=1,
+        padding='same',
+        use_bias=True,
+        trainable=False,
+    )
+    depthwise0.build((None, None, None, channels))
+    kernel = np.ones((1, 1, channels, 1), dtype=np.float32)
+    bias = np.zeros((channels,), dtype=np.float32)
+    depthwise0.set_weights([kernel, bias])
+
+    dw_conv0 = depthwise0(model_input)
+    return dw_conv0
+
+
 def strided_slice_fn(input, strides=(1, 1, 1, 1), input_batch=1, begin=[0, 0, 0, 0], begin_mask=0, end_mask=0):
     stride_b, stride_h, stride_w, stride_c = strides
     input_shape_dyn = input.shape
@@ -144,7 +165,8 @@ def create_dense_layers(input_op, operator_info_dict=None):
     # width = input_shape[2]
     # channels = input_shape[3]
     # reshape_to = height*width*channels
-    flat = tf.keras.layers.Flatten(name="flatten")(input_op)
+    default_first_op = default_first_unit_test_op(input_op)
+    flat = tf.keras.layers.Flatten(name="flatten")(default_first_op)
     activation = None
     if 'ACTIVATION' in operator_info_dict:
         activation = operator_info_dict['ACTIVATION']
@@ -224,6 +246,7 @@ def create_conv_layers(input_op, operator_info_dict=None):
 
 
 def create_pointwise_layers(input_op, operator_info_dict=None):
+    default_first_op = default_first_unit_test_op(input_op)
     strides = (1, 1)
     filters = 32
     activation = None
@@ -239,7 +262,7 @@ def create_pointwise_layers(input_op, operator_info_dict=None):
             padding = operator_info_dict['PADDING_TYPE']
 
     # add layers as needed
-    output_op = conv_fn(input_op, filters, pw=True,
+    output_op = conv_fn(default_first_op, filters, pw=True,
                         strides=strides, activations=activation, padding=padding)
     return output_op
 
@@ -256,9 +279,43 @@ def create_depthwise_layers(input_op, operator_info_dict=None):
         activation = operator_info_dict['ACTIVATION']
     if 'KERNEL_SIZE' in operator_info_dict:
         kernel_size = operator_info_dict['KERNEL_SIZE']
-
+    model_variant = "default"
+    if operator_info_dict is not None:
+        if 'MODEL_VARIANT' in operator_info_dict:
+            model_variant = operator_info_dict['MODEL_VARIANT']
     output_op = dw_fn(input_op, kernel_size,
                       padding=padding, activation=activation)
+    if model_variant == "two_ops":
+        input_shape = input_op.shape
+        channels = input_shape[-1]
+        # first layer performs a unit depthwise
+        depthwise0 = tf.keras.layers.DepthwiseConv2D(
+            kernel_size=1,
+            depth_multiplier=1,
+            padding='same',
+            use_bias=True,
+            trainable=False,
+        )
+        depthwise0.build((None, None, None, channels))
+        kernel = np.ones((1, 1, channels, 1), dtype=np.float32)
+        bias = np.zeros((channels,), dtype=np.float32)
+        depthwise0.set_weights([kernel, bias])
+
+        dw_conv0 = depthwise0(input_op)
+        channels = input_op.shape[-1]
+        kernel = np.ones((1, 1, channels, 1), dtype=np.float32)
+        bias = np.zeros((channels,), dtype=np.float32)
+        depthwise1 = tf.keras.layers.DepthwiseConv2D(
+            kernel_size=1,
+            depth_multiplier=1,
+            padding='same',
+            use_bias=True,
+            trainable=False,
+        )
+        depthwise1.build((None, None, None, channels))
+        kernel_2 = kernel * 2
+        depthwise1.set_weights([kernel_2, bias])
+        output_op = depthwise1(dw_conv0)
     return output_op
 
 
@@ -278,34 +335,53 @@ def create_strided_slice_layers(input_op, batch, operator_info_dict=None):
 
 
 def create_concat_layers(input_op, operator_info_dict=None):
-    avg_pool0 = tf.keras.layers.AveragePooling2D(
-        pool_size=(1, 1), strides=(2, 1), padding='same')(input_op)
-    # Concatenate along height (axis=1)
-    x_h = tf.keras.layers.concatenate(
-        [input_op, avg_pool0], axis=1, name="concat_h")
-    avg_pool1 = tf.keras.layers.AveragePooling2D(
-        pool_size=(1, 1), strides=(1, 2), padding='same')(x_h)
-    # Concatenate along width (axis=2)
-    x_w = tf.keras.layers.concatenate(
-        [x_h, avg_pool1], axis=2, name="concat_w")
-    in_channels = x_w.shape[-1]
-    out_channels = int(0.5 * in_channels)
-    # Create unit-like weights
-    kernel2x = unit_kernel_initializer((1, 1, in_channels, out_channels))
-    bias_weights = np.zeros((out_channels,), dtype=np.float32)
-    conv = tf.keras.layers.Conv2D(
-        filters=out_channels,
-        kernel_size=1,
-        padding='same',
-        use_bias=True,
-        trainable=False,
-    )
-    conv2d0 = conv(x_w)
-    # Set weights manually
-    conv.set_weights([kernel2x.numpy(), bias_weights])
-    # Concatenate along channels (axis=3)
-    output_op = tf.keras.layers.concatenate(
-        [conv2d0, x_w], axis=3, name="concat_c")
+    # add a default first op
+    channels = input_op.shape[-1]
+    width = input_op.shape[2]
+    height = input_op.shape[1]
+    default_first_op = default_first_unit_test_op(input_op)
+    model_variant = "default"
+    if operator_info_dict is not None:
+        if 'MODEL_VARIANT' in operator_info_dict:
+            model_variant = operator_info_dict['MODEL_VARIANT']
+    if model_variant == "single_input":
+        output_op = tf.keras.layers.concatenate(
+            [default_first_op, default_first_op], axis=2, name="concat_w")
+    elif model_variant == "neuton_concat_reshapes":
+        r0 = tf.reshape(default_first_op, [height, width, channels])
+        c0 = tf.keras.layers.concatenate(
+            [r0, r0], axis=2, name="concat_w")
+        r1 = tf.reshape(c0, [-1,height,2*width,channels])
+        output_op = default_first_unit_test_op(r1)
+    else:
+        avg_pool0 = tf.keras.layers.AveragePooling2D(
+            pool_size=(1, 1), strides=(2, 1), padding='same')(default_first_op)
+        # Concatenate along height (axis=1)
+        x_h = tf.keras.layers.concatenate(
+            [default_first_op, avg_pool0], axis=1, name="concat_h")
+        avg_pool1 = tf.keras.layers.AveragePooling2D(
+            pool_size=(1, 1), strides=(1, 2), padding='same')(x_h)
+        # Concatenate along width (axis=2)
+        x_w = tf.keras.layers.concatenate(
+            [x_h, avg_pool1], axis=2, name="concat_w")
+        in_channels = x_w.shape[-1]
+        out_channels = int(0.5 * in_channels)
+        # Create unit-like weights
+        kernel2x = unit_kernel_initializer((1, 1, in_channels, out_channels))
+        bias_weights = np.zeros((out_channels,), dtype=np.float32)
+        conv = tf.keras.layers.Conv2D(
+            filters=out_channels,
+            kernel_size=1,
+            padding='same',
+            use_bias=True,
+            trainable=False,
+        )
+        conv2d0 = conv(x_w)
+        # Set weights manually
+        conv.set_weights([kernel2x.numpy(), bias_weights])
+        # Concatenate along channels (axis=3)
+        output_op = tf.keras.layers.concatenate(
+            [conv2d0, x_w], axis=3, name="concat_c")
     return output_op
 
 
@@ -324,7 +400,8 @@ def create_pad_layers(input_op, operator_info_dict=None):
         if 'CONST_VALUE' in operator_info_dict:
             constant_value = operator_info_dict['CONST_VALUE']
 
-    xh = tf.pad(input_op, paddings=[[0, 0], h_pad, [0, 0], [
+    default_first_op = default_first_unit_test_op(input_op)
+    xh = tf.pad(default_first_op, paddings=[[0, 0], h_pad, [0, 0], [
                 0, 0]], name="H_Pad", mode='CONSTANT', constant_values=constant_value)  # Height
     channels = xh.shape[-1]
     depthwise0 = tf.keras.layers.DepthwiseConv2D(
@@ -347,29 +424,76 @@ def create_pad_layers(input_op, operator_info_dict=None):
     return output_op
 
 
-def create_add_layers(input_op, operator_info_dict=None):
+def add_fn(input_op, activation=None, broadcast_axis=None):
     channels = input_op.shape[-1]
-    kernel = np.ones((1, 1, channels, 1), dtype=np.float32)
-    bias = np.zeros((channels,), dtype=np.float32)
-    depthwise1 = tf.keras.layers.DepthwiseConv2D(
-        kernel_size=1,
-        depth_multiplier=1,
-        padding='same',
-        use_bias=True,
-        trainable=False,
-    )
-    depthwise1.build((None, None, None, channels))
-    kernel_2 = kernel * 2
-    depthwise1.set_weights([kernel_2, bias])
-    dw_conv1 = depthwise1(input_op)
-    add1 = tf.keras.layers.Add()([input_op, dw_conv1])
-    add1Relu = tf.keras.layers.ReLU()(add1)
+    width = input_op.shape[2]
+    height = input_op.shape[1]
+    # conv1 = conv_fn(input_op, kernel_size=(1, 1), filter_size=channels)
+    conv1 = pool_fn(input_op)
+    # add1 = tf.keras.layers.Add()([input_op, dw_conv1])
+    add1 = tf.keras.layers.Add()([input_op, conv1])
     # flat0 = tf.keras.layers.Flatten(name="flatten0")(add1Relu)
     # flat1 = tf.keras.layers.Flatten(name="flatten1")(dw_conv1)
     # dens0 = dense_fn(flat0, 1020)
     # dense1 = dense_fn(flat1, 1020)
     # output_op = tf.keras.layers.Add()([dens0,dense1])
-    output_op = tf.keras.layers.Add()([add1Relu, dw_conv1])
+    if broadcast_axis is not None:
+        mean0 = tf.reduce_mean(add1, axis=broadcast_axis, keepdims=True)
+        add2 = tf.keras.layers.Add()([add1, mean0])
+    else:
+        add1Relu = tf.keras.layers.ReLU()(add1)
+        # add2 = tf.keras.layers.Add()([add1Relu, dw_conv1])
+        add2 = tf.keras.layers.Add()([add1Relu, conv1])
+    output_op = tf.keras.layers.Activation(activation)(add2)
+    return output_op
+
+
+def constant_input_to_ops(op_type, input_op, activation=None, broadcast_axis=None):
+    x1 = pool_fn(input_op)
+    constant_shape = list(input_op.shape)
+    if broadcast_axis is not None:
+        if type(broadcast_axis) is list:
+            for i in (1, 2, 3):
+                if i in broadcast_axis:
+                    constant_shape[i] = 1
+        else:
+            constant_shape[broadcast_axis] = 1
+
+    H = constant_shape[1]
+    W = constant_shape[2]
+    C = constant_shape[3]
+    # random_vector = np.random.rand(1,H,W,C).astype(np.float32)
+    random_vector = (7/22) * np.ones(shape = (1,H,W,C), dtype=np.float32)    
+    c = tf.constant(random_vector)
+    if op_type == "Add":
+        op1 = tf.keras.layers.Add()([x1, c])
+    elif op_type == "Mul":
+        op1 = tf.keras.layers.Multiply()([x1, c])
+
+    output_op = tf.keras.layers.Activation(activation)(op1)
+    return output_op
+
+
+def create_add_layers(input_op, operator_info_dict=None):
+    model_variant = 'default'
+    activation = None
+    broadcast_axis = None
+    if operator_info_dict is not None:
+        if 'ACTIVATION' in operator_info_dict:
+            activation = operator_info_dict['ACTIVATION']
+        if 'MODEL_VARIANT' in operator_info_dict:
+            model_variant = operator_info_dict['MODEL_VARIANT']
+        if 'BROADCAST_AXIS' in operator_info_dict:
+            broadcast_axis = operator_info_dict['BROADCAST_AXIS']
+
+    # add a default first op
+    default_first_op = default_first_unit_test_op(input_op)
+    if model_variant == 'constant_input':
+        output_op = constant_input_to_ops(
+            "Add", input_op, activation=activation, broadcast_axis=broadcast_axis)
+    else:
+        output_op = add_fn(
+            default_first_op, activation=activation, broadcast_axis=broadcast_axis)
     return output_op
 
 
@@ -382,10 +506,12 @@ def create_pool_layers(input_op, operator_info_dict=None):
             stride = operator_info_dict['STRIDES']
         # if 'ACTIVATION' in operator_info_dict:
         #     activation = operator_info_dict['ACTIVATION']
+        if 'PADDING_TYPE' in operator_info_dict:
+            padding = operator_info_dict['PADDING_TYPE']        
         if 'KERNEL_SIZE' in operator_info_dict:
             kernel_size = operator_info_dict['KERNEL_SIZE']
-        if 'PADDING_TYPE' in operator_info_dict:
-            padding = operator_info_dict['PADDING_TYPE']
+            if operator_info_dict['OP_TYPE']=="AvgPool":
+                padding = 'valid'
     # add layers as needed
     pool0 = pool_fn(input_op, operator_info_dict['OP_TYPE'],
                     pool_size=kernel_size, strides=stride, padding=padding)
@@ -467,23 +593,26 @@ def create_splitv_layers(input_op, input_batch=1, operator_info_dict=None):
     if 'MODEL_VARIANT' in operator_info_dict:
         model_variant = operator_info_dict['MODEL_VARIANT']
 
+    default_first_op = default_first_unit_test_op(input_op)
+
     if model_variant == "neuton_example":
         output_op = splitv_neuton_example_fn(
-            input_op, input_batch, split_size, axis)
+            default_first_op, input_batch, split_size, axis)
     elif model_variant == "double_split":
-        layer0 = splitv_fn(input_op, split_size, axis)
+        layer0 = splitv_fn(default_first_op, split_size, axis)
         output_op = splitv_fn(layer0, split_size, axis)
     else:
-        output_op = splitv_fn(input_op, split_size, axis)
+        output_op = splitv_fn(default_first_op, split_size, axis)
     return output_op
 
 
 def create_mean_layers(input_op, operator_info_dict=None):
     axis = 1
+    default_first_op = default_first_unit_test_op(input_op)
     if 'MEAN_AXIS' in operator_info_dict:
         axis = operator_info_dict['MEAN_AXIS']
     keepdims = True
-    output_op = tf.reduce_mean(input_op, axis=axis, keepdims=keepdims)
+    output_op = tf.reduce_mean(default_first_op, axis=axis, keepdims=keepdims)
     return output_op
 
 
@@ -495,9 +624,11 @@ def create_leakyrelu_layers(input_op, operator_info_dict=None):
     if 'MODEL_VARIANT' in operator_info_dict:
         model_variant = operator_info_dict['MODEL_VARIANT']
 
+    default_first_op = default_first_unit_test_op(input_op)
+
     if model_variant == "leaky_relu_test":
         leakyrelu0 = tf.keras.layers.LeakyReLU(
-            alpha=alpha, name='leaky_relu')(input_op)
+            alpha=alpha, name='leaky_relu')(default_first_op)
         conv0 = conv_fn(leakyrelu0, 3, (3, 3))
         leakyrelu1 = tf.keras.layers.LeakyReLU(
             alpha=alpha, name='leaky_relu1')(conv0)
@@ -506,46 +637,38 @@ def create_leakyrelu_layers(input_op, operator_info_dict=None):
             alpha=alpha, name='leaky_relu2')(dw0)
     else:
         output_op = tf.keras.layers.LeakyReLU(
-            alpha=alpha, name='leaky_relu')(input_op)
+            alpha=alpha, name='leaky_relu')(default_first_op)
     return output_op
 
 
 def multiply_neuton_example_fn(input_op):
     channels = input_op.shape[-1]
-    mean_output_op = tf.reduce_mean(input_op, axis=[1,2], keepdims=False)
+    mean_output_op = tf.reduce_mean(input_op, axis=[1, 2], keepdims=False)
     fc0 = dense_fn(mean_output_op, 8, activation='relu')
     fc1 = dense_fn(fc0, channels, activation='sigmoid')
-    reshape0 = tf.reshape(fc1,[-1,1,1,channels])
+    reshape0 = tf.reshape(fc1, [-1, 1, 1, channels])
     mul1 = tf.keras.layers.Multiply()([input_op, reshape0])
     return mul1
 
-def mutiply_fn(input_op,activation=None, broadcast_axis=None):
+
+def mutiply_fn(input_op, activation=None, broadcast_axis=None):
     channels = input_op.shape[-1]
-    kernel = np.ones((1, 1, channels, 1), dtype=np.float32)
-    bias = np.zeros((channels,), dtype=np.float32)
-    depthwise1 = tf.keras.layers.DepthwiseConv2D(
-        kernel_size=1,
-        depth_multiplier=1,
-        padding='same',
-        use_bias=True,
-        trainable=False,
-    )
-    depthwise1.build((None, None, None, channels))
-    kernel_2 = kernel * 2
-    depthwise1.set_weights([kernel_2, bias])
-    dw_conv1 = depthwise1(input_op)
+    conv1 = conv_fn(input_op, kernel_size=(3, 3), filter_size=channels)
     if broadcast_axis is not None:
-        mean0 = tf.reduce_mean(dw_conv1, axis=broadcast_axis, keepdims=True)
+        # mean0 = tf.reduce_mean(dw_conv1, axis=broadcast_axis, keepdims=True)
+        mean0 = tf.reduce_mean(conv1, axis=broadcast_axis, keepdims=True)
         mul1 = tf.keras.layers.Multiply()([input_op, mean0])
     else:
-        mul1 = tf.keras.layers.Multiply()([input_op, dw_conv1])
-    
+        # mul1 = tf.keras.layers.Multiply()([input_op, dw_conv1])
+        mul1 = tf.keras.layers.Multiply()([input_op, conv1])
+
     output_op = tf.keras.layers.Activation(activation)(mul1)
     return output_op
 
+
 def create_multiply_layers(input_op, operator_info_dict=None):
-    activation=None
-    broadcast_axis=None
+    activation = None
+    broadcast_axis = None
     if operator_info_dict:
         if 'ACTIVATION' in operator_info_dict:
             activation = operator_info_dict['ACTIVATION']
@@ -554,10 +677,15 @@ def create_multiply_layers(input_op, operator_info_dict=None):
         if 'BROADCAST_AXIS' in operator_info_dict:
             broadcast_axis = operator_info_dict['BROADCAST_AXIS']
 
-    if model_variant=="neuton_example":
-        output_op = multiply_neuton_example_fn(input_op)
+    default_first_op = default_first_unit_test_op(input_op)
+
+    if model_variant == "neuton_example":
+        output_op = multiply_neuton_example_fn(default_first_op)
+    elif model_variant == 'constant_input':
+        output_op = constant_input_to_ops(
+            "Mul", input_op, activation, broadcast_axis)
     else:
-        output_op = mutiply_fn(input_op, activation, broadcast_axis)
+        output_op = mutiply_fn(default_first_op, activation, broadcast_axis)
     return output_op
 
 
@@ -566,52 +694,37 @@ SUPPORTED_LAYER_OPS_LIST = {"Add", "Pad", "Concat", "StridedSlice", "Dense", "Co
 
 
 def create_operator_layer(model_input, model_type, model_data_input, test_op_info_dict=None):
+
     input_shape = model_data_input.shape
-    channels = input_shape[-1]
     # width = input_shape[2]
     # height = input_shape[1]
     batch = input_shape[0]
-
-    # first layer performs a unit depthwise
-    depthwise0 = tf.keras.layers.DepthwiseConv2D(
-        kernel_size=1,
-        depth_multiplier=1,
-        padding='same',
-        use_bias=True,
-        trainable=False,
-    )
-    depthwise0.build((None, None, None, channels))
-    kernel = np.ones((1, 1, channels, 1), dtype=np.float32)
-    bias = np.zeros((channels,), dtype=np.float32)
-    depthwise0.set_weights([kernel, bias])
-
-    dw_conv0 = depthwise0(model_input)
-
     if model_type == "Add":
-        model_output = create_add_layers(dw_conv0, test_op_info_dict)
+        model_output = create_add_layers(model_input, test_op_info_dict)
     elif model_type == "Concat":
-        model_output = create_concat_layers(dw_conv0, test_op_info_dict)
+        model_output = create_concat_layers(model_input, test_op_info_dict)
     elif model_type == "StridedSlice":
         model_output = create_strided_slice_layers(
             model_input, batch, test_op_info_dict)
     elif model_type == "Pad":
-        model_output = create_pad_layers(dw_conv0, test_op_info_dict)
+        model_output = create_pad_layers(model_input, test_op_info_dict)
     elif model_type == "Dense":
-        model_output = create_dense_layers(dw_conv0, test_op_info_dict)
+        model_output = create_dense_layers(model_input, test_op_info_dict)
     elif model_type == "Conv" or model_type == "Conv1D":
         model_output = create_conv_layers(model_input, test_op_info_dict)
     elif model_type == "PwConv":
-        model_output = create_pointwise_layers(dw_conv0, test_op_info_dict)
+        model_output = create_pointwise_layers(model_input, test_op_info_dict)
     elif model_type == "DwConv":
         model_output = create_depthwise_layers(model_input, test_op_info_dict)
     elif model_type == "AvgPool" or model_type == "MaxPool":
         model_output = create_pool_layers(model_input, test_op_info_dict)
     elif model_type == "SplitV":
-        model_output = create_splitv_layers(dw_conv0, batch, test_op_info_dict)
+        model_output = create_splitv_layers(
+            model_input, batch, test_op_info_dict)
     elif model_type == "Mean":
-        model_output = create_mean_layers(dw_conv0, test_op_info_dict)
+        model_output = create_mean_layers(model_input, test_op_info_dict)
     elif model_type == "LeakyRelu":
-        model_output = create_leakyrelu_layers(dw_conv0, test_op_info_dict)    
+        model_output = create_leakyrelu_layers(model_input, test_op_info_dict)
     elif model_type == "Multiply":
-        model_output = create_multiply_layers(dw_conv0, test_op_info_dict)
+        model_output = create_multiply_layers(model_input, test_op_info_dict)
     return model_output

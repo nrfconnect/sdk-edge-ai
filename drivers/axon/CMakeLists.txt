@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.13.0)
 if (${NOT_A_ZEPHYR_BUILD})
   add_library(nrf-axon-driver-interface INTERFACE)
 
-  target_include_directories(nrf-axon-driver-interface INTERFACE ../../include/drivers/axon)
+  target_include_directories(nrf-axon-driver-interface INTERFACE ../../include)
 
   target_link_libraries(nrf-axon-driver-interface
     INTERFACE
@@ -40,10 +40,6 @@ if (${NOT_A_ZEPHYR_BUILD})
   )
 
 else()
-  zephyr_include_directories(
-    ../../include/drivers/axon
-  )
-
 	zephyr_sources(
 		nrf_axon_nn_infer.c
 		nrf_axon_nn_infer_test.c

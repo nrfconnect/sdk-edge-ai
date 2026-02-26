@@ -102,9 +102,6 @@ else()
 	  set(CONFIG_NRF_AXON_PSUM_BUFFER_SIZE 0)
   endif()
 
-  zephyr_include_directories(
-    ../../../include/axon
-  )
   zephyr_sources(
     src/nrf_axon_logging.c
     src/nrf_axon_vector_compare.c
@@ -121,5 +118,3 @@ else()
   )
 
 endif()
-
-

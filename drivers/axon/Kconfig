@@ -6,6 +6,7 @@
 
 config NRF_AXON
 	bool "Enable Axon Neural Processing Unit"
+	select NRF_SYS_EVENT
 
 config NRF_AXON_INTERLAYER_BUFFER_SIZE
 	int "Axon Interlayer buffer size (in bytes)"

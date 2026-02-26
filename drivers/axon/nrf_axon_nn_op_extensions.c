@@ -19,10 +19,10 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
-#include "nrf_axon_platform.h"
-#include "nrf_axon_nn_op_extensions.h"
-#include "nrf_axon_nn_infer.h"
-#include "nrf_axon_dsp_intrinsics.h"
+#include "axon/nrf_axon_platform.h"
+#include "drivers/axon/nrf_axon_nn_op_extensions.h"
+#include "drivers/axon/nrf_axon_nn_infer.h"
+#include "drivers/axon/nrf_axon_dsp_intrinsics.h"
 
 /**
  * @brief
@@ -153,7 +153,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(uint16_t argc, NRF_AXON_PLATF
    */
   // unpacked input rows always start on a 32bit boundary.
   uint8_t input_extra_stride = (!base1_args->remaining_args.input_is_packed && base1_args->remaining_args.width & 1) ? 1 : 0; 
-  uint8_t output_extra_stride = base1_args->remaining_args.output_bytewidth == 4 ? 0 : (4 - base1_args->remaining_args.width & 3) & 3;
+  uint8_t output_extra_stride = base1_args->remaining_args.output_bytewidth == 4 ? 0 : (4 - (base1_args->remaining_args.width & 3)) & 3;
 
   int16_t *input_ptr = (int16_t*)base1_args->ptr_args.input;
   union {
@@ -174,7 +174,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(uint16_t argc, NRF_AXON_PLATF
         scratch = 1/(1+scratch); // have float sigmoid(x)
         switch (base1_args->remaining_args.output_bytewidth) {
           case 1: // quantized output. scales between 0 and 1.
-            scratch = (float)round(scratch * 256.0) - 128; // quantized
+            scratch = (float)round(scratch * 256.0f) - 128; // quantized
             *output_ptr.i8 = scratch > 127 ? 127: scratch < -128 ? -128 : (int8_t)scratch; // saturated
             output_ptr.i8++;
             break;
@@ -206,7 +206,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh(uint16_t argc, NRF_AXON_PLATFORM
    */
   // unpacked input rows always start on a 32bit boundary.
   uint8_t input_extra_stride = (!base1_args->remaining_args.input_is_packed && base1_args->remaining_args.width & 1) ? 1 : 0; 
-  uint8_t output_extra_stride = base1_args->remaining_args.output_bytewidth == 4 ? 0 : (4 - base1_args->remaining_args.width & 3) & 3;
+  uint8_t output_extra_stride = base1_args->remaining_args.output_bytewidth == 4 ? 0 : (4 - (base1_args->remaining_args.width & 3)) & 3;
 
   int16_t *input_ptr = (int16_t*)base1_args->ptr_args.input;
   union {
@@ -245,5 +245,10 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh(uint16_t argc, NRF_AXON_PLATFORM
       output_ptr.value += output_extra_stride;
     }
   }
+  return NRF_AXON_RESULT_SUCCESS;
+}
+
+nrf_axon_result_e nrf_axon_nn_op_extension_reshape(uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
+{
   return NRF_AXON_RESULT_SUCCESS;
 }

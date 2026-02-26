@@ -20,11 +20,16 @@ from enum import Enum
 from pathlib import Path
 from utility import util as util
 
-TFLITE_AXON_AXIS_ENUM_MAP = {
+TFLITE_RANK4_AXON_AXIS_ENUM_MAP = {
     0: 'BATCH',
     1: 'NRF_AXON_NN_AXIS_HEIGHT',
     2: 'NRF_AXON_NN_AXIS_WIDTH',
     3: 'NRF_AXON_NN_AXIS_CHANNEL'}
+
+TFLITE_RANK3_AXON_AXIS_ENUM_MAP = {
+    0: 'NRF_AXON_NN_AXIS_HEIGHT',
+    1: 'NRF_AXON_NN_AXIS_WIDTH',
+    2: 'NRF_AXON_NN_AXIS_CHANNEL'}
 
 TFLITE_AXON_ACTIVATION_ENUM_MAP = {
     "None":   'NRF_AXON_NN_ACTIVATION_FUNCTION_DISABLED',
@@ -228,9 +233,9 @@ class CompilerResultsReturnClass():
 
 class ModelDescriptionBin:
     MAJOR_VER = 0
-    MINOR_VER = 15
+    MINOR_VER = 17
     PATCH_VER = 0
-    binary_title_string = "%AXONPRO_CROSS_COMPILER_BIN%"
+    binary_title_string = "AXON_INTERMEDIATE_REPRESENTATION_FILE"
     MODEL_BIN_VER = (MAJOR_VER << 16) + (MINOR_VER << 8) + PATCH_VER
     model_ver_bin = bytearray(np.array([MODEL_BIN_VER], dtype=np.uint32))
 
@@ -317,7 +322,6 @@ def clear_model_descriptor_layer_struct(layer_descriptor):
     layer_descriptor[0].output_dimensions.byte_width = 0
     layer_descriptor[0].stride_x = 0
     layer_descriptor[0].stride_y = 0
-    layer_descriptor[0].input_zero_point = 0
     layer_descriptor[0].output_zero_point = 0
     layer_descriptor[0].bias_prime.offset = 0
     layer_descriptor[0].output_multipliers.offset = 0
@@ -447,7 +451,6 @@ def model_wrapper_test():
     layer[0].output_dimensions.byte_width = 4
     layer[0].stride_x = 1
     layer[0].stride_y = 2
-    layer[0].input_zero_point = -128
     layer[0].output_zero_point = -128
     layer[0].bias_prime.offset = 0x10100101
     layer[0].output_multipliers.offset = 0x1DDDBBBB
@@ -477,7 +480,6 @@ def model_wrapper_test():
     layer[1].output_dimensions.byte_width = 4
     layer[1].stride_x = 1
     layer[1].stride_y = 2
-    layer[1].input_zero_point = -128
     layer[1].output_zero_point = -128
     layer[1].bias_prime.offset = 0x10100101
     layer[1].output_multipliers.offset = 0x1DDDBBBB
@@ -511,7 +513,6 @@ def model_wrapper_test():
     layer2[0].output_dimensions.byte_width = 4
     layer2[0].stride_x = 1
     layer2[0].stride_y = 2
-    layer2[0].input_zero_point = -128
     layer2[0].output_zero_point = -128
     layer2[0].bias_prime.offset = 0x10100101
     layer2[0].output_multipliers.offset = 0x1DDDBBBB
@@ -700,8 +701,6 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
         logger.debug(
             f"stride y : {model_layer_description_struct[layers].stride_y }")  # 2
         logger.debug(
-            f"input zp : {model_layer_description_struct[layers].input_zero_point }")  # -128
-        logger.debug(
             f"output zp : {model_layer_description_struct[layers].output_zero_point }")  # -128
         logger.debug(
             f"scale shift cnt : {model_layer_description_struct[layers].scale_shift_cnt }")  # 1
@@ -767,19 +766,6 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
 
 
 INCLUDE = "#include"
-"""
-# def find_and_import_includes(source_text, include_dir=r"../include/"):
-
-#   include_dir = r"src\c_files\axonpro_api.h"
-#   parsed_hdr = pycparser.preprocess_file(include_dir)
-#   # parsed_hdr = pycparser.parse_file(include_dir,use_cpp=True)
-#   ast = pycparser.parse_file(include_dir, use_cpp=True,
-#           cpp_path='gcc')
-#           # cpp_args=['-E', r'-Iutils/fake_libc_include'])
-#   ast.show()
-
-#   return parsed_hdr
-"""
 
 
 if __name__ == "__main__":
