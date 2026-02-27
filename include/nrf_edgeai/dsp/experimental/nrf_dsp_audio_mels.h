@@ -7,7 +7,7 @@
  *
  * @defgroup nrf_dsp_exp_audio_mels Audio Mel Spectrogram
  * @{
- * @ingroup nrf_dsp_experimental
+ * @ingroup nrf_dsp_transform
  *
  * @brief
  *

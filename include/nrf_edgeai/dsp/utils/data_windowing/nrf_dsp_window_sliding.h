@@ -64,7 +64,7 @@ typedef struct nrf_dsp_window_sliding_s
  * @param[in]   p_window      Pointer to window buffer
  * @param[in]   window_size   Window buffer size in samples
  * @param[in]   sample_size   Sample size in bytes 
- * @param[in]   window_hop    Window hop in samples. Must be less or equal @window_size
+ * @param[in]   window_hop    Window hop in samples. Must be less or equal @p window_size
  * @param[in]   cb            On window ready user callback
  * @param[in]   p_user_ctx    Pointer to user context
  *  

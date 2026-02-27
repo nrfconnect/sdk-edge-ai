@@ -5,7 +5,7 @@
  */
 /**
  *
- * @defgroup nrf_dsp_spectral_centroid Spectral Spread
+ * @defgroup nrf_dsp_spectral_spread Spectral Spread
  * @{
  * @ingroup nrf_dsp_spectral
  *

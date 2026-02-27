@@ -92,10 +92,11 @@ int16_t nrf_dsp_scr_i8_s(const int8_t*          p_input,
 /**
  * @brief Counts Sigma-crossing rate with respect to Mean, of a INT16 fixed-point vector.
  *
- * @param[in]   p_input   Pointer to the input vector
- * @param[in]   num       Number of samples in input vector
- * @param[in]   p_ctx     Optional pointer to the statistics context,
- *                        this function will use <pre> p_ctx->value.var </pre> for calculation if it exist
+ * @param[in]   p_input       Pointer to the input vector
+ * @param[in]   num           Number of samples in input vector
+ * @param[in]   sigma_factor  Sigma multiplier for which the crossing rate will be counted
+ * @param[in]   p_ctx         Optional pointer to the statistics context,
+ *                            this function will use <pre> p_ctx->value.var </pre> for calculation if it exist
  *
  * @return  int16_t  Sigma-crossing rate in the vector, multiplied by NRF_DSP_PERCENTAGE_TO_INT_FACTOR
  */

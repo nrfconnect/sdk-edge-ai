@@ -27,7 +27,7 @@ typedef struct nrf_dsp_window_flatsliding_s
     nrf_dsp_window_flatten_t flatten;
 
     /** Window shift in samples, by which the window will be shifted when it is filled. 
-     * Must be less or equal @flatten.max_samples_num
+     * Must be less or equal to flatten.max_samples_num
      */
     uint16_t window_shift;
 
@@ -42,9 +42,9 @@ typedef struct nrf_dsp_window_flatsliding_s
  * @param[in]    p_window            Pointer to window buffer
  * @param[in]    max_samples_num     Maximum number of feature samples in window buffer, feature sample = 1 * uniq_features_num
  * @param[in]    uniq_features_num   Number of unique features in feature sample, e.g feature sample = {x, y, z}, then uniq_features_num = 3
- * @param[in]    window_shift        Window shift in samples by which the window will be shifted when it is filled. Must be less or equal @max_samples_num
+ * @param[in]    window_shift        Window shift in samples by which the window will be shifted when it is filled. Must be less or equal @p max_samples_num
  * 
- * @return Operation status code @ref neuton_status_t
+ * @return Operation status code: -1 - Null pointer error, -2 - Invalid argument error, 0 - Success
  */
 int8_t nrf_dsp_window_flatsliding_init(nrf_dsp_window_flatsliding_t* p_ctx,
                                        void*                         p_window,

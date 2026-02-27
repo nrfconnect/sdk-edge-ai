@@ -50,7 +50,7 @@ typedef struct nrf_dsp_window_flatten_s
 
     /** Number of unique features actually collected in windows, 
      * equal to uniq_features_num by default,
-     * only changed in @ref nrf_dsp_window_flatten_feed_bymask 
+     * only changed in nrf_dsp_window_flatten_feed_bymask API
      */
     uint16_t uniq_features_collected;
 } nrf_dsp_window_flatten_t;

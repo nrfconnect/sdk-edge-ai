@@ -25,23 +25,24 @@
  * );
  * @endcode
  * where:
- *   - <feature_name>  : Name of the feature (e.g., mean_i8, std_f32, etc.)
- *   - <input_type>    : Input data type (int8_t, int16_t, flt32_t)
- *   - <feature_type>  : Output feature data type (int16_t, int32_t, flt32_t)
+ *   - \<feature_name\>  : Name of the feature (e.g., mean_i8, std_f32, etc.)
+ *   - \<input_type\>    : Input data type (int8_t, int16_t, flt32_t)
+ *   - \<feature_type\>  : Output feature data type (int16_t, int32_t, flt32_t)
  *
  * These functions extract one or more time-domain features from the input signal buffer,
  * storing the results in the output feature buffer. The feature_mask parameter allows
  * selective extraction of features. The pipeline context and argument callback provide
  * additional configuration or arguments for feature extraction.
  *
- * @param[in]  p_input         Pointer to the input signal buffer.
- * @param[in]  num             Number of input samples.
- * @param[out] p_features      Pointer to the output feature buffer.
- * @param[in]  feature_mask    Mask specifying which features to extract.
- * @param[in]  p_pipeline_ctx  Pointer to the pipeline context (may be NULL).
- * @param[in]  get_argument    Callback to get feature-specific arguments (may be NULL).
- * @param[in]  p_argument_ctx  Pointer to argument context for the callback (may be NULL).
- * @return     Number of features extracted and written to p_features.
+ * Parameters of the expanded function:
+ * - @c p_input         Pointer to the input signal buffer.
+ * - @c num             Number of input samples.
+ * - @c p_features      Pointer to the output feature buffer.
+ * - @c feature_mask    Mask specifying which features to extract.
+ * - @c p_pipeline_ctx  Pointer to the pipeline context (may be NULL).
+ * - @c get_argument    Callback to get feature-specific arguments (may be NULL).
+ * - @c p_argument_ctx  Pointer to argument context for the callback (may be NULL).
+ * - Return: Number of features extracted and written to p_features.
  *
  * @note
  * - Use NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I8, NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I16, or NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_F32

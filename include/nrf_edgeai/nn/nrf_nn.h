@@ -7,7 +7,6 @@
  *
  * @defgroup nrf_nn Nordic Semiconductor Neural Network SDK
  * @{
- * @ingroup nrf_nn
  *
  *
  */

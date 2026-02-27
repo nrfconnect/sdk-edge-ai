@@ -7,7 +7,6 @@
  *
  * @defgroup nrf_dsp Nordic Semiconductor Digital Signal Processing SDK
  * @{
- * @ingroup nrf_dsp
  *
  *
  */

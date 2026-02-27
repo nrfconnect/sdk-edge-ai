@@ -26,7 +26,7 @@ extern "C" {
 typedef struct
 {
     /** Buffer to store mel-spectrogram 
-     * (elements count is @mel_spectrum_n_mels * @mel_spectrum_count)
+     * (elements count is freq_bands * time_bands)
      */
     flt32_t* p_melspectrum;
 

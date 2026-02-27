@@ -7,7 +7,6 @@
  *
  * @defgroup nrf_edgeai Nordic Semiconductor Edge AI SDK
  * @{
- * @ingroup nrf_edgeai
  *
  *
  */

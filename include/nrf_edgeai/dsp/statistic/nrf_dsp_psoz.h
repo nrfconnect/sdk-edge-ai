@@ -5,7 +5,7 @@
  */
 /**
  *
- * @defgroup nrf_dsp_statistic_psot Percentage of signal over zero
+ * @defgroup nrf_dsp_statistic_psoz Percentage of signal over zero
  * @{
  * @ingroup nrf_dsp_statistic
  *

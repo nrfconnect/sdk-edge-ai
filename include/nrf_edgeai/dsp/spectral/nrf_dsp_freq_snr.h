@@ -5,7 +5,7 @@
  */
 /**
  *
- * @defgroup nrf_dsp_spectral_thd Frequencies Signal-to-Noise ratio
+ * @defgroup nrf_dsp_freq_snr Frequencies Signal-to-Noise ratio
  * @{
  * @ingroup nrf_dsp_spectral
  *

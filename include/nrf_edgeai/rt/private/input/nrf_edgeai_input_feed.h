@@ -22,7 +22,7 @@ extern "C" {
  *                                             void*              p_input_values,
  *                                             uint16_t       num_values);
  * @endcode
- * where <mode> specifies the windowing/data type strategy.
+ * where \<mode\> specifies the windowing/data type strategy.
  */
 #define NRF_EDGEAI_DECLARE_INPUT_FEED_INTERFACE(interface_name)                                 \
     nrf_edgeai_err_t nrf_edgeai_input_feed_##interface_name(nrf_edgeai_input_t* p_input_ctx,    \
