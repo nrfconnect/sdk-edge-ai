@@ -15,5 +15,5 @@ This section provides information about various applications that can be built u
    :glob:
    :caption: Subpages:
 
-   applications/kws.rst
+   /../applications/keyword_spotting/README.rst
    /../applications/gesture_recognition/README.rst
