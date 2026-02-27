@@ -1,34 +1,33 @@
 .. _quick_start:
 
-Quick start
-###########
+Quick start guide
+#################
 
 .. contents::
    :local:
-   :depth: 1
+   :depth: 2
 
-Welcome to nRF Edge AI quick start guides!
-Ready to bring machine learning to your Nordic Semiconductor devices?
-These guides will help you get started with edge AI, whether you're training your first model or deploying advanced applications.
 
-Choose the path that best fits your project needs and experience level.
-Each guide provides step-by-step instructions from setup through deployment, helping you succeed with your edge AI application.
+This section includes quick start guides for running machine learning workloads on Nordic Semiconductor devices using nRF Edge AI.
+These pages cover common development paths, from simplified end‑to‑end solutions to lower‑level integrations with direct hardware control.
 
-.. tip::
-   Not sure which option to choose? Check the :ref:`solution_comparison` page for a detailed comparison of features, performance, and use cases.
+Select the guide that best matches your required level of control, tooling preferences, and target hardware.
+Each guide walks through the required setup steps and shows how to deploy and run an edge AI application.
+
+If you are unsure which approach fits your use case, see the :ref:`solution_comparison` page for a comparison of features, performance characteristics, and supported workflows.
 
 Basic setup variants
 ********************
 
-Start here if you're new to edge AI or want to get up and running quickly.
-These solutions provide high-level APIs and integrated toolchains that handle much of the complexity for you.
+Use these options to get started quickly or when you prefer higher‑level tooling that abstracts most of the model deployment and runtime details.
+These workflows rely on integrated toolchains and APIs to reduce setup effort:
 
-* :ref:`quick_start_nrf_edgeai` - Train models using Nordic Edge AI Lab and deploy them with a unified API.
-  Supports both CPU execution (Neuton) and NPU acceleration (Axon) on compatible devices.
-  Perfect for: Getting started quickly, standardized workflow, and the best Nordic device compatibility.
-* :ref:`quick_start_edge_impulse` - Use the popular Edge Impulse platform for an end-to-end ML solution.
-  Includes visual development tools, extensive documentation, and community support.
-  Perfect for: Visual model development, teams already using Edge Impulse, existing Edge Impulse projects.
+* :ref:`quick_start_nrf_edgeai` - Use it to train models with Nordic Edge AI Lab and deploy them with a unified API.
+  It supports both CPU execution (Neuton) and NPU acceleration (Axon) on compatible devices.
+  Use it for easy setup, standardized workflow, and the best Nordic Semiconductordevice compatibility.
+* :ref:`quick_start_edge_impulse` - Use the Edge Impulse platform for an end-to-end machine learning solution.
+  It includes visual development tools, extensive documentation, and community support.
+  Use this option if you already work with Edge Impulse or require its tooling ecosystem.
 
 .. toctree::
    :maxdepth: 1
@@ -40,15 +39,15 @@ These solutions provide high-level APIs and integrated toolchains that handle mu
 Advanced setup variants
 ***********************
 
-Choose these options when you need maximum control, custom optimizations, or want to leverage specific hardware capabilities.
-These approaches require more technical expertise but offer greater flexibility and performance tuning.
+Use these options when you need lower‑level control, custom inference pipelines, or direct access to hardware acceleration features.
+These workflows require more manual configuration but allow finer control over performance and resource usage.
 
 * :ref:`quick_start_axon_driver` - Work directly with the Axon NPU driver API for maximum control, performance and low energy consumption.
   Compile TensorFlow Lite models and implement custom inference pipelines.
-  Perfect for: Advanced optimization, custom integrations, maximum NPU performance.
+  Use this option for advanced optimization and direct NPU control.
 * :ref:`quick_start_axon_edge_impulse` -  Combine Edge Impulse's user-friendly platform with Axon NPU hardware acceleration.
   Use Edge Impulse SDK while benefiting from NPU performance on compatible devices.
-  Perfect for: Current Edge Impulse users with Axon hardware.
+  Use this option if you want to keep the Edge Impulse workflow while targeting Axon hardware.
 
 .. toctree::
    :maxdepth: 1

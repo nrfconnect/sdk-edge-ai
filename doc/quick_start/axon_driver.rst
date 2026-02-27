@@ -1,20 +1,19 @@
 .. _quick_start_axon_driver:
 
-Axon Driver - Quick Start Guide
-###############################
+Axon driver
+###########
 
 .. contents::
    :local:
    :depth: 2
 
-Welcome to the Axon Driver quick start guide!
-This guide is for developers who want maximum control and performance by working directly with the Axon NPU hardware.
-Using the Axon driver API directly gives you low-level access to the NPU's capabilities, allowing for fine-tuned optimization and integration.
+The following guide explains how to use the Axon NPU driver API to run TensorFlow Lite models directly on the Axon NPU.
+It is ideal if you require low‑level control over inference execution, memory usage, and system integration.
 
-If you're comfortable with embedded systems programming and want to squeeze every bit of performance from the Axon NPU, this is the right path for you.
-While this approach requires more technical expertise than using higher-level frameworks like |EAILib|, it offers the flexibility and control needed for advanced applications.
+To follow this guide, you should be familiar with embedded systems development and C‑based APIs.
+Compared to higher‑level frameworks such as |EAILib|, using the driver API requires more manual setup but enables finer control over performance and resource utilization.
 
-By the end of this guide, you'll have compiled a TensorFlow Lite model for Axon NPU and deployed a custom AI application using the driver API!
+After completing this guide, you will have compiled a TensorFlow Lite model for the Axon NPU and deployed a custom application that performs inference using the Axon driver API.
 
 Model compilation
 *****************
@@ -36,7 +35,7 @@ Compile your model
 ==================
 
 The Axon compiler analyzes your model's operations, maps them to hardware accelerators, and generates efficient code for the NPU.
-Whether you're using a pre-trained model or one you've trained yourself, you'll need to run it through this compilation process.
+Whether you're using a pre-trained model or one you have trained yourself, you will need to run it through this compilation process.
 
 Follow the :ref:`axon_npu_tflite_compiler_setup_executor` instructions to transform your TFLite model into an Axon-optimized model.
 
@@ -48,13 +47,13 @@ Verify compilation
 Test your compiled model to ensure it works correctly before integrating it into your application.
 
 Run :ref:`test_nn_inference` to confirm your compiled model produces correct results.
-This validation step helps catch compilation issues early in the development process.
+This validation step checks for compilation issues early in the development process.
 
 Application development
 ***********************
 
-Now that you have a compiled model, it's time to integrate it into your embedded application.
-You'll use the Axon driver API to load your model, manage memory, and execute inference directly on the NPU hardware.
+Once you have a compiled model, you must integrate it into your embedded application.
+Use the Axon driver API to load your model, manage memory, and execute inference directly on the NPU hardware.
 
 .. rst-class:: numbered-step
 
@@ -62,7 +61,8 @@ Get compatible hardware
 =======================
 
 The Axon driver requires direct access to NPU hardware.
-Obtain a development board with `Axon NPU`_ - the NPU is only available on select Nordic devices, so verify compatibility before starting.
+Obtain a development board with `Axon NPU`_.
+Keep in mind the NPU is only available on select Nordic devices, so verify compatibility before starting.
 
 .. rst-class:: numbered-step
 
@@ -70,7 +70,6 @@ Set up the Axon driver
 =======================
 
 Install the Axon runtime library and driver components on your development system.
-
 Follow the :ref:`Axon driver setup <setup_axon>` instructions to prepare your environment for building and deploying Axon applications.
 
 .. rst-class:: numbered-step
@@ -79,10 +78,9 @@ Verify your setup
 =================
 
 Before developing your own application, verify that everything is working correctly.
-
 Run the :ref:`sample_hello_axon` sample application to confirm the driver can communicate with the NPU hardware.
 
-.. tip::
+.. note::
    Successfully running this sample means your development environment is ready.
    Any issues at this stage are typically related to hardware setup or driver installation.
 
@@ -91,8 +89,11 @@ Run the :ref:`sample_hello_axon` sample application to confirm the driver can co
 Develop your application
 ========================
 
-With your environment set up and model compiled, you're ready to build your Axon-powered application!
-The Axon driver API provides direct control over model loading, memory management, and inference execution.
+With your environment set up and model compiled, you can start building your Axon application.
+Use the Axon driver API to load your compiled model, manage memory buffers, and execute inference.
+
+.. tip::
+   Start by modifying the :ref:`sample_hello_axon` sample to understand the basic API flow before building your custom application from scratch.
 
 Follow the :ref:`ug_axon_integration` guide for detailed instructions on:
 
@@ -101,20 +102,14 @@ Follow the :ref:`ug_axon_integration` guide for detailed instructions on:
 * Executing inference and handling results
 * Integrating the model into your application
 
-.. tip::
-   Start by modifying the :ref:`sample_hello_axon` sample to understand the basic API flow before building your custom application from scratch.
-   This incremental approach helps you identify issues early.
-
 .. rst-class:: numbered-step
 
 Deploy and optimize
 ===================
 
-Build your application, flash it to your Nordic device, and see your model running on the Axon NPU!
+Build your application and flash it to your Nordic device.
 
 .. include:: /includes/build_and_run_general.txt
 
 Monitor performance metrics like inference time and power consumption to ensure your application meets requirements.
 The direct driver access gives you the control needed to fine-tune performance for demanding embedded AI applications.
-
-Congratulations! You're now developing high-performance AI applications with direct Axon NPU access.
