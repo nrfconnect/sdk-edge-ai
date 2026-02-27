@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
@@ -20,7 +21,7 @@ extern "C" {
 #endif
 
 /** Neuton model meta information */
-typedef struct nrf_nn_neuton_meta_s
+typedef struct nrf_nn_neuton_model_meta_s
 {
     const uint16_t* p_neuron_internal_links_num; /**< Number of internal links for each neuron */
     const uint16_t* p_neuron_external_links_num; /**< Number of external links for each neuron */
@@ -30,33 +31,55 @@ typedef struct nrf_nn_neuton_meta_s
     const uint16_t  outputs_num;                 /**< Number of model outputs */
     const uint16_t  neurons_num;                 /**< Number of neurons in the model */
     const uint32_t  weights_num;                 /**< Number of weights in the model */
-} nrf_nn_neuton_meta_t;
+} nrf_nn_neuton_model_meta_t;
+
+/** Neuton parameters for 8-bit quantized model */
+typedef struct nrf_nn_neuton_model_params_q8_s
+{
+    const int8_t*  p_weights;     /**< Pointer to weights array */
+    const uint8_t* p_act_weights; /**< Pointer to activation function weights */
+    uint8_t*       p_neurons;     /**< Pointer to neurons buffer */
+} nrf_nn_neuton_model_params_q8_t;
+
+/**
+ * @brief Neuton parameters for 16-bit quantized model
+ */
+typedef struct nrf_nn_neuton_model_params_q16_s
+{
+    const int16_t*  p_weights;     /**< Pointer to weights array */
+    const uint16_t* p_act_weights; /**< Pointer to activation function weights */
+    uint16_t*       p_neurons;     /**< Pointer to neurons buffer */
+} nrf_nn_neuton_model_params_q16_t;
+
+/**
+ * @brief Neuton parameters for 32-bit floating-point model
+ */
+typedef struct nrf_nn_neuton_model_params_f32_s
+{
+    const flt32_t* p_weights;     /**< Pointer to weights array */
+    const flt32_t* p_act_weights; /**< Pointer to activation function weights */
+    flt32_t*       p_neurons;     /**< Pointer to neurons buffer */
+} nrf_nn_neuton_model_params_f32_t;
 
 /** Neuton model structure for 8-bit quantized model */
 typedef struct nrf_nn_neuton_model_q8_s
 {
-    nrf_nn_neuton_meta_t meta;          /**< Model meta information */
-    const int8_t*        p_weights;     /**< Pointer to weights array */
-    const uint8_t*       p_act_weights; /**< Pointer to activation function weights */
-    uint8_t*             p_neurons;     /**< Pointer to neurons buffer */
+    nrf_nn_neuton_model_meta_t      meta;   /**< Model meta information */
+    nrf_nn_neuton_model_params_q8_t params; /**< Model parameters */
 } nrf_nn_neuton_model_q8_t;
 
 /** Neuton model structure for 16-bit quantized model */
 typedef struct nrf_nn_neuton_model_q16_s
 {
-    nrf_nn_neuton_meta_t meta;          /**< Model meta information */
-    const int16_t*       p_weights;     /**< Pointer to weights array */
-    const uint16_t*      p_act_weights; /**< Pointer to activation function weights */
-    uint16_t*            p_neurons;     /**< Pointer to neurons buffer */
+    nrf_nn_neuton_model_meta_t       meta;   /**< Model meta information */
+    nrf_nn_neuton_model_params_q16_t params; /**< Model parameters */
 } nrf_nn_neuton_model_q16_t;
 
 /** Neuton model structure for 32-bit floating point model */
 typedef struct nrf_nn_neuton_model_f32_s
 {
-    nrf_nn_neuton_meta_t meta;          /**< Model meta information */
-    const flt32_t*       p_weights;     /**< Pointer to weights array */
-    const flt32_t*       p_act_weights; /**< Pointer to activation function weights */
-    flt32_t*             p_neurons;     /**< Pointer to neurons buffer */
+    nrf_nn_neuton_model_meta_t       meta;   /**< Model meta information */
+    nrf_nn_neuton_model_params_f32_t params; /**< Model parameters */
 } nrf_nn_neuton_model_f32_t;
 
 /** @brief Run inference for 8-bit quantized Neuton model, results of inferece are stored in p_model->p_neurons

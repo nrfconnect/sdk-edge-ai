@@ -33,6 +33,7 @@ tests:
       type: multi_line
       ordered: true
       regex:
+        - "nRF Edge AI runtime version: 2.2.0"
         - "--- Testing IDLE state \\(parcel at rest\\) ---"
         - "In 7 classes, predicted 0 with probability"
         - "Expected class IDLE - predicted Idle"

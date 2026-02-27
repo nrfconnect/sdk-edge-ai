@@ -33,6 +33,7 @@ tests:
       type: multi_line
       ordered: true
       regex:
+        - "nRF Edge AI runtime version: 2.2.0"
         - "--- Testing GOOD gear vibration data ---"
         - "Expected: Low anomaly score \\(normal vibration pattern\\)"
         - "Anomaly score for GOOD gear data:"

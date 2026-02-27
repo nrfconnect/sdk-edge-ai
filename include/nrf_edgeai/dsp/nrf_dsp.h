@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
  * @defgroup nrf_dsp Nordic Semiconductor Digital Signal Processing SDK
  * @{
- * @ingroup nrf_dsp
  *
  *
  */
@@ -18,6 +18,7 @@
 #include "nrf_dsp_transform.h"
 #include "nrf_dsp_spectral.h"
 #include "nrf_dsp_fast_math.h"
+#include "nrf_dsp_utils.h"
 
 #endif /* _NRF_DSP_H_ */
 

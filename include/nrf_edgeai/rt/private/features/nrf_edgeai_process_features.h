@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #ifndef _NRF_EDGEAI_PRIVATE_INTERFACES_PROCESS_FEATURES_H_
 #define _NRF_EDGEAI_PRIVATE_INTERFACES_PROCESS_FEATURES_H_
@@ -20,9 +21,9 @@ extern "C" {
  * nrf_edgeai_err_t nrf_edgeai_process_features_<mode>_<input_type>_<output_type>(nrf_edgeai_t* p_edgeai);
  * @endcode
  * where:
- *   - <mode>        : scale_vector, scale_window, or dsp
- *   - <input_type>  : i8, i16, or f32 (input data type)
- *   - <output_type> : q8, q16, or f32 (output/target data type)
+ *   - \<mode\>        : scale_vector, scale_window, or dsp
+ *   - \<input_type\>  : i8, i16, or f32 (input data type)
+ *   - \<output_type\> : q8, q16, or f32 (output/target data type)
  */
 #define NRF_EDGEAI_DECLARE_PROCESS_FEATURES_INTERFACE(interface_name) \
     nrf_edgeai_err_t nrf_edgeai_process_features_##interface_name(    \
@@ -97,6 +98,8 @@ NRF_EDGEAI_DECLARE_PROCESS_FEATURES_INTERFACE(dsp_i16_f32);
 NRF_EDGEAI_DECLARE_PROCESS_FEATURES_INTERFACE(dsp_f32_q8);
 NRF_EDGEAI_DECLARE_PROCESS_FEATURES_INTERFACE(dsp_f32_q16);
 NRF_EDGEAI_DECLARE_PROCESS_FEATURES_INTERFACE(dsp_f32_f32);
+NRF_EDGEAI_DECLARE_PROCESS_FEATURES_INTERFACE(dsp_i16_noscale);
+NRF_EDGEAI_DECLARE_PROCESS_FEATURES_INTERFACE(dsp_f32_noscale);
 
 #ifdef __cplusplus
 }

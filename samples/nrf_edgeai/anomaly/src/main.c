@@ -325,6 +325,10 @@ int main(void)
 
 	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
 
+	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
+	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
+		v.field.patch);
+
 	flt32_t anomaly_score;
 	const size_t DATA_LEN = USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM;
 

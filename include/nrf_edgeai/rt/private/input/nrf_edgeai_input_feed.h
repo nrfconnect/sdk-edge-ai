@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #ifndef _NRF_EDGEAI_PRIVATE_INTERFACES_INPUT_FEED_H_
 #define _NRF_EDGEAI_PRIVATE_INTERFACES_INPUT_FEED_H_
@@ -21,7 +22,7 @@ extern "C" {
  *                                             void*              p_input_values,
  *                                             uint16_t       num_values);
  * @endcode
- * where <mode> specifies the windowing/data type strategy.
+ * where \<mode\> specifies the windowing/data type strategy.
  */
 #define NRF_EDGEAI_DECLARE_INPUT_FEED_INTERFACE(interface_name)                                 \
     nrf_edgeai_err_t nrf_edgeai_input_feed_##interface_name(nrf_edgeai_input_t* p_input_ctx,    \

@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
@@ -64,7 +65,7 @@ void nrf_dsp_rfft_init_i16(nrf_dsp_rfft_i16_t* p_rfft,
  *          speed advantage over complex algorithms of the same length.
  *          This function can compute results "in-place" of input buffer
  *
- * @param[in]   p_rfft      Pointer to instance of real FFT structure @ref nrf_dsp_rfft_fast_i16_t
+ * @param[in]   p_rfft      Pointer to instance of real FFT structure @ref nrf_dsp_rfft_i16_t
  * @param[in]   p_input     Pointer to buffer with input samples, the complex FFT computes in-place and will modify input buffer with FFT results.
  * @param[out]  p_output    Pointer to the output buffer, can be the same as p_input.
  *                          The results will be written to output array in the interleaved fashion:
@@ -78,7 +79,7 @@ void nrf_dsp_rfft_i16(const nrf_dsp_rfft_i16_t* p_rfft, int16_t* p_input, int16_
  *          speed advantage over complex algorithms of the same length.
  *          This function can compute results "in-place" of input buffer
  *
- * @param[in]   p_rfft      Pointer to instance of real FFT structure @ref nrf_dsp_rfft_fast_i16_t
+ * @param[in]   p_rfft      Pointer to instance of real FFT structure @ref nrf_dsp_rfft_i16_t
  * @param[in]   p_input     Pointer to buffer with input samples, the complex FFT computes in-place and will modify input buffer with FFT results.
  * @param[out]  p_output    Pointer to the output buffer, can be the same as p_input.
  *                          The results will be written to output array in the interleaved fashion:

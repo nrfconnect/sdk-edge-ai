@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
- * @defgroup nrf_dsp_spectral_centroid Spectral Spread
+ * @defgroup nrf_dsp_spectral_spread Spectral Spread
  * @{
  * @ingroup nrf_dsp_spectral
  *

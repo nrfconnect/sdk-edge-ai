@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
- * @defgroup nrf_dsp_statistic_psot Percentage of signal over zero
+ * @defgroup nrf_dsp_statistic_psoz Percentage of signal over zero
  * @{
  * @ingroup nrf_dsp_statistic
  *

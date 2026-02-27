@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
@@ -49,7 +50,7 @@ typedef struct nrf_dsp_window_sliding_s
     /** Window buffer size in samples */
     uint16_t window_size;
 
-    /** Window hop in samples. Must be less or equal @window_size*/
+    /** Window hop in samples. Must be less or equal window_size */
     uint16_t window_hop;
 
     /** Pointer to user context. Can be accessed in callback function */
@@ -63,7 +64,7 @@ typedef struct nrf_dsp_window_sliding_s
  * @param[in]   p_window      Pointer to window buffer
  * @param[in]   window_size   Window buffer size in samples
  * @param[in]   sample_size   Sample size in bytes 
- * @param[in]   window_hop    Window hop in samples. Must be less or equal @window_size
+ * @param[in]   window_hop    Window hop in samples. Must be less or equal @p window_size
  * @param[in]   cb            On window ready user callback
  * @param[in]   p_user_ctx    Pointer to user context
  *  

@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
@@ -34,7 +35,7 @@
 #ifdef NRF_DSP_ENABLE_RUNTIME_CHECKS
 #define NRF_DSP_RETURN_IF(is_true, ret_val) RETURN_IF(is_true, ret_val)
 #else
-#define NRF_DSP_RETURN_IF(...) ;
+#define NRF_DSP_RETURN_IF(is_true, ret_val) ;
 #endif  // NRF_DSP_ENABLE_RUNTIME_CHECKS
 
 /**

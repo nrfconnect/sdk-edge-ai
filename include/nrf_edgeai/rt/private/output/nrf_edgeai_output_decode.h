@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #ifndef _NRF_EDGEAI_PRIVATE_INTERFACES_OUTPUT_DECODE_H_
 #define _NRF_EDGEAI_PRIVATE_INTERFACES_OUTPUT_DECODE_H_
@@ -12,13 +13,13 @@ extern "C" {
 #endif
 
 /**
- * @brief Decode neural network outputs for classification tasks.
+ * @brief Decode model outputs for classification tasks.
  *
  * These functions process the raw model outputs for classification tasks, converting them into
  * predicted class indices and class probabilities. The decoding is performed according to the
  * output data type (f32, q8, or q16).
  *
- * @param[in] p_model_output      Pointer to model output structure @ref nrf_edgeai_model_t
+ * @param[in] p_model_output      Pointer to model output structure @ref nrf_edgeai_model_output_t
  * @param[out] p_decoded_output   Pointer to decoded output structure @ref nrf_edgeai_decoded_output_t
  *
  * @note
@@ -34,12 +35,12 @@ void nrf_edgeai_output_decode_classification_q16(nrf_edgeai_model_output_t*   p_
                                                  nrf_edgeai_decoded_output_t* p_decoded_output);
 
 /**
- * @brief Decode neural network outputs for regression tasks.
+ * @brief Decode model outputs for regression tasks.
  *
  * This function processes the raw model outputs for regression tasks, converting them into
  * final regression values.
  *
- * @param[in] p_model_output      Pointer to model output structure @ref nrf_edgeai_model_t
+ * @param[in] p_model_output      Pointer to model output structure @ref nrf_edgeai_model_neuton_t
  * @param[out] p_decoded_output   Pointer to decoded output structure @ref nrf_edgeai_decoded_output_t
  *
  * @note
@@ -49,12 +50,12 @@ void nrf_edgeai_output_decode_regression_f32(nrf_edgeai_model_output_t*   p_mode
                                              nrf_edgeai_decoded_output_t* p_decoded_output);
 
 /**
- * @brief Decode neural network outputs for anomaly detection tasks.
+ * @brief Decode model outputs for anomaly detection tasks.
  *
  * This function processes the raw model outputs for anomaly detection tasks, converting them into
  * final anomaly score value.
  *
- * @param[in] p_model_output      Pointer to model output structure @ref nrf_edgeai_model_t
+ * @param[in] p_model_output      Pointer to model output structure @ref nrf_edgeai_model_neuton_t
  * @param[out] p_decoded_output   Pointer to decoded output structure @ref nrf_edgeai_decoded_output_t
  *
  * @note

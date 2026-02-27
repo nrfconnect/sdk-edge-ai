@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
- * @defgroup nrf_dsp_spectral_thd Frequencies Signal-to-Noise ratio
+ * @defgroup nrf_dsp_freq_snr Frequencies Signal-to-Noise ratio
  * @{
  * @ingroup nrf_dsp_spectral
  *

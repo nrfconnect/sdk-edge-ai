@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 /**
  *
  * @defgroup nrf_edgeai Nordic Semiconductor Edge AI SDK
  * @{
- * @ingroup nrf_edgeai
  *
  *
  */

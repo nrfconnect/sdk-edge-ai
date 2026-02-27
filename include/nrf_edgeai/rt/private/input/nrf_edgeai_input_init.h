@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-#ifndef _NRF_EDGEAI_PRIVATE_INTERFACES_INPUT_SETUP_H_
-#define _NRF_EDGEAI_PRIVATE_INTERFACES_INPUT_SETUP_H_
+#ifndef _NRF_EDGEAI_PRIVATE_INTERFACES_INPUT_INIT_H_
+#define _NRF_EDGEAI_PRIVATE_INTERFACES_INPUT_INIT_H_
 
 #include <nrf_edgeai/rt/nrf_edgeai_input_types.h>
 
@@ -19,9 +20,9 @@ extern "C" {
  *
  * @param[in,out] p_input_ctx Pointer to the input context structure (@ref nrf_edgeai_input_t).
  * 
- * @return NRF Edge AI operation status code @ref nrf_edgeai_err_t
+ * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
-nrf_edgeai_err_t nrf_edgeai_input_setup_no_window(nrf_edgeai_input_t* p_input_ctx);
+nrf_edgeai_err_t nrf_edgeai_input_init_no_window(nrf_edgeai_input_t* p_input_ctx);
 
 /**
  * @brief Setup input context for discrete windowing.
@@ -30,9 +31,9 @@ nrf_edgeai_err_t nrf_edgeai_input_setup_no_window(nrf_edgeai_input_t* p_input_ct
  *
  * @param[in,out] p_input_ctx Pointer to the input context structure (@ref nrf_edgeai_input_t).
  * 
- * @return NRF Edge AI operation status code @ref nrf_edgeai_err_t
+ * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
-nrf_edgeai_err_t nrf_edgeai_input_setup_discrete_window(nrf_edgeai_input_t* p_input_ctx);
+nrf_edgeai_err_t nrf_edgeai_input_init_discrete_window(nrf_edgeai_input_t* p_input_ctx);
 
 /**
  * @brief Setup input context for sliding windowing.
@@ -41,12 +42,12 @@ nrf_edgeai_err_t nrf_edgeai_input_setup_discrete_window(nrf_edgeai_input_t* p_in
  *
  * @param[in,out] p_input_ctx Pointer to the input context structure (@ref nrf_edgeai_input_t).
  * 
- * @return NRF Edge AI operation status code @ref nrf_edgeai_err_t
+ * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
-nrf_edgeai_err_t nrf_edgeai_input_setup_sliding_window(nrf_edgeai_input_t* p_input_ctx);
+nrf_edgeai_err_t nrf_edgeai_input_init_sliding_window(nrf_edgeai_input_t* p_input_ctx);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _NRF_EDGEAI_PRIVATE_INTERFACES_INPUT_SETUP_H_ */
+#endif /* _NRF_EDGEAI_PRIVATE_INTERFACES_INPUT_INIT_H_ */
