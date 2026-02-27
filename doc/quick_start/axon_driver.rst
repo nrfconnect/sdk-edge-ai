@@ -111,5 +111,5 @@ Build your application and flash it to your Nordic device.
 
 .. include:: /includes/build_and_run_general.txt
 
-Monitor performance metrics like inference time and power consumption to ensure your application meets requirements.
+Monitor performance metrics like inference time and current consumption to ensure your application meets requirements.
 The direct driver access gives you the control needed to fine-tune performance for demanding embedded AI applications.

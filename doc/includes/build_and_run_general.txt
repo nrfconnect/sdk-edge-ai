@@ -1,0 +1,2 @@
+To build an application, follow the instructions in `Building an application`_ for your preferred building environment.
+See also `Programming`_ for programming steps and `Testing and optimization`_ for general information about testing and debugging in the |NCS|.

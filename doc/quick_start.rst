@@ -24,7 +24,7 @@ These workflows rely on integrated toolchains and APIs to reduce setup effort:
 
 * :ref:`quick_start_nrf_edgeai` - Use it to train models with Nordic Edge AI Lab and deploy them with a unified API.
   It supports both CPU execution (Neuton) and NPU acceleration (Axon) on compatible devices.
-  Use it for easy setup, standardized workflow, and the best Nordic Semiconductordevice compatibility.
+  Use it for easy setup, standardized workflow, and the best Nordic Semiconductor device compatibility.
 * :ref:`quick_start_edge_impulse` - Use the Edge Impulse platform for an end-to-end machine learning solution.
   It includes visual development tools, extensive documentation, and community support.
   Use this option if you already work with Edge Impulse or require its tooling ecosystem.
@@ -45,7 +45,7 @@ These workflows require more manual configuration but allow finer control over p
 * :ref:`quick_start_axon_driver` - Work directly with the Axon NPU driver API for maximum control, performance and low energy consumption.
   Compile TensorFlow Lite models and implement custom inference pipelines.
   Use this option for advanced optimization and direct NPU control.
-* :ref:`quick_start_axon_edge_impulse` -  Combine Edge Impulse's user-friendly platform with Axon NPU hardware acceleration.
+* :ref:`quick_start_axon_edge_impulse` - Combine Edge Impulse's user-friendly platform with Axon NPU hardware acceleration.
   Use Edge Impulse SDK while benefiting from NPU performance on compatible devices.
   Use this option if you want to keep the Edge Impulse workflow while targeting Axon hardware.
 
