@@ -1,7 +1,7 @@
 .. _axon_compiler:
 
-Axon compiler
-#############
+Axon NPU compiler
+#################
 
 The following pages describes the :ref:`TinyML sample models <axon_compiler_tiny_models>` provided with the :ref:`Axon TFLite compiler <axon_npu_tflite_compiler>`.
 They cover instructions on how the compiler is used to compile and run machine learning models on the Axon NPU. 
@@ -11,5 +11,7 @@ Each model includes an overview and a dedicated subpage with model‑specific de
 .. toctree::
    :maxdepth: 2
 
+   /axon_compiler/supported_operators.rst
    /axon_compiler/Axon_npu_tflite_compiler.rst
    /axon_compiler/mlperf_tiny_models.rst
+   /axon_compiler/axon_npu_changelog

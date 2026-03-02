@@ -8,6 +8,7 @@ Axon NPU TFLITE compiler
    :depth: 2
 
 The following guide provides an overview of the Axon NPU TFLite compiler, including how it works, its input parameters, and instructions for setting up and running the compiler.
+See the :ref:`glossary` for definitions of key terms used in this documentation.
 
 Overview
 ********

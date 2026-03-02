@@ -25,7 +25,7 @@ You can easily replace the bundled wakeword with a custom one using the Text to 
 
 .. note::
    The current implementation in this application performs wakeword detection.
-   A separate keyword classification stage is will be added soon.
+   A separate keyword classification stage will be added in future releases.
 
 Requirements
 ************
