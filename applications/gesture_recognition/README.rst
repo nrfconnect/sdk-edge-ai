@@ -59,9 +59,10 @@ Development kits
       .. figure:: images/nordic_thingy.jpg
          :alt: Nordic Thingy:53 kit
 
-   .. tab:: nRF54LM20A
+   .. tab:: nRF54LM20 DK
 
-      The `nRF54LM20A`_ development kit requires a sensor evaluation board:
+      The `nRF54LM20 DK`_ development kit has two variants with different SoCs: nRF54LM20A and nRF54LM20B.
+      Both variants require a sensor evaluation board:
 
       .. list-table::
          :header-rows: 0
@@ -72,10 +73,10 @@ Development kits
            - .. figure:: images/sensor_EB_bottom.jpeg
                 :alt: Sensor Evaluation Board bottom view
 
-      The Sensor Evaluation Board is connected to the DK through the **EXP** port on the nRF54LM20A board:
+      The Sensor Evaluation Board is connected to the DK through the **EXP** port on the nRF54LM20 DK board:
 
-      .. figure:: images/nrf54lm20a_EB.jpeg
-         :alt: nRF54LM20A sensor EXP port
+      .. figure:: images/nrf54lm20_EB.jpeg
+         :alt: nRF54LM20 DK sensor EXP port
 
    .. tab:: nRF54L15 TAG
 
@@ -141,20 +142,20 @@ The following table explains the LED indications for control modes and Bluetooth
        .. figure:: images/device-led-ble-connect-music-mode_thingy.gif
           :alt: Thingy53 LED green, music mode
 
-   * - nRF54LM20A
+   * - nRF54LM20 DK
      - Press the **BUTTON 0** to switch between Presentation Control and Music Control modes.
      - * **LED0** glows.
 
        .. figure:: images/device-led-no-ble-connect_nrf54lm20.gif
-          :alt: nRF54LM20A LED0, no BLE connection
+          :alt: nRF54LM20 DK LED0, no BLE connection
      - * **LED2** glows.
 
        .. figure:: images/device-led-ble-connect-presentation-mode_nrf54lm20.gif
-          :alt: nRF54LM20A LED2, presentation mode
+          :alt: nRF54LM20 DK LED2, presentation mode
      - * **LED1** glows.
 
        .. figure:: images/device-led-ble-connect-music-mode_nrf54lm20.gif
-          :alt: nRF54LM20A LED1, music mode
+          :alt: nRF54LM20 DK LED1, music mode
 
    * - nRF54L15 TAG
      - Press the **BTN1** to switch between Presentation Control and Music Control modes.
@@ -331,10 +332,10 @@ Make sure the default (initial) position of the device matches the following:
       .. figure:: images/initial_orientation_thingy.gif
          :alt: Initial orientation (Thingy53)
 
-   .. group-tab:: nRF54LM20A
+   .. group-tab:: nRF54LM20 DK
 
       .. figure:: images/initial_orientation_54lm20.gif
-         :alt: Initial orientation (nRF54LM20A)
+         :alt: Initial orientation (nRF54LM20 DK)
 
    .. group-tab:: nRF54L15 TAG
 
@@ -380,7 +381,7 @@ Keep in mind the device orientation, as it is important for the recognition to w
            - .. figure:: images/double_tap_thingy.gif
                 :alt: Double tap
 
-   .. group-tab:: nRF54LM20A
+   .. group-tab:: nRF54LM20 DK
 
       .. list-table:: Swipe right and left
          :header-rows: 1

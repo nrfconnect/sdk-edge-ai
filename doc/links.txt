@@ -11,7 +11,7 @@
 .. _`nRF54 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
 .. _`training dataset`: https://files.nordicsemi.com/ui/native/edge-ai/external/
 .. _`Nordic Thingy:53 Multi-protocol IoT prototyping platform`: https://www.nordicsemi.com/Products/Development-hardware/Nordic-Thingy-53
-.. _`nRF54LM20A`: https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK/Hardware-files
+.. _`nRF54LM20 DK`: https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK/Hardware-files
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/signal_processing.html
 .. _`Nordic Edge AI Lab platform`: https://ai.lab.nordicsemi.com/
