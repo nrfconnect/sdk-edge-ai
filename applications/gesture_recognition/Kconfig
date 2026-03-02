@@ -18,6 +18,28 @@ config LED_NOTIFICATION_BLINK
 config DATA_COLLECTION_MODE
 	bool "Enable Data Collection Mode (no inference run)"
 
+choice NRF_EDGEAI_GESTURE_RECOGNITION_MODEL
+	prompt "Edge AI model backend"
+	default NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON if SOC_NRF54LM20B
+	default NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_NEUTON
+	help
+	  Select which model implementation to use. Axon (NPU) is only available
+	  on nRF54L20 (nrf54lm20b). Other boards use Neuton (CPU).
+
+config NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_NEUTON
+	bool "Neuton (CPU)"
+	help
+	  Use the Neuton model. Works on all supported boards.
+
+config NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON
+	bool "Axon (NPU)"
+	depends on SOC_NRF54LM20B
+	select NRF_AXON
+	help
+	  Use the Axon model. Only available on Axon-enabled devices.
+
+endchoice
+
 choice BLE_MODE
 	prompt "BLE mode"
 	default BLE_MODE_HID if !DATA_COLLECTION_MODE

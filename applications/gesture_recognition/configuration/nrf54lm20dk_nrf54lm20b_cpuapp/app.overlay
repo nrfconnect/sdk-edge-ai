@@ -126,3 +126,7 @@
 		spi-max-frequency = <DT_FREQ_M(8)>;
 	};
 };
+
+&axon {
+	status = "okay";
+};

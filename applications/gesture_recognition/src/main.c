@@ -79,8 +79,12 @@ typedef enum app_remotectrl_mode_e {
 
 typedef int (*led_set_func_t)(float brightness);
 
-static void send_imu_data(int16_t *input_data);
+#if IS_ENABLED(CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON)
+static void execute_inference(flt32_t *input_data);
+#else
 static void execute_inference(int16_t *input_data);
+#endif
+static void send_imu_data(int16_t *input_data);
 static void hw_modules_init(void);
 #if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
 static void led_blink_set_active_led(void);
@@ -131,7 +135,10 @@ int main(void)
 		nrf_edgeai_solution_id_str(p_model));
 
 	imu_data_t imu_data = {0};
-	int16_t input_data[NRF_EDGEAI_INPUT_DATA_LEN];
+
+	flt32_t input_data_f32[NRF_EDGEAI_INPUT_DATA_LEN];
+	int16_t input_data_i16[NRF_EDGEAI_INPUT_DATA_LEN];
+
 
 	for (;;) {
 		/* Wait for the semaphore to be released by IMU data ready interrupt */
@@ -141,17 +148,28 @@ int main(void)
 			continue;
 		}
 
-		input_data[0] = imu_data.accel[0].raw;
-		input_data[1] = imu_data.accel[1].raw;
-		input_data[2] = imu_data.accel[2].raw;
-		input_data[3] = imu_data.gyro[0].raw;
-		input_data[4] = imu_data.gyro[1].raw;
-		input_data[5] = imu_data.gyro[2].raw;
+		input_data_f32[0] = (flt32_t)(imu_data.accel[0].phys * 1000);
+		input_data_f32[1] = (flt32_t)(imu_data.accel[1].phys * 1000);
+		input_data_f32[2] = (flt32_t)(imu_data.accel[2].phys * 1000);
+		input_data_f32[3] = (flt32_t)(imu_data.gyro[0].phys * 1000);
+		input_data_f32[4] = (flt32_t)(imu_data.gyro[1].phys * 1000);
+		input_data_f32[5] = (flt32_t)(imu_data.gyro[2].phys * 1000);
+
+		input_data_i16[0] = imu_data.accel[0].raw;
+		input_data_i16[1] = imu_data.accel[1].raw;
+		input_data_i16[2] = imu_data.accel[2].raw;
+		input_data_i16[3] = imu_data.gyro[0].raw;
+		input_data_i16[4] = imu_data.gyro[1].raw;
+		input_data_i16[5] = imu_data.gyro[2].raw;
 
 		if (IS_ENABLED(CONFIG_DATA_COLLECTION_MODE)) {
-			send_imu_data(input_data);
+			send_imu_data(input_data_i16);
 		} else {
-			execute_inference(input_data);
+#if IS_ENABLED(CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON)
+			execute_inference(input_data_f32);
+#else
+			execute_inference(input_data_i16);
+#endif
 		}
 	}
 
@@ -394,11 +412,15 @@ static void ble_send_recognized_class(const class_label_t class_label, size_t pr
 }
 #endif
 
+#if IS_ENABLED(CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON)
+static void execute_inference(flt32_t *input_data)
+#else
 static void execute_inference(int16_t *input_data)
+#endif
 {
 	nrf_edgeai_err_t res;
 
-	res = nrf_edgeai_feed_inputs(p_model, input_data, NRF_EDGEAI_INPUT_DATA_LEN);
+	res = nrf_edgeai_feed_inputs(p_model, (void *)input_data, NRF_EDGEAI_INPUT_DATA_LEN);
 
 	if (res == NRF_EDGEAI_ERR_SUCCESS) {
 		res = nrf_edgeai_run_inference(p_model);

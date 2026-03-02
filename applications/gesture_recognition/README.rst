@@ -12,11 +12,12 @@ This application demonstrates a gesture-based remote control device using Nordic
 Application overview
 ********************
 
-.. note::
-
-   Currently, the gesture recognition application supports only Neuton CPU-based neural network models.
-
 The gesture recognition application demonstrates how to use an nRF Edge AI model to recognize hand gestures from motion sensor data and expose them as standard HID inputs over Bluetooth® Low Energy.
+There are two variants of the application that differ in where the model is executed:
+
+* The Neuton variant, which uses a CPU-based model, also called the Neuton model.
+* The Axon variant, which uses an NPU-based model, also called the Axon model.
+
 When connected to a PC, the device appears as a Bluetooth LE HID device, allowing recognized gestures to control media playback or presentation slides.
 Based on accelerometer and gyroscope data, the nRF Edge AI model recognizes eight gesture classes:
 
@@ -178,6 +179,17 @@ Configuration
 *************
 
 |config|
+
+Choosing the model backend
+==========================
+
+The application supports two execution backends:
+
+* `Neuton models`_ - Highly optimized models that run on the CPU.
+* `Axon NPU`_ - Models that run on the Axon NPU (AI accelerator core).
+
+The Neuton model is used by default on all boards that do not have the Axon NPU.
+You can use the Axon model by enabling the ``CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON`` Kconfig option.
 
 Build types
 ===========

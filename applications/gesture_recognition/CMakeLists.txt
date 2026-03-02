@@ -12,17 +12,26 @@ set(APPLICATION_CONFIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/configuration/\${NORMALI
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(gesture_recognition)
 
-# Check if platform-specific neural network model file exists
-set(NN_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/${BOARD}")
-set(NN_PATH "${NN_SOURCE}/nrf_edgeai_user_model.c")
-if(EXISTS "${NN_PATH}")
-    message(STATUS "Using Edge AI model for board: ${BOARD}")
+set(NN_BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/${BOARD}")
+
+if(CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON)
+  set(NN_SOURCE "${NN_BASE}/Axon")
 else()
-    message(FATAL_ERROR "Edge AI model file not found for board '${BOARD}'.\n"
-        "Expected file: ${NN_PATH}\n"
-        "Please create ${NN_PATH} or use one of the supported boards."
-    )
+  # Neuton: use Neuton subdir only for nrf54lm20dk (has both Axon and Neuton)
+  if(BOARD STREQUAL "nrf54lm20dk")
+    set(NN_SOURCE "${NN_BASE}/Neuton")
+  else()
+    set(NN_SOURCE "${NN_BASE}")
+  endif()
 endif()
+
+set(NN_PATH "${NN_SOURCE}/nrf_edgeai_user_model.c")
+if(NOT EXISTS "${NN_PATH}")
+  message(FATAL_ERROR "Edge AI model file not found for board '${BOARD}' (model dir: ${BOARD_BASE}).\n"
+    "Expected: ${NN_PATH}\n"
+    "Create the model at that path or use a supported board.")
+endif()
+message(STATUS "Using Edge AI model: ${NN_SOURCE}")
 
 target_include_directories(app PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src/hw_modules
