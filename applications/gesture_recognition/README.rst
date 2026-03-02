@@ -179,6 +179,30 @@ Configuration
 
 |config|
 
+Build types
+===========
+
+Each board directory contains per-board configuration files for different build types.
+See `Custom build types`_ and `Providing CMake options`_ for more information.
+The application supports the following build types:
+
+.. list-table:: Gesture Recognition build types
+   :widths: auto
+   :header-rows: 1
+
+   * - Build type
+     - File name
+     - Description
+   * - Debug (default)
+     - :file:`prj.conf`
+     - Debug version of the application with logging and assertions enabled.
+   * - Release
+     - :file:`prj_release.conf`
+     - Release version of the application with logging disabled, compiler optimizations, and reduced LED activity for lower power consumption.
+   * - Release without Bluetooth LE
+     - :file:`prj_release_no_ble.conf`
+     - Release version of the application without Bluetooth LE, but with serial logging enabled for diagnostics.
+
 Choosing Bluetooth LE mode
 ==========================
 

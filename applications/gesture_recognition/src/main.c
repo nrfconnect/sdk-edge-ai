@@ -36,9 +36,16 @@
 
 #define NRF_EDGEAI_INPUT_DATA_LEN (ACCEL_AXIS_NUM + GYRO_AXIS_NUM)
 
+#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
+#define LED_NOTIFY_BLINK_COUNT (3)
+#define LED_NOTIFY_BLINK_ON_MS (100)
+#define LED_NOTIFY_BLINK_OFF_MS (200)
+#else
 #define BLINK_LED_TIMER_PERIOD_MS (30)
-#define LED_MAX_BRIGHTNESS (0.2f)
 #define LED_BLINK_CHANGE_BRIGHTNESS_STEP (0.005f)
+#endif
+
+#define LED_MAX_BRIGHTNESS (0.2f)
 
 LOG_MODULE_REGISTER(main);
 
@@ -75,7 +82,11 @@ typedef int (*led_set_func_t)(float brightness);
 static void send_imu_data(int16_t *input_data);
 static void execute_inference(int16_t *input_data);
 static void hw_modules_init(void);
+#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
+static void led_blink_set_active_led(void);
+#else
 static void led_glowing_timer_handler(struct k_timer *timer);
+#endif
 static void handle_inference_result(nrf_edgeai_t *model);
 
 static bool ble_connected;
@@ -84,11 +95,20 @@ static struct k_sem imu_data_ready_sem;
 
 
 /* Work queue items for deferring interrupt context LED operations to thread context */
+#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
+static struct k_work led_notify_work;
+static struct k_work_delayable led_notify_blink_work;
+static int led_notify_remaining;
+#else
 static struct k_work led_update_work;
+#endif
+
 static struct k_work button_work;
 static nrf_edgeai_t *p_model;
 
+#if !IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
 K_TIMER_DEFINE(led_timer, led_glowing_timer_handler, NULL);
+#endif /* !CONFIG_LED_NOTIFICATION_BLINK */
 
 int main(void)
 {
@@ -98,7 +118,7 @@ int main(void)
 	__ASSERT_NO_MSG(p_model != NULL);
 	__ASSERT_NO_MSG(nrf_edgeai_is_runtime_compatible(p_model));
 
-	nrf_edgeai_err_t res = nrf_edgeai_init(p_model);
+	__maybe_unused nrf_edgeai_err_t res = nrf_edgeai_init(p_model);
 
 	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
 
@@ -148,24 +168,18 @@ static void ble_connection_cb(bool connected)
 {
 	ble_connected = connected;
 	led_off();
+#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
+	k_work_submit(&led_notify_work);
+#endif
 }
 #endif
 
-static void led_glowing_timer_handler(struct k_timer *timer)
-{
-	(void)timer;
-	k_work_submit(&led_update_work);
-}
-
-static void led_update_work_handler(struct k_work *work)
+static void led_set_active(float brightness)
 {
 	static const led_set_func_t LED_VS_KEYBOARD_MODE[] = {
 		[APP_REMOTECTRL_MODE_PRESENTATION] = led_set_led2,
 		[APP_REMOTECTRL_MODE_MUSIC] = led_set_led1,
 	};
-
-	static bool rising = true;
-	static float brightness;
 
 	if (ble_connected) {
 		__ASSERT_NO_MSG(keyboard_ctrl_mode < ARRAY_SIZE(LED_VS_KEYBOARD_MODE));
@@ -176,6 +190,70 @@ static void led_update_work_handler(struct k_work *work)
 	} else {
 		led_set_led0(brightness);
 	}
+}
+
+#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
+
+static void led_blink_set_active_led(void)
+{
+	led_set_active(LED_MAX_BRIGHTNESS);
+}
+
+/**
+ * Notification blink state machine.
+ * Total steps = LED_NOTIFY_BLINK_COUNT * 2 (on + off per blink).
+ * Even remaining → turn LED on, schedule off.
+ * Odd remaining  → turn LED off, schedule next on (or stop).
+ */
+static void led_notify_blink_handler(struct k_work *work)
+{
+	if (led_notify_remaining <= 0) {
+		return;
+	}
+
+	if (led_notify_remaining % 2 == 0) {
+		/* LED-on phase */
+		led_blink_set_active_led();
+		led_notify_remaining--;
+		k_work_schedule(&led_notify_blink_work, K_MSEC(LED_NOTIFY_BLINK_ON_MS));
+	} else {
+		/* LED-off phase */
+		led_off();
+		led_notify_remaining--;
+		if (led_notify_remaining > 0) {
+			k_work_schedule(&led_notify_blink_work,
+					K_MSEC(LED_NOTIFY_BLINK_OFF_MS));
+		}
+	}
+}
+
+static void led_notify_start_work_handler(struct k_work *work)
+{
+	/* Cancel any ongoing sequence before starting a new one */
+	k_work_cancel_delayable(&led_notify_blink_work);
+	led_off();
+
+	/* Each blink = on + off step */
+	led_notify_remaining = LED_NOTIFY_BLINK_COUNT * 2;
+
+	/* Kick off immediately */
+	led_notify_blink_handler(NULL);
+}
+
+#else /* !CONFIG_LED_NOTIFICATION_BLINK */
+
+static void led_glowing_timer_handler(struct k_timer *timer)
+{
+	(void)timer;
+	k_work_submit(&led_update_work);
+}
+
+static void led_update_work_handler(struct k_work *work)
+{
+	static bool rising = true;
+	static float brightness;
+
+	led_set_active(brightness);
 
 	if (rising) {
 		brightness += LED_BLINK_CHANGE_BRIGHTNESS_STEP;
@@ -190,10 +268,15 @@ static void led_update_work_handler(struct k_work *work)
 	}
 }
 
+#endif /* CONFIG_LED_NOTIFICATION_BLINK */
+
 static void button_work_handler(struct k_work *work)
 {
 	keyboard_ctrl_mode ^= 1;
 	led_off();
+#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
+	k_work_submit(&led_notify_work);
+#endif
 }
 
 static void button_click_handler(bool pressed)
@@ -207,15 +290,26 @@ static void hw_modules_init(void)
 {
 	int ret;
 
+#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
+	k_work_init(&led_notify_work, led_notify_start_work_handler);
+	k_work_init_delayable(&led_notify_blink_work, led_notify_blink_handler);
+#else
 	k_work_init(&led_update_work, led_update_work_handler);
+#endif
+
 	k_work_init(&button_work, button_work_handler);
 
 	ret = led_init();
 	if (ret != 0) {
 		LOG_ERR("Failed to initialize LEDs module, error = %d", ret);
 	}
+#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
+	/* Blink once at startup to confirm the device is alive */
+	k_work_submit(&led_notify_work);
+#else
 	k_timer_start(&led_timer, K_MSEC(BLINK_LED_TIMER_PERIOD_MS),
-		     K_MSEC(BLINK_LED_TIMER_PERIOD_MS));
+		      K_MSEC(BLINK_LED_TIMER_PERIOD_MS));
+#endif
 
 	ret = button_init();
 	if (ret != 0) {

@@ -6,6 +6,15 @@
 
 source "Kconfig.zephyr"
 
+config LED_NOTIFICATION_BLINK
+	bool "Notification LED blink on event only"
+	help
+	  When enabled, the LED blinks a few times on state changes
+	  (BLE connect/disconnect, mode switch via button) and then stays
+	  off until the next event. This reduces current consumption.
+	  When disabled (default), the status LED smoothly pulses using
+	  PWM brightness changes driven by a periodic timer.
+
 config DATA_COLLECTION_MODE
 	bool "Enable Data Collection Mode (no inference run)"
 
