@@ -3,6 +3,8 @@
 Glossary
 *********
 
+The glossary defines the key terms used throughout the documentation.
+
 command_buffer
 --------------
 

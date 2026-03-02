@@ -229,6 +229,7 @@ Tensor manipulation operators
        | See :ref:`supported_operators_reshape` for details.
      - CPU
      - 1.0.0
+  
 Model design recommendations
 ****************************
 
