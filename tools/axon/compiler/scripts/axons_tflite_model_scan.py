@@ -1,12 +1,9 @@
-""" 
-/*
- * Copyright (c) 2025, Nordic Semiconductor ASA. All Rights Reserved.
- *
- * The information contained herein is confidential property of Nordic Semiconductor ASA.
- * The use, copying, transfer or disclosure of such information is prohibited except by
- * express written agreement with Nordic Semiconductor ASA.
- */
 """
+Copyright (c) 2026 Nordic Semiconductor
+
+SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+"""
+
 from utility import cpu_operator_options as cpu_operator_options
 from utility import operator_options as ops
 # from utility import util

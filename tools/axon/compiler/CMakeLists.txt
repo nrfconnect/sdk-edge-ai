@@ -1,9 +1,7 @@
 #
-# Copyright (c) 2023, Nordic Semiconductor ASA. All Rights Reserved.
+# Copyright (c) 2025 Nordic Semiconductor ASA
 #
-# The information contained herein is confidential property of Nordic Semiconductor ASA.
-# The use, copying, transfer or disclosure of such information is prohibited except by
-# express written agreement with Nordic Semiconductor ASA.
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
 if (${NOT_A_ZEPHYR_BUILD})
@@ -11,11 +9,4 @@ if (${NOT_A_ZEPHYR_BUILD})
     INTERFACE
       include
   )
-
-else()
-
-  zephyr_include_directories(
-    include
-  )
-
 endif()

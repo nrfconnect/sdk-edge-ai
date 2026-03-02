@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Nordic Semiconductor
+
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+
 script_config:
     run_mode : #script configuration for running the script in different modes out of "get_data", "train" and "test" e.g "train"
     

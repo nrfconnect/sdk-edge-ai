@@ -6,6 +6,7 @@
 
 config NRF_AXON
 	bool "Enable Axon Neural Processing Unit"
+	select NRF_SYS_EVENT
 
 config NRF_AXON_INTERLAYER_BUFFER_SIZE
 	int "Axon Interlayer buffer size (in bytes)"
@@ -38,5 +39,5 @@ config NRF_AXON_PSUM_BUFFER_SIZE
 	  partial sum buffer. See the model header file for the size needed.
 
 config NRF_AXON_MODEL_NAME
-	string "Name of the model to use in single model examples"
+	string "Name of the model to use in axon/test/inference."
 	depends on NRF_AXON

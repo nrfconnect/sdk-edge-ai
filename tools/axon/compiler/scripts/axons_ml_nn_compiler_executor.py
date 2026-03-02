@@ -1,34 +1,32 @@
-""" 
-/*
- * Copyright (c) 2024, Nordic Semiconductor ASA. All Rights Reserved.
- *
- * The information contained herein is confidential property of Nordic Semiconductor ASA.
- * The use, copying, transfer or disclosure of such information is prohibited except by
- * express written agreement with Nordic Semiconductor ASA.
- */
 """
-from compile_model_helper import generate_compiler_outputs, run_compiler_library
-from utility import cpu_operator_options as cpu_operator_options
-from utility import operator_options as ops
-from utility import util
-from pathlib import Path
-import compare_models as compare_models
-import tflite_converter as tc
-import tensorflow as tf
-import tflite as tflite
-import ctypes as ctypes
-import datetime as dt
-import numpy as np
-import platform
-import logging
-import time
-import copy
-import sys
+Copyright (c) 2026 Nordic Semiconductor
+
+SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+"""
+
 import gc
+import sys
+import copy
+import time
+import logging
+import platform
+import numpy as np
+import datetime as dt
+import ctypes as ctypes
+import tflite as tflite
+import tensorflow as tf
+import tflite_converter as tc
+import compare_models as compare_models
+from pathlib import Path
+from utility import util
+from utility import operator_options as ops
+from utility import cpu_operator_options as cpu_operator_options
+from compile_model_helper import generate_compiler_outputs, run_compiler_library
 import os
+# Suppress all logs (INFO, WARNING, and ERROR)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-
+os.environ["MLIR_ENABLE_CRASH_REPRODUCER"] = "0"
 
 # from contextlib import contextmanager
 # import tempfile
@@ -41,12 +39,14 @@ Code to enable debugging when running the executor from within the docker contai
 # print("Waiting for client to attach...")
 # debugpy.wait_for_client()
 
+tf.get_logger().setLevel("ERROR")
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
 """create logger object"""
 logger = logging.getLogger(__name__)
 
 COMPILER_VERBOSE = 1
 GET_PER_CLASS_PRECISION = True
-GET_LAYER_RESULTS = False
+GET_INTERMEDIATE_FILES = False
 
 USER_WORK_DIR = os.getcwd()
 TOOL_ROOT_DIR = os.path.dirname(__file__)
@@ -146,7 +146,7 @@ def axons_compiler(parsed_dict):
         parsed_dict['run_all_variants'] = None
     if 'transpose_kernel' not in parsed_dict:
         parsed_dict['transpose_kernel'] = None
-        
+
     """set the requested log level"""
     if parsed_dict['log_level'] == "debug":
         log_lvl = logging.DEBUG
@@ -271,7 +271,7 @@ def axons_compiler(parsed_dict):
 
         if (parsed_dict['reshape_input'] is None):
             parsed_dict['reshape_input'] = False
-        
+
         """
         Variant Parameters Default Value Setting
         """
@@ -338,7 +338,7 @@ def axons_compiler(parsed_dict):
         return -916, f" assert error : {e}"
 
     logger.info("starting compiler...")
-    logger.debug("model name is : {}".format(parsed_dict['model_name']))
+    logger.info("model name is : {}".format(parsed_dict['model_name']))
     logger.debug("tflite model filename is : {}".format(
         parsed_dict['tflite_model']))
 
@@ -390,8 +390,8 @@ def axons_compiler(parsed_dict):
                 parsed_dict['tflite_model'])
             if (not util.shapes_are_same(actual_input_shape, expected_input_shape)):
                 if (parsed_dict['reshape_input']):
-                    logger.warning(
-                        f"Reshaping test input to {expected_input_shape} to get test vectors and accuracy results!")
+                    logger.debug(
+                        f"reshaping test input to {expected_input_shape} to get test vectors and accuracy results!")
                     x_test = util.reshape_input(x_test, expected_input_shape)
                 else:
                     raise Exception(
@@ -454,10 +454,10 @@ def axons_compiler(parsed_dict):
                 test_result_tflite = tc.test_tflite_model(parsed_dict['tflite_model'], quantized_x_test, y_test, classification_model=(
                     parsed_dict['classification_labels'] is not None))
             else:
-                logger.warning(
+                logger.info(
                     "Accuracy results will be handled by the user provided function!")
         elif (Path(parsed_dict['tflite_model']).is_file()):
-            logger.warning(
+            logger.info(
                 "test data or proper test labels are not provided, we have the tflite file.")
             # x_test = np.zeros(1)
             # y_test = np.zeros(1)
@@ -581,13 +581,13 @@ def axons_compiler(parsed_dict):
             return -908, "exception occured when generating the bin file"
         # util.save_to_file(intermediate_outputs_dir,const_bin_file_name,const_bin_content, file_type="bin")
         # util.save_to_file(intermediate_outputs_dir,model_desc_bin_file_name,model_descriptor_bin_content, file_type="bin")
-
-        util.save_to_file(intermediate_outputs_dir,
-                          file_name_prefix + "_binfile_content_.txt", file_content)
+        if GET_INTERMEDIATE_FILES:
+            util.save_to_file(intermediate_outputs_dir,
+                              file_name_prefix + "_binfile_content_.txt", file_content)
         util.save_to_file(intermediate_outputs_dir,
                           bin_file_name, model_bin_content, file_type="bin")
-        logger.debug("compiler intermediate outputs are saved in : " +
-                     str(intermediate_outputs_dir))
+        logger.info("compiler intermediate outputs are saved in : " +
+                    str(intermediate_outputs_dir))
 
         # logger.info(log_string)
         # log_string += log_content
@@ -636,24 +636,32 @@ def axons_compiler(parsed_dict):
 
             reshape_input = False
             transpose_model_input_flag = False
+            
+            model_ip_datawidth = inputs[0]['dtype']
+            x_test_q = quantized_x_test
+            if model_ip_datawidth != np.int8 and x_test_q.dtype != np.int8:
+                if ops_details[0]['op_name'] == "QUANTIZE":
+                    scale, model_ip_zeropoint = tensor_details[operators_detail_graph[0]
+                                                            ['op_tensors'][0]]['quantization']
+                    x_test_q = ((x_test_q/scale)+model_ip_zeropoint).astype(np.int8)
             if (ops_details[0]["op_name"] == "RESHAPE"):
                 # check if the test input needs to be transposed
                 # we only transpose the test input if the reshape puts some element in the channel
-                # reshape_ip_shape = ops.TensorShape(tensor_details[subgraph.Operators(0).InputsAsNumpy()[0]]['shape'])
+                reshape_ip_shape = ops.TensorShape(tensor_details[subgraph.Operators(0).InputsAsNumpy()[0]]['shape'])
                 reshape_op_shape = ops.TensorShape(
                     tensor_details[subgraph.Operators(0).OutputsAsNumpy()[0]]['shape'])
                 reshape_input = True
-                if (reshape_op_shape.depth != 1):
+                if (reshape_op_shape.depth != reshape_ip_shape.depth):
                     # we have to transpose the input
-                    original_shape = quantized_x_test.shape
-                    x_test_q_tr = quantized_x_test.reshape(len(
-                        quantized_x_test), reshape_op_shape.height, reshape_op_shape.width, reshape_op_shape.depth)
+                    original_shape = x_test_q.shape
+                    x_test_q_tr = x_test_q.reshape(len(
+                        x_test_q), reshape_op_shape.height, reshape_op_shape.width, reshape_op_shape.depth)
                     x_test_q_tr = x_test_q_tr.transpose(0, 3, 1, 2)
                     x_test_q_tr = x_test_q_tr.reshape(original_shape)
                     input_transposed = True
                 else:
-                    x_test_q_reshaped = quantized_x_test.reshape(len(
-                        quantized_x_test), reshape_op_shape.height, reshape_op_shape.width, reshape_op_shape.depth)
+                    x_test_q_reshaped = x_test_q.reshape(len(
+                        x_test_q), reshape_op_shape.height, reshape_op_shape.width, reshape_op_shape.depth)
                     input_reshaped = True
 
             # figure out here if the input needs to be transposed
@@ -678,7 +686,7 @@ def axons_compiler(parsed_dict):
                         csv_test_vectors_file_name, test_io_vector_ndx, x_test_q_reshaped, y_test, intermediate_outputs_dir, transpose_model_input_flag)
                 else:
                     util.save_vectors_for_mass_inference(
-                        csv_test_vectors_file_name, test_io_vector_ndx, quantized_x_test, y_test, intermediate_outputs_dir, transpose_model_input_flag)
+                        csv_test_vectors_file_name, test_io_vector_ndx, x_test_q, y_test, intermediate_outputs_dir, transpose_model_input_flag)
                 get_mass_inference_vectors = False
                 logger.info(
                     f".... done!, took {time.time()-get_mass_inference_start_tick} seconds! for {len(test_io_vector_ndx)} vectors")
@@ -693,7 +701,8 @@ def axons_compiler(parsed_dict):
                 tflite_interpreter.set_tensor(inputs[0]['index'], test_)
                 # Run inference.
                 tflite_interpreter.invoke()
-                if (model_ip_shape.depth > 1):  # we have a multiple channel input
+                # we have a multiple channel input
+                if (model_ip_shape.depth > 1) and model_ip_shape.shape_size > 3:
                     test_ = test_.transpose(0, 3, 1, 2)
                 test_ip_vector.append(test_)
                 multiple_layer_output_vectors = ""
@@ -702,8 +711,9 @@ def axons_compiler(parsed_dict):
                 multiple_test_input_array_names_list += "    " + \
                     parsed_dict['model_name'].lower(
                     )+"_test_input_"+str(ndx)+",\n"
-                multiple_test_input_array_values += util.write_array_to_file(
-                    test_.squeeze(), parsed_dict['model_name'].lower()+"_test_input_"+str(ndx))
+                if GET_INTERMEDIATE_FILES:
+                    multiple_test_input_array_values += util.write_array_to_file(
+                        test_.squeeze(), parsed_dict['model_name'].lower()+"_test_input_"+str(ndx))
                 if (i == 0):
                     test_layers_name_list += "\n\nconst int8_t* " + parsed_dict['model_name'].lower(
                     )+"_layer_vectors[] = \n{"+f"\n#ifndef {USE_MINIMUM_TEST_VECTORS_DEFINE}"+"\n    "+parsed_dict['model_name'].lower()+"_l0_test_input,\n"
@@ -712,8 +722,9 @@ def axons_compiler(parsed_dict):
 
                 op_cnt = 0
                 # if we need the output for each of the layers we need to get them in multiple header files
-                multiple_layer_output_vectors += util.write_array_to_file(
-                    test_.squeeze(), parsed_dict['model_name'].lower()+"_l0_test_input")
+                if GET_INTERMEDIATE_FILES:
+                    multiple_layer_output_vectors += util.write_array_to_file(
+                        test_.squeeze(), parsed_dict['model_name'].lower()+"_l0_test_input")
                 multiple_layer_output_vectors += f"\n#ifndef {USE_MINIMUM_TEST_VECTORS_DEFINE}"
                 operator_op_ndx = np.array([-1])
                 for ops_graph_index in range(len(operators_detail_graph)):
@@ -797,8 +808,9 @@ def axons_compiler(parsed_dict):
 
                         tflite_output_layer_name = parsed_dict['model_name'].lower(
                         )+"_l"+str(op_cnt) + "_"+ops_name+"_tflite_op"
-                        multiple_layer_output_vectors += util.write_array_to_file(
-                            layer_op, tflite_output_layer_name, op_dw)
+                        if GET_INTERMEDIATE_FILES:
+                            multiple_layer_output_vectors += util.write_array_to_file(
+                                layer_op, tflite_output_layer_name, op_dw)
                         if (i == 0):
                             test_layers_name_list += "    " + tflite_output_layer_name.lower() + ",\n"
                         op_cnt += 1
@@ -835,14 +847,16 @@ def axons_compiler(parsed_dict):
                     op = op.astype(output_datawidth)
 
                 test_op_vector.append(op)
-                csv_test_vectors_op += util.write_array_to_file(
-                    op.squeeze(), "", array_bitwidth=op.dtype)
+                if GET_INTERMEDIATE_FILES:
+                    csv_test_vectors_op += util.write_array_to_file(
+                        op.squeeze(), "", array_bitwidth=op.dtype)
                 csv_test_vectors_op = util.get_csv_text(csv_test_vectors_op)
                 multiple_test_output_array_names_list += "    " + \
                     parsed_dict['model_name'].lower(
                     )+"_expected_output_"+str(ndx)+",\n"
-                multiple_test_output_array_values += util.write_array_to_file(np.array(op).squeeze(
-                ), parsed_dict['model_name'].lower()+"_expected_output_"+str(ndx), output_datawidth)
+                if GET_INTERMEDIATE_FILES:
+                    multiple_test_output_array_values += util.write_array_to_file(np.array(op).squeeze(
+                    ), parsed_dict['model_name'].lower()+"_expected_output_"+str(ndx), output_datawidth)
                 if (i == 0):
                     multiple_test_output_array_names_list += f"#ifndef {USE_MINIMUM_TEST_VECTORS_DEFINE}\n"
                     multiple_test_output_array_values += f"\n#ifndef {USE_MINIMUM_TEST_VECTORS_DEFINE}"
@@ -885,7 +899,7 @@ def axons_compiler(parsed_dict):
                 parsed_dict['model_name'].lower(
                 )+"_expected_output_vectors = NULL;\n"
 
-        if (parsed_dict['header_file_test_vector_cnt'] != 0):
+        if (parsed_dict['header_file_test_vector_cnt'] != 0) and GET_INTERMEDIATE_FILES:
             util.save_to_file(intermediate_outputs_dir,
                               tflite_test_vectors_filename, tflite_test_vectors_file_content)
         """End of Code to get mass inference vectors, test_vectors for inference"""
@@ -1017,8 +1031,9 @@ def axons_compiler(parsed_dict):
                 precision_score_text + confusion_matrix_text  # + classification_report_text
             variants_object.set_test_data_set_size(
                 variant, test_io_vector_ndx.size)
-            util.save_to_file(intermediate_outputs_dir, file_name_prefix +
-                              "_accuracy_results_.txt", model_results_text)
+            if GET_INTERMEDIATE_FILES:
+                util.save_to_file(intermediate_outputs_dir, file_name_prefix +
+                                  "_accuracy_results_.txt", model_results_text)
             logger.info(model_results_text)
         if subprocess_return_code == 0:
             logger.info(
@@ -1028,12 +1043,13 @@ def axons_compiler(parsed_dict):
                 f"encountered error running variant {variant}, return code {subprocess_return_code}")
 
     variants_result_yaml = variants_object.get_variants_result_as_yaml()
-    util.save_to_file(intermediate_outputs_dir, file_name_prefix +
-                      "_variants_result_.yml", variants_result_yaml)
     compare_results_yaml = variants_object.get_compare_variant_results(
         as_yaml=True)
-    util.save_to_file(intermediate_outputs_dir, file_name_prefix +
-                      "_compare_variants_result_.yml", compare_results_yaml)
+    if GET_INTERMEDIATE_FILES:
+        util.save_to_file(intermediate_outputs_dir, file_name_prefix +
+                          "_variants_result_.yml", variants_result_yaml)
+        util.save_to_file(intermediate_outputs_dir, file_name_prefix +
+                          "_compare_variants_result_.yml", compare_results_yaml)
     performance_metric_table = variants_object.get_performance_metrics_as_table()
     logger.info(performance_metric_table)
     # FIXME needs to be addressed as using dlclose with the library causes the docker container to crash
@@ -1134,7 +1150,7 @@ def run_app():
                 logging.basicConfig(filename=log_full_path,
                                     level=log_level, format=log_format)
                 # Log OS details
-                logger.info(
+                logger.debug(
                     f"os.name = {os.name}, platform.system() = {platform.system()}, platform.machine() = {platform.machine()}")
                 for test in yaml_test_list:
                     if (test == "default_values"):

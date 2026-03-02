@@ -1,15 +1,13 @@
-""" 
-/*
- * Copyright (c) 2024, Nordic Semiconductor ASA. All Rights Reserved.
- *
- * The information contained herein is confidential property of Nordic Semiconductor ASA.
- * The use, copying, transfer or disclosure of such information is prohibited except by
- * express written agreement with Nordic Semiconductor ASA.
- */
 """
+Copyright (c) 2026 Nordic Semiconductor
+
+SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+"""
+
 import tflite
 import numpy as np
 from utility import util as util
+from utility import operator_options as ops_options
 from abc import ABC, abstractmethod
 
 
@@ -43,8 +41,16 @@ class CpuExtension(ABC):
     def GetAxonsCpuExtensionOpEnumName(self):
         return self.cpu_extension_axon_enum_string
 
+    @classmethod
+    def DetermineCpuExtensionSupport(cls, operator_object, op_list, op_index):
+        """
+        Default handle for operations for which there is no handler written
+        will just pass through
+        """
+        return ops_options.OperatorSupportEnum.SUPPORTED
 
-class CpuReshapeDummy(CpuExtension):
+
+class CpuOpDummy(CpuExtension):
     cpu_extension_axon_enum_string = ""
 
     @classmethod
@@ -61,7 +67,7 @@ class CpuReshapeDummy(CpuExtension):
         # options = operator_object.SetOperatorOptionObject(tflite.ReshapeOptions())
         new_shape = 610  # dummy value
         operator_object.SetOperatorMetaAttributesString(
-            f"RESHAPE Meta information as follows! {new_shape}")
+            f"Dummy Meta information as follows! {new_shape}")
         operator_object.SetOperationStrides(29, 42)
         operator_object.SetOperationPaddings(3, 7, 17, 19)
 
@@ -106,7 +112,7 @@ class CpuReshapeDummy(CpuExtension):
         # if it has three input tensors, they are usually input, filter/weight and biases
         # if only two, it could be just the input and the filter or some other vector information depending on the operator
         # the user should know apriori what those indexes are and how to use them
-        # in our example the ReshapeOperator() there are no filter or bias buffers so nothing has to be done,
+        # if there are no filter or bias buffers so nothing has to be done,
         # but a user can use the APIs to get and if needed perform the necessary math on them
         # and use the SetAPIs to set the filter tensors, bprime tensors and the scaleshift values
 
@@ -124,6 +130,10 @@ class CpuReshapeDummy(CpuExtension):
     @classmethod
     def HandlePreviousOperatorAttributes(cls, previous_operator_object):
         return -1
+
+    @classmethod
+    def DetermineCpuExtensionSupport(cls, operator_object, op_list, op_index):
+        return ops_options.OperatorSupportEnum.NOT_SUPPORTED
 
 
 class CpuSoftmax(CpuExtension):
@@ -269,6 +279,122 @@ class CpuSigmoid(CpuActivation):
     cpu_extension_axon_enum_string = "Logistic"
 
 
+class CpuReshape(CpuExtension):
+    cpu_extension_axon_enum_string = "Reshape"
+
+    def determine_reshape_is_passthrough(ip_shape, op_shape, shape, operator_list, op_index):
+        """
+        Reshapes are to be determined if they are passthroughs in the executor depending on pre-defined conditions.
+        These conditions are as described, if they do not fall under any of the conditions they will be treated as reshapes and handled by the compiler
+        1. The first reshape and the last reshape in model.
+        2. If the next operation is a FC and the reshape is changing the channel.
+        3. If the reshape is performing a transpose on the hxw and preserves the channel information with one dimension being 1 of either h or w.
+        """
+        if op_index == 0 or op_index == (len(operator_list)-1) or (0 in operator_list[op_index]['inputs']):  # first or last op is reshape, treated as passthorugh
+            return True
+
+        # shape dimensions remain the same
+        if ip_shape.shape_size == op_shape.shape_size:
+            # check if the shape sizes are not changing and the dimensions essentially remain the same
+            if ops_options.TensorShape.shapes_are_same(ip_shape, op_shape):
+                return True
+
+            if ip_shape.depth == op_shape.depth:
+                if (ip_shape.height == op_shape.width and ip_shape.width == 1 and op_shape.height == 1) or \
+                        (op_shape.height == ip_shape.width and op_shape.width == 1 and ip_shape.height == 1):
+                    return True
+
+        # shape dimensions are decreasing
+        if ip_shape.shape_size > op_shape.shape_size:
+
+            # check if the shape sizes are reducing but the dimensions essentially remain the same
+            if ops_options.TensorShape.shapes_are_same(ip_shape, op_shape):
+                return True
+
+            if ip_shape.depth == op_shape.width and ip_shape.shape_size == 4 and op_shape.shape_size < 4:
+                return True
+
+            if operator_list[op_index+1]['op_name'] == "FULLY_CONNECTED":
+                if ip_shape.shape_size > 2:
+                    if ip_shape.depth > 1:
+                        return True
+
+        # shape dimensions are increasing
+        if ip_shape.shape_size < op_shape.shape_size:
+
+            # check if the shape sizes are increasing but the dimensions essentially remain the same
+            if ops_options.TensorShape.shapes_are_same(ip_shape, op_shape):
+                return True
+
+            if op_shape.shape_size == 4 and ip_shape.shape_size == 2:
+                if (op_shape.height == 1 and op_shape.width == 1 and op_shape.depth == ip_shape.get_length()):
+                    return True
+
+        if (ip_shape.depth == op_shape.depth) and (ip_shape.depth == 1) and (ip_shape.width % 4 == 0) and (op_shape.width % 4 == 0):
+            return True
+
+        return False
+
+    def HandleOperatorOptions(self, operator_object):
+        """
+        perform all the operation needed for a specific custom operation needed, 
+        populate all the fields as needed inside the operator object
+        user should write code here to create the custom options object
+        """
+        options = operator_object.SetOperatorOptionObject(
+            tflite.ReshapeOptions())
+        # determine if this is a reshape operator
+        if operator_object.operation_detail is not None:
+            if operator_object.operation_detail['operator_support'] == ops_options.OperatorSupportEnum.PASSTHROUGH:
+                operator_object.error = True
+                operator_object.error_text = "RESHAPE is a PASSTHROUGH Operator"
+                operator_object.error_action = "CONTINUE"
+                return 1
+        # getting quantization parameters
+        ip_q, w_q, bias_q = operator_object.GetIpQuantizationParameters()
+        op_q = operator_object.GetOpQuantizationParameters()
+
+        # performing needed scaling optimizations
+        scale_q = ip_q['scales'] / op_q['scales']
+        result = util.optimized_ip_scaling_shift((scale_q), 8, 28, 28)
+        # error = result[0]
+        scaleshift = result[1]
+        scale_multipliers = np.array(
+            [abs(int(np.round((scale_q)*2**scaleshift)))])
+        scale_shift = np.array([scaleshift])
+
+        filter_tensor = np.array([])  # input_tensor[1]
+        bias_tensor = np.array([])  # input_tensor[2]
+
+        # perform some operations as needed on these vectors
+        operator_object.SetFilterTensor(filter_tensor)
+        # setting scale values
+        operator_object.SetMultiplierandScaleshift(
+            scale_multipliers, scale_shift)
+        # set the bias_prime tensor
+        operator_object.SetBPrimeTensor(bias_tensor)
+        return 0
+
+    @classmethod
+    def HandlePreviousOperatorAttributes(cls, previous_operator_object):
+        """
+        nothing to be done with the previous operators with the RESHAPE Operator
+        """
+        return 0
+
+    @classmethod
+    def DetermineCpuExtensionSupport(cls, operator_object, op_list, op_index):
+        ip_to_reshape = ops_options.TensorShape(operator_object.tflite_interpreter.get_tensor(
+            operator_object.operators_detail_graph[op_index]['inputs'][0]).shape)
+        op_of_reshape = ops_options.TensorShape(operator_object.tflite_interpreter.get_tensor(
+            operator_object.operators_detail_graph[op_index]['outputs'][0]).shape)
+        shape = operator_object.tflite_interpreter.get_tensor(
+            operator_object.operators_detail_graph[op_index]['inputs'][1])
+        if cls.determine_reshape_is_passthrough(ip_to_reshape, op_of_reshape, shape, op_list, op_index):
+            return ops_options.OperatorSupportEnum.PASSTHROUGH
+        return ops_options.OperatorSupportEnum.SUPPORTED
+
+
 """
 add the function to get the custom attributes and other options for a specific cpu operator 
 TODO this declaration and it's functions can be moved into a class and its object can be used to automatically add the cpu operators by reading the variable cpu operator list
@@ -276,7 +402,9 @@ TODO this declaration and it's functions can be moved into a class and its objec
 cpu_operators_list = {  # tflite.BuiltinOperator.RESHAPE: CpuReshapeDummy("DummyOp"),
     tflite.BuiltinOperator.SOFTMAX: CpuSoftmax("NRF_AXON_NN_OP_SOFTMAX"),
     tflite.BuiltinOperator.LOGISTIC: CpuSigmoid("NRF_AXON_NN_OP_SIGMOID"),
-    tflite.BuiltinOperator.TANH: CpuTanh("NRF_AXON_NN_OP_TANH")}
+    tflite.BuiltinOperator.TANH: CpuTanh("NRF_AXON_NN_OP_TANH"),
+    tflite.BuiltinOperator.RESHAPE: CpuReshape("NRF_AXON_NN_OP_RESHAPE"),
+}
 
 """
 Global function that links and initializes the cpu_extension_op object to ensure that all the methods have been defined
@@ -301,3 +429,10 @@ def HandleOperatorAttributesBeforeCpuOp(current_operator_object, code):
         return cpu_operators_list[code].HandlePreviousOperatorAttributes(
             current_operator_object)
     return CpuExtension.HandlePreviousOperatorAttributes(current_operator_object)
+
+
+def DetermineOperatorSupportforCpuExtension(current_operator_object, code, op_list, op_index):
+    if (code in cpu_operators_list):
+        return cpu_operators_list[code].DetermineCpuExtensionSupport(
+            current_operator_object, op_list, op_index)
+    return CpuExtension.DetermineCpuExtensionSupport(current_operator_object, op_list, op_index)

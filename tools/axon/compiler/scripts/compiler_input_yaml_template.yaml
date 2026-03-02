@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Nordic Semiconductor
+
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+
 unique_test_name:
   #NOTE : params that are not available or not needed should be left empty in the yaml file
   #Primary Parameters

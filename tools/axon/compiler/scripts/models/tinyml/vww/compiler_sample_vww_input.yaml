@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Nordic Semiconductor
+
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+
 default_values : ##FOR TESTING##
   get_quantized_data: &get_quantized_data False
   interlayer_buffer_size: &interlayer_buffer_size 120000
