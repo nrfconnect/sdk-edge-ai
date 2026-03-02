@@ -52,4 +52,8 @@
 
 .. nrf54lm20dk_nrf54lm20a_cpuapp
 
-| `nRF54LM20 DK <nRF54L15 DK_>`_ | PCA10184 | `nrf54lm20dk`_ | ``nrf54lm20dk/nrf54lm20a/cpuapp`` |
+| `nRF54LM20 DK <nRF54LM20 DK_>`_ | PCA10184 | `nrf54lm20dk`_ | ``nrf54lm20dk/nrf54lm20a/cpuapp`` |
+
+.. nrf54lm20dk_nrf54lm20b_cpuapp
+
+| `nRF54LM20 DK <nRF54LM20 DK_>`_ | PCA10184 | `nrf54lm20dk`_ | ``nrf54lm20dk/nrf54lm20b/cpuapp`` |
