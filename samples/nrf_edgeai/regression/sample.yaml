@@ -33,6 +33,7 @@ tests:
       type: multi_line
       ordered: true
       regex:
+        - "nRF Edge AI runtime version: 2.2.0"
         - "--- Testing Model Air Quality predictions ---"
         - "Air quality - Predicted:.*Expected:.*absolute error"
         - "========== All test cases completed =========="
