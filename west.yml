@@ -21,7 +21,7 @@ manifest:
     - name: edge-impulse-sdk-zephyr
       url: https://github.com/edgeimpulse/edge-impulse-sdk-zephyr
       path: modules/edge-impulse-sdk-zephyr
-      revision: v1.82.3
+      revision: v1.88.1
       west-commands: west/west-commands.yml
 
   self:

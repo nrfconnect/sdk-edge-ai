@@ -52,3 +52,12 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(${FETCH_CONTENT_NAME})
+
+if (${CONFIG_NRF_AXON})
+  zephyr_compile_definitions(
+    NRF_AXON_MODEL_NAME=${CONFIG_NRF_AXON_MODEL_NAME}
+  )
+
+  zephyr_include_directories(${edge_impulse_SOURCE_DIR})
+  zephyr_include_directories(${edge_impulse_SOURCE_DIR}/nordic-axon-model)
+endif()

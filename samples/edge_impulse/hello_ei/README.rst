@@ -26,6 +26,10 @@ Sample's main purpose is to:
 #. Start predictions using the machine learning model.
 #. Display the prediction results and time measurements.
 
+.. note::
+   When building target ``nrf54lm20dk/nrf54lm20b/cpuapp``, the sample uses an `Axon NPU`_-accelerated model for inference by default.
+   On other supported boards, the model runs on the CPU.
+
 Configuration options
 *********************
 
@@ -35,6 +39,29 @@ The sample can be configured using the following Kconfig options:
 
 .. options-from-kconfig::
    :show-type:
+
+Build types
+===========
+
+The ``nrf54lm20dk/nrf54lm20b/cpuapp`` board target supports the following build types.
+See `Custom build types`_ and `Providing CMake options`_ for more information.
+
+.. list-table:: Hello Edge Impulse build types
+   :widths: auto
+   :header-rows: 1
+
+   * - Build type
+     - File suffix
+     - Description
+   * - Axon NPU inference (default)
+     - (none)
+     - Runs inference on the `Axon NPU`_ using a model compiled for hardware acceleration.
+   * - CPU inference
+     - ``model_cpu``
+     - Runs inference on the CPU instead of the Axon NPU.
+       Build with ``-DFILE_SUFFIX=model_cpu``.
+
+Other supported boards always use CPU execution.
 
 Using your custom machine learning model
 ========================================

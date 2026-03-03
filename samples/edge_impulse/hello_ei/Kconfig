@@ -8,7 +8,7 @@ mainmenu "Hello Edge Impulse sample application"
 
 config EDGE_IMPULSE_PATH
 	string "Edge Impulse library path"
-	default 'ei_model_nrf_accel_sim_v39.zip'
+	default 'ei_model_nrf_accel_sim_cpu_v55.zip'
 	help
 	  Specifies local file path of an archive containing Edge Impulse library.
 
