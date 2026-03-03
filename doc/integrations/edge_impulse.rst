@@ -72,20 +72,38 @@ Preparing the machine learning model
 
       .. group-tab:: Using |EIS| web interface
 
-         a. Go to the :guilabel:`Deployment` tab and select :guilabel:`Zephyr library`.
-            This will generate a :file:`zip` file that contains source files defining the |EI| ML model.
+         .. tabs::
 
-         .. figure:: ./images/ei_deploy.png
-            :scale: 50 %
-            :alt: Model deployment in |EIS| dashboard
+            .. group-tab:: Model executed on CPU
 
-            Model deployment in |EIS| dashboard
+               a. Go to the :guilabel:`Deployment` tab and select :guilabel:`Zephyr library`.
+                  This will generate a :file:`zip` file that contains source files defining the |EI| ML model for execution on CPU.
 
-         .. note::
-            Edge Impulse supports multiple deployment formats, some of which are compatible with |NCS| applications.
-            However, this instruction focuses on the Zephyr library deployment format.
+               .. figure:: ./images/ei_deploy_cpu.png
+                  :scale: 50 %
+                  :alt: CPU model deployment in |EIS| dashboard
+
+                  CPU model deployment in |EIS| dashboard
+
+            .. group-tab:: Model executed on Axon NPU
+
+               a. Go to the :guilabel:`Deployment` tab and select :guilabel:`Nordic Axon NPU Library`.
+                  This will generate a :file:`zip` file that contains source files defining the |EI| ML model for Axon NPU.
+
+               .. figure:: ./images/ei_deploy_axon.png
+                  :scale: 50 %
+                  :alt: Axon NPU model deployment in |EIS| dashboard
+
+                  Axon NPU model deployment in |EIS| dashboard
+
+            .. note::
+               |EI| supports multiple deployment formats, some of which are compatible with |NCS| applications.
+               However, this instruction focuses on the `Zephyr library` and `Nordic Axon NPU Library` deployment formats.
 
       .. group-tab:: Using |EI| west extensions
+
+         .. note::
+            This method currently does not allow deploying Axon NPU models.
 
          |EI| provides west command extensions that let you build and deploy the machine learning model from |EIS| using the command line instead of the web interface.
          The commands are already configured in the |EAI| west manifest and are ready to use.
@@ -126,57 +144,167 @@ Preparing the machine learning model
 
 .. _ug_edge_impulse_adding_building:
 
-.. rst-class:: numbered-step
-
 Building an application with machine learning model
 ===================================================
 
 You have to complete the following configuration steps to be able to build your application including the deployed |EI| machine learning model:
 
-1. Make sure that the following Kconfig options are enabled:
+.. tabs::
 
-   * ``CONFIG_CPP``
-   * ``CONFIG_STD_CPP11``
-   * ``CONFIG_REQUIRES_FULL_LIBCPP``
-   * ``CONFIG_EDGE_IMPULSE_SDK``
+   .. group-tab:: Model executed on CPU
 
-   .. note::
-      The ``CONFIG_FPU`` Kconfig option is implied by default if floating point unit (FPU) is supported by the hardware.
-      Using FPU speeds up calculations.
+      1. Make sure that the following Kconfig options are enabled:
 
-#. Make sure that the ``CONFIG_FP16`` Kconfig option is disabled.
-   The |EI| library is not compatible with half-precision floating point support introduced in Zephyr.
+         * ``CONFIG_CPP``
+         * ``CONFIG_STD_CPP11``
+         * ``CONFIG_REQUIRES_FULL_LIBCPP``
+         * ``CONFIG_EDGE_IMPULSE_SDK``
 
-#. If you want to call |EI| API directly from C code, you must define the following macros in your application's :file:`CMakeLists.txt` file:
+         .. note::
+            The ``CONFIG_FPU`` Kconfig option is implied by default if floating point unit (FPU) is supported by the hardware.
+            Using FPU speeds up calculations.
 
-   .. code-block:: cmake
+      #. Make sure that the ``CONFIG_FP16`` Kconfig option is disabled.
+          The |EI| library is not compatible with half-precision floating point support introduced in Zephyr.
 
-      zephyr_compile_definitions(
-         EI_C_LINKAGE=1
-         EIDSP_SIGNAL_C_FN_POINTER=1
-      )
+      #. If you want to call |EI| API directly from C code, you must define the following macros in your application's :file:`CMakeLists.txt` file:
 
-   Check `Using the library from C`_ for more information.
+          .. code-block:: cmake
 
-#. Unpack the :file:`zip` archive with the deployed machine learning model and add the following to your application's :file:`CMakeLists.txt` file:
+             zephyr_compile_definitions(
+                EI_C_LINKAGE=1
+                EIDSP_SIGNAL_C_FN_POINTER=1
+             )
 
-   .. code-block:: cmake
+          Check `Using the library from C`_ for more information.
 
-      add_subdirectory(ei_model)
+      #. Unpack the :file:`zip` archive with the deployed machine learning model and add the following to your application's :file:`CMakeLists.txt` file:
 
-   Alternatively, you can automate the unpacking as part of the build process using CMake's ``FetchContent`` module.
-   This approach automatically extracts the archive during configuration:
+         .. code-block:: cmake
 
-   .. code-block:: cmake
+            add_subdirectory(ei_model)
 
-      include(FetchContent)
+         Alternatively, you can automate the unpacking as part of the build process using CMake's ``FetchContent`` module.
+         This approach automatically extracts the archive during configuration:
 
-      FetchContent_Declare(
-         ei_model
-         URL ${CMAKE_CURRENT_SOURCE_DIR}/ei_model.zip
-      )
+         .. code-block:: cmake
 
-      FetchContent_MakeAvailable(ei_model)
+            include(FetchContent)
+
+            FetchContent_Declare(
+               ei_model
+               URL ${CMAKE_CURRENT_SOURCE_DIR}/ei_model.zip
+            )
+
+            FetchContent_MakeAvailable(ei_model)
+
+   .. group-tab:: Model executed on Axon NPU
+
+      1. Make sure that Axon is enabled in your device tree.
+         Enable it in a board overlay file:
+
+         .. code-block:: dts
+
+            &axon {
+               status = "okay";
+            };
+
+      #. Make sure that the following Kconfig options are enabled:
+
+         * ``CONFIG_CPP``
+         * ``CONFIG_STD_CPP11``
+         * ``CONFIG_REQUIRES_FULL_LIBCPP``
+         * ``CONFIG_EDGE_IMPULSE_SDK``
+         * ``CONFIG_NRF_AXON``
+
+      #. Make sure that the ``CONFIG_FP16`` Kconfig option is disabled.
+         The |EI| library is not compatible with half-precision floating point support introduced in Zephyr.
+
+      #. If you want to call |EI| API directly from C code, you must define the following macros in your application's :file:`CMakeLists.txt` file:
+
+          .. code-block:: cmake
+
+             zephyr_compile_definitions(
+                EI_C_LINKAGE=1
+                EIDSP_SIGNAL_C_FN_POINTER=1
+             )
+
+          Check `Using the library from C`_ for more information.
+
+      #. Unpack the :file:`zip` archive with the deployed machine learning model and add the following to your application's :file:`CMakeLists.txt` file:
+
+         .. code-block:: cmake
+
+            add_subdirectory(ei_model)
+
+         Alternatively, you can automate the unpacking as part of the build process using CMake's ``FetchContent`` module.
+         This approach automatically extracts the archive during configuration:
+
+         .. code-block:: cmake
+
+            include(FetchContent)
+
+            FetchContent_Declare(
+               ei_model
+               URL ${CMAKE_CURRENT_SOURCE_DIR}/ei_model.zip
+            )
+
+            FetchContent_MakeAvailable(ei_model)
+
+      #. Set ``CONFIG_NRF_AXON_MODEL_NAME`` Kconfig option to the name of your model.
+         You can find it for example in:
+
+         * :file:`conf_overlay.conf` file included in the :file:`zip` archive with the deployed model, for example:
+
+           .. code-block:: console
+
+              cat ei_model/conf_overlay.conf
+              CONFIG_NRF_AXON_MODEL_NAME="ei_model_nrf_accel_sim_54"
+
+         * the names of the Axon model header files included in the archive.
+           For example:
+
+           .. code-block:: console
+
+              ls nordic-axon-model/nrf_axon_model_*.h
+              nordic-axon-model/nrf_axon_model_ei_model_nrf_accel_sim_54_.h
+              nordic-axon-model/nrf_axon_model_ei_model_nrf_accel_sim_54_layers_.h
+              nordic-axon-model/nrf_axon_model_ei_model_nrf_accel_sim_54_test_vectors_.h
+
+           means that the model name is ``ei_model_nrf_accel_sim_54``.
+
+      #. Set ``CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE`` and ``CONFIG_NRF_AXON_PSUM_BUFFER_SIZE`` appropriately, to fit your model's requirements.
+         If the buffers are too small, the inference will fail with an error indicating insufficient buffer size and the required size, for example:
+
+         .. code-block:: console
+
+            init model ei_model_nrf_accel_sim_54 failed! interlayer buffer too small! Allocated 0, need 36
+            ERR: nrf_axon_nn_model_validate failed!
+            E: Classification failed with error code: -36
+
+         You can also find the required buffer sizes:
+
+         * in the console output from testing model in |EIS|, when deploying the model:
+
+           .. code-block:: console
+
+               -------------------------------------------------------------------------------
+               Model EI_MODEL_NRF_ACCEL_SIM_54 results (variant : ei_model_nrf_accel_sim_54)
+               -------------------------------------------------------------------------------
+
+                     Memory Usage (in bytes)
+
+                              model_const_buffer_size:        1024
+                              interlayer_buffer_size: 36
+                              psum_buffer_size:       0
+                              cmd_buffer_size:        736
+
+         * in the :file:`nrf_axon_model_<model_name>_.h` file, for example:
+
+           .. code-block:: c
+
+              #define NRF_AXON_MODEL_EI_MODEL_NRF_ACCEL_SIM_54_MAX_IL_BUFFER_USED 36
+              #define NRF_AXON_MODEL_EI_MODEL_NRF_ACCEL_SIM_54_MAX_PSUM_BUFFER_USED 0
 
 .. _ug_edge_impulse_building:
 

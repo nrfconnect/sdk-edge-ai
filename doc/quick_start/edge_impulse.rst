@@ -10,6 +10,10 @@ Edge Impulse
 The following guide explains how to develop and deploy machine learning applications on Nordic Semiconductor devices using |EI|.
 It is ideal if you want an end‑to‑end workflow for data collection, model training, and deployment on embedded targets.
 
+|EI| models can run on CPU or on the `Axon NPU`_, depending on the target device you select during the deployment process.
+On devices equipped with the Axon NPU, |EI| automatically leverages hardware acceleration for supported operations, resulting in faster inference and lower power consumption.
+On devices without the NPU, the same model runs in software on the CPU.
+
 To follow this guide, you should be familiar with basic embedded systems development.
 The guide covers the steps required to collect data, train a model using Edge Impulse tools, and deploy the resulting model to a Nordic device.
 
@@ -55,7 +59,7 @@ Choose the method that works best for your project:
    * For image data, aim for 50-100 images per class as a starting point, with good variety in lighting, angles, and backgrounds.
    * For all data types, prioritize dataset diversity and balance the number of samples across classes to improve model performance.
 
-For more details on data collection strategies, follow the `Edge Impulse data acquisition` guide.
+For more details on data collection strategies, follow the `Edge Impulse data acquisition`_ guide.
 
 .. rst-class:: numbered-step
 
@@ -71,6 +75,11 @@ Train and deploy your model using `Edge Impulse studio`_:
 * Explore the comprehensive `Edge Impulse getting started guide`_ for in-depth tutorials on building different types of ML applications.
 
 Your model is now trained and ready for deployment on Nordic devices.
+
+Next steps
+==========
+
+* If you use Axon and need lower‑level access to the NPU beyond what |EI| provides, see :ref:`quick_start_axon_driver_model_compilation` to learn how to compile custom TensorFlow Lite models for Axon.
 
 Application development
 ***********************
@@ -109,7 +118,7 @@ The |EI| SDK makes it easy to load your model, feed it sensor data, and get pred
    * Read the `Edge Impulse C++ SDK`_ documentation for comprehensive API reference and advanced features.
 
 .. tip::
-   Start with one of the sample applications and modify it incrementally. 
+   Start with one of the sample applications and modify it incrementally.
    This will help you understand the API structure before building your custom application from scratch.
 
 .. rst-class:: numbered-step
@@ -128,5 +137,5 @@ Next steps
 
 To work on advanced solutions, see further documentation:
 
-* Accelerate with Axon NPU - If you have a device with `Axon NPU`_, see :ref:`quick_start_axon_edge_impulse` to learn how to combine |EI| with Axon hardware acceleration for significantly faster inference times.
 * Explore advanced features - Dive deeper into the `Edge Impulse C++ SDK`_ documentation to discover advanced capabilities like anomaly detection, continuous learning, and custom processing blocks.
+* Direct Axon NPU control - If you use Axon and need lower‑level access to the NPU beyond what |EI| provides, see :ref:`quick_start_axon_driver_app_development` to learn how to implement custom inference pipelines with the Axon driver API.

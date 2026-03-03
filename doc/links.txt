@@ -71,7 +71,6 @@
 .. _`Providing CMake options`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/app_dev/config_and_build/cmake/index.html#providing_cmake_options
 .. _`Custom build types`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/app_dev/config_and_build/config_and_build_system.html#app-build-additions-build-types
 
-
 .. _`Simulated sensor driver`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/nrf/drivers/sensor_sim.html
 
 .. _`Logging`: https://docs.nordicsemi.com/bundle/ncs-3.2.0/page/zephyr/services/logging/index.html#logging-api

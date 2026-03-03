@@ -15,6 +15,8 @@ Compared to higher‑level frameworks such as |EAILib|, using the driver API req
 
 After completing this guide, you will have compiled a TensorFlow Lite model for the Axon NPU and deployed a custom application that performs inference using the Axon driver API.
 
+.. _quick_start_axon_driver_model_compilation:
+
 Model compilation
 *****************
 
@@ -48,6 +50,8 @@ Test your compiled model to ensure it works correctly before integrating it into
 
 Run :ref:`test_nn_inference` to confirm your compiled model produces correct results.
 This validation step checks for compilation issues early in the development process.
+
+.. _quick_start_axon_driver_app_development:
 
 Application development
 ***********************
