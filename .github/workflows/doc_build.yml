@@ -1,0 +1,163 @@
+name: Documentation Build
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - 'v*-branch'
+    paths:
+      - '.github/workflows/doc_build.yml'
+      - '**.rst'
+      - '**/Kconfig'
+      - '**/sample.yaml'
+      - 'doc/**'
+      - 'applications/**'
+      - 'include/**'
+      - 'doc/requirements.txt'
+      - 'west.yml'
+  push:
+    branches:
+      - main
+      - 'v*-branch'
+    tags:
+      - v*
+
+env:
+  DOXYGEN_VERSION: 1.12.0
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: ncs/edge-ai
+
+      - name: Install system dependencies
+        run: |
+          wget --no-verbose "https://github.com/doxygen/doxygen/releases/download/Release_${DOXYGEN_VERSION//./_}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz"
+          sudo tar xf doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz -C /opt
+          echo "/opt/doxygen-${DOXYGEN_VERSION}/bin" >> $GITHUB_PATH
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.12
+          cache: pip
+          cache-dependency-path: ncs/edge-ai/doc/requirements*.txt
+          pip-install: |
+            -r ncs/edge-ai/doc/requirements.txt
+            -r ncs/edge-ai/doc/requirements_ci.txt
+
+      - name: West update
+        working-directory: ncs/edge-ai
+        run: |
+          west init -l .
+          west update -o=--depth=1 -n
+
+      - name: Build
+        working-directory: ncs/edge-ai/doc
+        run: |
+          make html
+
+      - name: Check version
+        run: |
+          VERSION_REGEX="^v([0-9a-zA-Z\.\-]+)$"
+          if [[ ${GITHUB_REF#refs/tags/} =~ $VERSION_REGEX ]]; then
+            VERSION=${BASH_REMATCH[1]}
+          elif [[ ${GITHUB_REF#refs/heads/} == "main" ]]; then
+            VERSION="latest"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            VERSION="pr-${{ github.event.number }}"
+          fi
+          echo "VERSION=${VERSION}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Prepare Azure upload
+        working-directory: ncs/edge-ai
+        run: |
+          PUBLISH="$PWD/publish"
+          mkdir -p "$PUBLISH"
+
+          MONITOR="monitor_${{ github.run_id }}.txt"
+
+          # Create documentation upload files
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            ARCHIVE="legacy-addon-edge-ai-pr-${{ github.event.number }}.zip"
+            echo "publish2 dev PR-${{ github.event.number }} ${ARCHIVE}" > "${MONITOR}"
+            echo "${{ github.event.number }}" > pr.txt
+          else
+            ARCHIVE="legacy-addon-edge-ai-${VERSION}.zip"
+            echo "publish2 main ${VERSION} ${ARCHIVE}" > "${MONITOR}"
+          fi
+
+          pushd "doc/_build/html"
+          zip -rq "${ARCHIVE}" .
+          mv "${ARCHIVE}" "$PUBLISH"
+          popd
+
+          mv "${MONITOR}" "$PUBLISH"
+          if [[ -f pr.txt ]]; then mv pr.txt "$PUBLISH"; fi
+
+      - name: Prepare Zoomin upload
+        if: ${{ github.event_name == 'push' }}
+        working-directory: ncs/edge-ai
+        run: |
+          PUBLISH="$PWD/publish"
+          mkdir -p "$PUBLISH"
+
+          # Edge AI Add-on API
+          OUTDIR=doc/_build/html-doxygen
+          ARCHIVE="addon-edge-ai-apis_$VERSION.zip"
+
+          mv doc/_build/html/doxygen/html "$OUTDIR"
+
+          # Populate custom.properties, tags.yml
+          cp doc/_zoomin/edge-ai.apis.custom.properties "$OUTDIR/custom.properties"
+          sed -i 's/__VERSION__/'"$VERSION"'/g' "$OUTDIR/custom.properties"
+
+          cp doc/_zoomin/edge-ai.apis.tags.yml "$OUTDIR/tags.yml"
+          sed -i 's/__VERSION__/'"$VERSION"'/g' "$OUTDIR/tags.yml"
+
+          # Patch links from Sphinx to same docset Doxygen APIs
+          find doc/_build/html -type f -name "*.html" -exec sed -ri "/href=\"([^\"]+)\/doxygen\/html\/([^\"]+)\"/{s//href=\"\/bundle\/addon-edge-ai-apis_$VERSION\/page\/\2\"/g; :a s/__/_/g;ta; }" {} \;
+
+          pushd "$OUTDIR"
+          zip -rq "$ARCHIVE" .
+          mv "$ARCHIVE" "$PUBLISH"
+          popd
+
+          # Edge AI Add-on
+          OUTDIR=doc/_build/html
+          ARCHIVE="addon-edge-ai_$VERSION.zip"
+
+          # Populate custom.properties, tags.yml
+          cp doc/_zoomin/edge-ai.custom.properties "$OUTDIR/custom.properties"
+          sed -i 's/__VERSION__/'"$VERSION"'/g' "$OUTDIR/custom.properties"
+
+          cp doc/_zoomin/edge-ai.tags.yml "$OUTDIR/tags.yml"
+          sed -i 's/__VERSION__/'"$VERSION"'/g' "$OUTDIR/tags.yml"
+
+          pushd "$OUTDIR"
+          zip -rq "$ARCHIVE" .
+          mv "$ARCHIVE" "$PUBLISH"
+          popd
+
+      - name: Store
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'external') || contains(github.event.pull_request.labels.*.name, 'CI-trusted-author') }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: docs
+          retention-days: 5
+          path: |
+            ncs/edge-ai/publish/*
