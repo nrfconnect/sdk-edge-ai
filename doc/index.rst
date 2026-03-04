@@ -42,7 +42,7 @@ See the following documentation:
    :glob:
    :caption: Subpages:
 
-   solution_comparison.rst
+   overview.rst
    quick_start.rst
    supported_operators.rst
    setting_up_environment.rst
