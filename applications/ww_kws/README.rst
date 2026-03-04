@@ -21,9 +21,11 @@ When a wakeword is detected, the application:
 * Blinks **LED0** for one second.
 * Sends a status message on UART30.
 
+You can easily replace the bundled wakeword with a custom one using the Text to Wake Word feature of the `Nordic Edge AI Lab`_.
+
 .. note::
    The current implementation in this application performs wakeword detection.
-   A separate keyword classification stage is not supported.
+   A separate keyword classification stage is will be added soon.
 
 Requirements
 ************
