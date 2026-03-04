@@ -1,0 +1,17 @@
+sample:
+  description: NN Inference test (application) to run and validate a compiled NN model
+  name: nRF Edge AI Axon Inference test
+tests:
+  axon.inference:
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "TEST:\\ttest_nn_inference_(.+)\\tCASE COUNT\\t(\\d+)"
+        - "TEST:\\ttest_nn_inference_(.+)\\tCOMPLETE\\tPASS COUNT\\t(\\d+)\\tFAIL COUNT\\t(\\d+)"
+    sysbuild: true
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
