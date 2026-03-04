@@ -15,7 +15,7 @@
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/signal_processing.html
 .. _`Nordic Edge AI Lab platform`: https://ai.lab.nordicsemi.com/
-.. _`Nordic Edge AI Lab`: http://ai.lab.nordicsemi.com/
+.. _`Nordic Edge AI Lab`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Software?lang=en#infotabs
 .. _`nRF54LM20B`: https://www.nordicsemi.com/Products/nRF54LM20B
 .. _`Axon NPU`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Axon-NPU
 .. _`Neuton models`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Neuton-models
