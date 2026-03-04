@@ -26,3 +26,4 @@ This release is based on the |NCS| release v3.2.0.
   * Edge Impulse SDK v1.82.3 integrated into the |EAI| west manifest.
   * :ref:`Documentation for setting up the environment <setting_up_environment>`, depending on |EAI| use case.
   * Release configurations for the :ref:`app_gesture_recognition` application.
+  * :ref:`Wakeword and Keyword Spotting application <app_ww_kws>` demonstrating use of wakeword model from `Nordic Edge AI Lab`_.
