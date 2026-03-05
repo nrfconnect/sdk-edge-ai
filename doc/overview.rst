@@ -1,7 +1,7 @@
 .. _solution_comparison:
 
-Overview
-########
+Solution overview
+#################
 
 .. contents::
    :local:
@@ -14,15 +14,16 @@ The following diagram illustrates how these layers relate to each other:
 .. figure:: images/solution_architecture.png
    :alt: Solution architecture overview
    :align: center
+   :scale: 70%
 
    High-level architecture of the |EAI|.
-   The `Nordic Edge AI Lab`_ cloud service handles online model development, while the on-device stack, consisting of the |EAILib|, the Axon driver, and the SoC hardware, handles embedded inference.
 
-Solutions are grouped into **basic** and **advanced** categories.
+The `Nordic Edge AI Lab`_ cloud service handles online model development, while the on-device stack, consisting of the |EAILib|, the Axon driver, and the SoC hardware, handles embedded inference.
+
+Solutions are grouped into :ref:`basic <solution_comparison_basic>` and :ref:`advanced <solution_comparison_advanced>` categories.
 Basic solutions provide higher-level APIs and integrated toolchains that minimize setup effort, while advanced solutions expose lower-level interfaces for fine-grained control over inference execution and resource usage.
 
-If you are unsure which solution fits your use case, the table below provides a quick comparison.
-Detailed descriptions of each solution follow.
+If you are unsure which solution fits your use case, refer to the table below for a quick comparison:
 
 .. list-table:: Solution comparison
    :header-rows: 1
@@ -37,7 +38,7 @@ Detailed descriptions of each solution follow.
      - `Nordic Edge AI Lab`_
      - Axon NPU
      - High-level API
-     - NPU-accelerated full ML pipeline with minimal integration effort
+     - NPU-accelerated full machine learning pipeline with minimal integration effort
    * - :ref:`nRF Edge AI Lib API with Neuton <solution_edgeai_neuton>`
      - `Nordic Edge AI Lab`_
      - CPU
@@ -52,13 +53,16 @@ Detailed descriptions of each solution follow.
      - `Edge Impulse studio`_
      - CPU or Axon NPU
      - High-level API
-     - End-to-end ML workflow with visual tools and community ecosystem
+     - End-to-end machine learning workflow with visual tools and community ecosystem
+
+
+.. _solution_comparison_basic:
 
 Basic solutions
 ***************
 
-Use the following basic solutions to get started quickly.
-They rely on integrated toolchains and higher-level APIs that abstract most of the model deployment and runtime details.
+Basic solutions rely on integrated toolchains and higher-level APIs that abstract most of the model deployment and runtime details.
+Use them to get started quickly with minimal configuration.
 
 .. _solution_edgeai_axon:
 
@@ -67,7 +71,7 @@ nRF Edge AI Lib API with Axon
 
 This solution uses models trained with the `Nordic Edge AI Lab`_ and deploys them through the |EAILib| API onto devices equipped with the `Axon NPU`_.
 The Nordic Edge AI Lab allows for model design, training, and optimization in the cloud.
-On the device, the |EAILib| provides a complete ML pipeline that covers the full path from raw sensor data to actionable results: its DSP module performs feature extraction (windowing, spectral transforms, statistical features), and its NN module runs inference on the Axon NPU.
+On the device, the |EAILib| provides a complete machine learning (ML) pipeline that covers the full path from raw sensor data to actionable results: its DSP module performs feature extraction (windowing, spectral transforms, statistical features), and its NN module runs inference on the Axon NPU.
 A lightweight runtime ties these stages together, so applications only interact with a single high-level API.
 
 Use this solution when you want a full, NPU-accelerated ML pipeline with a standardized API and minimal integration effort.
@@ -76,7 +80,7 @@ Key characteristics:
 
 * Models are trained and exported from the `Nordic Edge AI Lab`_ web tooling.
 * The |EAILib| delivers the complete on-device pipeline: signal processing, feature extraction, and neural network inference.
-* Inference runs on the Axon NPU for higher throughput and lower power consumption compared to CPU execution.
+* Inference runs on the Axon NPU for higher throughput and lower power consumption compared to executing on the CPU.
 * The API abstracts the entire pipeline, keeping applications model-agnostic.
 * Requires a device with `Axon NPU`_ hardware.
 
@@ -91,7 +95,9 @@ This solution uses Neuton models trained with the `Nordic Edge AI Lab`_ and depl
 As with the Axon variant, the |EAILib| provides the complete on-device ML pipeline, including DSP-based feature extraction and neural network inference, but executes entirely on the CPU.
 This makes the solution compatible with a wide range of Nordic Semiconductor devices, including those without an NPU.
 
-The Neuton models are highly optimized and have a minimal memory footprint. Typical resource requirements for Neuton models are 1--5 KB of RAM and 5--10 KB of NVM. Actual RAM and NVM usage depends on the model complexity and the selected signal-processing pipeline. 
+The Neuton models are highly optimized and have a minimal memory footprint. 
+Typical resource requirements for Neuton models are 1--5 KB of RAM and 5--10 KB of Non-Volatile Memory (NVM). 
+Actual RAM and NVM usage depends on the model complexity and the selected signal-processing pipeline. 
 
 Use this solution when you need broad device compatibility, an ultra-small footprint, or when your target hardware does not include an NPU.
 
@@ -125,6 +131,8 @@ Key characteristics:
 * Extensive documentation and community-contributed datasets are available through the Edge Impulse platform.
 
 See :ref:`quick_start_edge_impulse` for CPU-based deployment, or :ref:`quick_start_axon_edge_impulse` for NPU-accelerated deployment.
+
+.. _solution_comparison_advanced:
 
 Advanced solutions
 ******************
