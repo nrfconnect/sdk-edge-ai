@@ -187,6 +187,7 @@ tests:
     extra_args:
       - FILE_SUFFIX=release
       - CONFIG_BLE_MODE_NONE=y
+      - CONFIG_BT=n
   # This configuration is not working yet.
   # It's added so that shield is correctly rendered in the documentation.
   applications.gesture_recognition.shield:
