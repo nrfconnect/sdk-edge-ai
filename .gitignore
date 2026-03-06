@@ -34,3 +34,37 @@ doc/_build
 doc/_src
 doc/*_warnings.txt
 doc/*_doc.log
+
+# from check_compliance.py
+# zephyr-keep-sorted-start
+BinaryFiles.txt
+BoardYml.txt
+CMakeStyle.txt
+Checkpatch.txt
+ClangFormat.txt
+DevicetreeBindings.txt
+DevicetreeLinting.txt
+GitDiffCheck.txt
+Gitlint.txt
+Identity.txt
+ImageSize.txt
+Kconfig.txt
+KconfigBasic.txt
+KconfigBasicNoModules.txt
+KconfigHWMv2.txt
+KeepSorted.txt
+LicenseAndCopyrightCheck.txt
+MaintainersFormat.txt
+ModulesMaintainers.txt
+Nits.txt
+Pylint.txt
+PythonCompat.txt
+Ruff.txt
+SphinxLint.txt
+SysbuildKconfig.txt
+SysbuildKconfigBasic.txt
+SysbuildKconfigBasicNoModules.txt
+TextEncoding.txt
+YAMLLint.txt
+ZephyrModuleFile.txt
+# zephyr-keep-sorted-stop
