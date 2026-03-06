@@ -71,7 +71,7 @@ static void sync_flow(void)
 	/* Input buffer of size 1, matching the input layer dimensions in @ref model_hello_axon. */
 	int8_t input_buffer[INPUT_SIZE];
 	int8_t *input = input_buffer;
-#endif /*IS_ENABLED(CONFIG_AVOID_INPUT_DOUBLE_BUFFER)*/
+#endif /* IS_ENABLED(CONFIG_AVOID_INPUT_DOUBLE_COPY) */
 
 	/* Output buffer of size 1, matching the output dimensions in @ref model_hello_axon. */
 	int8_t output[OUTPUT_SIZE];
