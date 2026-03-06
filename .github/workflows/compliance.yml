@@ -1,0 +1,136 @@
+name: Compliance
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  compliance_job:
+    runs-on: ubuntu-24.04
+    name: Run compliance checks on patch series (PR)
+    steps:
+      - name: Checkout
+        uses: nrfconnect/action-checkout-west-update@main
+        with:
+          path: ncs/edge-ai
+          git-fetch-depth: 0
+          git-ref: ${{ github.event.pull_request.head.sha }}
+          rebase: true
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.12
+          cache: pip
+          cache-dependency-path: ncs/zephyr/scripts/requirements-compliance.txt
+          pip-install: |
+            -r ncs/zephyr/scripts/requirements-compliance.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v.6.3.0
+        with:
+          cache: npm
+          cache-dependency-path: ./ncs/zephyr/scripts/ci/package-lock.json
+
+      - name: Install Node dependencies
+        run: npm --prefix ./ncs/zephyr/scripts/ci ci
+
+      - name: Run merge commits test
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        working-directory: ncs/edge-ai
+        run: |
+          # Ensure there's no merge commits in the PR
+          [[ "$(git rev-list --merges --count origin/${BASE_REF}..)" == "0" ]] || \
+            (echo "::error ::Merge commits not allowed, rebase instead";false)
+
+      - name: Run Compliance Tests
+        continue-on-error: true
+        id: compliance
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        working-directory: ncs/edge-ai
+        if: contains(github.event.pull_request.user.login, 'dependabot[bot]') != true
+        run: |
+          export ZEPHYR_BASE="$(dirname "$(pwd)")/zephyr"
+          # debug
+          ls -la
+          git log --pretty=oneline | head -n 10
+
+          $ZEPHYR_BASE/scripts/ci/check_compliance.py \
+            -c origin/${BASE_REF}.. \
+            --annotate \
+            -e ClangFormat \
+            -e KconfigBasicNoModules \
+            -e SysbuildKconfigBasicNoModules \
+            -e LicenseAndCopyrightCheck \
+            -e BinaryFiles \
+            -e GitLint \
+            -e PyLint \
+            -e Ruff
+
+      - name: upload-results
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+        continue-on-error: true
+        if: contains(github.event.pull_request.user.login, 'dependabot[bot]') != true
+        with:
+          name: compliance.xml.zip
+          path: ncs/edge-ai/compliance.xml
+          overwrite: true
+
+      - name: check-warns
+        working-directory: ncs/edge-ai
+        if: contains(github.event.pull_request.user.login, 'dependabot[bot]') != true
+        run: |
+          export ZEPHYR_BASE="$(dirname "$(pwd)")/zephyr"
+          if [[ ! -s "compliance.xml" ]]; then
+            exit 1;
+          fi
+
+          files=($($ZEPHYR_BASE/scripts/ci/check_compliance.py -l))
+          for file in "${files[@]}"; do
+            f="${file}.txt"
+            if [[ -s $f ]]; then
+              errors=$(cat $f)
+              errors="${errors//'%'/'%25'}"
+              errors="${errors//$'\n'/'%0A'}"
+              errors="${errors//$'\r'/'%0D'}"
+              echo "::error file=${f}::$errors"
+              exit=1
+            fi
+          done
+
+          if [ "${exit}" == "1" ]; then
+            exit 1;
+          fi
+
+      - name: Check added or updated links
+        working-directory: ncs/edge-ai
+        run: |
+          RE='.. _`(.*)`: (.*)'
+          LINKS=$(git diff --unified=0 "${{ github.event.pull_request.base.sha }}..HEAD" -- "doc/links.txt" | \
+                  grep "^+" || true | \
+                  grep -Ev "^(---|\+\+\+)" || true)
+
+          while IFS= read -r link; do
+            if [[ $link =~ $RE ]]; then
+              NAME=${BASH_REMATCH[1]}
+              URL=${BASH_REMATCH[2]}
+
+              echo -n "Checking URL for '$NAME' ($URL)... "
+              if [[ "$URL" == *"files.nordicsemi.com"* ]]; then
+                # files.nordicsemi.com server does not allow downloading only headers
+                status=$(curl --write-out "%{http_code}" --output /dev/null --silent "$URL" || true)
+              else
+                status=$(curl --write-out "%{http_code}" --output /dev/null --silent --head "$URL" || true)
+              fi
+
+              if [[ "$status" -ne 200 ]]; then
+                echo "FAIL (HTTP code: ${status})"
+                exit 1
+              else
+                echo "OK"
+              fi
+            fi
+          done <<< "$LINKS"
