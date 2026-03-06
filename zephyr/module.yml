@@ -1,3 +1,9 @@
 build:
   cmake: zephyr
   kconfig: zephyr/Kconfig.edge_ai
+
+samples:
+  - applications
+  - samples
+tests:
+  - tests
