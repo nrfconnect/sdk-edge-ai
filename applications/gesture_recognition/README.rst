@@ -259,12 +259,14 @@ You can find raw datasets used for model training on the `training dataset`_ pag
    .. code-block::
 
       CONFIG_DATA_COLLECTION_MODE=y
+      CONFIG_BLE_MODE_NONE=y
 
-#. If you want to forward the same data over Bluetooth LE using `Nordic UART Service (NUS)`_, additionally enable:
+#. If you want to forward the same data over Bluetooth LE using `Nordic UART Service (NUS)`_, additionally switch from No BLE mode to NUS mode:
 
    .. code-block::
 
-      CONFIG_DATA_COLLECTION_BLE_NUS=y
+      CONFIG_DATA_COLLECTION_MODE=y
+      CONFIG_BLE_MODE_NUS=y
 
    In this mode, you must have an additional development kit running the `Nordic central UART sample`_ to receive the NUS data.
 
