@@ -19,7 +19,8 @@ Neural Net Workflow
 
 The neural net compiler for Axon NPU is provided in :file:`compiler/scripts`.
 It has two components; an executor script and a compiler shared object/dll.
-The compiler can work with a .tflite file (bare minimum) or the complete Keras model. The complete model with a test data set is needed if the user wants to measure quantization loss.
+The compiler can work with a .tflite file (bare minimum) or the complete Keras model.
+The complete model with a test data set is needed if the user wants to measure quantization loss.
 The user is responsible for populating a configuration .yml file with various parameters.
 The compiler will produce 3 header files:
 
@@ -38,7 +39,8 @@ Building Applications
 *********************
 
 All applications under :file:`samples` can target zephyr or the simulator.
-The simulator is simply a static library that is compiled into a console application. It is not cycle exact with hardware, but is bit exact and provides performance estimates.
+The simulator is simply a static library that is compiled into a console application.
+It is not cycle exact with hardware, but is bit exact and provides performance estimates.
 
 Zephyr Applications
 -------------------
@@ -56,7 +58,8 @@ To build the zephyr application, execute "west build..." in the application's ro
 Simulator Applications
 ----------------------
 
-To build a simulator application, use the CMakeLists.txt file under <application>/simulator. The simulator application links with various pre-compiled libraries, so it is required to install the same toolchain the pre-compiled libraries were compiled with.
+To build a simulator application, use the :file:`<application>/simulator/CMakeLists.txt` file.
+The simulator application links with various pre-compiled libraries, so it is required to install the same toolchain the pre-compiled libraries were compiled with.
 
 
 * For Windows, install and use the MSVC tool chain with CMake extensions in VS Code.
@@ -80,7 +83,8 @@ To build a simulator application, use the CMakeLists.txt file under <application
 
    cmake --build .
 
-Each application's CMakeList.txt file adds the repos root directory.
-At each directory level, CMakeList.txt files add local subdirectories, conditioned on kconfig variables.
+Each application's :file:`CMakeLists.txt` file adds the repos root directory.
+At each directory level, :file:`CMakeLists.txt` files add local subdirectories, conditioned on kconfig variables.
 
-For zephyr apps, the kconfig values are declared in the .prj file. For simulator apps, the kconfig values are declared in the <application>/simulator/CMakeLists.txt file.
+For zephyr applications, the kconfig values are declared in the .prj file.
+For simulator apps, the kconfig values are declared in the :file:`<application>/simulator/CMakeLists.txt` file.
