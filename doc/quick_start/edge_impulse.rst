@@ -48,7 +48,7 @@ Choose the method that works best for your project:
 * Directly from your development board - Use or modify the :ref:`ei_data_forwarder_sample` to stream sensor data directly from your Nordic board to |EIS|.
   Use it for custom hardware setups to have full control over data collection.
 
-* Quick start with Thingy:53 - If you have a Thingy:53, install the Edge Impulse - Wi-Fi firmware using the `nRF Programmer`_ mobile app, then use the `nRF Edge Impulse` mobile app to forward sensor data wirelessly.
+* Quick start with Thingy:53 - If you have a Thingy:53, install the Edge Impulse - Wi-Fi firmware using the `nRF Programmer`_ mobile app, then use the `nRF Edge Impulse`_ mobile app to forward sensor data wirelessly.
   This is the fastest way to start collecting data without writing any code.
 
 * Upload existing datasets - If you already have data, you can upload synthetic data or public datasets directly to |EIS|.

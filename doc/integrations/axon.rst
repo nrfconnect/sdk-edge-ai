@@ -206,7 +206,7 @@ Follow these steps to execute inference with a compiled Axon model:
             The call blocks until inference completes.
             The Axon hardware is reserved exclusively for the duration of the call.
 
-         #. Observe that when when ``nrf_axon_nn_model_infer_sync()`` returns, the ``output_buffer`` is populated with the inference results.
+         #. Observe that when ``nrf_axon_nn_model_infer_sync()`` returns, the ``output_buffer`` is populated with the inference results.
 
       .. tab:: Asynchronous inference
 
@@ -280,7 +280,7 @@ Ensure you have completed the following:
 #. Included the model header file :file:`nrf_axon_model_<model_name>_.h` in exactly one source file.
    The model symbols are intentionally not declared static, to avoid compiling multiple instances of the model into the application. 
    
-#. Updated the following Kconfig values in the application's :file:`prj.conf`` file:
+#. Updated the following Kconfig values in the application's :file:`prj.conf` file:
 
    * Enable the ``NRF_AXON`` Kconfig option.
    * Set ``NRF_AXON_INTERLAYER_BUFFER_SIZE`` to the maximum value needed across all models in the application. 

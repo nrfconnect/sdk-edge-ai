@@ -33,7 +33,7 @@ Its main goals are:
 
 * Providing a compact, portable C runtime that initializes models, preparing inputs, running inference, and exposing decoded outputs.
 * Delivering a set of DSP primitives, such as windowing, spectral transforms, and statistical features, which are commonly required for processing sensor data in machine learning applications.
-* Including sample applications and CI-friendly examples that show how to package generated model sources, configuring Kconfig options, and building projects using `west`.
+* Including sample applications and CI-friendly examples that show how to package generated model sources, configuring Kconfig options, and building projects using ``west``.
 
 See the following documentation:
 

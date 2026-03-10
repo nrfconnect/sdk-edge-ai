@@ -14,7 +14,7 @@ Overview
 
 The keyword spotting model is based on a Depthwise Separable Convolutional Neural Network (DS-CNN) architecture and follows the MLPerf Tiny keyword spotting reference implementation.
 The model is trained on the Google Speech Commands V2 dataset.
-Pre-trained model files are available in the the `MLPerf Tiny repository <Keyword spotting trained model>`_
+Pre-trained model files are available in the `MLPerf Tiny repository <Keyword spotting trained model>`_
 The Axon compiler uses the exported TFLite model as input and compiles it for execution on Axon-enabled devices.
 The pre-trained floating-point model is provided in TensorFlow SavedModel format, while the compiler expects a TFLite model.
 
@@ -51,7 +51,7 @@ Running the Compiler
 
 This section explains how to compile the keyword spotting model using the Axon compiler.
 You run the compiler executor using a sample compiler input configuration file.
-The provided sample configuration expects the TFLite model to be located in the root of the :file:`kws/`` directory.
+The provided sample configuration expects the TFLite model to be located in the root of the :file:`kws/` directory.
 
 Compiling the model without test accuracy evaluation
 ====================================================

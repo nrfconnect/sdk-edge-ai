@@ -33,7 +33,7 @@ When working with this model, keep the following points in mind:
 Running the model
 *****************
 
-For detailed instructions, see the `MLPerf Tiny anomaly detection` page.
+For detailed instructions, see the `MLPerf Tiny anomaly detection`_ page.
 You can also refer to a `Pre-trained anomaly detection model`_.
 
 Place the downloaded TFLite or Keras model in the directory expected by the compiler input configuration file, for example:
