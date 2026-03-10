@@ -7,7 +7,7 @@ TinyML Anomaly Detection
    :local:
    :depth: 2
 
-This model demonstrates a TinyML-based anomaly detection use case for identifying abnormal machine sounds. 
+This model demonstrates a TinyML-based anomaly detection use case for identifying abnormal machine sounds.
 
 Overview
 ********

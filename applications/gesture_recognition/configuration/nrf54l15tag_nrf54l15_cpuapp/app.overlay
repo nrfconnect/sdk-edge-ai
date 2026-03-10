@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
- / {
+/ {
 	aliases {
 		led0 = &led1_red;
 		led1 = &led1_green;

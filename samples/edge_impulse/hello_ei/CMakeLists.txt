@@ -53,7 +53,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(${FETCH_CONTENT_NAME})
 
-if (${CONFIG_NRF_AXON})
+if(${CONFIG_NRF_AXON})
   zephyr_compile_definitions(
     NRF_AXON_MODEL_NAME=${CONFIG_NRF_AXON_MODEL_NAME}
   )

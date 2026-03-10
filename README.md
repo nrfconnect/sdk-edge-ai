@@ -21,6 +21,3 @@ Support
 -------
 
 To ask questions about nRF Edge AI in the nRF Connect SDK, refer to https://devzone.nordicsemi.com.
-
-
-

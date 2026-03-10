@@ -67,7 +67,7 @@ Integration steps
 Complete the following steps:
 
 1. :ref:`Initializing Axon driver <axon_integration_driver_init>`
-#. :ref:`Initializing model <axon_integration_init_model>` 
+#. :ref:`Initializing model <axon_integration_init_model>`
 #. :ref:`Executing inference <axon_integration_inference>`
 #. :ref:`Integrating the model into an application <axon_integration_model_integration>`
 
@@ -84,7 +84,7 @@ Follow these steps to initialize the Axon driver:
 
 1. Call the platform initialization function
 
-   .. code-block:: console 
+   .. code-block:: console
 
       nrf_axon_platform_init()
 
@@ -92,17 +92,17 @@ Follow these steps to initialize the Axon driver:
    You can obtain ``base_address`` from the device tree on Zephyr.
 
    During initialization, the driver powers on Axon by calling the ``nrf_axon_platform_vote_for_power()`` function.
-   The driver then verifies that Axon exists at the specified base address. 
+   The driver then verifies that Axon exists at the specified base address.
    Axon remains powered on after initialization.
 
    .. note::
-      
+
       Do not create or manage a driver handle.
       Axon is implemented as a singleton, and the driver serializes access internally.
 
 #. Before starting a new inference session on a streaming-style model (where intermediate results are fed forward), initialize the model’s persistent variables:
 
-   .. code-block:: console 
+   .. code-block:: console
 
       nrf_axon_nn_model_init_vars(&my_model_wrapper);
 
@@ -125,16 +125,16 @@ Synchronous model inference
 Synchronous inference means that the inference call waits for completion before returning.
 The synchronous call will wait for the Axon hardware to be available and then claim its exclusive use.
 
-Asynchnronous requests can be made while the Axon is in synchronous mode. 
+Asynchnronous requests can be made while the Axon is in synchronous mode.
 These requests will be serviced upon exiting of synchronous mode, regardless of any pending synchronous requests.
 
-To initialize the model, invoke the function ``nrf_axon_nn_model_validate(&nrf_model_<model_name>)`` one time at start-up to do basic model validation. 
+To initialize the model, invoke the function ``nrf_axon_nn_model_validate(&nrf_model_<model_name>)`` one time at start-up to do basic model validation.
 This will confirm that the global buffers are large enough to handle the model.
 
 Asynchronous model inference
 ----------------------------
 
-Compiled models need to be initialized prior to asynchronous inference. 
+Compiled models need to be initialized prior to asynchronous inference.
 The initialization binds the static, compiled model stored in non-volatile memory (NVM) to a RAM wrapper struct that the driver then manages.
 First, you must declare a static (not on the stack) instance of ``nrf_axon_nn_model_async_inference_wrapper_s`` (included in :file:`include/drivers/nrf_axon_infer.h`), and then invoke the model by initializing the ``nrf_axon_nn_model_async_init()`` function:
 
@@ -196,7 +196,7 @@ Follow these steps to execute inference with a compiled Axon model:
       .. tab:: Synchronous inference
 
          a. Call the following function:
-            
+
             .. code-block:: c
 
                nrf_axon_nn_model_infer_sync(&nrf_axon_model_<model_name>,
@@ -278,12 +278,12 @@ Ensure you have completed the following:
       #include "drivers/axon/nrf_axon_inference.h"
 
 #. Included the model header file :file:`nrf_axon_model_<model_name>_.h` in exactly one source file.
-   The model symbols are intentionally not declared static, to avoid compiling multiple instances of the model into the application. 
-   
+   The model symbols are intentionally not declared static, to avoid compiling multiple instances of the model into the application.
+
 #. Updated the following Kconfig values in the application's :file:`prj.conf` file:
 
    * Enable the ``NRF_AXON`` Kconfig option.
-   * Set ``NRF_AXON_INTERLAYER_BUFFER_SIZE`` to the maximum value needed across all models in the application. 
+   * Set ``NRF_AXON_INTERLAYER_BUFFER_SIZE`` to the maximum value needed across all models in the application.
 
 #. Initialized driver one time at start-up.
 #. Initialized the model one-time at start-up for the desired mode of execution, synchronous (``nrf_axon_nn_model_validate``) or asynchronous (``nrf_axon_nn_model_async_init``).

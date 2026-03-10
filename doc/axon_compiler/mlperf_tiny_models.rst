@@ -12,7 +12,7 @@ The following page describes the MLPerf™ Tiny models that are supported on Axo
 Overview
 ********
 
-MLPerf™ Tiny is a benchmarking suite for evaluating deep learning models on extremely low‑power systems, such as microcontrollers. 
+MLPerf™ Tiny is a benchmarking suite for evaluating deep learning models on extremely low‑power systems, such as microcontrollers.
 The suite includes multiple models that represent real‑world deep learning applications and enables fair performance comparisons across embedded devices.
 
 All example models in this folder are part of the MLPerf Tiny Deep Learning Benchmarks for Embedded Devices.

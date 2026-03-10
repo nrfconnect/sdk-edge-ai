@@ -34,7 +34,7 @@ You must place the download TFLite model and Keras model files in the root direc
 Obtaining raw dataset
 =====================
 
-The model is trained on the CIFAR-10 dataset. 
+The model is trained on the CIFAR-10 dataset.
 To simplify the process, you can use the :file:`download_cifar10_train_resnet.sh` script in the `image classification folder structure <Image classification model_>`_ to download the CIFAR-10 dataset and start training the model.
 Alternatively, you can obtain it from the `CIFAR dataset`_ page.
 

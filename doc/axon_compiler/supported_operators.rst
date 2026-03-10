@@ -17,8 +17,8 @@ The Axon Compiler has the following constraints on model structure:
 * Supports 8-bit quantized input and output for all layers, with an option to use int32 model output with a configurable radix.
 * Supports stateful behavior between inferences when declared using VarHandle, ReadVariable, or AssignVariable.
 * Allows a maximum of two inputs per node.
-* Supports maximum tensor sizes: 
-  
+* Supports maximum tensor sizes:
+
   * Height: 1024
   * Width: 1024
   * Channels: 1024
@@ -34,26 +34,26 @@ Memory organization and reshape
 Axon stores tensors in memory using the following layout:
 
 .. code-block:: c
-  
+
   int8_t my_axon_tensor[channel_count][height][width];
 
 This differs from TFLite, where channels are the innermost dimension:
 
 .. code-block:: c
-  
+
   int8_t my_tflite_tensor[height][width][channel_count];
 
-In addition, the Axon hardware aligns the start of each output row to a 32‑bit boundary. 
+In addition, the Axon hardware aligns the start of each output row to a 32‑bit boundary.
 When the tensor width is not a multiple of four, this alignment introduces padding bytes at the end of each row.
-Because of these differences, a reshape operation in TFLite, which only changes tensor dimensions without moving data, may require actual data movement on Axon. 
+Because of these differences, a reshape operation in TFLite, which only changes tensor dimensions without moving data, may require actual data movement on Axon.
 In such cases, the reshape is executed on the CPU to perform the required memory reorganization.
 
 Many reshape operations are transparent to Axon and do not require data movement, including:
 
-* Dropping or adding an axis when transitioning between 1D and 2D operators. 
-* Flattening a multi‑channel output before a fully connected operator. 
+* Dropping or adding an axis when transitioning between 1D and 2D operators.
+* Flattening a multi‑channel output before a fully connected operator.
   The Axon compiler reorders the weights to account for the channel layout.
-* Applying a height/width transpose around an operation (for example, rotating the input by 90 degrees, performing the operation, and then rotating the output back). 
+* Applying a height/width transpose around an operation (for example, rotating the input by 90 degrees, performing the operation, and then rotating the output back).
   In this case, the Axon compiler removes the reshape operations and executes the operation in the unrotated orientation.
 
 .. _supported_operators_list:
@@ -229,7 +229,7 @@ Tensor manipulation operators
        | See :ref:`supported_operators_reshape` for details.
      - CPU
      - 1.0.0
-  
+
 Model design recommendations
 ****************************
 

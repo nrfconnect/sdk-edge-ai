@@ -31,14 +31,14 @@ Running the model
 *****************
 
 You can either train the model using the reference implementation or start from a pre-trained model.
-Place the downloaded TFLite model in the directory expected by the compiler input configuration file. 
+Place the downloaded TFLite model in the directory expected by the compiler input configuration file.
 
 Obtaining raw dataset
 =====================
 
 This model uses the Google Speech Commands V2 dataset.
 The MLPerf Tiny repository includes scripts to download the dataset, train the model, and prepare test data.
-Detailed instructions are provided in the `reference repository <Keyword spotting_>`_. 
+Detailed instructions are provided in the `reference repository <Keyword spotting_>`_.
 
 Data pre-processing and model behavior
 ======================================
@@ -110,7 +110,7 @@ It demonstrates how to:
 
 The limitations of the current script include:
 
-* It assumes that certain directories already exist and may fail if they are missing. 
+* It assumes that certain directories already exist and may fail if they are missing.
   You must create the required directories before running the script.
 * It is specific to the keyword spotting use case and is meant as an example rather than a production-ready tool.
 * It does not generate Axon feature extractor executables or libraries.
@@ -155,7 +155,7 @@ The training configuration includes parameters related to model definition, feat
 * ``batch_size`` – Training batch size
 * ``mfcc_shift`` – Fixed-point radix used for Axon-generated features
 
-This list is not exhaustive. 
+This list is not exhaustive.
 The YAML file may contain additional fields that are included for demonstration purposes and are not used by the script.
 
 Test mode

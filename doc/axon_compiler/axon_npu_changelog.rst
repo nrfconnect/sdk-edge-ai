@@ -21,7 +21,7 @@ Release 1.0.1  05 Mar 2026
 ==========================
 
 * Added:
- 
+
   * Compiler release 1.0.1
 
   .. note::
@@ -59,7 +59,7 @@ This is the first public release of the Axon NPU software.
 
 * Fixed:
 
-  * Softmax no longer specifies unpacked output. 
+  * Softmax no longer specifies unpacked output.
     Affects a small number of models.
 
 Known issues

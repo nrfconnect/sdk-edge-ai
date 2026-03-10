@@ -95,9 +95,9 @@ This solution uses Neuton models trained with the `Nordic Edge AI Lab`_ and depl
 As with the Axon variant, the |EAILib| provides the complete on-device ML pipeline, including DSP-based feature extraction and neural network inference, but executes entirely on the CPU.
 This makes the solution compatible with a wide range of Nordic Semiconductor devices, including those without an NPU.
 
-The Neuton models are highly optimized and have a minimal memory footprint. 
-Typical resource requirements for Neuton models are 1--5 KB of RAM and 5--10 KB of Non-Volatile Memory (NVM). 
-Actual RAM and NVM usage depends on the model complexity and the selected signal-processing pipeline. 
+The Neuton models are highly optimized and have a minimal memory footprint.
+Typical resource requirements for Neuton models are 1--5 KB of RAM and 5--10 KB of Non-Volatile Memory (NVM).
+Actual RAM and NVM usage depends on the model complexity and the selected signal-processing pipeline.
 
 Use this solution when you need broad device compatibility, an ultra-small footprint, or when your target hardware does not include an NPU.
 

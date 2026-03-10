@@ -48,7 +48,7 @@ This section describes how to configure, build, and run the application.
      A value of around ``115000`` is typically sufficient.
 
 #. Edit the following macros in :file:`src/nrf_axon_app_nn_test_nn_inference.c` to control how inference is performed:
-  
+
    * ``INCLUDE_VECTORS`` - When set to ``0``, test vectors are excluded and no inference is performed.
      This mode is useful for measuring the image size without test data.
    * ``AXON_MINIMUM_TEST_VECTORS`` - When set to ``1``, only a single end‑to‑end test vector is included.
@@ -57,7 +57,7 @@ This section describes how to configure, build, and run the application.
    * ``AXON_LAYER_TEST_START_LAYER`` and ``AXON_LAYER_TEST_STOP_LAYER`` - Use these to limit testing to a specific range of layers, which can help reduce image size or focus debugging on specific layers.
 
 #. Build the application by running the appropriate commands for your chosen build method:
-  
+
    * For a command‑line Zephyr build, run the ``west build`` from the application directory.
      Flash the application to the device and monitor the UART output for test results.
    * For a simulator build in Visual Studio Code, use the CMake extension to build and run the application directly.
