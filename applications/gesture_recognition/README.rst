@@ -270,6 +270,11 @@ You can find raw datasets used for model training on the `training dataset`_ pag
 
    In this mode, you must have an additional development kit running the `Nordic central UART sample`_ to receive the NUS data.
 
+   .. note::
+      When using Bluetooth LE NUS mode, some samples may be lost due to RF noise or increased distance between the device and the central.
+      To help track lost samples, the application prepends a sequential ID to each sample transmitted over NUS.
+      Use the :file:`scripts/check_nus_data.py` script to check for dropped samples and strip the ID from the received data.
+
 Building and running
 ********************
 

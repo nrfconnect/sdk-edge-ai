@@ -145,9 +145,11 @@ int ble_nus_send(const int16_t *input_data)
 		return -ENOTCONN;
 	}
 
-	len = snprintf(buffer, sizeof(buffer), "%d,%d,%d,%d,%d,%d\r\n",
-		       input_data[0], input_data[1], input_data[2],
-		       input_data[3], input_data[4], input_data[5]);
+	static uint32_t id;
+
+	id++;
+	len = snprintf(buffer, sizeof(buffer), "%u %d,%d,%d,%d,%d,%d\r\n", id, input_data[0],
+		       input_data[1], input_data[2], input_data[3], input_data[4], input_data[5]);
 	if ((len <= 0) || (len >= (int)sizeof(buffer))) {
 		return -EINVAL;
 	}
