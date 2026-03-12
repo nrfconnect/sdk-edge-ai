@@ -14,7 +14,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/settings/settings.h>
 
-LOG_MODULE_REGISTER(ble_hid, CONFIG_BT_HIDS_LOG_LEVEL);
+LOG_MODULE_REGISTER(ble_hid);
 
 
 #define KEY_ARROW_LEFT (0x50)
