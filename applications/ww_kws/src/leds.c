@@ -25,7 +25,7 @@ int leds_init(void)
 		return -ENODEV;
 	}
 
-	err = gpio_pin_configure_dt(&led0, GPIO_OUTPUT_ACTIVE);
+	err = gpio_pin_configure_dt(&led0, GPIO_OUTPUT_INACTIVE);
 	if (err) {
 		LOG_ERR("Failed to configure GPIO pin (err %d)", err);
 		return err;
