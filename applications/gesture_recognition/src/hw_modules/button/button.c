@@ -20,26 +20,43 @@ LOG_MODULE_REGISTER(button, CONFIG_LOG_DEFAULT_LEVEL);
 #error "Unsupported board: sw0 devicetree alias is not defined"
 #endif
 
+#define DEBOUNCE_MS 1000
 
 static const struct gpio_dt_spec button_sw0 = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios, {0});
 static struct gpio_callback button_cb_data;
 static button_click_handler_t button_click_handler;
+static struct k_timer reenable_timer;
 
-
-static bool is_pressed(void)
+static void reenable_timer_expiry(struct k_timer *timer)
 {
-	return gpio_pin_get_dt(&button_sw0) > 0;
+	ARG_UNUSED(timer);
+	int ret = gpio_pin_interrupt_configure_dt(&button_sw0, GPIO_INT_LEVEL_ACTIVE);
+
+	if (ret != 0) {
+		LOG_ERR("Error %d: failed to re-enable interrupt on %s pin %u",
+			ret, button_sw0.port->name, button_sw0.pin);
+	}
 }
 
-void button_interrupt(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void button_interrupt(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(cb);
 	ARG_UNUSED(pins);
 
-	if (button_click_handler) {
-		button_click_handler(is_pressed());
+	int ret = gpio_pin_interrupt_configure_dt(&button_sw0, GPIO_INT_DISABLE);
+	if (ret != 0) {
+		LOG_ERR("Error %d: failed to disable interrupt on %s pin %u",
+			ret, button_sw0.port->name, button_sw0.pin);
 	}
+
+	if (button_click_handler != NULL) {
+		button_click_handler();
+	} else {
+		LOG_WRN("Button interrupt fired but no click handler is registered");
+	}
+
+	k_timer_start(&reenable_timer, K_MSEC(DEBOUNCE_MS), K_NO_WAIT);
 }
 
 int button_init(void)
@@ -58,7 +75,9 @@ int button_init(void)
 		return ret;
 	}
 
-	ret = gpio_pin_interrupt_configure_dt(&button_sw0, GPIO_INT_EDGE_BOTH);
+	k_timer_init(&reenable_timer, reenable_timer_expiry, NULL);
+
+	ret = gpio_pin_interrupt_configure_dt(&button_sw0, GPIO_INT_LEVEL_ACTIVE);
 
 	if (ret != 0) {
 		LOG_ERR("Error %d: failed to configure interrupt on %s pin %u",

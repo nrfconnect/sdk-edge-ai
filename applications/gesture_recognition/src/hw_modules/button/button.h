@@ -23,11 +23,8 @@ extern "C" {
 
 /**
  * @brief Button click handler type
- *
- * @param is_pressed Indicates if the button is currently pressed (true) or released (false).
  */
-
-typedef void (*button_click_handler_t)(bool is_pressed);
+typedef void (*button_click_handler_t)(void);
 
 /**
  * @brief Initialize button module

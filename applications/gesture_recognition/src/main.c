@@ -297,11 +297,9 @@ static void button_work_handler(struct k_work *work)
 #endif
 }
 
-static void button_click_handler(bool pressed)
+static void button_click_handler(void)
 {
-	if (pressed) {
-		k_work_submit(&button_work);
-	}
+	k_work_submit(&button_work);
 }
 
 static void hw_modules_init(void)
