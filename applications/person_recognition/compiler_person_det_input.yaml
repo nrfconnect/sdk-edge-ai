@@ -1,0 +1,37 @@
+# Copyright (c) 2026 Nordic Semiconductor
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+# Axon compiler input for person detection (person-det.tflite).
+# Run from person_recognition so that outputs/ is created here.
+# Generate data/demo_input.npy with scripts/prepare_demo_input.py first.
+
+default_values:
+  get_quantized_data: false
+  interlayer_buffer_size: 120000
+  psum_buffer_size: 180000
+  test_vectors_list: [0]
+  header_file_test_vector_cnt: 1
+  log_level: info
+  run_all_variants: false
+  conv2d_setting: local_psum
+  psum_buffer_placement: interlayer_buffer
+  normalize_scaleshift: true
+  disable_op_quantization: true
+  skip_softmax_op: false
+  reshape_input: true
+
+person_det:
+  tflite_model: models/person-det.tflite
+  model_name: person_det
+  test_data: data/demo_input.npy
+  test_vectors: [0]
+  header_file_test_vector_cnt: 1
+  reshape_input: true
+  interlayer_buffer_size: 120000
+  psum_buffer_size: 180000
+  log_level: info
+  conv2d_setting: local_psum
+  psum_buffer_placement: interlayer_buffer
+  normalize_scaleshift: true
+  disable_op_quantization: true
+  skip_softmax_op: false
