@@ -61,6 +61,8 @@ static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
 				  BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL),
 				  BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
+	BT_DATA_BYTES(BT_DATA_GAP_APPEARANCE,
+				  BT_BYTES_LIST_LE16(BT_APPEARANCE_HID_PRESENTATION_REMOTE)),
 };
 
 static const struct bt_data sd[] = {
