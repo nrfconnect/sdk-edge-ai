@@ -11,7 +11,6 @@
 #include <zephyr/sys/util.h>
 
 #include <stdio.h>
-#include <errno.h>
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -114,6 +113,64 @@ static nrf_edgeai_t *p_model;
 K_TIMER_DEFINE(led_timer, led_glowing_timer_handler, NULL);
 #endif /* !CONFIG_LED_NOTIFICATION_BLINK */
 
+static void prepare_input_data(const imu_data_t *imu_data,
+			       flt32_t *input_data_f32,
+			       int16_t *input_data_i16)
+{
+	input_data_f32[0] = (flt32_t)(imu_data->accel[0].phys * 1000);
+	input_data_f32[1] = (flt32_t)(imu_data->accel[1].phys * 1000);
+	input_data_f32[2] = (flt32_t)(imu_data->accel[2].phys * 1000);
+	input_data_f32[3] = (flt32_t)(imu_data->gyro[0].phys * 1000);
+	input_data_f32[4] = (flt32_t)(imu_data->gyro[1].phys * 1000);
+	input_data_f32[5] = (flt32_t)(imu_data->gyro[2].phys * 1000);
+
+	input_data_i16[0] = imu_data->accel[0].raw;
+	input_data_i16[1] = imu_data->accel[1].raw;
+	input_data_i16[2] = imu_data->accel[2].raw;
+	input_data_i16[3] = imu_data->gyro[0].raw;
+	input_data_i16[4] = imu_data->gyro[1].raw;
+	input_data_i16[5] = imu_data->gyro[2].raw;
+}
+
+static void process_one_imu_sample(const imu_data_t *imu_data,
+				   flt32_t *input_data_f32,
+				   int16_t *input_data_i16)
+{
+	prepare_input_data(imu_data, input_data_f32, input_data_i16);
+
+	if (IS_ENABLED(CONFIG_DATA_COLLECTION_MODE)) {
+		send_imu_data(input_data_i16);
+		return;
+	}
+
+#if IS_ENABLED(CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON)
+	execute_inference(input_data_f32);
+#else
+	execute_inference(input_data_i16);
+#endif
+}
+
+static void process_ready_imu_samples(flt32_t *input_data_f32,
+				      int16_t *input_data_i16)
+{
+	imu_data_t imu_data = {0};
+
+#if IS_ENABLED(CONFIG_IMU_FIFO_BATCH)
+	unsigned int fifo_count = 0;
+
+	while (imu_read(&imu_data) == STATUS_SUCCESS) {
+		fifo_count++;
+		process_one_imu_sample(&imu_data, input_data_f32, input_data_i16);
+	}
+
+	LOG_DBG("FIFO batch: %u samples", fifo_count);
+#else
+	if (imu_read(&imu_data) == STATUS_SUCCESS) {
+		process_one_imu_sample(&imu_data, input_data_f32, input_data_i16);
+	}
+#endif
+}
+
 int main(void)
 {
 	hw_modules_init();
@@ -134,43 +191,12 @@ int main(void)
 	LOG_INF("nRF Edge AI Lab Solution id: %s",
 		nrf_edgeai_solution_id_str(p_model));
 
-	imu_data_t imu_data = {0};
-
 	flt32_t input_data_f32[NRF_EDGEAI_INPUT_DATA_LEN];
 	int16_t input_data_i16[NRF_EDGEAI_INPUT_DATA_LEN];
 
-
 	for (;;) {
-		/* Wait for the semaphore to be released by IMU data ready interrupt */
 		k_sem_take(&imu_data_ready_sem, K_FOREVER);
-
-		if (imu_read(&imu_data) != STATUS_SUCCESS) {
-			continue;
-		}
-
-		input_data_f32[0] = (flt32_t)(imu_data.accel[0].phys * 1000);
-		input_data_f32[1] = (flt32_t)(imu_data.accel[1].phys * 1000);
-		input_data_f32[2] = (flt32_t)(imu_data.accel[2].phys * 1000);
-		input_data_f32[3] = (flt32_t)(imu_data.gyro[0].phys * 1000);
-		input_data_f32[4] = (flt32_t)(imu_data.gyro[1].phys * 1000);
-		input_data_f32[5] = (flt32_t)(imu_data.gyro[2].phys * 1000);
-
-		input_data_i16[0] = imu_data.accel[0].raw;
-		input_data_i16[1] = imu_data.accel[1].raw;
-		input_data_i16[2] = imu_data.accel[2].raw;
-		input_data_i16[3] = imu_data.gyro[0].raw;
-		input_data_i16[4] = imu_data.gyro[1].raw;
-		input_data_i16[5] = imu_data.gyro[2].raw;
-
-		if (IS_ENABLED(CONFIG_DATA_COLLECTION_MODE)) {
-			send_imu_data(input_data_i16);
-		} else {
-#if IS_ENABLED(CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON)
-			execute_inference(input_data_f32);
-#else
-			execute_inference(input_data_i16);
-#endif
-		}
+		process_ready_imu_samples(input_data_f32, input_data_i16);
 	}
 
 	return 0;
@@ -347,7 +373,7 @@ static void hw_modules_init(void)
 		LOG_ERR("Failed to initialize IMU sensor, error = %d", (int)status);
 		__ASSERT_NO_MSG(false);
 	}
-	k_sem_init(&imu_data_ready_sem, 0, 1);
+	k_sem_init(&imu_data_ready_sem, 0, K_SEM_MAX_LIMIT);
 
 #if IS_ENABLED(CONFIG_BLE_MODE_HID)
 	ret = ble_hid_init(ble_connection_cb);
