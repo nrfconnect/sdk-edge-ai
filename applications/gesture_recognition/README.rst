@@ -304,13 +304,13 @@ Testing
       :class: highlight
 
       Predicted class: DOUBLE SHAKE, with probability 96 %
-      BLE HID Key 8 sent successfully
+      BLE HID key sent successfully
       Predicted class: SWIPE RIGHT, with probability 99 %
-      BLE HID Key 32 sent successfully
+      BLE HID key sent successfully
       Predicted class: SWIPE LEFT, with probability 99 %
-      BLE HID Key 16 sent successfully
+      BLE HID key sent successfully
       Predicted class: ROTATION RIGHT, with probability 93 %
-      BLE HID Key 1 sent successfully
+      BLE HID key sent successfully
 
    Once the device is running, Bluetooth LE advertising starts as a HID device and waits for a connection request from the PC.
    Devices can be connected in the same way as a regular Bluetooth keyboard.
@@ -322,9 +322,6 @@ Testing
 
       Connected 9C:B6:D0:C0:CE:FC (public)
       Security changed: 9C:B6:D0:C0:CE:FC (public) level 2
-      Input CCCD enabled
-      Input attribute handle: 0
-      Consumer CCCD enabled
 
    After Bluetooth connection, the device changes LED indication from red to green, or red to blue depending on the keyboard control mode.
    You can now use the device to control media playback or presentation slides by making gestures.
