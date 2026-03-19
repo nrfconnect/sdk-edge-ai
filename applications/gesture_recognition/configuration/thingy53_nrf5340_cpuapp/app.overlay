@@ -4,8 +4,21 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+/ {
+	aliases {
+		stream0 = &bmi270;
+	};
+};
+
 &spi3 {
 	bmi270: spi-dev-bmi270@1 {
 		status = "okay";
+		/*
+		 * BMI270 INT1 is on P0.23 (open solder bridge SB3 on PCA20053).
+		 * Defined here to satisfy CONFIG_BMI270_TRIGGER Kconfig dependency;
+		 * actual FIFO reads use CONFIG_BMI270_FIFO_POLL_FALLBACK since
+		 * the bridge is unpopulated by default.
+		 */
+		irq-gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
 	};
 };
