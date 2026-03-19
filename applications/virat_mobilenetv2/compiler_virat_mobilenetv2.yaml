@@ -1,0 +1,35 @@
+# Copyright (c) 2026 Nordic Semiconductor
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+# Compile virat_mobilenetv2.keras for Axon.
+# The compiler will convert Keras -> TFLite (int8) then compile for Axon.
+# Place virat_mobilenetv2.keras in models/ and representative train data in data/x_train_virat.npy.
+# Run from sdk-edge-ai/tools/axon/compiler:
+#   ./run_docker.sh axon_compiler /path/to/sdk-edge-ai/applications/virat_mobilenetv2/compiler_virat_mobilenetv2.yaml
+
+default_values:
+  get_quantized_data: false
+  interlayer_buffer_size: 120000
+  psum_buffer_size: 180000
+  log_level: info
+  run_all_variants: false
+  conv2d_setting: local_psum
+  psum_buffer_placement: interlayer_buffer
+  normalize_scaleshift: true
+  disable_op_quantization: true
+  skip_softmax_op: false
+  reshape_input: true
+
+virat_mobilenetv2:
+  float_model: models/virat_mobilenetv2.keras
+  model_name: virat_mobilenetv2
+  train_data: data/x_train_virat.npy
+  # Optional: omit tflite_model so the compiler converts keras -> tflite first
+  interlayer_buffer_size: 200000
+  psum_buffer_size: 200000
+  log_level: info
+  conv2d_setting: local_psum
+  psum_buffer_placement: interlayer_buffer
+  normalize_scaleshift: true
+  disable_op_quantization: true
+  skip_softmax_op: false

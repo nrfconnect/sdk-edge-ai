@@ -3,8 +3,8 @@
 Copyright (c) 2026 Nordic Semiconductor
 SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 
-Converts test pictures to VWW input format (96x96x3 int8) and emits a C header
-so the firmware can run inference on each. Uses tinyml_vww quantization params.
+Converts test pictures to model input format (int8) and emits a C header.
+Supports vww (96x96 CHW) and virat (360x640 HWC); same quantization params.
 """
 import argparse
 import sys
@@ -12,15 +12,19 @@ from pathlib import Path
 
 import numpy as np
 
-# tinyml_vww input quantization (from nrf_axon_model_tinyml_vww_.h)
-VWW_INPUT_QUANT_MULT = 133693432
-VWW_INPUT_QUANT_ROUND = 19
-VWW_INPUT_QUANT_ZP = -128
-VWW_HEIGHT, VWW_WIDTH, VWW_CHANS = 96, 96, 3
-VWW_SIZE = VWW_HEIGHT * VWW_WIDTH * VWW_CHANS
+# Shared input quantization (from nrf_axon_model_*.h)
+INPUT_QUANT_MULT = 133693432
+INPUT_QUANT_ROUND = 19
+INPUT_QUANT_ZP = -128
+
+# Model presets: (height, width, chans, use_chw)
+MODELS = {
+    "vww": (96, 96, 3, True),
+    "virat": (360, 640, 3, False),
+}
 
 
-def load_and_quantize(image_path: Path) -> np.ndarray:
+def load_and_quantize(image_path: Path, height: int, width: int, use_chw: bool) -> np.ndarray:
     try:
         from PIL import Image
     except ImportError:
@@ -29,16 +33,15 @@ def load_and_quantize(image_path: Path) -> np.ndarray:
     if img.mode != "RGB":
         img = img.convert("RGB")
     img = np.array(img, dtype=np.float32) / 255.0
-    if img.shape[0] != VWW_HEIGHT or img.shape[1] != VWW_WIDTH:
+    if img.shape[0] != height or img.shape[1] != width:
         pil_img = Image.fromarray((img * 255).astype(np.uint8))
-        pil_img = pil_img.resize((VWW_WIDTH, VWW_HEIGHT), Image.Resampling.BILINEAR)
+        pil_img = pil_img.resize((width, height), Image.Resampling.BILINEAR)
         img = np.array(pil_img, dtype=np.float32) / 255.0
-    # int8 = (float * quant_mult) >> quant_round + quant_zp, clamp to [-128, 127]
-    q = (img * VWW_INPUT_QUANT_MULT).astype(np.int64)
-    q = (q >> VWW_INPUT_QUANT_ROUND) + VWW_INPUT_QUANT_ZP
+    q = (img * INPUT_QUANT_MULT).astype(np.int64)
+    q = (q >> INPUT_QUANT_ROUND) + INPUT_QUANT_ZP
     q = np.clip(q, -128, 127).astype(np.int8)
-    # VWW expects CHW (channel, height, width); PIL gives HWC
-    q = np.transpose(q, (2, 0, 1))
+    if use_chw:
+        q = np.transpose(q, (2, 0, 1))
     return q
 
 
@@ -53,7 +56,13 @@ def array_to_c(name: str, arr: np.ndarray) -> str:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Convert test pictures to VWW C header")
+    ap = argparse.ArgumentParser(description="Convert test pictures to model input C header")
+    ap.add_argument(
+        "--model",
+        choices=list(MODELS.keys()),
+        default="vww",
+        help="Model input format: vww (96x96 CHW) or virat (360x640 HWC)",
+    )
     ap.add_argument(
         "--pictures-dir",
         default="pictures",
@@ -69,6 +78,8 @@ def main() -> int:
     pics_dir = root / args.pictures_dir
     out_path = root / args.out
 
+    height, width, chans, use_chw = MODELS[args.model]
+
     images = [
         ("demo_picture", "demo_picture.jpeg"),
         ("demo_2", "demo_2.jpeg"),
@@ -80,7 +91,7 @@ def main() -> int:
         if not path.is_file():
             print(f"Error: image not found: {path}", file=sys.stderr)
             return 1
-        arr = load_and_quantize(path)
+        arr = load_and_quantize(path, height, width, use_chw)
         arrays.append((var_name, arr))
 
     out_path.parent.mkdir(parents=True, exist_ok=True)

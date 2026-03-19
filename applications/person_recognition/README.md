@@ -1,8 +1,12 @@
 # Person recognition (nRF54L, Axon)
 
-Runs **tinyml_vww** (Visual Wake Word) on the Axon NPU and reports whether a **person is present** in each test picture.
+Runs **virat_mobilenetv2** on the Axon NPU and reports whether a **person is present** in each test picture.
 
-Uses the pre-compiled tinyml_vww model from `sdk-edge-ai/tests/axon/compiled_models`. At build time, three pictures are converted to VWW input (96×96×3 int8) and embedded for inference.
+Uses the compiled virat_mobilenetv2 model from `sdk-edge-ai/applications/virat_mobilenetv2/outputs`. You must compile that model first (see `applications/virat_mobilenetv2/README.md`). At build time, three pictures are converted to virat input (360×640×3 int8 HWC) and embedded for inference.
+
+## Prerequisite
+
+Compile the virat_mobilenetv2 model so that `../virat_mobilenetv2/outputs/nrf_axon_model_virat_mobilenetv2_.h` exists.
 
 ## Test pictures
 
@@ -12,7 +16,7 @@ Place these in `pictures/`:
 - `demo_2.jpeg`
 - `demo_3.jpeg`
 
-The build runs `scripts/embed_test_images.py` to generate `src/generated/test_images.h` from these files. If any file is missing, the build fails.
+The build runs `scripts/embed_test_images.py --model virat` to generate `src/generated/test_images.h` from these files. If any file is missing, the build fails.
 
 ## Build and run
 
@@ -27,6 +31,8 @@ west flash
 
 Serial log shows for each picture:
 
-- **demo_picture: person present: yes/no** (class, score)
-- **demo_2: person present: yes/no** (class, score)
-- **demo_3: person present: yes/no** (class, score)
+- **demo_picture: person present: yes/no** (person cells count)
+- **demo_2: person present: yes/no** (person cells count)
+- **demo_3: person present: yes/no** (person cells count)
+
+The model output is 45×80×3 (spatial × 3 classes). Class index 1 is interpreted as "person"; the app reports how many grid cells have that class as argmax.

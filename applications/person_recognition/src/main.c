@@ -2,9 +2,9 @@
  * Copyright (c) 2026 Nordic Semiconductor ASA
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  *
- * Person recognition application for nRF54L: runs tinyml_vww (Visual Wake Word)
- * on the Axon NPU and reports whether a person is present in each test picture
- * (demo_picture, demo_2, demo_3).
+ * Person recognition application for nRF54L: runs virat_mobilenetv2 on the Axon NPU
+ * and reports whether a person is present in each test picture (demo_picture, demo_2, demo_3).
+ * Output is 45x80x3 (spatial x 3 classes); class 1 is treated as "person".
  */
 
 #include <zephyr/kernel.h>
@@ -14,22 +14,54 @@
 #include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
 
-#include "nrf_axon_model_tinyml_vww_.h"
+#include "nrf_axon_model_virat_mobilenetv2_.h"
 #include "generated/test_images.h"
 
 LOG_MODULE_REGISTER(person_recognition);
 
-/* VWW classes: 0 = non_person, 1 = person (matches compiler_sample_vww_input.yaml) */
-#define VWW_NUM_CLASSES 2
-#define VWW_CLASS_PERSON 1
+/* Virat output: 45 x 80 x 3 (height x width x channels), int32, packed 43200 bytes */
+#define VIRAT_OUT_H  45
+#define VIRAT_OUT_W  80
+#define VIRAT_OUT_C  3
+#define VIRAT_OUT_SIZE (VIRAT_OUT_H * VIRAT_OUT_W * VIRAT_OUT_C * sizeof(int32_t))
+
+/* Class index assumed for "person" in virat 3-class output */
+#define VIRAT_CLASS_PERSON 1
+
+static int8_t output_buf[VIRAT_OUT_SIZE];
+
+/* Packed output is CHW: ch0[45*80], ch1[45*80], ch2[45*80] */
+#define VIRAT_CELLS (VIRAT_OUT_H * VIRAT_OUT_W)
+
+/** Count cells where argmax of 3 channels is VIRAT_CLASS_PERSON. */
+static int count_person_cells(const int32_t *out)
+{
+	int count = 0;
+	const int32_t *ch0 = out;
+	const int32_t *ch1 = out + VIRAT_CELLS;
+	const int32_t *ch2 = out + 2 * VIRAT_CELLS;
+
+	for (int h = 0; h < VIRAT_OUT_H; h++) {
+		for (int w = 0; w < VIRAT_OUT_W; w++) {
+			int idx = h * VIRAT_OUT_W + w;
+			int32_t s0 = ch0[idx];
+			int32_t s1 = ch1[idx];
+			int32_t s2 = ch2[idx];
+			int best_c = (s1 > s0 && s1 >= s2) ? 1 : ((s2 > s0 && s2 >= s1) ? 2 : 0);
+			if (best_c == VIRAT_CLASS_PERSON) {
+				count++;
+			}
+		}
+	}
+	return count;
+}
 
 int main(void)
 {
 	nrf_axon_result_e result;
-	const nrf_axon_nn_compiled_model_s *model = &model_tinyml_vww;
-	int8_t output_buf[8]; /* VWW output: 1x2 int32 => 8 bytes */
+	const nrf_axon_nn_compiled_model_s *model = &model_virat_mobilenetv2;
 
-	LOG_INF("Person recognition (nRF54L Axon, tinyml_vww)");
+	LOG_INF("Person recognition (nRF54L Axon, virat_mobilenetv2)");
 
 	result = nrf_axon_platform_init();
 	if (result != NRF_AXON_RESULT_SUCCESS) {
@@ -58,22 +90,12 @@ int main(void)
 			continue;
 		}
 
-		int32_t score = 0;
-		int16_t class_idx = nrf_axon_nn_get_classification(model, output_buf, NULL, &score);
-		if (class_idx < 0) {
-			LOG_ERR("%s: classification failed", name);
-			continue;
-		}
-
-		if (class_idx < VWW_NUM_CLASSES) {
-			LOG_INF("%s: person present: %s (class %d, score %d)",
-				name,
-				class_idx == VWW_CLASS_PERSON ? "yes" : "no",
-				class_idx,
-				score);
-		} else {
-			LOG_WRN("%s: unexpected class index: %d", name, class_idx);
-		}
+		int person_cells = count_person_cells((const int32_t *)output_buf);
+		LOG_INF("%s: person present: %s (person cells %d / %d)",
+			name,
+			person_cells > 0 ? "yes" : "no",
+			person_cells,
+			VIRAT_OUT_H * VIRAT_OUT_W);
 	}
 
 	LOG_INF("Person recognition done.");
