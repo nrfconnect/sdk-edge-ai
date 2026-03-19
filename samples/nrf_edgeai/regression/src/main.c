@@ -42,7 +42,7 @@
  */
 
 #include <nrf_edgeai/nrf_edgeai.h>
-#include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
+#include "nrf_edgeai_user_model.h"
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -300,6 +300,11 @@ int main(void)
 	flt32_t input_features[USER_UNIQ_INPUTS_NUM];
 
 	LOG_INF("--- Testing Model Air Quality predictions ---");
+	if (p_user_model->model.type == NRF_EDGEAI_MODEL_AXON) {
+		LOG_INF("Using Axon model");
+	} else {
+		LOG_INF("Using Neuton model");
+	}
 	/* Validation loop: test the model against all 29 sample data points */
 	const size_t NUM_INPUT_SAMPLES = ARRAY_SIZE(USER_INPUT_DATA);
 

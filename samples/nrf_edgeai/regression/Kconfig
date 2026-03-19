@@ -1,0 +1,33 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "nRF Edge AI Regression sample"
+
+choice NRF_EDGEAI_REGRESSION_MODEL
+	prompt "Regression model backend"
+	default NRF_EDGEAI_REGRESSION_MODEL_AXON if SOC_NRF54LM20B
+	default NRF_EDGEAI_REGRESSION_MODEL_NEUTON
+	help
+	  Select which model implementation to use for the air quality regression sample.
+	  Neuton runs on CPU; Axon uses the NPU and is only available on nRF54L20 (nrf54lm20b).
+
+config NRF_EDGEAI_REGRESSION_MODEL_NEUTON
+	bool "Neuton (CPU)"
+	help
+	  Use the Neuton model. Works on all nRF Edge AI supported boards.
+
+config NRF_EDGEAI_REGRESSION_MODEL_AXON
+	bool "Axon (NPU)"
+	depends on SOC_NRF54LM20B
+	select NRF_AXON
+	help
+	  Use the Axon model. Only available on nRF54L20 (nrf54lm20b) with Axon NPU.
+
+endchoice
+
+endmenu
+
+source "Kconfig.zephyr"

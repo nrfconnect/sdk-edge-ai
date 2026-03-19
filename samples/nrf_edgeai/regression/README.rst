@@ -40,6 +40,21 @@ Configuration
 
 The project configuration for this sample is provided in :file:`samples/nrf_edgeai/regression/prj.conf`.
 
+Model backend (Neuton and Axon)
+===============================
+
+The sample can use either of two model backends, selected in Kconfig:
+
+* Neuton (CPU) — Runs on the application core.
+  It is supported on all nRF Edge AI boards.
+* Axon (NPU) — Runs on the Axon neural processing unit. 
+  It is available only on SoCs with Axon NPU.
+
+To select the model backend, set the ``CONFIG_NRF_EDGEAI_REGRESSION_MODEL_NEUTON`` or ``CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON`` Kconfig option in your :file:`prj.conf` file.
+See board-specific configuration and overlays in the :file:`samples/nrf_edgeai/regression/boards/` folder.
+When using the Axon backend, the generated model saves its buffer requirements in the :file:`prj_example.conf` file as the ``CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE`` and ``CONFIG_NRF_AXON_PSUM_BUFFER_SIZE`` Kconfig options.
+You must manually include these values in your :file:`prj.conf` file before building.
+
 Configuration options
 =====================
 
@@ -70,7 +85,7 @@ For each case, the sample prints a line similar to the following:
 
 .. code-block:: console
 
-  Air quality - Predicted value: 12.345678, Expected value: 14.300000, absolute error 1.954322
+  Air quality - Predicted: 12.345678, Expected: 14.300000, absolute error 1.954322
 
 #. Observe the results printed:
 
