@@ -130,7 +130,7 @@ Key characteristics:
 * Deployed as a Zephyr library package that integrates directly into the |NCS| build system.
 * Extensive documentation and community-contributed datasets are available through the Edge Impulse platform.
 
-See :ref:`quick_start_edge_impulse` for CPU-based deployment, or :ref:`quick_start_axon_edge_impulse` for NPU-accelerated deployment.
+See :ref:`Edge Impulse quick start guide <quick_start_edge_impulse>` for details.
 
 .. _solution_comparison_advanced:
 
