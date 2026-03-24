@@ -1,0 +1,37 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Axon low power sample"
+
+config AXON_LOW_POWER_SLEEP_BETWEEN_SWEEPS_MS
+	int "Sleep duration between sliding-window sweeps (milliseconds)"
+	default 1000
+	range 0 3600000
+	help
+	  Delay after each full sliding-window inference sweep before the next
+	  sweep. Use 0 for back-to-back sweeps (higher duty cycle). Increase for
+	  lower average current.
+
+config AXON_LOW_POWER_GPIO_TRACING
+	bool "GPIO trace for inference and sweeps"
+	select GPIO
+	help
+	  Drive two scope/logic-analyzer pins (see devicetree aliases in the board overlay):
+	  infer-trace-gpios - high only during each nrf_axon_nn_model_infer_sync() call.
+	  sweep-trace-gpios - high for the full sliding-window sweep (one inference per window in that pass).
+
+config AXON_LOW_POWER_LED_INDICATION
+	bool "LED indication during sweep (devicetree led0)"
+	default y
+	select GPIO
+	help
+	  LED lit during each full sliding-window sweep (same envelope as sweep-trace-gpios when
+	  GPIO tracing is enabled). Used to confirm that sample is running as expected without
+	  logging.
+
+endmenu
+
+source "Kconfig.zephyr"

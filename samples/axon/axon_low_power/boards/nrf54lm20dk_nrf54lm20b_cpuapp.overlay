@@ -1,0 +1,20 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+/*
+ * GPIO tracing: zephyr,user pins when CONFIG_AXON_LOW_POWER_GPIO_TRACING is enabled.
+ * Change GPIOs for your wiring.
+ */
+/ {
+	zephyr,user {
+		infer-trace-gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;
+		sweep-trace-gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&axon {
+	status = "okay";
+};
