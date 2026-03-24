@@ -2,66 +2,62 @@
  * Copyright (c) 2026 Nordic Semiconductor ASA
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  *
- * Person recognition application for nRF54L: runs virat_mobilenetv2 on the Axon NPU
- * and reports whether a person is present in each test picture (demo_picture, demo_2, demo_3).
- * Output is 45x80x3 (spatial x 3 classes); class 1 is treated as "person".
+ * Person recognition (nRF54L Axon): mcunet_vww_320kb on embedded test images.
+ * Logs person present (argmax) and approximate person probability from dequantized logits,
+ * matching the PC path in eval_det.py (_dequantize_output + softmax on 2 logits).
  */
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
+#include <math.h>
+#include <stdint.h>
+
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
 
-#include "nrf_axon_model_virat_mobilenetv2_.h"
+#include "nrf_axon_model_mcunet_vww_320kb_.h"
 #include "generated/test_images.h"
 
 LOG_MODULE_REGISTER(person_recognition);
 
-/* Virat output: 45 x 80 x 3 (height x width x channels), int32, packed 43200 bytes */
-#define VIRAT_OUT_H  45
-#define VIRAT_OUT_W  80
-#define VIRAT_OUT_C  3
-#define VIRAT_OUT_SIZE (VIRAT_OUT_H * VIRAT_OUT_W * VIRAT_OUT_C * sizeof(int32_t))
+#define MCUNET_NUM_CLASSES           2
+#define MCUNET_CLASS_PERSON          1
+#define MCUNET_PACKED_OUTPUT_BYTES   NRF_AXON_MODEL_MCUNET_VWW_320KB_PACKED_OUTPUT_SIZE
 
-/* Class index assumed for "person" in virat 3-class output */
-#define VIRAT_CLASS_PERSON 1
+static int8_t output_buf[MCUNET_PACKED_OUTPUT_BYTES];
 
-static int8_t output_buf[VIRAT_OUT_SIZE];
-
-/* Packed output is CHW: ch0[45*80], ch1[45*80], ch2[45*80] */
-#define VIRAT_CELLS (VIRAT_OUT_H * VIRAT_OUT_W)
-
-/** Count cells where argmax of 3 channels is VIRAT_CLASS_PERSON. */
-static int count_person_cells(const int32_t *out)
+/*
+ * Axon header: float_output = (quant - output_dequant_zp) * output_dequant_mult / 2^output_dequant_round
+ * (same linear map for every output element, so argmax on int32 matches argmax on float.)
+ */
+static float dequant_logit(int32_t q, const nrf_axon_nn_compiled_model_s *model)
 {
-	int count = 0;
-	const int32_t *ch0 = out;
-	const int32_t *ch1 = out + VIRAT_CELLS;
-	const int32_t *ch2 = out + 2 * VIRAT_CELLS;
+	int64_t v = (int64_t)(q - model->output_dequant_zp) * (int64_t)model->output_dequant_mult;
 
-	for (int h = 0; h < VIRAT_OUT_H; h++) {
-		for (int w = 0; w < VIRAT_OUT_W; w++) {
-			int idx = h * VIRAT_OUT_W + w;
-			int32_t s0 = ch0[idx];
-			int32_t s1 = ch1[idx];
-			int32_t s2 = ch2[idx];
-			int best_c = (s1 > s0 && s1 >= s2) ? 1 : ((s2 > s0 && s2 >= s1) ? 2 : 0);
-			if (best_c == VIRAT_CLASS_PERSON) {
-				count++;
-			}
-		}
+	return (float)v / (float)(1ULL << model->output_dequant_round);
+}
+
+/* P(class 1) with 2 logits — same as eval_det.py: softmax then take index 1. */
+static float person_probability_two_class(float logit0, float logit1)
+{
+	float d = logit1 - logit0;
+
+	if (d >= 0.f) {
+		return 1.f / (1.f + expf(-d));
 	}
-	return count;
+	float ed = expf(d);
+
+	return ed / (1.f + ed);
 }
 
 int main(void)
 {
 	nrf_axon_result_e result;
-	const nrf_axon_nn_compiled_model_s *model = &model_virat_mobilenetv2;
+	const nrf_axon_nn_compiled_model_s *model = &model_mcunet_vww_320kb;
 
-	LOG_INF("Person recognition (nRF54L Axon, virat_mobilenetv2)");
+	LOG_INF("Person recognition (nRF54L Axon, mcunet_vww_320kb)");
 
 	result = nrf_axon_platform_init();
 	if (result != NRF_AXON_RESULT_SUCCESS) {
@@ -90,12 +86,32 @@ int main(void)
 			continue;
 		}
 
-		int person_cells = count_person_cells((const int32_t *)output_buf);
-		LOG_INF("%s: person present: %s (person cells %d / %d)",
-			name,
-			person_cells > 0 ? "yes" : "no",
-			person_cells,
-			VIRAT_OUT_H * VIRAT_OUT_W);
+		const int32_t *q = (const int32_t *)output_buf;
+
+		float l0 = dequant_logit(q[0], model);
+		float l1 = dequant_logit(q[1], model);
+		float p_person = person_probability_two_class(l0, l1);
+
+		int32_t score = 0;
+		int16_t class_idx = nrf_axon_nn_get_classification(model, output_buf, NULL, &score);
+
+		if (class_idx < 0) {
+			LOG_ERR("%s: classification failed", name);
+			continue;
+		}
+
+		if (class_idx < MCUNET_NUM_CLASSES) {
+			LOG_INF("%s: person present: %s (class %d, raw score %d, P(person) %.4f, logits %.4f %.4f)",
+				name,
+				class_idx == MCUNET_CLASS_PERSON ? "yes" : "no",
+				class_idx,
+				(int)score,
+				(double)p_person,
+				(double)l0,
+				(double)l1);
+		} else {
+			LOG_WRN("%s: unexpected class index: %d", name, class_idx);
+		}
 	}
 
 	LOG_INF("Person recognition done.");
