@@ -153,7 +153,7 @@ def main() -> int:
         "--images",
         nargs="+",
         metavar="FILE",
-        default=["demo_picture.jpeg", "demo_2.jpeg", "demo_3.jpeg"],
+        default=["demo_picture.jpeg", "demo_2.jpeg", "demo_3.jpeg", "image.png"],
         help="JPEG filenames under pictures-dir (default: three demos). "
         "Use e.g. --images demo_picture.jpeg to save flash.",
     )
