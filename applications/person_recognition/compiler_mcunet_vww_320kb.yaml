@@ -36,6 +36,8 @@ mcunet_vww_320kb:
   interlayer_buffer_size: 500000
   psum_buffer_size: 50000
   log_level: debug
+  test_data: data/demo_input.npy
+  test_vectors: all
   # conv2d_setting: local_psum
   # psum_buffer_placement: interlayer_buffer
   # normalize_scaleshift: true
