@@ -45,3 +45,6 @@ mcunet_vww_320kb:
   # test vectors and confuse I/O vs PC; if compile fails, try true again.
   # reshape_input: false
   classification_labels: ["non_person", "person"]
+
+  test_data: data/demo_input.npy
+  test_vectors: all

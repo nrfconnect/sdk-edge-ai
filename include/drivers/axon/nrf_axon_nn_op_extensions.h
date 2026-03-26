@@ -137,13 +137,27 @@ nrf_axon_result_e nrf_axon_nn_op_extension_softmax(uint16_t argc, NRF_AXON_PLATF
 /**
  * @brief Implements sigmoid operator.
  * 
+ * Note: legacy version that produces packed output for compiler versions below 1.1.0
+ * 
  * @param[in] argc number of elements in args. Must equal sizeof(nrf_axon_nn_op_extension_base1_args_s)/sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
  * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args);
 
 /**
+ * @brief Implements sigmoid operator.
+ * 
+ * Note: Updated  version that produces packed output for compiler versions 1.1.0 and later.
+ * 
+ * @param[in] argc number of elements in args. Must equal sizeof(nrf_axon_nn_op_extension_base1_args_s)/sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
+ */
+nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_v2(uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args);
+
+/**
  * @brief Implements tanh operator.
+ * 
+ * Note: legacy version that produces packed output for compiler versions below 1.1.0
  * 
  * @param[in] argc number of elements in args. Must equal sizeof(nrf_axon_nn_op_extension_base1_args_s)/sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
  * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
@@ -151,12 +165,30 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(uint16_t argc, NRF_AXON_PLATF
 nrf_axon_result_e nrf_axon_nn_op_extension_tanh(uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args);
 
 /**
- * @brief Implements reshape operator.
+ * @brief Implements tanh operator.
+ * 
+ * Note: Updated  version that produces packed output for compiler versions 1.1.0 and later.
  * 
  * @param[in] argc number of elements in args. Must equal sizeof(nrf_axon_nn_op_extension_base1_args_s)/sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
  * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
  */
+nrf_axon_result_e nrf_axon_nn_op_extension_tanh_v2(uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args);
+
+/**
+ * @brief Implements reshape operator.
+ * 
+ * @param[in] argc number of elements in args. Must equal sizeof(nrf_axon_nn_op_extension_base2_args_s)/sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base2_args_s, with parameters to the function.
+ */
 nrf_axon_result_e nrf_axon_nn_op_extension_reshape(uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args);
+
+/**
+ * @brief Implements resize_nearest_neighbor operator.
+ * 
+ * @param[in] argc number of elements in args. Must equal sizeof(nrf_axon_nn_op_extension_base2_args_s)/sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base2_args_s, with parameters to the function.
+ */
+nrf_axon_result_e nrf_axon_nn_op_extension_resize_nearest_neighbor(uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args);
 
 
 #ifdef __cplusplus

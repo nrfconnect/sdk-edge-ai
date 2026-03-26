@@ -7,7 +7,7 @@
 
 default_values:
   get_quantized_data: false
-  interlayer_buffer_size: 120000
+  interlayer_buffer_size: 227020
   psum_buffer_size: 180000
   test_vectors_list: [0]
   header_file_test_vector_cnt: 1
@@ -21,13 +21,13 @@ default_values:
   reshape_input: true
 
 person_det:
-  tflite_model: models/person-det-concat.tflite
+  tflite_model: models/person-det.tflite
   model_name: person_det
   test_data: data/demo_input.npy
   test_vectors: [0]
   header_file_test_vector_cnt: 1
   reshape_input: true
-  interlayer_buffer_size: 120000
+  interlayer_buffer_size: 227020
   psum_buffer_size: 180000
   log_level: info
   conv2d_setting: local_psum

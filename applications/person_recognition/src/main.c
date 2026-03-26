@@ -17,16 +17,16 @@
 #include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
 
-#include "nrf_axon_model_mcunet_vww_320kb_.h"
+#include "nrf_axon_model_person_det_.h"
 #include "generated/test_images.h"
 
 LOG_MODULE_REGISTER(person_recognition);
 
 #define MCUNET_NUM_CLASSES           2
 #define MCUNET_CLASS_PERSON          1
-#define MCUNET_PACKED_OUTPUT_BYTES   NRF_AXON_MODEL_MCUNET_VWW_320KB_PACKED_OUTPUT_SIZE
+#define PERSON_DET_PACKED_OUTPUT_BYTES   NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE
 
-static int8_t output_buf[MCUNET_PACKED_OUTPUT_BYTES];
+static int8_t output_buf[PERSON_DET_PACKED_OUTPUT_BYTES];
 
 /*
  * Axon header: float_output = (quant - output_dequant_zp) * output_dequant_mult / 2^output_dequant_round
@@ -57,7 +57,7 @@ static float person_probability_two_class(float logit0, float logit1)
 int main(void)
 {
 	nrf_axon_result_e result;
-	const nrf_axon_nn_compiled_model_s *model = &model_mcunet_vww_320kb;
+	const nrf_axon_nn_compiled_model_s *model = &model_person_det;
 
 	LOG_INF("Person recognition (nRF54L Axon, mcunet_vww_320kb)");
 
@@ -79,6 +79,7 @@ int main(void)
 	}
 
 	for (size_t i = 0; i < PERSON_RECOGNITION_NUM_TEST_IMAGES; i++) {
+		LOG_INF("test %u", i);
 		const int8_t *input = person_recognition_test_inputs[i];
 		const char *name = person_recognition_test_names[i];
 
@@ -88,32 +89,29 @@ int main(void)
 			continue;
 		}
 
-		const int32_t *q = (const int32_t *)output_buf;
+		// const int32_t *q = (const int32_t *)output_buf;
 
-		float l0 = dequant_logit(output_buf[0], model);
-		float l1 = dequant_logit(output_buf[1], model);
-		float p_person = person_probability_two_class(l0, l1);
+		// float l0 = dequant_logit(output_buf[0], model);
+		// float l1 = dequant_logit(output_buf[1], model);
+		// float p_person = person_probability_two_class(l0, l1);
 
-		int32_t score = 0;
-		int16_t class_idx = nrf_axon_nn_get_classification(model, output_buf, NULL, &score);
+		// int32_t score = 0;
+		// int16_t class_idx = nrf_axon_nn_get_classification(model, output_buf, NULL, &score);
 
-		if (class_idx < 0) {
-			LOG_ERR("%s: classification failed", name);
-			continue;
-		}
+		// if (class_idx < 0) {
+		// 	LOG_ERR("%s: classification failed", name);
+		// 	continue;
+		// }
 
-		if (class_idx < MCUNET_NUM_CLASSES) {
-			LOG_INF("%s: person present: %s (class %d, raw score %d, P(person) %.4f, logits %.4f %.4f)",
-				name,
-				class_idx == MCUNET_CLASS_PERSON ? "yes" : "no",
-				class_idx,
-				(int)score,
-				(double)p_person,
-				(double)l0,
-				(double)l1);
-		} else {
-			LOG_WRN("%s: unexpected class index: %d", name, class_idx);
-		}
+		// if (class_idx < MCUNET_NUM_CLASSES) {
+		// 	LOG_INF("%s: person present: %s (class %d, raw score %d)",
+		// 		name,
+		// 		class_idx == MCUNET_CLASS_PERSON ? "yes" : "no",
+		// 		class_idx,
+		// 		(int)score);
+		// } else {
+		// 	LOG_WRN("%s: unexpected class index: %d", name, class_idx);
+		// }
 	}
 
 	LOG_INF("Person recognition done.");
