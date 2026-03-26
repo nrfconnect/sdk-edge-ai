@@ -21,7 +21,7 @@ default_values:
   reshape_input: true
 
 person_det:
-  tflite_model: models/person-det.tflite
+  tflite_model: models/person-det-concat.tflite
   model_name: person_det
   test_data: data/demo_input.npy
   test_vectors: [0]
