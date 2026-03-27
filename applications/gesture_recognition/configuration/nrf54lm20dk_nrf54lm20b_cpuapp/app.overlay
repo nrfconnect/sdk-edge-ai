@@ -9,6 +9,7 @@
 		pwm-led0 = &pwm_led0;
 		pwm-led1 = &pwm_led1;
 		pwm-led2 = &pwm_led2;
+		stream0 = &bmi270;
 	};
 
 	pwmleds {
@@ -107,6 +108,10 @@
 	};
 };
 
+&gpio1 {
+	status = "okay";
+};
+
 &gpio3 {
 	status = "okay";
 };
@@ -124,6 +129,7 @@
 		status = "okay";
 		reg = <0>;
 		spi-max-frequency = <DT_FREQ_M(8)>;
+		irq-gpios = <&gpio1 0 GPIO_ACTIVE_HIGH>;
 	};
 };
 
