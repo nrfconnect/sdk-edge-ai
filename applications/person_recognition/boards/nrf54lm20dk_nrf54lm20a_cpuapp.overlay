@@ -1,11 +1,11 @@
 /*
  * Copyright (c) 2026 Nordic Semiconductor ASA
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * Arducam Mega on SPI22 (same wiring as sdk-edge-ai fomo branch).
+ *
+ * nRF54LM20A SoC DTS does not define the Axon node; use nRF54LM20B + axon overlay for inference.
  */
-
-&axon {
-	status = "okay";
-};
 
 &pinctrl {
 	spi22_default: spi22_default {
