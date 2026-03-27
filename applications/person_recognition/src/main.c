@@ -34,9 +34,11 @@ static int8_t output_buf[MCUNET_PACKED_OUTPUT_BYTES];
  */
 static float dequant_logit(int32_t q, const nrf_axon_nn_compiled_model_s *model)
 {
-	int64_t v = (int64_t)(q - model->output_dequant_zp) * (int64_t)model->output_dequant_mult;
+	const uint32_t deq_mult = model->output_dequant_mult;
+	const uint8_t deq_round = model->output_dequant_round;
+	const int8_t deq_zp = model->output_dequant_zp;
 
-	return (float)v / (float)(1ULL << model->output_dequant_round);
+	return (float)((q - deq_zp) * ((float)deq_mult / (1 << deq_round)));
 }
 
 /* P(class 1) with 2 logits — same as eval_det.py: softmax then take index 1. */
@@ -86,10 +88,10 @@ int main(void)
 			continue;
 		}
 
-		const int32_t *q = (const int32_t *)output_buf;
+		// const int8_t *q = (const int32_t *)output_buf;
 
-		float l0 = dequant_logit(q[0], model);
-		float l1 = dequant_logit(q[1], model);
+		float l0 = dequant_logit(output_buf[0], model);
+		float l1 = dequant_logit(output_buf[1], model);
 		float p_person = person_probability_two_class(l0, l1);
 
 		int32_t score = 0;
