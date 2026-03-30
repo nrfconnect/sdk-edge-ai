@@ -42,7 +42,7 @@
  */
 
 #include <nrf_edgeai/nrf_edgeai.h>
-#include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
+#include "nrf_edgeai_user_model.h"
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -411,6 +411,12 @@ int main(void)
 	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
 	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
 		v.field.patch);
+
+	if (p_user_model->model.type == NRF_EDGEAI_MODEL_AXON) {
+		LOG_INF("Using Axon model");
+	} else {
+		LOG_INF("Using Neuton model");
+	}
 
 	int32_t predicted_class;
 	const size_t DATA_LEN = USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM;

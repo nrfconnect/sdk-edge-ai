@@ -12,7 +12,17 @@ project(nrf_edgeai_classification_sample)
 
 # Source files
 target_include_directories(app PRIVATE include)
-target_sources(app PRIVATE
-    src/main.c
-    src/nrf_edgeai_generated/nrf_edgeai_user_model.c
-)
+
+if(CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_AXON)
+  target_sources(app PRIVATE
+    src/nrf_edgeai_generated/Axon/nrf_edgeai_user_model.c)
+  message(STATUS "Using Axon Edge AI model")
+  target_include_directories(app PRIVATE src/nrf_edgeai_generated/Axon)
+else()
+  target_sources(app PRIVATE
+    src/nrf_edgeai_generated/Neuton/nrf_edgeai_user_model.c)
+  message(STATUS "Using Neuton Edge AI model")
+  target_include_directories(app PRIVATE src/nrf_edgeai_generated/Neuton)
+endif()
+
+target_sources(app PRIVATE src/main.c)

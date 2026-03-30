@@ -44,6 +44,21 @@ Configuration
 
 The project configuration for this sample is provided in :file:`samples/nrf_edgeai/classification/prj.conf`.
 
+Model backend (Neuton and Axon)
+===============================
+
+The sample can use either of two model backends, selected in Kconfig:
+
+* Neuton (CPU) — Runs on the application core.
+  It is supported on all nRF Edge AI boards.
+* Axon (NPU) — Runs on the Axon neural processing unit.
+  It is available only on SoCs with Axon NPU.
+
+To select the model backend, set the ``CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_NEUTON`` or ``CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_AXON`` Kconfig option in your :file:`prj.conf` file.
+See board-specific configuration and overlays in the :file:`samples/nrf_edgeai/classification/boards/` folder.
+When using the Axon backend, the generated model saves its buffer requirements in the :file:`prj_example.conf` file as the ``CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE`` and ``CONFIG_NRF_AXON_PSUM_BUFFER_SIZE`` Kconfig options.
+You must manually include these values in your :file:`prj.conf` file before building.
+
 Configuration options
 =====================
 

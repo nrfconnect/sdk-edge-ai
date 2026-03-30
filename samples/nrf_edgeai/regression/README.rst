@@ -47,7 +47,7 @@ The sample can use either of two model backends, selected in Kconfig:
 
 * Neuton (CPU) — Runs on the application core.
   It is supported on all nRF Edge AI boards.
-* Axon (NPU) — Runs on the Axon neural processing unit. 
+* Axon (NPU) — Runs on the Axon neural processing unit.
   It is available only on SoCs with Axon NPU.
 
 To select the model backend, set the ``CONFIG_NRF_EDGEAI_REGRESSION_MODEL_NEUTON`` or ``CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON`` Kconfig option in your :file:`prj.conf` file.
