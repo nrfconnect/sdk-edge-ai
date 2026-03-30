@@ -14,7 +14,7 @@ Documentation
 
 Browse the official Edge AI documentation:
 
-- To see the official nRF Connect SDK documentation, go to https://docs.nordicsemi.com/bundle/addon-edge-ai_v1.0.0-rc2/page/index.html
+- To see the official nRF Connect SDK documentation, go to https://docs.nordicsemi.com/bundle/addon-edge-ai_latest/page/index.html
 - Nordic Edge AI Lab documentation: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/overview_of_nordic_edge_ai_lab.html
 
 Support
