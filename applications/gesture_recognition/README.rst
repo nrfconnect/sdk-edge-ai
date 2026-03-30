@@ -491,6 +491,7 @@ Dependencies
 This sample uses the following |NCS| services:
 
 * `Nordic UART Service (NUS)`_
+* `HID Service`_
 
 This sample uses the following Zephyr libraries:
 
