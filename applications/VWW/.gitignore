@@ -1,0 +1,4 @@
+# Generated at build from pictures/*.jpeg
+src/generated/
+debug_inputs/
+simulator/build/

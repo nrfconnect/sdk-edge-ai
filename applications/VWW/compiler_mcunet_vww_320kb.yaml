@@ -1,0 +1,49 @@
+# Copyright (c) 2026 Nordic Semiconductor
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+# Compile MCUNet VWW int8 TFLite for Axon.
+#
+# 1) Copy your model to:
+#    applications/person_recognition/models/mcunetmcunet-320kb-1mb_vww.tflite
+#    (e.g. from ~/.torch/mcunetmcunet-320kb-1mb_vww.tflite)
+#
+# 2) From repo root, run (adjust image name if needed):
+#    cd sdk-edge-ai/tools/axon/compiler
+#    ./run_docker.sh axon_compiler \
+#      /absolute/path/to/sdk-edge-ai/applications/person_recognition/compiler_mcunet_vww_320kb.yaml
+#
+# Outputs: applications/person_recognition/outputs/nrf_axon_model_mcunet_vww_320kb_.h
+#
+# If compilation fails (unsupported op / buffer too small), raise interlayer_buffer_size /
+# psum_buffer_size and re-run.
+
+default_values:
+  # get_quantized_data: false
+  # interlayer_buffer_size: 400000
+  # psum_buffer_size: 200000
+  # log_level: info
+  # run_all_variants: false
+  # conv2d_setting: local_psum
+  # psum_buffer_placement: interlayer_buffer
+  # normalize_scaleshift: true
+  # disable_op_quantization: true
+  # skip_softmax_op: false
+  # reshape_input: true
+
+mcunet_vww_320kb:
+  tflite_model: models/mcunet-320kb-1mb_vww.tflite
+  model_name: mcunet_vww_320kb
+  interlayer_buffer_size: 500000
+  psum_buffer_size: 50000
+  log_level: debug
+  test_data: data/demo_input.npy
+  test_vectors: all
+  # conv2d_setting: local_psum
+  # psum_buffer_placement: interlayer_buffer
+  # normalize_scaleshift: true
+  # disable_op_quantization: true
+  # skip_softmax_op: false
+  # Keep false so compiled input H×W matches the .tflite (e.g. 144×144). True can reshape
+  # test vectors and confuse I/O vs PC; if compile fails, try true again.
+  # reshape_input: false
+  classification_labels: ["non_person", "person"]
