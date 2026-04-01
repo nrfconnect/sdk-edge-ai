@@ -97,11 +97,7 @@ typedef struct nrf_axon_queued_cmd_info_wrapper_s {
   const int8_t *input_vector;                           /**< If not NULL, input data will be copied from here to input_buffer immediately prior to execution. Needed if there is any possibility axon is in use by any other user.  */
   int8_t *input_buffer;                                 /**< Location of input as compiled into the command buffer. */
   uint16_t input_size;                                  /**< size in bytes of the input to be copied from input_vector to input_buffer. */
-  int8_t *tmp_output_buffer;                            /**< if not null, driver will copy the results from here. */
-  int8_t *output_buffer;                                /**< if not null, driver will copy the results here*/
-  uint16_t output_width_in_bytes;                       /**< width of an output row in units of bytes. */
-  uint16_t output_stride;                               /**< distance between rows of output in units of bytes, >= output_width_in_bytes*/
-  uint16_t output_buffer_packed_size;                   /**< total size of the packed output in bytes. */
+  void (*copy_result_function)(void *callback_context);  /**< function to call to copy results. The next queued command runs after this callback. */
   struct nrf_axon_queued_cmd_info_wrapper_s* next;      /**< Managed by the driver to place this entry in a linked-list queue. */
 } nrf_axon_queued_cmd_info_wrapper_s;
 

@@ -184,8 +184,10 @@ def axons_compiler(parsed_dict):
                 parsed_dict['train_data'], USER_WORK_DIR)
 
         if not (parsed_dict['float_model'] is None or parsed_dict['float_model'] == ""):
-            assert parsed_dict['float_model'].endswith(".h5") or os.path.isdir(
-                parsed_dict['float_model']), "Keras/saved model is not valid. "
+            assert (parsed_dict['float_model'].endswith(".h5") or
+                    parsed_dict['float_model'].endswith(".keras") or
+                    os.path.isdir(parsed_dict['float_model'])), \
+                "Keras/saved model must be .h5, .keras, or a saved_model directory."
             parsed_dict['float_model'] = util.append_user_workspace(
                 parsed_dict['float_model'], USER_WORK_DIR)
 

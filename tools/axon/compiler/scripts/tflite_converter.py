@@ -49,8 +49,9 @@ def tflite_conversion(x_train, keras_file):
             image = np.expand_dims(x_train[i], axis=0)
             yield [image]
 
-    if keras_file.endswith(".h5"):
-        model = tf.keras.models.load_model(keras_file)
+    if keras_file.endswith(".h5") or keras_file.endswith(".keras"):
+        # compile=False avoids deserializing custom loss/optimizer (only need graph + weights)
+        model = tf.keras.models.load_model(keras_file, compile=False)
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
     else:
         converter = tf.lite.TFLiteConverter.from_saved_model(keras_file)
