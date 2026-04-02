@@ -15,7 +15,11 @@ target_sources(app PRIVATE
   src/control_output.c
   src/dmic.c
   src/leds.c
-  src/wakeword.c
 
-  src/nrf_edgeai_generated/nrf_edgeai_user_model.c
+  src/ww/wakeword.c
+  src/ww/nrf_edgeai_generated/nrf_edgeai_user_model.c
+
+
+  src/kws/kws.c
+  src/kws/nrf_edgeai_generated/nrf_edgeai_user_model.c
 )
