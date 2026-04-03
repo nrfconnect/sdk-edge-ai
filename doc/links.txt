@@ -78,6 +78,7 @@
 .. _`Sensor`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/zephyr/hardware/peripherals/sensor/index.html#sensor
 .. _`Nordic UART Service (NUS)`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/nrf/libraries/bluetooth/services/nus.html
 .. _`TensorFlow Lite for Microcontrollers: Hello World`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/zephyr/samples/modules/tflite-micro/hello_world/README.html#tflite-hello-world
+.. _`HID Service`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/nrf/libraries/bluetooth/services/hids.html
 
 .. ### Source: edgeimpulse.com
 
