@@ -26,6 +26,12 @@
 
 LOG_MODULE_REGISTER(person_recognition);
 
+#include <hal/nrf_gpio.h>
+#define TRACE_PIN_CAPTURE NRF_GPIO_PIN_MAP(1, 10)
+#define TRACE_PIN_PRE NRF_GPIO_PIN_MAP(1, 11)
+#define TRACE_PIN_INFER NRF_GPIO_PIN_MAP(1, 12)
+#define TRACE_PIN_POST NRF_GPIO_PIN_MAP(1, 13)
+
 #define PACKED_OUTPUT_BYTES NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE
 
 #define CAM_W 128
@@ -42,6 +48,7 @@ BUILD_ASSERT(PAD_TOP + CAM_H + PAD_TOP == MODEL_H, "vertical pad");
 #define FRAME_RGB565_BYTES ((CAM_W) * (CAM_H) * 2)
 
 #define MAX_BOXES_LOG 8
+
 
 static int8_t output_buf[PACKED_OUTPUT_BYTES];
 static int8_t input_buf[MODEL_W * MODEL_H * 3];
@@ -222,10 +229,16 @@ int main(void)
 		return -1;
 	}
 
+	nrf_gpio_cfg_output(TRACE_PIN_CAPTURE);
+	nrf_gpio_cfg_output(TRACE_PIN_PRE);
+	nrf_gpio_cfg_output(TRACE_PIN_INFER);
+	nrf_gpio_cfg_output(TRACE_PIN_POST);
+
 	while (true) {
 		atomic_set(&capture_led_active, 1);
 		k_timer_start(&capture_led_timer, K_NO_WAIT, K_MSEC(55));
 
+		nrf_gpio_pin_set(TRACE_PIN_CAPTURE);
 		if (video_stream_start(video, VIDEO_BUF_TYPE_OUTPUT) != 0) {
 			LOG_ERR("video_stream_start failed");
 			atomic_set(&capture_led_active, 0);
@@ -245,14 +258,19 @@ int main(void)
 		}
 
 		(void)video_stream_stop(video, VIDEO_BUF_TYPE_OUTPUT);
+		nrf_gpio_pin_clear(TRACE_PIN_CAPTURE);
 
 		atomic_set(&capture_led_active, 0);
 		k_timer_stop(&capture_led_timer);
 		gpio_pin_set_dt(&led_capture, 0);
 
+		nrf_gpio_pin_set(TRACE_PIN_PRE);
 		build_model_input_from_frame(frame_rgb565, model);
+		nrf_gpio_pin_clear(TRACE_PIN_PRE);
 
+		nrf_gpio_pin_set(TRACE_PIN_INFER);
 		result = nrf_axon_nn_model_infer_sync(model, input_buf, output_buf);
+		nrf_gpio_pin_clear(TRACE_PIN_INFER);
 		if (result != NRF_AXON_RESULT_SUCCESS) {
 			LOG_ERR("inference failed: %d", result);
 			gpio_pin_set_dt(&led_person, 0);
@@ -260,7 +278,9 @@ int main(void)
 			continue;
 		}
 
+		nrf_gpio_pin_set(TRACE_PIN_POST);
 		int n = person_det_decode_and_nms(model, boxes, MAX_BOXES_LOG, score_thresh, nms_iou);
+		nrf_gpio_pin_clear(TRACE_PIN_POST);
 
 		if (n > 0) {
 			for (int i = 0; i < n; i++) {
