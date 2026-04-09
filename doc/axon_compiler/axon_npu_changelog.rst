@@ -17,6 +17,63 @@ Changelog
 
 See the list of changes for a specific release of the Axon NPU software.
 
+Release 1.2.0  16 Apr 2026
+==========================
+
+* Added:
+
+  * Compiler release 1.2.0
+  * Support for ``v3.3.0-preview2`` tag of ``sdk-nrf`` (``SHA-1 ede152ec21``).
+ 
+    .. note::
+      The compiler was tested and built with SDK toolchain version v3.2.0.
+      You should use this version for stable builds.
+
+  * Support for multiple outputs in a model.
+  * Support CPU operator ``RESIZE_NEAREST_NEIGHBOR``.
+  *  ``static_assert`` in compiled model header files to verify that the interlayer buffer is allocated enough space to accommodate the model.
+  *  Compatibility check so that models report a minimum supported Axon version, preventing models compiled with new features from being run on an older version of the driver that does not support these features.
+  * Option to print a histogram of bit differences between Axon inference and TFLite inference.
+
+
+* Fixed:
+
+  * Quantization multiplier misapplied under some circumstances when one input to an Add operation is packed and the other is unpacked. You must recompile models to apply this fix.
+
+
+Compatibility
+=============
+
+* Older model versions are compatible with the latest driver. 
+  You should recompile models using the Add operator.
+* New model versions are compatible with older driver versions if they do not include multiple outputs or the ``RESIZE_NEAREST_NEIGHBOR`` operation.
+
+  * Older driver versions will ignore all but the first output if a model has multiple outputs.
+  * Older driver versions will not compile models with the ``RESIZE_NEAREST_NEIGHBOR`` operation.
+
+Release 1.1.0  19 Mar 2026
+===========================
+
+* Added:
+
+  * Compiler release 1.1.0.
+  * Support for the ``v3.3.0-preview2`` tag of ``sdk-nrf`` (``SHA-1 ede152ec21``).
+   
+    .. note::
+       The compiler was tested and built with SDK toolchain version v3.2.0.
+       You should use this version for stable builds.
+   
+  * TFLite v2.19 as the officially supported version of TFLite. 
+    Version 2.15 should still work.
+  * Build support for ``nRF54lm20b``, replacing ``nRF54lm20a``. 
+    The new board name is ``nrf54lm20dk/nrf54lm20b/cpuapp`` in the build command.
+
+* Fixed:
+
+  * Fully-connected layers with up to 2048 input length and 1024 output length now work correctly with TFLite 2.19. 
+    The previous version supported up to 2046 and 512, respectively.
+  * Sigmoid and Tanh after fully-connected layers now work correctly with TFLite 2.19.
+
 Release 1.0.1  05 Mar 2026
 ==========================
 
