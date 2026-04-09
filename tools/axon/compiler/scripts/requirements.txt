@@ -1,5 +1,5 @@
 numpy
-tensorflow==2.15.1
+tensorflow==2.19.0
 tflite
 pyyaml
 cffi
