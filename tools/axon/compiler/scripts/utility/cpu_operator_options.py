@@ -395,6 +395,60 @@ class CpuReshape(CpuExtension):
         return ops_options.OperatorSupportEnum.SUPPORTED
 
 
+class CpuResizeNearestNeighbor(CpuExtension):
+    cpu_extension_axon_enum_string = "ResizeNearestNeigbor"
+
+
+    def HandleOperatorOptions(self, operator_object):
+        """
+        perform all the operation needed for a specific custom operation needed, 
+        populate all the fields as needed inside the operator object
+        user should write code here to create the custom options object
+        ResizeNearsetNeighbor does not perform quantization/dequantization, nor does it have a bias.
+        The primary attributes are output height and width, but these can be retreived from the actual output dimensions.
+        Optional attributes are booleans align_corners and half_pixel_centers
+        """
+        options = operator_object.SetOperatorOptionObject(
+            tflite.ResizeNearestNeighborOptions())
+        align_corners = options.AlignCorners()
+        half_pixel_centers = options.HalfPixelCenters()
+        operator_object.SetOperatorMetaAttributesString(f"align_corners value : {align_corners}, half_pixel_centers value : {half_pixel_centers}")
+        # @FIXME!! REMOVE THE 175; IT'S JUST THERE TO CONFIRM THAT THE 2 PRECEDING 0s ARE FOR THIS PURPOSE.
+        operator_object.FillAdditionalCpuAttributes([align_corners, half_pixel_centers, 175])
+        # getting quantization parameters
+        ip_q, w_q, bias_q = operator_object.GetIpQuantizationParameters()
+        op_q = operator_object.GetOpQuantizationParameters()
+
+        # performing needed scaling optimizations
+        scale_q = 1
+        scaleshift = 0
+        scale_multipliers = np.array(
+            [abs(int(np.round((scale_q)*2**scaleshift)))])
+        scale_shift = np.array([scaleshift])
+
+        filter_tensor = np.array([])  # input_tensor[1]
+        bias_tensor = np.array([])  # input_tensor[2]
+
+        # perform some operations as needed on these vectors
+        operator_object.SetFilterTensor(filter_tensor)
+        # setting scale values
+        operator_object.SetMultiplierandScaleshift(
+            scale_multipliers, scale_shift)
+        # set the bias_prime tensor
+        operator_object.SetBPrimeTensor(bias_tensor)
+        return 0
+
+    @classmethod
+    def HandlePreviousOperatorAttributes(cls, previous_operator_object):
+        """
+        nothing to be done with the previous operators with the RESHAPE Operator
+        """
+        return 0
+
+    @classmethod
+    def DetermineCpuExtensionSupport(cls, operator_object, op_list, op_index):
+        return ops_options.OperatorSupportEnum.SUPPORTED
+
 """
 add the function to get the custom attributes and other options for a specific cpu operator 
 TODO this declaration and it's functions can be moved into a class and its object can be used to automatically add the cpu operators by reading the variable cpu operator list
@@ -404,6 +458,7 @@ cpu_operators_list = {  # tflite.BuiltinOperator.RESHAPE: CpuReshapeDummy("Dummy
     tflite.BuiltinOperator.LOGISTIC: CpuSigmoid("NRF_AXON_NN_OP_SIGMOID"),
     tflite.BuiltinOperator.TANH: CpuTanh("NRF_AXON_NN_OP_TANH"),
     tflite.BuiltinOperator.RESHAPE: CpuReshape("NRF_AXON_NN_OP_RESHAPE"),
+    tflite.BuiltinOperator.RESIZE_NEAREST_NEIGHBOR: CpuResizeNearestNeighbor("NRF_AXON_NN_OP_RESIZE_NEAREST_NEIGHBOR"),
 }
 
 """

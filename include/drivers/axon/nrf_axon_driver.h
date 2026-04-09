@@ -17,6 +17,50 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
+/**
+ * NRF_AXON_VERSION applies to the entire axon software tool chain.
+ * 
+ * version history
+ * 1.2.0
+ * - Multiple outputs supported
+ * - Resize_Nearest_Neighbor operater supported.
+ * - Rev'ed bin file version to 1.2.0
+ * 
+ * 1.1.0 03/19/2026:
+ * - TFLite 2.19 is supported version (was 2.15)
+ * - More fixes to per-channel quantized dense layers:
+ *     maximum input length increased to 2048 from 2046.
+ *     maximum output length increased to 1024 from 512.
+ *     signmoid and tanh actviation functions after per-channel quantized, fully-connected fixed.
+ * 1.0.1 03/04/2026:
+ * - softmax after fully-connected with per channel quantization fixed.
+ * 1.0.0  03/02/2026:
+ * - softmax fixed to report packed output.
+ * - reshape implemented as a CPU op.
+ * 0.2.0  02/17/2026:
+ * - Compiler catches unsupported dilation settings.
+ * - Renamed broadcast add op function.
+ * 0.1.4  02/03/2026:
+ * - Constant inputs for add and multiply operations.
+ * - Axis broadcast for add operation.
+ * - Width axis broadcast disabled (temporarily) for multiply operation.
+ * - Maximum input channels increased from 512 to 1023 for many operations.
+ * - Passlist functionality added.
+ * - Optimization for 1D convolutions whose channel count is <= 16.
+ * 0.1.2  12/18/2025 : 
+ * - Fix to SplitV for bug experienced on Linux (not Windows).
+ * - Average pool operations that are "mean-like" in that have an output width of 1 on height and/or width axis but whose
+ *   filter size on that axis is less than the input size are now implemented with mean operation, allowing a maximum axis
+ *   size of 1024 (vs 32). For example, input 49x20x64, filter 48x20x64, output 1x1x64, can now be handled.
+ * - (INTERNAL) 1x1 pointwise output optimized with matrix mult instead of conv. Allows output channels up to 512 insteand of just 16.
+ * - (INTERNAL) Places packing conv output in scratch mem.
+ * 0.1.1  Internal development 
+ * 0.1.0  12/11/2025 : 
+ * - 1st versioned release
+ */
+#define NRF_AXON_GENERATE_VERSION(major,minor,patch) ( ((major)<<16) | ((minor) << 8) | (patch))
+#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(1,2,0)
+
 
 #if !defined(AXON_FORCE_32BIT_ADDR) && ((defined(__SIZEOF_POINTER__) && (__SIZEOF_POINTER__==8)) || defined(_WIN64))
 typedef uint64_t NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE;
@@ -97,11 +141,7 @@ typedef struct nrf_axon_queued_cmd_info_wrapper_s {
   const int8_t *input_vector;                           /**< If not NULL, input data will be copied from here to input_buffer immediately prior to execution. Needed if there is any possibility axon is in use by any other user.  */
   int8_t *input_buffer;                                 /**< Location of input as compiled into the command buffer. */
   uint16_t input_size;                                  /**< size in bytes of the input to be copied from input_vector to input_buffer. */
-  int8_t *tmp_output_buffer;                            /**< if not null, driver will copy the results from here. */
-  int8_t *output_buffer;                                /**< if not null, driver will copy the results here*/
-  uint16_t output_width_in_bytes;                       /**< width of an output row in units of bytes. */
-  uint16_t output_stride;                               /**< distance between rows of output in units of bytes, >= output_width_in_bytes*/
-  uint16_t output_buffer_packed_size;                   /**< total size of the packed output in bytes. */
+  void (*copy_result_function)(void *callback_context);  /**< function to call to copy results. The next queued command runs after this callback. */
   struct nrf_axon_queued_cmd_info_wrapper_s* next;      /**< Managed by the driver to place this entry in a linked-list queue. */
 } nrf_axon_queued_cmd_info_wrapper_s;
 

@@ -121,7 +121,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     input_shape = inputs[0]['shape']
     model_ip_datawidth = inputs[0]['dtype']
 
-    if model_ip_datawidth == np.float32:
+    if model_ip_datawidth == np.float32 :
         if operators_detail_graph[0]['op_name'] == "QUANTIZE":
             logger.debug(
                 "input is float, getting the input quantization from QUANTIZE operator")
@@ -143,13 +143,23 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             raise Exception(
                 f"{model_name} has uint8 inputs, which are not supported!")
 
-    if (skip_softmax_op and operators_detail_graph[last_layer_ndx]['op_name'] == "SOFTMAX"):
-        last_layer_ndx = tflite_axon_graph_object.get_index_for_axon_layer_num(
-            axon_last_layer_num-1)
+    # if (skip_softmax_op and operators_detail_graph[last_layer_ndx[0]]['op_name'] == "SOFTMAX"):
+    #     #FIXME when multiple outputs are present!
+    #     if type(last_layer_ndx) is not list:
+    #         last_layer_ndx = [last_layer_ndx]
+    #     last_layer_ndx[0] = tflite_axon_graph_object.get_index_for_axon_layer_num(
+    #         axon_last_layer_num[0]-1)
+
+    if skip_softmax_op:
+        for ndx,layer_ndx in enumerate(last_layer_ndx) :
+            if ops_details[layer_ndx]['op_name'] == "SOFTMAX":
+                last_layer_ndx[ndx] = tflite_axon_graph_object.get_index_for_axon_layer_num(
+                axon_last_layer_num[ndx]-1)
 
     # getting the output scale of the actual final output
     model_op_scale, model_op_zeropoint = copy.deepcopy(
-        tensor_details[operators_detail_graph[last_layer_ndx]['op_tensors'][0]]['quantization'])
+        # tensor_details[operators_detail_graph[last_layer_ndx[0]]['op_tensors'][0]]['quantization'])
+        tensor_details[operators_detail_graph[last_layer_ndx[-1]]['op_tensors'][0]]['quantization'])
     model_op_scaleshift = util.optimized_ip_scaling_shift(
         (model_op_scale), 16, 30, 31)[1]
     model_op_multiplier = int(
@@ -344,7 +354,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             op_q = options.GetOpQuantizationParameters()
 
             ip_zeropoint = copy.deepcopy(ip_q['zero_points'])
-            # ip_scales = copy.deepcopy(ip_q['scales'])
+            ip_scales = copy.deepcopy(ip_q['scales'])
             # op_radix_scales = copy.deepcopy(op_q['scales']) #FIXME - this needs to be handled properly
             # op_radix_zp = copy.deepcopy(op_q['zero_points']) #FIXME - this needs to be handled properly
             op_scales = copy.deepcopy(op_q['scales'])
@@ -363,7 +373,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             options.SetOpQuantizationDisableFlag(disable_op_quantization)
             transpose_layer = options.SetTransposeKernelFlag(transpose_layer)
 
-            if (i == last_layer_ndx) and disable_op_quantization:
+            # if (i == last_layer_ndx[0]) and disable_op_quantization:
+            if (i in last_layer_ndx) and disable_op_quantization:
                 op_scales[0] = 1
                 options.SetOpQScale(op_scales[0])
                 op_zeropoint[0] = 0
@@ -385,7 +396,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 ip_zeropoint, op_zeropoint = options.GetIpOpZeropoints()
                 cpu_op_additional_attrib_list = options.GetCpuAdditionalAttributesTensor()
 
-                if (i == last_layer_ndx) and disable_op_quantization:
+                # if (i == last_layer_ndx[0]) and disable_op_quantization:
+                if (i in last_layer_ndx) and disable_op_quantization:
                     op_scales[0] = 1
                     op_zeropoint[0] = 0
             else:
@@ -409,7 +421,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
 
                 # check here if we need to swap the MAXPOOL operations height and width
                 if (op_name == "AVERAGE_POOL_2D") or (op_name == "MAX_POOL_2D"):
-                    if (i != 0 and operators_detail_graph[i-1]['op_name'] == "RESHAPE") and (i != last_layer_ndx and operators_detail_graph[i+1]['op_name'] == "RESHAPE"):
+                    # if (i != 0 and operators_detail_graph[i-1]['op_name'] == "RESHAPE") and (i != last_layer_ndx[0] and operators_detail_graph[i+1]['op_name'] == "RESHAPE"):
+                    if (i != 0 and operators_detail_graph[i-1]['op_name'] == "RESHAPE") and (i not in last_layer_ndx and operators_detail_graph[i+1]['op_name'] == "RESHAPE"):
                         # check to see if we need to swap the MAXPOOL
                         maxpool_reshape_ip_ = ops.TensorShape(
                             tensor_details[subgraph.Operators(new_op['index']-1).InputsAsNumpy()[0]]['shape'])
@@ -436,7 +449,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 activation_function)
             file_content += line_info + "_ACTIVATION_FUNCTION "+activation_function_enum.name
             # and op_radix > 8:
-            if (disable_op_quantization) and (i == last_layer_ndx):
+            # if (disable_op_quantization) and (i == last_layer_ndx[0]):
+            if (disable_op_quantization) and (i in last_layer_ndx):
                 if (op_radix <= 0):
                     op_radix = util.get_output_radix(op_radix, np.array(
                         min(scale_shift)), model_op_scale, model_op_zeropoint, op_datawidth)
@@ -622,6 +636,17 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 model_descriptor_layer_struct[0].pad_bottom = ops_padding_details.pad_back
             model_descriptor_layer_struct[0].input_zero_point = ip_zeropoint[0]
             model_descriptor_layer_struct[0].output_zero_point = op_zeropoint[0]
+
+            layer_op_scale, layer_op_zeropoint = copy.deepcopy(
+                tensor_details[new_op['op_tensors'][0]]['quantization'])
+            layer_op_scaleshift = util.optimized_ip_scaling_shift(
+                (layer_op_scale), 16, 30, 31)[1]
+            layer_op_multiplier = int(
+                np.round((layer_op_scale)*(2**layer_op_scaleshift)))
+
+            model_descriptor_layer_struct[0].output_dequant_shift = layer_op_scaleshift
+            model_descriptor_layer_struct[0].output_dequant_multiplier = layer_op_multiplier
+
             model_descriptor_layer_struct[0].scale_shift_cnt = scale_shift.size
             model_descriptor_layer_struct[0].activation_function = activation_function_enum.value
             model_descriptor_layer_struct[0].bias_prime.offset = np.array(
@@ -1029,6 +1054,8 @@ def run_compiler_library(test_vectors_flag,
                 if get_per_layer_results and csv_per_layer_results_file_name is not None:
                     command_string_array.append(
                         "-r" + relative_compiler_outputs_dir + "/"+csv_per_layer_results_file_name)
+            command_string_array.append(
+                    "-s" + relative_compiler_outputs_dir + "/sim_env")
             command_string_array.append(
                 "-f" + relative_compiler_outputs_dir + "/"+file_name_prefix)
             command_string_array.append(
