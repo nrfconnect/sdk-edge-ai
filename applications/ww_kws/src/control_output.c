@@ -24,8 +24,17 @@ struct k_work control_output_work;
 K_MSGQ_DEFINE(control_msg_queue, sizeof(struct control_message), 10,
 	      alignof(struct control_message));
 
-static const char waiting_ww_msg[] = "Waiting for wakeword\r\n";
-static const char detected_ww_msg[] = "Wakeword detected\r\n";
+static const char *const messages[] = {
+	[CONTROL_MESSAGE_WAITING_WW] = "Waiting for wakeword\r\n",
+	[CONTROL_MESSAGE_WW_DETECTED] = "Wakeword detected\r\n",
+
+	[CONTROL_MESSAGE_WAITING_KW] = "Waiting for keywords\r\n",
+	[CONTROL_MESSAGE_KW_SPOTTED] = "Keyword spotted: %s\r\n",
+	[CONTROL_MESSAGE_TIMEOUT_KWS] = "Keyword spotting window timeout\r\n",
+};
+
+BUILD_ASSERT(CONTROL_MESSAGE_COUNT == ARRAY_SIZE(messages),
+	     "Mismatch between control_message_type and messages size");
 
 static const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(ncs_control_output_uart));
 static atomic_t uart_busy;
@@ -53,6 +62,7 @@ static void control_output_work_handler(struct k_work *work)
 	int err;
 	struct control_message message_item;
 
+	static char output_buffer[40];
 	const char *buffer = NULL;
 	size_t buffer_len = 0;
 
@@ -70,16 +80,25 @@ static void control_output_work_handler(struct k_work *work)
 
 	switch (message_item.type) {
 	case CONTROL_MESSAGE_WAITING_WW:
-		buffer_len = sizeof(waiting_ww_msg) - 1;
-		buffer = waiting_ww_msg;
-		break;
 	case CONTROL_MESSAGE_WW_DETECTED:
-		buffer_len = sizeof(detected_ww_msg) - 1;
-		buffer = detected_ww_msg;
+	case CONTROL_MESSAGE_WAITING_KW:
+	case CONTROL_MESSAGE_TIMEOUT_KWS:
+		buffer = messages[message_item.type];
+		buffer_len = strlen(buffer);
+		break;
+
+	case CONTROL_MESSAGE_KW_SPOTTED:
+		buffer = output_buffer;
+		buffer_len = snprintf(output_buffer, sizeof(output_buffer),
+				      messages[message_item.type], message_item.name);
+		__ASSERT(buffer_len >= 0, "Error in snprintf call (%d)", buffer_len);
+		__ASSERT(buffer_len < sizeof(output_buffer), "Output buffer is too small");
+
 		break;
 	default:
 		atomic_set(&uart_busy, false);
-		LOG_ERR("Unhandled case");
+		k_msgq_get(&control_msg_queue, &message_item, K_NO_WAIT);
+		LOG_WRN("Unhandled case");
 		return;
 	}
 

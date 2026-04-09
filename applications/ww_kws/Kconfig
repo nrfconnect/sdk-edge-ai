@@ -6,6 +6,28 @@
 
 menu "Wakeword and Keyword Spotting application"
 
+choice APP_MODE
+	prompt "Application mode"
+	default APP_MODE_WW_GATED_KWS
+
+config APP_MODE_WW_GATED_KWS
+	bool "Wakeword-gated keyword spotting mode"
+	help
+	  Run keyword spotting model only after wakeword was detected. After configurable duration
+	  without any keyword spotted switch back to wakeword detection.
+
+config APP_MODE_WW_ONLY
+	bool "Wakeword detection only mode"
+	help
+	  Run wakeword detection continuously without switiching to keyword spotting.
+
+config APP_MODE_KWS_ONLY
+	bool "Keyword spotting only mode"
+	help
+	  Run keyword spotting continuously without need to detect wakeword firstly.
+
+endchoice
+
 config WW_PROBABILITY_THRESHOLD
 	int "Wakeword probability threshold"
 	range 0 1000
@@ -29,6 +51,18 @@ config WW_COUNT_THRESHOLD
 	help
 	  Number of predictions above threshold in predictions history required to confirm wakeword
 	  detection.
+
+config KWS_PERIOD_MS
+	int "Length of keyword spotting window in wakeword-gated mode"
+	default 3000
+
+config KWS_EMA_ALPHA
+	int "Exponential moving average coefficient for class probability"
+	range 0 1000
+	default 120
+	help
+	  Coefficient for new entries in exponential moving average calculation for average class
+	  probability. The value is expressed in units of 1/1000.
 
 endmenu
 
