@@ -61,6 +61,20 @@ Users can see this value declared in the model header file macro ``NRF_AXON_MODE
 
 The synchronous and asynchronous inference APIs accept as parameters the input and output buffers, and will fill/drain the interlayer buffer with input/output in a thread safe manner.
 
+Power Management
+================
+
+The axon npu is automatically put in a low power state when not in use. No explicit power management steps are required of the user.
+
+Other System Resources
+======================
+
+The axon driver executes both in the caller's thread and  in a workqueue. 
+Jobs are initiated in the caller's thread, interrupts are processed in the workqueue, and in synchornous mode, job completion is signaled with a semaphore.
+User callbacks are invoked upon job complete in asynchronous mode; the user takes responsibility for signaling their owning thread.
+A mutex is used to serialize access to the axon npu hardware. 
+The workqueue, interrupt, semaphore, and mutex are all initialized by the function ``nrf_axon_platform_init``, which is called once at start up. The initialization process is described further below.
+
 Integration steps
 *****************
 
@@ -93,7 +107,6 @@ Follow these steps to initialize the Axon driver:
 
    During initialization, the driver powers on Axon by calling the ``nrf_axon_platform_vote_for_power()`` function.
    The driver then verifies that Axon exists at the specified base address.
-   Axon remains powered on after initialization.
 
    .. note::
 

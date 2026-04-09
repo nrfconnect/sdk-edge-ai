@@ -14,6 +14,8 @@ Model structure
 
 The Axon Compiler has the following constraints on model structure:
 
+* Allows a maximum of 1 external input to the model.
+* Allows a maximum of 20 ouputs of the model.
 * Supports 8-bit quantized input and output for all layers, with an option to use int32 model output with a configurable radix.
 * Supports stateful behavior between inferences when declared using VarHandle, ReadVariable, or AssignVariable.
 * Allows a maximum of two inputs per node.
@@ -229,6 +231,10 @@ Tensor manipulation operators
        | See :ref:`supported_operators_reshape` for details.
      - CPU
      - 1.0.0
+   * - Resize Nearest Neighbor
+     - No additional limitations specified
+     - CPU
+     - 1.2.0
 
 Model design recommendations
 ****************************
