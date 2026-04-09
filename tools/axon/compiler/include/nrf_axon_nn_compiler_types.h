@@ -92,7 +92,8 @@ typedef enum {
   NRF_AXON_NN_OP_SOFTMAX=NRF_AXON_NN_OP_FIRST_EXTENSION,  /**< Softmax implemented as an op extension */
   NRF_AXON_NN_OP_SIGMOID,                                 /**< Sigmoid activation implemented as an op extension */
   NRF_AXON_NN_OP_TANH,                                    /**< tanh activation implemented as an op extension */
-  NRF_AXON_NN_OP_RESHAPE,                                 /**< reshape not implemented yet */
+  NRF_AXON_NN_OP_RESHAPE,                                 /**< handles reshapes that require physical movement of data due to difference between axon and tflite data organization */
+  NRF_AXON_NN_OP_RESIZE_NEAREST_NEIGHBOR,
 } nrf_axon_nn_op_e;
 
 /**
@@ -170,7 +171,9 @@ typedef struct {
   uint8_t stride_y;                                                 /**< stride in the height dimension. */
   uint8_t dilation_x;                                               /**< filter dilation in the width dimension. */
   uint8_t dilation_y;                                               /**< filter dilation in the height dimension. */
-  int8_t input_zero_point;                                          /**< input zero point for quantization, used for constant inputs to operations like Add/Multiply . */
+  int8_t input_zero_point;                                          /**< input zero point for quantization, used for constant inputs to operations like Add/Multiply. */
+  uint32_t output_dequant_multiplier;                               /**< To support multiple outputs, need output quantization parameters */
+  uint8_t output_dequant_shift;                                     /**< To support multiple outputs, need output quantization parameters */
   int8_t output_zero_point;                                         /**< output zero point for quantization. */
   union {                                                           /**< Bias vector that includes the sum of the weights/filters * input_zero_point */
     uint64_t offset;                                                /**< populated w/ an offset into the bin file by the executor... */

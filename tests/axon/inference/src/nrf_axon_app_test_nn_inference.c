@@ -104,7 +104,7 @@ int AxonnnModelPrepare() {
     STRINGIZE_2_CONCAT(THE_TEST_NAME_ROOT, NRF_AXON_MODEL_NAME),
     (const int8_t**)THE_TEST_INPUT_VECTORS_LIST_NAME(NRF_AXON_MODEL_NAME),  // test vectors for full model
     (const int8_t**)THE_expected_output_vectors_NAME(NRF_AXON_MODEL_NAME), // expected output vectors, one for each input vector (full model)
-    sizeof(THE_expected_output_vectors_NAME(NRF_AXON_MODEL_NAME))/sizeof(*THE_expected_output_vectors_NAME(NRF_AXON_MODEL_NAME)), // number of full model test/expected_output vector pairs.
+    sizeof(THE_TEST_INPUT_VECTORS_LIST_NAME(NRF_AXON_MODEL_NAME))/sizeof(*THE_TEST_INPUT_VECTORS_LIST_NAME(NRF_AXON_MODEL_NAME)), // number of full model test/expected_output vector pairs.
     (const int8_t**)THE_layer_vectors_NAME(NRF_AXON_MODEL_NAME),  // individual layer outputs. for each n, layer_models[n] input is layer_vectors[n-1] (except n=0, input is full_model_input_vectors[0]), expected output is layer_vectors[n]
     sizeof(THE_layer_vectors_NAME(NRF_AXON_MODEL_NAME))/sizeof(*THE_layer_vectors_NAME(NRF_AXON_MODEL_NAME))); // number of elements in layer_vectors
 # if AXON_LAYER_TEST_VECTORS 
