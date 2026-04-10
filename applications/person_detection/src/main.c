@@ -243,29 +243,19 @@ int main(void)
 	nrf_gpio_cfg_output(TRACE_PIN_INFER);
 	nrf_gpio_cfg_output(TRACE_PIN_POST);
 
-		if (video_stream_start(video, VIDEO_BUF_TYPE_OUTPUT) != 0) {
-			LOG_ERR("video_stream_start failed");
-			atomic_set(&capture_led_active, 0);
-			k_timer_stop(&capture_led_timer);
-			gpio_pin_set_dt(&led_capture, 0);
-			k_msleep(500);
-			// continue;
-		}
+	if (video_stream_start(video, VIDEO_BUF_TYPE_OUTPUT) != 0) {
+		LOG_ERR("video_stream_start failed");
+		atomic_set(&capture_led_active, 0);
+		k_timer_stop(&capture_led_timer);
+		gpio_pin_set_dt(&led_capture, 0);
+		return 0;
+	}
 
 	while (true) {
 		atomic_set(&capture_led_active, 1);
 		k_timer_start(&capture_led_timer, K_NO_WAIT, K_MSEC(55));
 
 		nrf_gpio_pin_set(TRACE_PIN_CAPTURE);
-		// if (video_stream_start(video, VIDEO_BUF_TYPE_OUTPUT) != 0) {
-		// 	LOG_ERR("video_stream_start failed");
-		// 	atomic_set(&capture_led_active, 0);
-		// 	k_timer_stop(&capture_led_timer);
-		// 	gpio_pin_set_dt(&led_capture, 0);
-		// 	k_msleep(500);
-		// 	continue;
-		// }
-
 		if (capture_one_frame(video) != 0) {
 			(void)video_stream_stop(video, VIDEO_BUF_TYPE_OUTPUT);
 			atomic_set(&capture_led_active, 0);
@@ -274,8 +264,6 @@ int main(void)
 			k_msleep(500);
 			continue;
 		}
-
-		// (void)video_stream_stop(video, VIDEO_BUF_TYPE_OUTPUT);
 		nrf_gpio_pin_clear(TRACE_PIN_CAPTURE);
 
 		atomic_set(&capture_led_active, 0);
