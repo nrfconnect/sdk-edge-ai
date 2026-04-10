@@ -70,20 +70,17 @@ static void capture_led_timer_fn(struct k_timer *timer)
 
 K_TIMER_DEFINE(capture_led_timer, capture_led_timer_fn, NULL);
 
-static int8_t quantize_sym(float sym_m1_1, uint32_t quant_mult, uint8_t quant_round, int8_t quant_zp)
+static inline int8_t quantize(const float value, const nrf_axon_nn_compiled_model_input_s *in)
 {
-	double v = (double)sym_m1_1 * (double)quant_mult;
-	int64_t qi = (int64_t)v;
+	const uint32_t quant_mult = in->quant_mult;
+	const uint8_t quant_round = in->quant_round;
+	const int8_t quant_zp = in->quant_zp;
 
-	qi >>= quant_round;
-	qi += quant_zp;
-	if (qi < -128) {
-		return -128;
-	}
-	if (qi > 127) {
-		return 127;
-	}
-	return (int8_t)qi;
+	const float scale = (float)quant_mult / (float)(1 << quant_round);
+	const float scaled = value * scale;
+	const int32_t scaled_int = (int32_t)scaled + quant_zp;
+
+	return (int8_t)__ssat(scaled_int, 8);
 }
 
 static inline uint16_t rgb565_read_be(const uint8_t *p)
@@ -91,53 +88,51 @@ static inline uint16_t rgb565_read_be(const uint8_t *p)
 	return (uint16_t)((uint16_t)p[0] << 8 | p[1]);
 }
 
-static inline float rgb565_channel_to_01(uint16_t pix, unsigned c)
+static void prefill_input_buf(const nrf_axon_nn_compiled_model_input_s *in)
 {
-	unsigned r5 = (pix >> 11) & 0x1f;
-	unsigned g6 = (pix >> 5) & 0x3f;
-	unsigned b5 = pix & 0x1f;
-	unsigned r8 = (r5 << 3) | (r5 >> 2);
-	unsigned g8 = (g6 << 2) | (g6 >> 4);
-	unsigned b8 = (b5 << 3) | (b5 >> 2);
+	const float gray_symmetric = 0.0f;
+	const uint8_t gray = quantize(gray_symmetric, in);
 
-	if (c == 0) {
-		return (float)r8 / 255.f;
-	}
-	if (c == 1) {
-		return (float)g8 / 255.f;
-	}
-	return (float)b8 / 255.f;
+	memset(input_buf, gray, sizeof(input_buf));
 }
 
-static void build_model_input_from_frame(const uint8_t *rgb565, const nrf_axon_nn_compiled_model_s *model)
+static uint8_t lut_5[32];
+static uint8_t lut_6[64];
+
+static void prepare_LUTs(const nrf_axon_nn_compiled_model_input_s *in)
 {
-	const nrf_axon_nn_compiled_model_input_s *in = &model->inputs[model->external_input_ndx];
-	const uint32_t qm = in->quant_mult;
-	const uint8_t qr = in->quant_round;
-	const int8_t qz = in->quant_zp;
+	for (size_t i = 0; i < ARRAY_SIZE(lut_5); i++) {
+		const float value = (float)i / 32.f;
+		const float value_sym = (value * 2.f) - 1.f;
+		lut_5[i] = quantize(value_sym, in);
+	}
 
-	for (unsigned c = 0; c < 3; c++) {
-		for (unsigned y = 0; y < MODEL_H; y++) {
-			for (unsigned x = 0; x < MODEL_W; x++) {
-				float ch01;
+	for (size_t i = 0; i < ARRAY_SIZE(lut_6); i++) {
+		const float value = (float)i / 64.f;
+		const float value_sym = (value * 2.f) - 1.f;
+		lut_6[i] = quantize(value_sym, in);
+	}
+}
 
-				if (x >= PAD_LEFT && x < PAD_LEFT + CAM_W && y >= PAD_TOP &&
-				    y < PAD_TOP + CAM_H) {
-					unsigned sx = x - PAD_LEFT;
-					unsigned sy = y - PAD_TOP;
-					uint16_t pix = rgb565_read_be(&rgb565[(sy * CAM_W + sx) * 2]);
+static void build_model_input_from_frame(const uint8_t *rgb565,
+					 const nrf_axon_nn_compiled_model_input_s *in)
+{
+	for (unsigned cam_row = 0; cam_row < CAM_H; cam_row++) {
+		const unsigned model_row = PAD_TOP + cam_row;
 
-					ch01 = rgb565_channel_to_01(pix, c);
-				} else {
-					ch01 = 0.5f;
-				}
+		for (unsigned cam_col = 0; cam_col < CAM_W; cam_col++) {
+			const unsigned model_col = PAD_LEFT + cam_col;
 
-				float sym = ch01 * 2.f - 1.f;
-				unsigned plane = c * MODEL_W * MODEL_H;
-				unsigned idx = plane + y * MODEL_W + x;
+			const uint16_t pixel =
+				rgb565_read_be(&rgb565[(cam_row * CAM_W + cam_col) * 2]);
+			const unsigned r5 = (pixel >> 11) & 0x1f;
+			const unsigned g6 = (pixel >> 5) & 0x3f;
+			const unsigned b5 = pixel & 0x1f;
+			const unsigned dst_offset = model_row * MODEL_W + model_col;
 
-				input_buf[idx] = quantize_sym(sym, qm, qr, qz);
-			}
+			input_buf[0 * MODEL_W * MODEL_H + dst_offset] = (int8_t)lut_5[r5];
+			input_buf[1 * MODEL_W * MODEL_H + dst_offset] = (int8_t)lut_6[g6];
+			input_buf[2 * MODEL_W * MODEL_H + dst_offset] = (int8_t)lut_5[b5];
 		}
 	}
 }
@@ -172,6 +167,8 @@ int main(void)
 {
 	nrf_axon_result_e result;
 	const nrf_axon_nn_compiled_model_s *model = &model_person_det;
+	const nrf_axon_nn_compiled_model_input_s *model_inputs =
+		&model->inputs[model->external_input_ndx];
 	const struct device *video = DEVICE_DT_GET(DT_NODELABEL(arducam_mega));
 	struct video_buffer *vbufs[2];
 	struct video_format fmt = {.pixelformat = VIDEO_PIX_FMT_RGB565,
@@ -229,6 +226,9 @@ int main(void)
 		return -1;
 	}
 
+	prefill_input_buf(model_inputs);
+	prepare_LUTs(model_inputs);
+
 	nrf_gpio_cfg_output(TRACE_PIN_CAPTURE);
 	nrf_gpio_cfg_output(TRACE_PIN_PRE);
 	nrf_gpio_cfg_output(TRACE_PIN_INFER);
@@ -265,7 +265,7 @@ int main(void)
 		gpio_pin_set_dt(&led_capture, 0);
 
 		nrf_gpio_pin_set(TRACE_PIN_PRE);
-		build_model_input_from_frame(frame_rgb565, model);
+		build_model_input_from_frame(frame_rgb565, model_inputs);
 		nrf_gpio_pin_clear(TRACE_PIN_PRE);
 
 		nrf_gpio_pin_set(TRACE_PIN_INFER);
