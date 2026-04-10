@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+/ {
+	chosen {
+		ncs,control-output-uart = &uart30;
+	};
+
+	aliases {
+		/* Use watchdog wdt31 as the application watchdog */
+		watchdog0 = &wdt31;
+	};
+};
+
+&rram_controller {
+	cpuapp_rram: rram@0 {
+		reg = <0x0 DT_SIZE_K(2036)>;
+		ranges = <0x0 0x0 DT_SIZE_K(2036)>;
+	};
+};
+
+&uart30 {
+	status = "okay";
+};
+
+&pinctrl {
+	pdm20_default_alt: pdm20_default_alt {
+		group1 {
+			psels = <NRF_PSEL(PDM_CLK, 1, 4)>,
+				<NRF_PSEL(PDM_DIN, 1, 5)>;
+		};
+	};
+};
+
+dmic_dev: &pdm20 {
+	status = "okay";
+	pinctrl-0 = <&pdm20_default_alt>;
+	pinctrl-names = "default";
+	clock-source = "PCLK32M";
+};
+
+&axon {
+	status = "okay";
+};
+
+&mx25r64 {
+	status = "disabled";
+};
+
+&wdt31 {
+	status = "okay";
+};

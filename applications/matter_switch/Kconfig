@@ -1,0 +1,115 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Matter Edge AI Switch"
+
+choice SWITCH_TYPE
+	prompt "Matter Switch Type"
+	default GENERIC_SWITCH
+	help
+	  Choose the type of switch to act as.
+
+config LIGHT_SWITCH
+	bool "Act as a Light Switch"
+	help
+	  Act as a Light Switch, which uses client application clusters (for example, Level Control) and bindings to send commands to the server clusters.
+
+config GENERIC_SWITCH
+	bool "Act as a Generic Switch"
+	help
+	  Act as a Generic Switch, which implements the Momentary Switch (`MS`) and Momentary Switch Release (`MSR`) features.
+
+endchoice
+
+config SWITCH_ENDPOINT_ID
+	int "Switch Endpoint ID"
+	default 1
+	help
+	  Endpoint ID for the switch.
+
+config SWITCH_SHELL
+	bool "Switch Shell"
+	depends on CHIP_LIB_SHELL
+	depends on !GENERIC_SWITCH # Currently only Light Switch supports shell commands
+	help
+	  Enable the Switch Shell.
+
+if LIGHT_SWITCH
+
+config NCS_SAMPLE_MATTER_ZAP_FILE_PATH
+	default "${APPLICATION_CONFIG_DIR}/src/light_switch_zap/light_switch.zap"
+
+endif # LIGHT_SWITCH
+
+if GENERIC_SWITCH
+
+config NCS_SAMPLE_MATTER_ZAP_FILE_PATH
+	default "${APPLICATION_CONFIG_DIR}/src/generic_switch_zap/generic_switch.zap"
+
+endif # GENERIC_SWITCH
+
+config SWITCH_THREAD_STACK_SIZE
+	int "Edge AI Switch thread stack size"
+	default 6144
+	help
+	  Stack size for switch thread.
+
+config SWITCH_THREAD_PRIORITY
+	int "Edge AI Switch thread priority"
+	default 8
+	help
+	  Preemptible thread priority.
+
+config WW_PROBABILITY_THRESHOLD
+	int "Wakeword probability threshold"
+	range 0 1000
+	default 990
+	help
+	   Probability threshold for wakeword detection model. The value is expressed in units of
+	   1/1000.
+
+config WW_HISTORY_SIZE
+	int "Size of wakeword predictions history"
+	range 1 32
+	default 20
+	help
+	  Size of history of previous results from wakeword detection model. Each entry corresponds
+	  to 30 milliseconds of past audio.
+
+config WW_COUNT_THRESHOLD
+	int "Threshold for wakeword detection from predictions history"
+	range 1 WW_HISTORY_SIZE
+	default 15
+	help
+	  Number of predictions above threshold in predictions history required to confirm wakeword
+	  detection.
+
+endmenu
+
+# Sample configuration used for Thread networking
+if OPENTHREAD
+
+choice OPENTHREAD_NORDIC_LIBRARY_CONFIGURATION
+	default OPENTHREAD_NORDIC_LIBRARY_MTD
+endchoice
+
+choice OPENTHREAD_DEVICE_TYPE
+	default OPENTHREAD_MTD
+endchoice
+
+config CHIP_ENABLE_ICD_SUPPORT
+	default y
+
+# Reduce Thread TX output power to 0 dBm for SED device
+config OPENTHREAD_DEFAULT_TX_POWER
+	default 0
+
+endif # OPENTHREAD
+
+source "$(ZEPHYR_CONNECTEDHOMEIP_MODULE_DIR)/config/nrfconnect/chip-module/Kconfig.features"
+source "$(ZEPHYR_CONNECTEDHOMEIP_MODULE_DIR)/config/nrfconnect/chip-module/Kconfig.defaults"
+source "$(ZEPHYR_NRF_MODULE_DIR)/samples/matter/common/src/Kconfig"
+source "Kconfig.zephyr"
