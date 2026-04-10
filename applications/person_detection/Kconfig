@@ -5,3 +5,5 @@
 #
 
 source "Kconfig.zephyr"
+
+source "samples/subsys/usb/common/Kconfig.sample_usbd"

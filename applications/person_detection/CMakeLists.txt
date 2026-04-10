@@ -20,4 +20,7 @@ target_include_directories(app PRIVATE ${COMPILED_MODELS_DIR} ${CMAKE_CURRENT_SO
 			   ${CMAKE_CURRENT_SOURCE_DIR}/src/drivers)
 zephyr_compile_definitions(NRF_AXON_MODEL_NAME=person_det)
 
-target_sources(app PRIVATE src/main.c src/person_det_postprocess.c src/drivers/arducam_mega.c)
+include(${ZEPHYR_BASE}/samples/subsys/usb/common/common.cmake)
+
+target_sources(app PRIVATE src/main.c src/person_det_postprocess.c src/drivers/arducam_mega.c
+			   src/usb_stream.c)

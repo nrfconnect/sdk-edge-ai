@@ -23,6 +23,7 @@
 
 #include "nrf_axon_model_person_det_.h"
 #include "person_det_postprocess.h"
+#include "usb_stream.h"
 
 LOG_MODULE_REGISTER(person_recognition);
 
@@ -229,24 +230,41 @@ int main(void)
 	prefill_input_buf(model_inputs);
 	prepare_LUTs(model_inputs);
 
+	int usb_err = usb_stream_init();
+
+	if (usb_err != 0) {
+		LOG_WRN("USB stream init failed: %d (continuing without streaming)", usb_err);
+	}
+
+	uint32_t frame_id = 0;
+
 	nrf_gpio_cfg_output(TRACE_PIN_CAPTURE);
 	nrf_gpio_cfg_output(TRACE_PIN_PRE);
 	nrf_gpio_cfg_output(TRACE_PIN_INFER);
 	nrf_gpio_cfg_output(TRACE_PIN_POST);
 
-	while (true) {
-		atomic_set(&capture_led_active, 1);
-		k_timer_start(&capture_led_timer, K_NO_WAIT, K_MSEC(55));
-
-		nrf_gpio_pin_set(TRACE_PIN_CAPTURE);
 		if (video_stream_start(video, VIDEO_BUF_TYPE_OUTPUT) != 0) {
 			LOG_ERR("video_stream_start failed");
 			atomic_set(&capture_led_active, 0);
 			k_timer_stop(&capture_led_timer);
 			gpio_pin_set_dt(&led_capture, 0);
 			k_msleep(500);
-			continue;
+			// continue;
 		}
+
+	while (true) {
+		atomic_set(&capture_led_active, 1);
+		k_timer_start(&capture_led_timer, K_NO_WAIT, K_MSEC(55));
+
+		nrf_gpio_pin_set(TRACE_PIN_CAPTURE);
+		// if (video_stream_start(video, VIDEO_BUF_TYPE_OUTPUT) != 0) {
+		// 	LOG_ERR("video_stream_start failed");
+		// 	atomic_set(&capture_led_active, 0);
+		// 	k_timer_stop(&capture_led_timer);
+		// 	gpio_pin_set_dt(&led_capture, 0);
+		// 	k_msleep(500);
+		// 	continue;
+		// }
 
 		if (capture_one_frame(video) != 0) {
 			(void)video_stream_stop(video, VIDEO_BUF_TYPE_OUTPUT);
@@ -257,12 +275,15 @@ int main(void)
 			continue;
 		}
 
-		(void)video_stream_stop(video, VIDEO_BUF_TYPE_OUTPUT);
+		// (void)video_stream_stop(video, VIDEO_BUF_TYPE_OUTPUT);
 		nrf_gpio_pin_clear(TRACE_PIN_CAPTURE);
 
 		atomic_set(&capture_led_active, 0);
 		k_timer_stop(&capture_led_timer);
 		gpio_pin_set_dt(&led_capture, 0);
+
+		usb_stream_send_frame(frame_id, CAM_W, CAM_H,
+				      frame_rgb565, FRAME_RGB565_BYTES);
 
 		nrf_gpio_pin_set(TRACE_PIN_PRE);
 		build_model_input_from_frame(frame_rgb565, model_inputs);
@@ -282,6 +303,9 @@ int main(void)
 		int n = person_det_decode_and_nms(model, boxes, MAX_BOXES_LOG, score_thresh, nms_iou);
 		nrf_gpio_pin_clear(TRACE_PIN_POST);
 
+		usb_stream_send_detections(frame_id, MODEL_W, MODEL_H,
+					   PAD_LEFT, PAD_TOP, boxes, n);
+
 		if (n > 0) {
 			for (int i = 0; i < n; i++) {
 				LOG_INF(
@@ -295,7 +319,7 @@ int main(void)
 			gpio_pin_set_dt(&led_person, 0);
 		}
 
-		k_msleep(280);
+		frame_id++;
 	}
 
 	return 0;
