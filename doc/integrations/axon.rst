@@ -64,15 +64,15 @@ The synchronous and asynchronous inference APIs accept as parameters the input a
 Power Management
 ================
 
-The axon npu is automatically put in a low power state when not in use. No explicit power management steps are required of the user.
+The Axon NPU is automatically put in a low power state when not in use. No explicit power management steps are required of the user.
 
 Other System Resources
 ======================
 
-The axon driver executes both in the caller's thread and  in a workqueue. 
+The Axon driver executes both in the caller's thread and  in a workqueue.
 Jobs are initiated in the caller's thread, interrupts are processed in the workqueue, and in synchornous mode, job completion is signaled with a semaphore.
 User callbacks are invoked upon job complete in asynchronous mode; the user takes responsibility for signaling their owning thread.
-A mutex is used to serialize access to the axon npu hardware. 
+A mutex is used to serialize access to the Axon NPU hardware.
 The workqueue, interrupt, semaphore, and mutex are all initialized by the function ``nrf_axon_platform_init``, which is called once at start up. The initialization process is described further below.
 
 Integration steps

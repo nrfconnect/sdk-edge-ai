@@ -66,7 +66,8 @@ nrf_axon_result_e nrf_axon_nn_populate_input_vector(const nrf_axon_nn_compiled_m
  */
 static void copy_result_callback(void *callback_context)
 {
-  nrf_axon_nn_model_async_inference_wrapper_s* model_wrapper = (nrf_axon_nn_model_async_inference_wrapper_s*)callback_context;
+  nrf_axon_nn_model_async_inference_wrapper_s* model_wrapper =
+    (nrf_axon_nn_model_async_inference_wrapper_s*)callback_context;
   nrf_axon_nn_copy_output_to_packed_buffer(model_wrapper->compiled_model, model_wrapper->output_buffer);
 }
 
@@ -96,7 +97,7 @@ nrf_axon_result_e nrf_axon_nn_model_infer_async(
   model_wrapper->queued_cmd_buf_wrapper.cmd_buf_info = &model_wrapper->cmd_buf_info;
   model_wrapper->queued_cmd_buf_wrapper.callback_context = (void *)model_wrapper;
   // register our own handler for the driver callback
-  model_wrapper->queued_cmd_buf_wrapper.callback_function = classify_complete_callback; 
+  model_wrapper->queued_cmd_buf_wrapper.callback_function = classify_complete_callback;
   model_wrapper->output_buffer = output_buffer;
   if (output_buffer != NULL)
   // also record the user's callback
@@ -116,10 +117,17 @@ nrf_axon_result_e nrf_axon_nn_model_infer_async(
       return NRF_AXON_RESULT_FAILURE;
     }
     model_wrapper->queued_cmd_buf_wrapper.input_buffer = model_input->ptr;
-    model_wrapper->queued_cmd_buf_wrapper.input_size = model_input->dimensions.byte_width*model_input->dimensions.channel_cnt*model_input->dimensions.height*model_input->dimensions.width;
+    model_wrapper->queued_cmd_buf_wrapper.input_size =
+      model_input->dimensions.byte_width *
+      model_input->dimensions.channel_cnt *
+      model_input->dimensions.height *
+      model_input->dimensions.width;
     model_wrapper->queued_cmd_buf_wrapper.input_vector = input_vector;
   }
-  model_wrapper->queued_cmd_buf_wrapper.copy_result_function = output_buffer == NULL ? NULL : copy_result_callback;
+  model_wrapper->queued_cmd_buf_wrapper.copy_result_function =
+    output_buffer == NULL ?
+      NULL :
+      copy_result_callback;
   // and submit!
   result = nrf_axon_queue_cmd_buf(&model_wrapper->queued_cmd_buf_wrapper);
   return result;
@@ -242,7 +250,7 @@ int nrf_axon_nn_offset_to_output_ndx(const nrf_axon_nn_compiled_model_s *compile
     return -1; // illegal index
   }
   // some up the sizes
-  int result = CEIL_4(compiled_model->output_dimensions.byte_width * 
+  int result = CEIL_4(compiled_model->output_dimensions.byte_width *
               compiled_model->output_dimensions.channel_cnt *
               compiled_model->output_dimensions.height *
               compiled_model->output_dimensions.width);

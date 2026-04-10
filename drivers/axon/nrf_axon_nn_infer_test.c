@@ -82,7 +82,7 @@ static void unpack_vector(void* unpacked, const void* packed, const nrf_axon_nn_
  * compares one output vector to its expected output.
  * returns number of mismatches (0 on exact match).
  */
-static int test_compare_1_output(const nrf_axon_nn_model_layer_dimensions_s* packed_dimensions, unsigned output_stride, const int8_t *output, const int8_t *expected_output) 
+static int test_compare_1_output(const nrf_axon_nn_model_layer_dimensions_s* packed_dimensions, unsigned output_stride, const int8_t *output, const int8_t *expected_output)
 {
   int max_error = 0;
   int max_error_cnt = 0;
@@ -245,7 +245,7 @@ static int run_layer_test_vector(const nrf_axon_nn_compiled_model_s* compiled_mo
  * This function only works for complete models that expect a single, packed external input vector. Inner layer models are not supported.
  * Note: to support multiple outputs.
  */
-static int run_test_vector_sync(const nrf_axon_nn_compiled_model_s* compiled_model, const int8_t *packed_input, const int8_t **expected_output_list) 
+static int run_test_vector_sync(const nrf_axon_nn_compiled_model_s* compiled_model, const int8_t *packed_input, const int8_t **expected_output_list)
 {
   // do the inference. don't provide the input vector as it has already been transferred to the proper location
   uint32_t profiling_ticks = nrf_axon_platform_get_ticks();
@@ -301,7 +301,7 @@ static void test_vector_async_inference_callback(nrf_axon_result_e result, void 
  * retrieve the output in the callback function.
  */
 
-static int run_test_vector_async(nrf_axon_nn_model_async_inference_wrapper_s* model_wrapper, const int8_t *packed_input, const int8_t **expected_output_list) 
+static int run_test_vector_async(nrf_axon_nn_model_async_inference_wrapper_s* model_wrapper, const int8_t *packed_input, const int8_t **expected_output_list)
 {
   const nrf_axon_nn_compiled_model_s* compiled_model = model_wrapper->compiled_model;
 
@@ -424,7 +424,7 @@ int nrf_axon_nn_run_test_vectors(const nrf_axon_nn_compiled_model_s **compiled_f
         result = run_test_vector_sync(the_model_wrapper.compiled_model, input_ptr, this_model_expected_outputs);
       }
       this_model_expected_outputs += 1 + NRF_AXON_COMPILED_MODEL_EXTRA_OUTPUT_CNT(the_model_wrapper.compiled_model);
-      
+
       if(NRF_AXON_RESULT_SUCCESS == result){
           nrf_axon_platform_printf("\r\nTEST:\t%s\tCASE NO\t%d\tRESULT:\t%s\n", test_vectors[model_ndx].test_name, test_case_ndx, "PASS");
           test_pass_cnt++;
@@ -458,18 +458,18 @@ int nrf_axon_nn_run_test_vectors(const nrf_axon_nn_compiled_model_s **compiled_f
         }
         nrf_axon_platform_printf("\r\nTEST:\t%s\tSTART CASE NO\t%d\n", test_vectors[model_ndx].test_name, test_case_ndx);
         printf("\nTest inference %s vector %d layer %d\n", 
-          this_1_layer_model->base.model_name, 0, layer_ndx);  
-        
-        const int8_t *packed_input = this_1_layer_model->input0_layer_ndx < 0 ? 
+          this_1_layer_model->base.model_name, 0, layer_ndx);
+
+        const int8_t *packed_input = this_1_layer_model->input0_layer_ndx < 0 ?
             test_vectors[model_ndx].full_model_input_vectors[0] :  // negative code indicates external inpout
-              NULL == compiled_1_layer_models[model_ndx][this_1_layer_model->input0_layer_ndx] ? 
+              NULL == compiled_1_layer_models[model_ndx][this_1_layer_model->input0_layer_ndx] ?
                 NULL : // if the input model is NULL, don't have a vector, so just use the state of the interlayer buffer or peristent var buffer
                   test_vectors[model_ndx].layer_vectors[this_1_layer_model->input0_layer_ndx];
-        const int8_t *packed_input1 = this_1_layer_model->base.input_cnt < 2 ? 
+        const int8_t *packed_input1 = this_1_layer_model->base.input_cnt < 2 ?
               NULL : // only 1 input
-                this_1_layer_model->input1_layer_ndx < 0 ? 
+                this_1_layer_model->input1_layer_ndx < 0 ?
                   test_vectors[model_ndx].full_model_input_vectors[0] :  // negative code indicates external inpout
-                    NULL == compiled_1_layer_models[model_ndx][this_1_layer_model->input1_layer_ndx] ? 
+                    NULL == compiled_1_layer_models[model_ndx][this_1_layer_model->input1_layer_ndx] ?
                       NULL : // if the input model is NULL, don't have a vector, so just use the state of the interlayer buffer or peristent var buffer
                         test_vectors[model_ndx].layer_vectors[this_1_layer_model->input1_layer_ndx];
 
@@ -477,7 +477,7 @@ int nrf_axon_nn_run_test_vectors(const nrf_axon_nn_compiled_model_s **compiled_f
         nrf_axon_simulator_perfmodel_init();
 #endif 
 
-        if(NRF_AXON_RESULT_SUCCESS == run_layer_test_vector(&this_1_layer_model->base, packed_input, packed_input1, 
+        if(NRF_AXON_RESULT_SUCCESS == run_layer_test_vector(&this_1_layer_model->base, packed_input, packed_input1,
                                       test_vectors[model_ndx].layer_vectors[this_1_layer_model->layer_ndx])) {
           nrf_axon_platform_printf("\r\nTEST:\t%s\tCASE NO\t%d\tRESULT:\t%s\n", test_vectors[model_ndx].test_name, test_case_ndx, "PASS");
           test_pass_cnt++;

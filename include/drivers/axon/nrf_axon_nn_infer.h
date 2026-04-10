@@ -51,11 +51,11 @@ typedef struct {
 
 /**
  * Beginning with compiler version 1.1.1, multiple output tensors are supported.
- * 
+ *
  * This structure describes their dimensions and dequantizaton parameters.
  * If a dedicated buffer is allocated to hold the outputs, the packed outputs will be stored
- * in order of declaration. Each node's output will begin on a 32bit boundary, so there can be up to 
- * 3bytes of padding between the end of the prior node's output and the beginning of the next node's 
+ * in order of declaration. Each node's output will begin on a 32bit boundary, so there can be up to
+ * 3bytes of padding between the end of the prior node's output and the beginning of the next node's
  * output.
  */
 typedef struct nrf_axon_compiled_model_output_tag_s {
@@ -295,7 +295,7 @@ nrf_axon_result_e nrf_axon_nn_populate_input_vector(const nrf_axon_nn_compiled_m
 
 /**
  * @brief Returns the offset into the packed output buffer filled for the start of a particular output node ndx.
- * 
+ *
  * Output node ndx 0 corresponds to the output described in the main compiled_model structures.
  * Output nodes ndx 1 and greater are correspond to extra_outputs[].
  * Each node's output data is stored in packed format (ie, rows do not have to start on a 32bit boundary).
@@ -322,4 +322,3 @@ void nrf_axon_nn_copy_output_to_packed_buffer(
 #ifdef __cplusplus
 } // extern "C" {
 #endif
-

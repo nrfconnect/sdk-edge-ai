@@ -350,16 +350,16 @@ nrf_axon_result_e nrf_axon_nn_op_extension_resize_nearest_neighbor(uint16_t argc
   int output_stride = resize_nearest_neighbor_args->remaining_args.output_width;
   int input_z_stride = input_stride * resize_nearest_neighbor_args->remaining_args.input_height;
   int output_z_stride = output_stride * resize_nearest_neighbor_args->remaining_args.output_height;
-        
+
   // iterate across the output surface.
   for (uint16_t row_ndx=0; row_ndx < resize_nearest_neighbor_args->remaining_args.output_height; row_ndx++) { // height
-      int32_t in_row_ndx = get_nearest_neighbor(row_ndx, resize_nearest_neighbor_args->remaining_args.input_height, 
+      int32_t in_row_ndx = get_nearest_neighbor(row_ndx, resize_nearest_neighbor_args->remaining_args.input_height,
                                         resize_nearest_neighbor_args->remaining_args.output_height,
                                         resize_nearest_neighbor_args->remaining_args.align_corners, //align_corners,
                                         resize_nearest_neighbor_args->remaining_args.half_pixel_centers); //half_pixel_centers
-    
+
     for (uint16_t col_ndx=0;col_ndx < resize_nearest_neighbor_args->remaining_args.output_width; col_ndx++) { //width
-      int32_t in_col_ndx = get_nearest_neighbor(col_ndx, resize_nearest_neighbor_args->remaining_args.input_width, 
+      int32_t in_col_ndx = get_nearest_neighbor(col_ndx, resize_nearest_neighbor_args->remaining_args.input_width,
                                         resize_nearest_neighbor_args->remaining_args.output_width,
                                         resize_nearest_neighbor_args->remaining_args.align_corners, //align_corners,
                                         resize_nearest_neighbor_args->remaining_args.half_pixel_centers); //half_pixel_centers
@@ -371,7 +371,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_resize_nearest_neighbor(uint16_t argc
         input_offset += input_z_stride;
         output_offset += output_z_stride;
       }
-      
+
     }
   }
   return NRF_AXON_RESULT_SUCCESS;

@@ -19,13 +19,13 @@ extern "C" {
 
 /**
  * NRF_AXON_VERSION applies to the entire axon software tool chain.
- * 
+ *
  * version history
  * 1.2.0
  * - Multiple outputs supported
  * - Resize_Nearest_Neighbor operater supported.
  * - Rev'ed bin file version to 1.2.0
- * 
+ *
  * 1.1.0 03/19/2026:
  * - TFLite 2.19 is supported version (was 2.15)
  * - More fixes to per-channel quantized dense layers:
@@ -47,15 +47,15 @@ extern "C" {
  * - Maximum input channels increased from 512 to 1023 for many operations.
  * - Passlist functionality added.
  * - Optimization for 1D convolutions whose channel count is <= 16.
- * 0.1.2  12/18/2025 : 
+ * 0.1.2  12/18/2025 :
  * - Fix to SplitV for bug experienced on Linux (not Windows).
  * - Average pool operations that are "mean-like" in that have an output width of 1 on height and/or width axis but whose
  *   filter size on that axis is less than the input size are now implemented with mean operation, allowing a maximum axis
  *   size of 1024 (vs 32). For example, input 49x20x64, filter 48x20x64, output 1x1x64, can now be handled.
  * - (INTERNAL) 1x1 pointwise output optimized with matrix mult instead of conv. Allows output channels up to 512 insteand of just 16.
  * - (INTERNAL) Places packing conv output in scratch mem.
- * 0.1.1  Internal development 
- * 0.1.0  12/11/2025 : 
+ * 0.1.1  Internal development
+ * 0.1.0  12/11/2025 :
  * - 1st versioned release
  */
 #define NRF_AXON_GENERATE_VERSION(major,minor,patch) ( ((major)<<16) | ((minor) << 8) | (patch))
