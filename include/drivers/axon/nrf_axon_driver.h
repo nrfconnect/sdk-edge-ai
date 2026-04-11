@@ -72,7 +72,7 @@ typedef int32_t NRF_AXON_PLATFORM_BITWIDTH_SIGNED_TYPE;
 
 /**
  * @brief Axon driver return codes
- * 
+ *
  * Axon driver functions return either a positive success value
  * or a negative error code.
  */
@@ -106,19 +106,19 @@ typedef struct {
 
 /**
  * @brief Specifies the blocking mechanism for synchronous Axon command buffer execution
- * 
+ *
  * nrf_axon_run_cmd_buf_sync() provides a synchronous interface to executing an Axon command buffer.
- * The optimal blocking scheme is dependent on the work load being presented. 
- * 
- * Smaller work loads like intrinsics are faster and more energy efficient when a hardware status polling 
+ * The optimal blocking scheme is dependent on the work load being presented.
+ *
+ * Smaller work loads like intrinsics are faster and more energy efficient when a hardware status polling
  * loop is used, because the overhead of interrupt handling is high relative to the Axon work load.
- * 
- * Larger work loads like NN model inference will be more energy efficient using interrupts because the CPU 
- * can sleep during Axon execution. The interrupt processing overhead is small compared to the Axon 
+ *
+ * Larger work loads like NN model inference will be more energy efficient using interrupts because the CPU
+ * can sleep during Axon execution. The interrupt processing overhead is small compared to the Axon
  * execution time.
- * 
+ *
  * A potential future option is to defer blocking and return immediately and allow the caller to proceed with other work,
- * then perform the wait with a call to a TBD function. Callers must ensure that no variables passed to 
+ * then perform the wait with a call to a TBD function. Callers must ensure that no variables passed to
  * nrf_axon_run_cmd_buf_sync fall out of scope, and that there are no interdependencies between the work Axon is doing
  * and the work the CPU is doing.
  */
@@ -147,15 +147,15 @@ typedef struct nrf_axon_queued_cmd_info_wrapper_s {
 
 /**
  * @brief Asynchronous command buffer execution
- * 
- * Low level function that adds a command buffer to the Axon command buffer queue to be executed at the next opportunity. 
+ *
+ * Low level function that adds a command buffer to the Axon command buffer queue to be executed at the next opportunity.
  * Operates asynchronously; returns as soon as the command buffer has been added to the queue. Caller supplied call back
  * function in cmd_buf_wrapper will be invoked upon completion.
- * 
+ *
  * For asynchronous AI Model inference, users should call the higher level function nrf_axon_nn_model_infer_async.
- * 
+ *
  * Caller is responsible for populating cmd_buf_wrapper, but driver manages it.
- * @param[in] cmd_buf_wrapper wrapper struct that includes the command buffer and a callback function. 
+ * @param[in] cmd_buf_wrapper wrapper struct that includes the command buffer and a callback function.
  * Must allocated from static memory and remain valid until the callback function is invoked. (ie, can't be
  * placed on the stack). Caller populates most of this structure, but driver manages
  */
@@ -164,24 +164,24 @@ nrf_axon_result_e nrf_axon_queue_cmd_buf(nrf_axon_queued_cmd_info_wrapper_s* cmd
 /**
  * @brief Synchronous command buffer execution
  *
- * Low level function that executes the command buffer in cmd_buf_info on Axon in a way that 
+ * Low level function that executes the command buffer in cmd_buf_info on Axon in a way that
  * appears synchronous to the user. It returns when the execution is complete.
  * Waits for exclusive access to axon using nrf_axon_platform_reserve_for_user(),
  * then executes the command buffer in cmd_buf_info synchronously.
  * The caller can specify to "keep" the reservation in case a series of axon command buffers are
- * executed in succession. 
+ * executed in succession.
  * The reservation can be returned on the last command buffer or explictly by the user with
  * nrf_axon_platform_free_reservation_from_user().
- * 
+ *
  * @param[in] cmd_buf_info command buffer that has been initialized by nrf_axon_init_command_buffer_info.
  * @param[in] block_mode Specifies how to wait for Axon completion.
  * @param[in] keep_reservation If true, Axon reservation is not freed before returning; user maintains ownership of Axon.
- * 
+ *
  * @retval 0 on success or a negative error code.
  */
 nrf_axon_result_e nrf_axon_run_cmd_buf_sync(
-  nrf_axon_cmd_buffer_info_s* cmd_buf_info, 
-  nrf_axon_syncmode_blocking_e block_mode, 
+  nrf_axon_cmd_buffer_info_s* cmd_buf_info,
+  nrf_axon_syncmode_blocking_e block_mode,
   bool keep_reservation);
 
 /**
@@ -193,8 +193,8 @@ nrf_axon_result_e nrf_axon_run_cmd_buf_sync(
  * @return kAxonResultSuccess if success or a negative error code.
  */
 nrf_axon_result_e nrf_axon_init_command_buffer_info(
-  nrf_axon_cmd_buffer_info_s* cmd_buf_info_ptr, 
-  const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* cmd_buf, 
+  nrf_axon_cmd_buffer_info_s* cmd_buf_info_ptr,
+  const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* cmd_buf,
   uint32_t buffer_length);
 
 #ifdef __cplusplus

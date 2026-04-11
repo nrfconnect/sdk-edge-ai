@@ -37,9 +37,9 @@ static inline void axon_saturate_i32(float value, int32_t *output_ptr, unsigned 
  * @param args down cast to a *nrf_axon_nn_op_extension_base1_args_s
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_softmax(uint16_t argc,
-                      NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
 {
-#define MAX_EXP_INPUT (31182) //the maximum input to exp before it saturates
+#define MAX_EXP_INPUT (31182) /*the maximum input to exp before it saturates */ */
 	if (((argc * sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)) <
 	     sizeof(nrf_axon_nn_op_extension_base1_args_s)) || (args==NULL)) {
 		return NRF_AXON_RESULT_FAILURE;
@@ -53,9 +53,9 @@ nrf_axon_result_e nrf_axon_nn_op_extension_softmax(uint16_t argc,
 	uint16_t area = base1_args->remaining_args.height * base1_args->remaining_args.width;
 	int32_t *input_ptr = (int32_t*)base1_args->ptr_args.input;
 
-	// 1st step is to normalize input of each surface element to the maximum channel value
+	/* 1st step is to normalize input of each surface element to the maximum channel value */ */
 	for (uint16_t area_ndx = 0; area_ndx < area; area_ndx++, input_ptr++) {
-		int32_t max_value = *input_ptr; // channel 0 starts off as the max
+		int32_t max_value = *input_ptr; /* channel 0 starts off as the max */
 		int32_t *channel_ptr = input_ptr + area;
 		for (uint16_t channel_ndx = 1;
 		     channel_ndx < base1_args->remaining_args.channel_cnt;
@@ -64,7 +64,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_softmax(uint16_t argc,
 				max_value = *channel_ptr;
 			}
 		}
-		// found the max value for this surface ndx, now normalize.
+		/* found the max value for this surface ndx, now normalize. */
 		/* The Q11.12 value saturates at 2048. ln(2048) = 7.61283103, converted to q11.12 is	31182.
 			Set the maximum value to this, and adjust all the other values accordingly. */
 		int32_t offset = max_value - MAX_EXP_INPUT;
@@ -76,8 +76,8 @@ nrf_axon_result_e nrf_axon_nn_op_extension_softmax(uint16_t argc,
 		}
 	}
 
-	// run exp() on everything
-	input_ptr = (int32_t*)base1_args->ptr_args.input; // reset input ptr to beginning
+	/* run exp() on everything */
+	input_ptr = (int32_t*)base1_args->ptr_args.input; /* reset input ptr to beginning */
 	uint16_t total_elements = area * base1_args->remaining_args.channel_cnt;
 	for (uint16_t done_so_far=0;
 	     done_so_far < total_elements;
@@ -85,40 +85,40 @@ nrf_axon_result_e nrf_axon_nn_op_extension_softmax(uint16_t argc,
 		uint16_t done_this_time = total_elements-done_so_far;
 		if (done_this_time > 512) {
 			done_this_time = 512;
-		} else	if(done_this_time < 4) { // minimum length of exp op is 4.
+		} else	if(done_this_time < 4) { /* minimum length of exp op is 4. */
 			memset(input_ptr + done_this_time, 0, (4 - done_this_time) * sizeof(*input_ptr));
 			done_this_time = 4;
-		} else if (done_this_time & 1) { // exp op needs even length
+		} else if (done_this_time & 1) { /* exp op needs even length */
 			*(input_ptr + done_this_time) = 0;
-			done_this_time++; //
+			done_this_time++; /* */
 		}
-		// MUST ALWAYS KEEP THE RESERVATION WHEN EXECUING AN INTRISIC WITHIN A OP EXTENSION!
+		/* MUST ALWAYS KEEP THE RESERVATION WHEN EXECUING AN INTRISIC WITHIN A OP EXTENSION! */
 		axon_exp_11p12(input_ptr, input_ptr, done_this_time,
 		    NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
 	}
-  float scaling_multiplier = (float)base1_args->remaining_args.output_multiplier /
-          (float)(1 << base1_args->remaining_args.output_rounding);
-	// go back through and normalize results to 1.
-	input_ptr = (int32_t*)base1_args->ptr_args.input; // reset input ptr to beginning
+	float scaling_multiplier = (float)base1_args->remaining_args.output_multiplier /
+	                           (float)(1 << base1_args->remaining_args.output_rounding);
+	/* go back through and normalize results to 1. */
+	input_ptr = (int32_t*)base1_args->ptr_args.input; /* reset input ptr to beginning */
 	for (uint16_t area_ndx = 0; area_ndx < area; area_ndx++, input_ptr++) {
 		uint64_t sum = 0;
 		int32_t *channel_ptr = input_ptr;
-		// 1st sum the results
+		/* 1st sum the results */
 		for (uint16_t channel_ndx = 0;
 		     channel_ndx < base1_args->remaining_args.channel_cnt;
 		     channel_ndx++, channel_ptr += area) {
 			sum += *channel_ptr;
 		}
-		
+
 
 		if(sum==0) {
-			//Ideally we should not have a sum value of zero as we are offsetting the input to the exponents in the first software step,
-			//in the off-case we do get all zeros, the actual values are going to be very small floating values which when quantized are equal to -128
-			//setting sum=1 prevents undefined results w/o affecting the final results
+			/*Ideally we should not have a sum value of zero as we are offsetting the input to the exponents in the first software step, */
+			/*in the off-case we do get all zeros, the actual values are going to be very small floating values which when quantized are equal to -128 */
+			/*setting sum=1 prevents undefined results w/o affecting the final results */
 			sum = 1;
 		}
 
-		// now go back and divide by the sum and quantize
+		/* now go back and divide by the sum and quantize */
 		channel_ptr = input_ptr;
 		for (uint16_t channel_ndx = 0;
 		     channel_ndx < base1_args->remaining_args.channel_cnt;
@@ -161,7 +161,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_softmax(uint16_t argc,
  * @param packed_output if true, output will be written in packed format. if false, each row will start on a 32bit boundary.
  */
 static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
-          NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args, bool packed_output)
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args, bool packed_output)
 {
 	if (((argc * sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)) <
 	     sizeof(nrf_axon_nn_op_extension_base1_args_s)) || (args==NULL)) {
@@ -173,7 +173,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 	 * Sigmoid is calculated 1 for 1 for all input. Input is int16, q3.12 format
 	 * So iterate through channels/rows/columns
 	 */
-	// unpacked input rows always start on a 32bit boundary.
+	/* unpacked input rows always start on a 32bit boundary. */
 	uint8_t input_extra_stride =
 	    (!base1_args->remaining_args.input_is_packed &&
 	     base1_args->remaining_args.width & 1) ?
@@ -203,16 +203,16 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 				/**
 				 * sigmoid(x) = 1/(1+exp(-x))
 				 */
-				scratch /= (float)(1<<12); // input is q.12, convert to float
-				scratch = (float)exp(-scratch); // now have exp(x)
-				scratch = 1/(1+scratch); // have float sigmoid(x)
+				scratch /= (float)(1<<12); /* input is q.12, convert to float */
+				scratch = (float)exp(-scratch); /* now have exp(x) */
+				scratch = 1/(1+scratch); /* have float sigmoid(x) */
 				switch (base1_args->remaining_args.output_bytewidth) {
-					case 1: // quantized output. scales between 0 and 1.
-						scratch = (float)round(scratch * 256.0f) - 128; // quantized
+					case 1: /* quantized output. scales between 0 and 1. */
+						scratch = (float)round(scratch * 256.0f) - 128; /* quantized */
 						axon_saturate_i8(scratch, output_ptr.i8, 0);
 						output_ptr.i8++;
 						break;
-					case 4: // q1.30 output
+					case 4: /* q1.30 output */
 						*output_ptr.i32 = (int32_t)(scratch * (1<<30));
 						output_ptr.i32++;
 						break;
@@ -234,7 +234,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
  * sigmoid version used by compiler versions before 1.1.0.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(uint16_t argc,
-                     NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
 {
 	return nrf_axon_nn_op_extension_sigmoid_base(argc, args, false);
 }
@@ -242,7 +242,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(uint16_t argc,
  * sigmoid version used by compiler versions 1.1.0 and later
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_v2(uint16_t argc,
-                    NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
 {
 	return nrf_axon_nn_op_extension_sigmoid_base(argc, args, true);
 }
@@ -257,7 +257,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_v2(uint16_t argc,
  * @param packed_output if true, output will be written in packed format. if false, each row will start on a 32bit boundary.
  */
 static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
-                           NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args, bool packed_output)
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args, bool packed_output)
 {
 	if (((argc * sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)) <
 	     sizeof(nrf_axon_nn_op_extension_base1_args_s)) || (args==NULL)) {
@@ -269,7 +269,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 	 * Sigmoid is calculated 1 for 1 for all input. Input is int16, q3.12 format
 	 * So iterate through channels/rows/columns
 	 */
-	// unpacked input rows always start on a 32bit boundary.
+	/* unpacked input rows always start on a 32bit boundary. */
 	uint8_t input_extra_stride =
 	       (!base1_args->remaining_args.input_is_packed &&
 		    base1_args->remaining_args.width & 1) ? 1 : 0;
@@ -299,16 +299,16 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 				 * tanh(x) = (exp(2x)-1)/(exp(2x)+1)
 				 */
 
-				scratch /= (float)(1<<11); // input is q.12, multiply by 2 and convert to float
-				scratch = expf(scratch); // now have exp(2x)
-				scratch = (scratch - 1)/(scratch+1); // have float tanh(x)
+				scratch /= (float)(1<<11); /* input is q.12, multiply by 2 and convert to float */
+				scratch = expf(scratch); /* now have exp(2x) */
+				scratch = (scratch - 1)/(scratch+1); /* have float tanh(x) */
 				switch (base1_args->remaining_args.output_bytewidth) {
-					case 1: // quantized output. scales between -1 and 1.
-						scratch = roundf(scratch * 128.0f); // quantized
+					case 1: /* quantized output. scales between -1 and 1. */
+						scratch = roundf(scratch * 128.0f); /* quantized */
 						axon_saturate_i8(scratch, output_ptr.i8, 0);
 						output_ptr.i8++;
 						break;
-					case 4: // q1.30 output
+					case 4: /* q1.30 output */
 						*output_ptr.i32 = (int32_t)(scratch * (1<<30));
 						output_ptr.i32++;
 						break;
@@ -329,7 +329,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
  * tanh version used by compiler versions before 1.1.0.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_tanh(uint16_t argc,
-                       NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
 {
 	return nrf_axon_nn_op_extension_tanh_base(argc, args, false);
 }
@@ -337,13 +337,13 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh(uint16_t argc,
  * tanh version used by compiler versions 1.1.0 and later
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_tanh_v2(uint16_t argc,
-                      NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
 {
 	return nrf_axon_nn_op_extension_tanh_base(argc, args, true);
 }
 
 nrf_axon_result_e nrf_axon_nn_op_extension_reshape(uint16_t argc,
-                      NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
 {
 	if (((argc * sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)) <
 	     sizeof(nrf_axon_nn_op_extension_base2_args_s)) || (args==NULL)) {
@@ -357,15 +357,15 @@ nrf_axon_result_e nrf_axon_nn_op_extension_reshape(uint16_t argc,
 
 	for (uint16_t chan_ndx = 0;
 	     chan_ndx < base2_args->remaining_args.output_channel_cnt;
-		 chan_ndx++) { //channel
+		 chan_ndx++) { /*channel */
 
 		for (uint16_t row_ndx=0;
 		     row_ndx < base2_args->remaining_args.output_height;
-			 row_ndx++) { // height
+			 row_ndx++) { /* height */
 
 			for (uint16_t col_ndx=0;
 			     col_ndx < base2_args->remaining_args.output_width;
-				 col_ndx++) { //width
+				 col_ndx++) { /*width */
 
 				int xtf = row_ndx * (base2_args->remaining_args.output_width *
 				           base2_args->remaining_args.output_channel_cnt)
@@ -400,10 +400,10 @@ nrf_axon_result_e nrf_axon_nn_op_extension_reshape(uint16_t argc,
 }
 
 static inline int32_t get_nearest_neighbor(const int input_value,
-                                  const int32_t input_size,
-                                  const int32_t output_size,
-                                  const bool align_corners,
-                                  const bool half_pixel_centers) {
+	const int32_t input_size,
+	const int32_t output_size,
+	const bool align_corners,
+	const bool half_pixel_centers) {
 #define MY_MIN(a,b) (a>b ? b : a)
 #define MY_MAX(a,b) (a>b ? a : b)
 	const float scale =
@@ -423,7 +423,7 @@ static inline int32_t get_nearest_neighbor(const int input_value,
 }
 
 nrf_axon_result_e nrf_axon_nn_op_extension_resize_nearest_neighbor(uint16_t argc,
-                     NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* args)
 {
 	if (((argc * sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)) <
 	     sizeof(nrf_axon_nn_op_extension_base2_args_s)) || (args==NULL)) {
@@ -440,34 +440,34 @@ nrf_axon_result_e nrf_axon_nn_op_extension_resize_nearest_neighbor(uint16_t argc
 	int output_z_stride = output_stride *
 	       resize_nearest_neighbor_args->remaining_args.output_height;
 
-// iterate across the output surface.
+/* iterate across the output surface. */
 	for (uint16_t row_ndx=0;
 	     row_ndx < resize_nearest_neighbor_args->remaining_args.output_height;
-	     row_ndx++) { // height
+	     row_ndx++) { /* height */
 
 		int32_t in_row_ndx = get_nearest_neighbor(row_ndx,
 		        resize_nearest_neighbor_args->remaining_args.input_height,
 		        resize_nearest_neighbor_args->remaining_args.output_height,
-		        resize_nearest_neighbor_args->remaining_args.align_corners, //align_corners,
-		        resize_nearest_neighbor_args->remaining_args.half_pixel_centers); //half_pixel_centers
+		        resize_nearest_neighbor_args->remaining_args.align_corners, /*align_corners, */
+		        resize_nearest_neighbor_args->remaining_args.half_pixel_centers); /*half_pixel_centers */
 
 		for (uint16_t col_ndx=0;
 		     col_ndx < resize_nearest_neighbor_args->remaining_args.output_width;
-		     col_ndx++) { //width
-			
+		     col_ndx++) { /*width */
+
 			int32_t in_col_ndx = get_nearest_neighbor(col_ndx,
 			       resize_nearest_neighbor_args->remaining_args.input_width,
 			       resize_nearest_neighbor_args->remaining_args.output_width,
-			       resize_nearest_neighbor_args->remaining_args.align_corners, //align_corners,
-			       resize_nearest_neighbor_args->remaining_args.half_pixel_centers); //half_pixel_centers
-			// now propagate the input to the output across all channels.
+			       resize_nearest_neighbor_args->remaining_args.align_corners, /*align_corners, */
+			       resize_nearest_neighbor_args->remaining_args.half_pixel_centers); /*half_pixel_centers */
+			/* now propagate the input to the output across all channels. */
 			int32_t input_offset = in_row_ndx *
 			                       resize_nearest_neighbor_args->remaining_args.input_stride +
 			                       in_col_ndx;
 			int32_t output_offset = row_ndx * output_stride + col_ndx;
 			for (uint16_t chan_ndx = 0;
 			     chan_ndx < resize_nearest_neighbor_args->remaining_args.output_channel_cnt;
-			     chan_ndx++) { //channel
+			     chan_ndx++) { /*channel */
 				resize_nearest_neighbor_args->ptr_args.output[output_offset] =
 				    resize_nearest_neighbor_args->ptr_args.input[input_offset];
 				input_offset += input_z_stride;
@@ -475,5 +475,5 @@ nrf_axon_result_e nrf_axon_nn_op_extension_resize_nearest_neighbor(uint16_t argc
 			}
 		}
 	}
-  return NRF_AXON_RESULT_SUCCESS;
+	return NRF_AXON_RESULT_SUCCESS;
 }

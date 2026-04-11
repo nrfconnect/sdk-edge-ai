@@ -16,8 +16,8 @@
 #endif
 
 static void unpack_vector32(int32_t *unpacked, const int32_t *packed,
-              const nrf_axon_nn_model_layer_dimensions_s *packed_dimensions,
-              uint16_t unpacked_stride)
+	const nrf_axon_nn_model_layer_dimensions_s *packed_dimensions,
+	uint16_t unpacked_stride)
 {
 	uint16_t extra_stride =
 	    (unpacked_stride - (packed_dimensions->width * packed_dimensions->byte_width)) /
@@ -25,41 +25,41 @@ static void unpack_vector32(int32_t *unpacked, const int32_t *packed,
 	for (int ch_ndx = 0; ch_ndx < packed_dimensions->channel_cnt; ch_ndx++) {
 		for (int height_ndx = 0; height_ndx < packed_dimensions->height; height_ndx++) {
 			for (int width_ndx = 0; width_ndx < packed_dimensions->width; width_ndx++) {
-				// accumulate the mis-match count in result.
+				/* accumulate the mis-match count in result. */
 				*unpacked = *packed;
 				unpacked++;
 				packed++;
 			}
-			// expected_output is packed, outpout isn't, so advance the output_ndx past the padding space
+			/* expected_output is packed, outpout isn't, so advance the output_ndx past the padding space */
 			unpacked += extra_stride;
 		}
 	}
 }
 
 static void unpack_vector16(int16_t *unpacked, const int16_t *packed,
-                const nrf_axon_nn_model_layer_dimensions_s *packed_dimensions,
-                uint16_t unpacked_stride)
+	const nrf_axon_nn_model_layer_dimensions_s *packed_dimensions,
+	uint16_t unpacked_stride)
 {
 	uint16_t extra_stride = (unpacked_stride -
 	                         (packed_dimensions->width * packed_dimensions->byte_width)) /
-							packed_dimensions->byte_width;
+	                        packed_dimensions->byte_width;
 	for (int ch_ndx = 0; ch_ndx < packed_dimensions->channel_cnt; ch_ndx++) {
 		for (int height_ndx = 0; height_ndx < packed_dimensions->height; height_ndx++) {
 			for (int width_ndx = 0; width_ndx < packed_dimensions->width; width_ndx++) {
-				// accumulate the mis-match count in result.
+				/* accumulate the mis-match count in result. */
 				*unpacked = *packed;
 				unpacked++;
 				packed++;
 			}
-			// expected_output is packed, output isn't, so advance the output_ndx past the padding space
+			/* expected_output is packed, output isn't, so advance the output_ndx past the padding space */
 			unpacked += extra_stride;
 		}
 	}
 }
 
 static void unpack_vector8(int8_t *unpacked, const int8_t *packed,
-                const nrf_axon_nn_model_layer_dimensions_s *packed_dimensions,
-                uint16_t unpacked_stride)
+	const nrf_axon_nn_model_layer_dimensions_s *packed_dimensions,
+	uint16_t unpacked_stride)
 {
 
 	uint16_t extra_stride = unpacked_stride -
@@ -68,20 +68,20 @@ static void unpack_vector8(int8_t *unpacked, const int8_t *packed,
 	for (int ch_ndx = 0; ch_ndx < packed_dimensions->channel_cnt; ch_ndx++) {
 		for (int height_ndx = 0; height_ndx < packed_dimensions->height; height_ndx++) {
 			for (int width_ndx = 0; width_ndx < packed_dimensions->width; width_ndx++) {
-				// accumulate the mis-match count in result.
+				/* accumulate the mis-match count in result. */
 				*unpacked = *packed;
 				unpacked += packed_dimensions->byte_width;
 				packed++;
 			}
-			// expected_output is packed, outpout isn't, so advance the output_ndx past the padding space
+			/* expected_output is packed, outpout isn't, so advance the output_ndx past the padding space */
 			unpacked += extra_stride;
 		}
 	}
 }
 
 static void unpack_vector(void *unpacked, const void *packed,
-                const nrf_axon_nn_model_layer_dimensions_s *packed_dimensions,
-                uint16_t unpacked_stride)
+	const nrf_axon_nn_model_layer_dimensions_s *packed_dimensions,
+	uint16_t unpacked_stride)
 {
 	if ((NULL==unpacked) || (NULL==packed)){
 		return;
@@ -108,7 +108,7 @@ static void unpack_vector(void *unpacked, const void *packed,
  * returns number of mismatches (0 on exact match).
  */
 static int test_compare_1_output(const nrf_axon_nn_model_layer_dimensions_s *packed_dimensions,
-               unsigned output_stride, const int8_t *output, const int8_t *expected_output)
+	unsigned output_stride, const int8_t *output, const int8_t *expected_output)
 {
 	int max_error = 0;
 	int max_error_cnt = 0;
@@ -121,7 +121,7 @@ static int test_compare_1_output(const nrf_axon_nn_model_layer_dimensions_s *pac
 	for (int ch_ndx = 0; ch_ndx < packed_dimensions->channel_cnt; ch_ndx++) {
 		for (int height_ndx = 0; height_ndx < packed_dimensions->height; height_ndx++) {
 			for (int width_ndx = 0; width_ndx < packed_dimensions->width; width_ndx++) {
-				// accumulate the mis-match count in result.
+				/* accumulate the mis-match count in result. */
 				int32_t output_val;
 				int32_t expected_val;
 				switch (packed_dimensions->byte_width) {
@@ -144,7 +144,7 @@ static int test_compare_1_output(const nrf_axon_nn_model_layer_dimensions_s *pac
 					success_cnt++;
 				} else {
 					result++;
-					// if this was the 1st error, display its location.
+					/* if this was the 1st error, display its location. */
 					if (result < 15) {
 						nrf_axon_platform_printf(
 						    "output mismatch: %d != %d @ch %d, row %d, col %d\n",
@@ -160,11 +160,11 @@ static int test_compare_1_output(const nrf_axon_nn_model_layer_dimensions_s *pac
 				output += packed_dimensions->byte_width;
 				expected_output += packed_dimensions->byte_width;
 			}
-			// expected_output is packed, outpout isn't, so advance the output_ndx past the padding space
+			/* expected_output is packed, outpout isn't, so advance the output_ndx past the padding space */
 			output += extra_stride;
 		}
 	}
-	// all done, print the results
+	/* all done, print the results */
 	if (result) {
 		nrf_axon_platform_printf(
 		    "output matched %d, mismatched %d, max error %d occurred %d times.\n",
@@ -180,7 +180,7 @@ static int test_compare_1_output(const nrf_axon_nn_model_layer_dimensions_s *pac
 * Handles multiple outputs.
 */
 static int test_compare_results(const nrf_axon_nn_compiled_model_s *compiled_model,
-               const int8_t *packed_output, const int8_t **expected_output_list)
+	const int8_t *packed_output, const int8_t **expected_output_list)
 {
 	int result = 0;
 	unsigned output_stride = compiled_model->output_stride;
@@ -191,7 +191,7 @@ static int test_compare_results(const nrf_axon_nn_compiled_model_s *compiled_mod
 	int output_ndx = 0;
 	while(1) {
 		if (NULL != packed_output) {
-			// packed output
+			/* packed output */
 			output_stride = output_dimensions->byte_width * output_dimensions->width;
 			output = packed_output +
 			         nrf_axon_nn_offset_to_output_ndx(compiled_model, output_ndx);
@@ -199,9 +199,9 @@ static int test_compare_results(const nrf_axon_nn_compiled_model_s *compiled_mod
 		result += test_compare_1_output(output_dimensions, output_stride,
 		              output, expected_output_list[output_ndx]);
 		if (output_ndx == NRF_AXON_COMPILED_MODEL_EXTRA_OUTPUT_CNT(compiled_model)) {
-			break; // last output
+			break; /* last output */
 		}
-		// initialize to unpacked output
+		/* initialize to unpacked output */
 		output_stride = compiled_model->extra_outputs[output_ndx].stride;
 		output_dimensions = &compiled_model->extra_outputs[output_ndx].dimensions;
 		output = compiled_model->extra_outputs[output_ndx].ptr;
@@ -211,7 +211,7 @@ static int test_compare_results(const nrf_axon_nn_compiled_model_s *compiled_mod
 }
 
 int nrf_axon_print_test_inference_results(const nrf_axon_nn_compiled_model_s *compiled_model,
-        int8_t *output_ptr, uint32_t profiling_ticks)
+	int8_t *output_ptr, uint32_t profiling_ticks)
 {
 	int label_ndx;
 	const char *label;
@@ -244,8 +244,8 @@ int nrf_axon_print_test_inference_results(const nrf_axon_nn_compiled_model_s *co
  * and there are no other axon users.
  */
 static int run_layer_test_vector(const nrf_axon_nn_compiled_model_s* compiled_model,
-               const int8_t *packed_input, const int8_t *packed_input1,
-               const int8_t *expected_output)
+	const int8_t *packed_input, const int8_t *packed_input1,
+	const int8_t *expected_output)
 {
 
 	/* Move the test vectors to their expected locations, unpacking if necessary.*/
@@ -255,7 +255,7 @@ static int run_layer_test_vector(const nrf_axon_nn_compiled_model_s* compiled_mo
 	unpack_vector(compiled_model->inputs[1].ptr, packed_input1,
 	    &compiled_model->inputs[1].dimensions, compiled_model->inputs[1].stride);
 
-	// do the inference. don't provide the input vector as it has already been transferred to the proper location
+	/* do the inference. don't provide the input vector as it has already been transferred to the proper location */
 #if AXON_SIMULATION
 	nrf_axon_simulator_perfmodel_enable();
 	nrf_axon_simulator_perfmodel_init();
@@ -289,9 +289,9 @@ static int run_layer_test_vector(const nrf_axon_nn_compiled_model_s* compiled_mo
  * Note: to support multiple outputs.
  */
 static int run_test_vector_sync(const nrf_axon_nn_compiled_model_s *compiled_model,
-               const int8_t *packed_input, const int8_t **expected_output_list)
+	const int8_t *packed_input, const int8_t **expected_output_list)
 {
-	// do the inference. don't provide the input vector as it has already been transferred to the proper location
+	/* do the inference. don't provide the input vector as it has already been transferred to the proper location */
 	uint32_t profiling_ticks = nrf_axon_platform_get_ticks();
 
 	nrf_axon_platform_set_profiling_gpio();
@@ -302,8 +302,8 @@ static int run_test_vector_sync(const nrf_axon_nn_compiled_model_s *compiled_mod
 	 This test code can't guarantee that the locally declared output_buffer is sized properly for the output.
 	 */
 	int8_t *packed_output_ptr = compiled_model->packed_output_buf != NULL ?
-	               compiled_model->packed_output_buf :// use the output buffer provisioned by the compiler.
-	               NULL; // leave output in the interlayer buffer.
+	               compiled_model->packed_output_buf :/* use the output buffer provisioned by the compiler. */
+	               NULL; /* leave output in the interlayer buffer. */
 	nrf_axon_result_e result = nrf_axon_nn_model_infer_sync(compiled_model,
 	                               packed_input, packed_output_ptr);
 
@@ -347,7 +347,7 @@ static void test_vector_async_inference_callback(nrf_axon_result_e result, void 
  */
 
 static int run_test_vector_async(nrf_axon_nn_model_async_inference_wrapper_s *model_wrapper,
-               const int8_t *packed_input, const int8_t **expected_output_list)
+	const int8_t *packed_input, const int8_t **expected_output_list)
 {
 	const nrf_axon_nn_compiled_model_s *compiled_model = model_wrapper->compiled_model;
 
@@ -361,8 +361,8 @@ static int run_test_vector_async(nrf_axon_nn_model_async_inference_wrapper_s *mo
 	 if there are multiple users of axons.
 	*/
 	int8_t *packed_output_ptr = compiled_model->packed_output_buf != NULL ?
-	            compiled_model->packed_output_buf : // use the output buffer provisioned by the compiler.
-	            NULL; // leave output in the interlayer buffer.
+	            compiled_model->packed_output_buf : /* use the output buffer provisioned by the compiler. */
+	            NULL; /* leave output in the interlayer buffer. */
 
 	nrf_axon_result_e result = nrf_axon_nn_model_infer_async(model_wrapper, packed_input,
 	                   packed_output_ptr, test_vector_async_inference_callback, NULL);
@@ -382,7 +382,7 @@ static int run_test_vector_async(nrf_axon_nn_model_async_inference_wrapper_s *mo
 #if AXON_SIMULATION
 	profiling_ticks = (uint32_t)nrf_axon_simulator_perfmodel_get_cycles();
 #endif
-	// get the label.
+	/* get the label. */
 	nrf_axon_print_test_inference_results(model_wrapper->compiled_model,
 	    packed_output_ptr, profiling_ticks);
 
@@ -400,13 +400,13 @@ static int run_test_vectors_1_model(const nrf_axon_nn_compiled_model_s *this_ful
 {
 	static nrf_axon_nn_model_async_inference_wrapper_s the_model_wrapper;
 
-	// bind the full model for async operation since every other vector will be in async mode.
+	/* bind the full model for async operation since every other vector will be in async mode. */
 	int result = nrf_axon_nn_model_async_init(&the_model_wrapper, this_full_model);
 	if (result < 0) {
 		return result;
 	}
 
-	// init the persistent variables 1 time only for the full vectors.
+	/* init the persistent variables 1 time only for the full vectors. */
 	nrf_axon_nn_model_init_vars(this_full_model);
 
 	/*
@@ -461,8 +461,8 @@ int vector_ndx=0;
 				(*test_fail_cnt)++;
 			}
 			(*test_case_ndx)++;
-	} // for loop to run the full model on all vectors
-#endif // #if 1, block to disable full model inference.
+	} /* for loop to run the full model on all vectors */
+#endif /* #if 1, block to disable full model inference. *;
 
 	/*
 	* next loop. process layer-by-layer models.
@@ -471,7 +471,7 @@ int vector_ndx=0;
 	if ((model_layers_count == 0) || (compiled_1_layer_models == NULL)) {
 		return result;
 	}
-	// init the persistent variables 1 time only for the layers.
+	/* init the persistent variables 1 time only for the layers. */
 	nrf_axon_nn_model_init_vars(this_full_model);
 #if AXON_SIMULATION
 	nrf_axon_simulator_perfmodel_enable();
@@ -479,11 +479,11 @@ int vector_ndx=0;
 	for (int layer_ndx=0; layer_ndx < model_layers_count;layer_ndx++) {
 		const nrf_axon_nn_compiled_model_layer_s *this_1_layer_model =
 					compiled_1_layer_models[layer_ndx];
-		// make sure this layer is populated
+		/* make sure this layer is populated */
 		if (NULL==this_1_layer_model) {
 			continue;
 		}
-		// layers are only supported in sync mode, so just validate them; don't need to bind them.
+		/* layers are only supported in sync mode, so just validate them; don't need to bind them. */
 		if (0 > (result=nrf_axon_nn_model_validate(&this_1_layer_model->base))) {
 			return result;
 		}
@@ -493,16 +493,16 @@ int vector_ndx=0;
 			this_1_layer_model->base.model_name, 0, layer_ndx);
 
 		const int8_t *packed_input = this_1_layer_model->input0_layer_ndx < 0 ?
-				test_vectors->full_model_input_vectors[0] :	// negative code indicates external inpout
+				test_vectors->full_model_input_vectors[0] :	/* negative code indicates external inpout */
 				NULL == compiled_1_layer_models[this_1_layer_model->input0_layer_ndx] ?
-				NULL : // if the input model is NULL, don't have a vector, so just use the state of the interlayer buffer or peristent var buffer
+				NULL : /* if the input model is NULL, don't have a vector, so just use the state of the interlayer buffer or peristent var buffer */
 				test_vectors->layer_vectors[this_1_layer_model->input0_layer_ndx];
 		const int8_t *packed_input1 = this_1_layer_model->base.input_cnt < 2 ?
-				NULL : // only 1 input
+				NULL : /* only 1 input */
 				this_1_layer_model->input1_layer_ndx < 0 ?
-					test_vectors->full_model_input_vectors[0] :	// negative code indicates external inpout
+					test_vectors->full_model_input_vectors[0] :	/* negative code indicates external inpout */
 					NULL == compiled_1_layer_models[this_1_layer_model->input1_layer_ndx] ?
-					NULL : // if the input model is NULL, don't have a vector, so just use the state of the interlayer buffer or peristent var buffer
+					NULL : /* if the input model is NULL, don't have a vector, so just use the state of the interlayer buffer or peristent var buffer */
 					test_vectors->layer_vectors[this_1_layer_model->input1_layer_ndx];
 
 #if AXON_SIMULATION
@@ -522,16 +522,16 @@ int vector_ndx=0;
 		}
 		(*test_case_ndx)++;
 		vector_ndx++;
-	} // for layer_ndx
+	} /* for layer_ndx */
 	return result;
 }
 int nrf_axon_nn_run_test_vectors(const nrf_axon_nn_compiled_model_s **compiled_full_models,
-                 const char *test_group_name, uint16_t models_count,
-                 const nrf_axon_nn_compiled_model_layer_s **compiled_1_layer_models[],
-                 uint16_t *model_layers_count,
-                 const nrf_axon_nn_model_test_info_s *test_vectors)
+	const char *test_group_name, uint16_t models_count,
+	const nrf_axon_nn_compiled_model_layer_s **compiled_1_layer_models[],
+	uint16_t *model_layers_count,
+	const nrf_axon_nn_model_test_info_s *test_vectors)
 {
-	nrf_axon_platform_clear_profiling_gpio(); // start in low position
+	nrf_axon_platform_clear_profiling_gpio(); /* start in low position */
 
 	const char *test_name;
 	if (test_group_name) {
@@ -547,7 +547,7 @@ int nrf_axon_nn_run_test_vectors(const nrf_axon_nn_compiled_model_s **compiled_f
 		if (model_layers_count == NULL) {
 			continue;
 		}
-		// only count layers that have an associated model (ie, not persistent variable layers)
+		/* only count layers that have an associated model (ie, not persistent variable layers) */
 		for (int layer_ndx = 0; layer_ndx < model_layers_count[model_ndx]; layer_ndx++) {
 			if (NULL != compiled_1_layer_models[model_ndx][layer_ndx],
 			                &test_vectors[model_ndx]) {
@@ -566,7 +566,7 @@ int nrf_axon_nn_run_test_vectors(const nrf_axon_nn_compiled_model_s **compiled_f
 			compiled_1_layer_models == NULL ? NULL : compiled_1_layer_models[model_ndx],
 			model_layers_count == NULL ? 0 : model_layers_count[model_ndx],
 			&test_vectors[model_ndx], &test_case_ndx, &test_pass_cnt, &test_fail_cnt);
-	} // outer loop through all th models
+	} /* outer loop through all th models */
 
 	nrf_axon_platform_printf("\r\nTEST:\t%s\tCOMPLETE\tPASS COUNT\t%d\tFAIL COUNT\t%d\n",
 	    test_name, test_pass_cnt, test_fail_cnt);
@@ -576,18 +576,18 @@ int nrf_axon_nn_run_test_vectors(const nrf_axon_nn_compiled_model_s **compiled_f
 /*
 */
 void nrf_axon_nn_populate_model_test_info_s(
-	nrf_axon_nn_model_test_info_s *the_struct, // structure to populate
+	nrf_axon_nn_model_test_info_s *the_struct, /* structure to populate */
 	const char *test_name,
-	const int8_t **full_model_input_vectors, // test vectors for layer 1 (full model)
-	const int8_t **full_model_expected_output_vectors, // expected output vectors, one for each input vector (full model)
-	uint16_t full_model_vector_count, // number of full model test/expected_output vector pairs.
-	const int8_t **layer_vectors, // individual layer outputs.
-	uint16_t layer_cnt) // number of elements in layer_vectors
+	const int8_t **full_model_input_vectors, /* test vectors for layer 1 (full model) */
+	const int8_t **full_model_expected_output_vectors, /* expected output vectors, one for each input vector (full model) */
+	uint16_t full_model_vector_count, /* number of full model test/expected_output vector pairs. */
+	const int8_t **layer_vectors, /* individual layer outputs. */
+	uint16_t layer_cnt) /* number of elements in layer_vectors */
 {
 	the_struct->test_name = test_name;
-	the_struct->full_model_input_vectors = full_model_input_vectors;	// test vectors for layer 1 (full model)
-	the_struct->full_model_expected_output_vectors = full_model_expected_output_vectors; // expected output vectors, one for each input vector (full model)
-	the_struct->full_model_vector_count = full_model_vector_count; // number of full model test/expected_output vector pairs.
-	the_struct->layer_vectors = layer_vectors; // individual layer outputs. for each n, layer_models[n] input is layer_vectors[n-1] (except n=0, input is full_model_input_vectors[0]), expected output is layer_vectors[n]
-	the_struct->layer_cnt = layer_cnt; // number of elements in layer_models and layer_vectors
+	the_struct->full_model_input_vectors = full_model_input_vectors;	/* test vectors for layer 1 (full model) */
+	the_struct->full_model_expected_output_vectors = full_model_expected_output_vectors; /* expected output vectors, one for each input vector (full model) */
+	the_struct->full_model_vector_count = full_model_vector_count; /* number of full model test/expected_output vector pairs. */
+	the_struct->layer_vectors = layer_vectors; /* individual layer outputs. for each n, layer_models[n] input is layer_vectors[n-1] (except n=0, input is full_model_input_vectors[0]), expected output is layer_vectors[n] */
+	the_struct->layer_cnt = layer_cnt; /* number of elements in layer_models and layer_vectors */
 }
