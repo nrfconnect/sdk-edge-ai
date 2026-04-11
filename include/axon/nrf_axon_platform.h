@@ -185,4 +185,3 @@ int nrf_axon_simulator_run_test_files(
 #ifdef __cplusplus
 }
 #endif
-

@@ -88,4 +88,3 @@ int nrf_axon_print_test_inference_results(const nrf_axon_nn_compiled_model_s *co
 #ifdef __cplusplus
 } // extern "C" {
 #endif
-

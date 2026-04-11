@@ -241,4 +241,3 @@ nrf_axon_result_e nrf_axon_nn_op_extension_resize_nearest_neighbor(uint16_t argc
 #ifdef __cplusplus
 } // extern "C" {
 #endif
-

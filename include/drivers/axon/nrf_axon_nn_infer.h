@@ -322,4 +322,3 @@ void nrf_axon_nn_copy_output_to_packed_buffer(
 #ifdef __cplusplus
 } // extern "C" {
 #endif
-
