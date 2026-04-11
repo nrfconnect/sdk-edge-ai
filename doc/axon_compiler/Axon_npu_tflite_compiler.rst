@@ -547,3 +547,11 @@ After execution, the script prints the following information to the console:
 
 Any constraints or compatibility issues are displayed as warnings prefixed with ``WARN``.
 The script also indicates whether a transposed version of the model can be executed successfully using the executor.
+
+Verifying model on an Axon-enabled device
+*****************************************
+
+The quickest, easiest way to get precise performance results on actual hardware is to use the NN Inference test code.
+To do so, ensure that a test data set is provided through the configuration item TEST_DATA, and HEADER_FILE_TEST_VECTOR_CNT is greater than 0.
+The compiler will then produce two additional header files, ``nrf_axon_model_<model_name>_test_vectors_.h`` and ``nrf_axon_model_<model_name>_layers_.h``.
+Copy these two files and the primary model file to tests/axon/compiled_models, and follow the procedure for :ref:`test_nn_inference`.

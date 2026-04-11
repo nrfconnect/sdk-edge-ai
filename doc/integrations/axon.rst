@@ -20,7 +20,7 @@ Integration overview
 ********************
 
 The Axon NPU is a peripheral processor that runs independently of the CPU.
-Use the Axon driver to control the Axon hardware and run inference workloads.
+Use the Axon NPU driver to control the Axon hardware and run inference workloads.
 The driver provides the following functionality:
 
 * Initializing the Axon hardware and driver.
@@ -29,7 +29,7 @@ The driver provides the following functionality:
 * Executing intrinsics, which are small, pre-compiled Axon code snippets that perform limited functions.
 
 The driver also includes wrapper and test functions for managing compiled AI models, which are provided in source form.
-The Axon driver is implemented as a platform-independent library, while all platform-specific behavior is handled by the nRF Axon platform component.
+The Axon NPU driver is implemented as a platform-independent library, while all platform-specific behavior is handled by the nRF Axon platform component.
 This separation allows the same driver library and related components, including samples, simulator, and tool chain files, to be built and used on Zephyr, in a software simulator running on the host machine, or in bare-metal environments.
 
 The Axon NPU can accelerate neural networks as well as some feature extraction algorithms.
@@ -61,12 +61,26 @@ Users can see this value declared in the model header file macro ``NRF_AXON_MODE
 
 The synchronous and asynchronous inference APIs accept as parameters the input and output buffers, and will fill/drain the interlayer buffer with input/output in a thread safe manner.
 
+Power Management
+================
+
+The Axon NPU is automatically put in a low power state when not in use. No explicit power management steps are required of the user.
+
+Other System Resources
+======================
+
+The Axon NPU driver executes both in the caller's thread and  in a workqueue.
+Jobs are initiated in the caller's thread, interrupts are processed in the workqueue, and in synchornous mode, job completion is signaled with a semaphore.
+User callbacks are invoked upon job complete in asynchronous mode; the user takes responsibility for signaling their owning thread.
+A mutex is used to serialize access to the Axon NPU hardware.
+The workqueue, interrupt, semaphore, and mutex are all initialized by the function ``nrf_axon_platform_init``, which is called once at start up. The initialization process is described further below.
+
 Integration steps
 *****************
 
 Complete the following steps:
 
-1. :ref:`Initializing Axon driver <axon_integration_driver_init>`
+1. :ref:`Initializing Axon NPU driver <axon_integration_driver_init>`
 #. :ref:`Initializing model <axon_integration_init_model>`
 #. :ref:`Executing inference <axon_integration_inference>`
 #. :ref:`Integrating the model into an application <axon_integration_model_integration>`
@@ -80,7 +94,7 @@ Complete the following steps:
 Initializing driver
 ===================
 
-Follow these steps to initialize the Axon driver:
+Follow these steps to initialize the Axon NPU driver:
 
 1. Call the platform initialization function
 
@@ -93,7 +107,6 @@ Follow these steps to initialize the Axon driver:
 
    During initialization, the driver powers on Axon by calling the ``nrf_axon_platform_vote_for_power()`` function.
    The driver then verifies that Axon exists at the specified base address.
-   Axon remains powered on after initialization.
 
    .. note::
 
@@ -157,7 +170,7 @@ The same high‑level flow applies to both synchronous and asynchronous inferenc
 
 Follow these steps to execute inference with a compiled Axon model:
 
-#. Ensure the Axon driver has been initialized and the model has been initialized for the selected execution mode.
+#. Ensure the Axon NPU driver has been initialized and the model has been initialized for the selected execution mode.
 
 #. Prepare the input data in packed format::
 

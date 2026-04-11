@@ -66,7 +66,7 @@ char *strcpy_s(char* dest, size_t size, char const* src);
 #endif
 
 /*
-* register write to axon nn primative. 
+* register write to axon nn primative.
 * returns:
 * 0 if normal register written.
 * 1 if an "action" register was written (meanning the command buffer needs to be serviced)
@@ -113,10 +113,10 @@ void axon_simulator_read_saturation_cnt(AxonCoreSatCntLogSt *);
 void axon_simulator_clear_saturation_cnt();
 
 int nrf_axon_simulator_run_test_files(
-  char* input_file_path, 
-  char* output_file_path, 
-  char* input_file_ext, 
-  char* output_file_head_str, 
+  char* input_file_path,
+  char* output_file_path,
+  char* input_file_ext,
+  char* output_file_head_str,
   uint32_t buffer_size,
   int (*callback_function)(char* input_file_name, char* output_file_name, int8_t* input_vector, uint32_t buffer_size));
 
