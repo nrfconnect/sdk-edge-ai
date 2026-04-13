@@ -199,9 +199,9 @@ int main(void)
 	}
 
 	for (size_t i = 0; i < ARRAY_SIZE(vbufs); i++) {
-		vbufs[i] = video_buffer_alloc(1024, K_FOREVER);
+		vbufs[i] = video_buffer_alloc(1024, K_NO_WAIT);
 		if (vbufs[i] == NULL) {
-			LOG_ERR("video_buffer_alloc failed");
+			LOG_ERR("video_buffer_alloc %u failed", i);
 			return -1;
 		}
 		vbufs[i]->type = VIDEO_BUF_TYPE_OUTPUT;
