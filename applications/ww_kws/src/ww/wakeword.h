@@ -44,6 +44,11 @@ int ww_init(void);
  */
 int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *const ww_detected);
 
+/**
+ * @brief Reset Wakeword model state.
+ */
+void ww_reset(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

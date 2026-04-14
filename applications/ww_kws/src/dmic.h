@@ -17,9 +17,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#define SAMPLES_BLOCK_LENGTH_MS (10)
 #define DMIC_SAMPLE_BYTES	(2)
 #define DMIC_PCM_RATE		(16000)
-#define SAMPLES_BLOCK_LENGTH_MS (10)
+#define DMIC_SAMPLES_IN_BLOCK	(DMIC_PCM_RATE * SAMPLES_BLOCK_LENGTH_MS / 1000)
 
 /**
  * @brief Initialize DMIC.

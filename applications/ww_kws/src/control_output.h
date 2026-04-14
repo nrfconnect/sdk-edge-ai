@@ -13,6 +13,8 @@
 #ifndef __CONTROL_OUTPUT_H__
 #define __CONTROL_OUTPUT_H__
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -23,6 +25,12 @@ extern "C" {
 enum control_message_type {
 	CONTROL_MESSAGE_WAITING_WW,
 	CONTROL_MESSAGE_WW_DETECTED,
+
+	CONTROL_MESSAGE_WAITING_KW,
+	CONTROL_MESSAGE_KW_SPOTTED,
+	CONTROL_MESSAGE_TIMEOUT_KWS,
+
+	CONTROL_MESSAGE_COUNT
 };
 
 /**
@@ -30,6 +38,8 @@ enum control_message_type {
  */
 struct control_message {
 	enum control_message_type type;
+	uint16_t kw_class;
+	const char *name;
 };
 
 /**
