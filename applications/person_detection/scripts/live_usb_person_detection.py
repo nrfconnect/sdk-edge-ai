@@ -235,7 +235,7 @@ def clamp(v: float, lo: float, hi: float) -> float:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Live USB viewer for person_detection")
-    ap.add_argument("--port", default="/dev/ttyACM4", help="CDC ACM serial port")
+    ap.add_argument("--port", default="/dev/ttyACM2", help="CDC ACM serial port")
     ap.add_argument("--baud", type=int, default=115200, help="Baud rate (CDC ACM ignores this)")
     ap.add_argument("--scale", type=int, default=4, help="Display upscale factor")
     args = ap.parse_args()

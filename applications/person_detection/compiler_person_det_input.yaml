@@ -23,7 +23,7 @@ default_values:
 person_det:
   tflite_model: models/person-det.tflite
   model_name: person_det
-  test_data: data/demo_input.npy
+  # test_data: data/demo_input.npy
   test_vectors: all
   header_file_test_vector_cnt: 1
   reshape_input: true
