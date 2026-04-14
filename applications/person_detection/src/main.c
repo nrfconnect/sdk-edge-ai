@@ -288,7 +288,12 @@ int main(void)
 		}
 
 		nrf_gpio_pin_set(TRACE_PIN_POST);
-		int n = person_det_decode_and_nms(model, boxes, MAX_BOXES_LOG, score_thresh, nms_iou);
+		const struct person_det_decode_config decode_config = {
+			.max_out = MAX_BOXES_LOG,
+			.score_thresh = score_thresh,
+			.nms_iou = nms_iou,
+		};
+		int n = person_det_decode_and_nms(model, boxes, &decode_config);
 		nrf_gpio_pin_clear(TRACE_PIN_POST);
 
 		usb_stream_send_detections(frame_id, MODEL_W, MODEL_H,

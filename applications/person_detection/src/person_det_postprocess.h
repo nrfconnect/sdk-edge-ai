@@ -24,6 +24,12 @@ struct person_det_box {
 	enum person_det_head head;
 };
 
+struct person_det_decode_config {
+	int max_out;
+	float score_thresh;
+	float nms_iou;
+};
+
 /** Short label for logs (e.g. "s32", "s16", "s8"). */
 const char *person_det_head_name(enum person_det_head head);
 
@@ -31,9 +37,8 @@ const char *person_det_head_name(enum person_det_head head);
  * Decode all three detection heads and run NMS. Uses raw output pointers inside
  * @p model (valid immediately after nrf_axon_nn_model_infer_sync()).
  *
- * @param score_thresh  minimum class score (after sigmoid), e.g. 0.25f
- * @param nms_iou       IoU threshold for suppression, e.g. 0.45f
- * @return number of boxes written to @p out (at most @p max_out)
+ * @param config        decode and NMS configuration
+ * @return number of boxes written to @p out (at most config->max_out)
  */
 int person_det_decode_and_nms(const nrf_axon_nn_compiled_model_s *model, struct person_det_box *out,
-				int max_out, float score_thresh, float nms_iou);
+			      const struct person_det_decode_config *config);

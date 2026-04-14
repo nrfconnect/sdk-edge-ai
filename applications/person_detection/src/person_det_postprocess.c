@@ -8,7 +8,6 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
 
 #define NUM_ANCHORS    3
 #define PRED_PER_ANCH  6
@@ -73,6 +72,64 @@ static struct person_det_sigmoid_lut g_sigmoid_lut_s32;
 static struct person_det_sigmoid_lut g_sigmoid_lut_s16;
 static struct person_det_sigmoid_lut g_sigmoid_lut_s8;
 
+struct person_det_input_size {
+	float width;
+	float height;
+};
+
+struct person_det_output_desc {
+	const int8_t *base;
+	uint16_t height;
+	uint16_t width;
+	uint16_t row_stride;
+	uint32_t dequant_mult;
+	uint8_t dequant_round;
+	int8_t dequant_zp;
+};
+
+struct person_det_scale_desc {
+	const int8_t *base;
+	uint16_t height;
+	uint16_t width;
+	uint16_t row_stride;
+	int stride_px;
+	const float *anchors;
+	const struct person_det_sigmoid_lut *sigmoid_lut;
+	enum person_det_head head_id;
+};
+
+struct person_det_head_desc {
+	enum person_det_head head_id;
+	int stride_px;
+	int extra_output_idx;
+	const float *anchors;
+	struct person_det_sigmoid_lut *sigmoid_lut;
+};
+
+static const struct person_det_head_desc k_head_descs[] = {
+	{
+		.head_id = PERSON_DET_HEAD_STRIDE_32,
+		.stride_px = 32,
+		.extra_output_idx = 1,
+		.anchors = k_anchors_stride32,
+		.sigmoid_lut = &g_sigmoid_lut_s32,
+	},
+	{
+		.head_id = PERSON_DET_HEAD_STRIDE_16,
+		.stride_px = 16,
+		.extra_output_idx = 0,
+		.anchors = k_anchors_stride16,
+		.sigmoid_lut = &g_sigmoid_lut_s16,
+	},
+	{
+		.head_id = PERSON_DET_HEAD_STRIDE_8,
+		.stride_px = 8,
+		.extra_output_idx = -1,
+		.anchors = k_anchors_stride8,
+		.sigmoid_lut = &g_sigmoid_lut_s8,
+	},
+};
+
 const char *person_det_head_name(enum person_det_head head)
 {
 	switch (head) {
@@ -99,58 +156,107 @@ static int8_t read_ch(const int8_t *base, uint16_t h, uint16_t row_stride, uint1
 		    (size_t)x];
 }
 
-static void decode_scale(const int8_t *base, uint16_t fh, uint16_t fw, uint16_t row_stride,
-			 uint32_t dqm, uint8_t dqr, int8_t dqz, int stride_px, const float *anchors,
-			 float in_w, float in_h, struct person_det_box *cand, int *ncand,
-			 float score_thresh, enum person_det_head head_id)
-{
-	const struct person_det_sigmoid_lut *sigmoid_lut;
+static void decode_scale(const struct person_det_scale_desc *scale,
+			 const struct person_det_input_size *input_size,
+			 const struct person_det_decode_config *config, struct person_det_box *cand,
+			 int *ncand);
 
-	switch (head_id) {
-	case PERSON_DET_HEAD_STRIDE_32:
-		sigmoid_lut = &g_sigmoid_lut_s32;
-		break;
-	case PERSON_DET_HEAD_STRIDE_16:
-		sigmoid_lut = &g_sigmoid_lut_s16;
-		break;
-	default:
-		sigmoid_lut = &g_sigmoid_lut_s8;
-		break;
+static bool get_output_desc(const nrf_axon_nn_compiled_model_s *model,
+			    const struct person_det_head_desc *head,
+			    struct person_det_output_desc *output)
+{
+	if (head->extra_output_idx >= 0) {
+		if (model->extra_output_cnt <= (uint32_t)head->extra_output_idx) {
+			return false;
+		}
+
+		const nrf_axon_compiled_model_output_s *extra =
+			&model->extra_outputs[head->extra_output_idx];
+
+		*output = (struct person_det_output_desc){
+			.base = extra->ptr,
+			.height = extra->dimensions.height,
+			.width = extra->dimensions.width,
+			.row_stride = extra->stride,
+			.dequant_mult = extra->dequant_mult,
+			.dequant_round = extra->dequant_round,
+			.dequant_zp = extra->dequant_zp,
+		};
+
+		return true;
 	}
 
-	for (unsigned y = 0; y < fh; y++) {
-		for (unsigned x = 0; x < fw; x++) {
+	*output = (struct person_det_output_desc){
+		.base = model->output_ptr,
+		.height = model->output_dimensions.height,
+		.width = model->output_dimensions.width,
+		.row_stride = model->output_stride,
+		.dequant_mult = model->output_dequant_mult,
+		.dequant_round = model->output_dequant_round,
+		.dequant_zp = model->output_dequant_zp,
+	};
+
+	return true;
+}
+
+static void decode_head_output(const struct person_det_head_desc *head,
+			       const struct person_det_output_desc *output,
+			       const struct person_det_input_size *input_size,
+			       const struct person_det_decode_config *config,
+			       struct person_det_box *cand, int *ncand)
+{
+	person_det_sigmoid_lut_init(head->sigmoid_lut, output->dequant_mult, output->dequant_round,
+				    output->dequant_zp);
+
+	const struct person_det_scale_desc scale = {
+		.base = output->base,
+		.height = output->height,
+		.width = output->width,
+		.row_stride = output->row_stride,
+		.stride_px = head->stride_px,
+		.anchors = head->anchors,
+		.sigmoid_lut = head->sigmoid_lut,
+		.head_id = head->head_id,
+	};
+
+	decode_scale(&scale, input_size, config, cand, ncand);
+}
+
+static void decode_scale(const struct person_det_scale_desc *scale,
+			 const struct person_det_input_size *input_size,
+			 const struct person_det_decode_config *config, struct person_det_box *cand,
+			 int *ncand)
+{
+	for (unsigned y = 0; y < scale->height; y++) {
+		for (unsigned x = 0; x < scale->width; x++) {
 			for (int a = 0; a < NUM_ANCHORS; a++) {
 				int o = a * PRED_PER_ANCH;
-				int8_t qcx = read_ch(base, fh, row_stride, (uint16_t)(o + 0), y, x);
-				int8_t qcy = read_ch(base, fh, row_stride, (uint16_t)(o + 1), y, x);
-				int8_t qw = read_ch(base, fh, row_stride, (uint16_t)(o + 2), y, x);
-				int8_t qh = read_ch(base, fh, row_stride, (uint16_t)(o + 3), y, x);
-				int8_t qobj = read_ch(base, fh, row_stride, (uint16_t)(o + 4), y, x);
-				int8_t qcls = read_ch(base, fh, row_stride, (uint16_t)(o + 5), y, x);
+				int8_t qcx = read_ch(scale->base, scale->height, scale->row_stride,
+						   (uint16_t)(o + 0), y, x);
+				int8_t qcy = read_ch(scale->base, scale->height, scale->row_stride,
+						   (uint16_t)(o + 1), y, x);
+				int8_t qw = read_ch(scale->base, scale->height, scale->row_stride,
+						  (uint16_t)(o + 2), y, x);
+				int8_t qh = read_ch(scale->base, scale->height, scale->row_stride,
+						  (uint16_t)(o + 3), y, x);
+				int8_t qobj = read_ch(scale->base, scale->height, scale->row_stride,
+						    (uint16_t)(o + 4), y, x);
+				int8_t qcls = read_ch(scale->base, scale->height, scale->row_stride,
+						    (uint16_t)(o + 5), y, x);
 
-				// float rw = dequant_q(sigmoid_lut, qw);
-				// float rh = dequant_q(sigmoid_lut, qh);
-
-				float cx = (sigmoid_q(sigmoid_lut, qcx) + (float)x) * (float)stride_px;
-				float cy = (sigmoid_q(sigmoid_lut, qcy) + (float)y) * (float)stride_px;
-
-				// rw = fminf(rw, 10.f);
-				// rh = fminf(rh, 10.f);
-				// float bw = expf(rw) * anchors[a * 2 + 0];
-				// float bh = expf(rh) * anchors[a * 2 + 1];
-
-				// float bw = rw * anchors[a * 2 + 0];
-				// float bh = rh * anchors[a * 2 + 1];
-
-				float bw = exp_q(sigmoid_lut, qw) * anchors[a * 2 + 0];
-				float bh = exp_q(sigmoid_lut, qh) * anchors[a * 2 + 1];
+				float cx =
+					(sigmoid_q(scale->sigmoid_lut, qcx) + (float)x) * (float)scale->stride_px;
+				float cy =
+					(sigmoid_q(scale->sigmoid_lut, qcy) + (float)y) * (float)scale->stride_px;
+				float bw = exp_q(scale->sigmoid_lut, qw) * scale->anchors[a * 2 + 0];
+				float bh = exp_q(scale->sigmoid_lut, qh) * scale->anchors[a * 2 + 1];
 
 				float hw = bw * 0.5f;
 				float hh = bh * 0.5f;
 
-				float conf = sigmoid_q(sigmoid_lut, qobj) * sigmoid_q(sigmoid_lut, qcls);
-				if (conf < score_thresh || *ncand >= MAX_CANDIDATES) {
+				float conf = sigmoid_q(scale->sigmoid_lut, qobj) *
+					     sigmoid_q(scale->sigmoid_lut, qcls);
+				if (conf < config->score_thresh || *ncand >= MAX_CANDIDATES) {
 					continue;
 				}
 
@@ -165,11 +271,11 @@ static void decode_scale(const int8_t *base, uint16_t fh, uint16_t fw, uint16_t 
 				if (y1 < 0.f) {
 					y1 = 0.f;
 				}
-				if (x2 > in_w) {
-					x2 = in_w;
+				if (x2 > input_size->width) {
+					x2 = input_size->width;
 				}
-				if (y2 > in_h) {
-					y2 = in_h;
+				if (y2 > input_size->height) {
+					y2 = input_size->height;
 				}
 				if (x2 <= x1 || y2 <= y1) {
 					continue;
@@ -180,7 +286,7 @@ static void decode_scale(const int8_t *base, uint16_t fh, uint16_t fw, uint16_t 
 				cand[*ncand].x2 = x2;
 				cand[*ncand].y2 = y2;
 				cand[*ncand].score = conf;
-				cand[*ncand].head = head_id;
+				cand[*ncand].head = scale->head_id;
 				(*ncand)++;
 			}
 		}
@@ -216,8 +322,8 @@ static int cmp_score_desc(const void *va, const void *vb)
 	return 0;
 }
 
-static int nms(struct person_det_box *dets, int n, struct person_det_box *out, int max_out,
-	       float iou_thres)
+static int nms(struct person_det_box *dets, int n, struct person_det_box *out,
+	       const struct person_det_decode_config *config)
 {
 	if (n <= 0) {
 		return 0;
@@ -227,11 +333,11 @@ static int nms(struct person_det_box *dets, int n, struct person_det_box *out, i
 
 	int kept = 0;
 
-	for (int i = 0; i < n && kept < max_out; i++) {
+	for (int i = 0; i < n && kept < config->max_out; i++) {
 		bool take = true;
 
 		for (int j = 0; j < kept; j++) {
-			if (bbox_iou(&dets[i], &out[j]) > iou_thres) {
+			if (bbox_iou(&dets[i], &out[j]) > config->nms_iou) {
 				take = false;
 				break;
 			}
@@ -245,53 +351,31 @@ static int nms(struct person_det_box *dets, int n, struct person_det_box *out, i
 }
 
 int person_det_decode_and_nms(const nrf_axon_nn_compiled_model_s *model, struct person_det_box *out,
-			      int max_out, float score_thresh, float nms_iou)
+			      const struct person_det_decode_config *config)
 {
+	if (model == NULL || out == NULL || config == NULL || config->max_out <= 0) {
+		return 0;
+	}
+
 	struct person_det_box cand[MAX_CANDIDATES];
 	int ncand = 0;
 
 	const nrf_axon_nn_model_layer_dimensions_s *idim = &model->inputs[model->external_input_ndx].dimensions;
-	float in_w = (float)idim->width;
-	float in_h = (float)idim->height;
-
-	if (model->extra_output_cnt >= 2) {
-		const nrf_axon_compiled_model_output_s *e1 = &model->extra_outputs[1];
-
-		person_det_sigmoid_lut_init(&g_sigmoid_lut_s32, e1->dequant_mult,
-					    e1->dequant_round, e1->dequant_zp);
-	}
-	if (model->extra_output_cnt >= 1) {
-		const nrf_axon_compiled_model_output_s *e0 = &model->extra_outputs[0];
-
-		person_det_sigmoid_lut_init(&g_sigmoid_lut_s16, e0->dequant_mult,
-					    e0->dequant_round, e0->dequant_zp);
-	}
-	person_det_sigmoid_lut_init(&g_sigmoid_lut_s8, model->output_dequant_mult,
-				    model->output_dequant_round, model->output_dequant_zp);
+	const struct person_det_input_size input_size = {
+		.width = (float)idim->width,
+		.height = (float)idim->height,
+	};
 
 	/* Same tensor order as run_det_camera.py: stride 32, 16, 8 (see build_det_helper). */
-	if (model->extra_output_cnt >= 2) {
-		const nrf_axon_compiled_model_output_s *e1 = &model->extra_outputs[1];
+	for (size_t i = 0; i < sizeof(k_head_descs) / sizeof(k_head_descs[0]); i++) {
+		struct person_det_output_desc output;
 
-		decode_scale(e1->ptr, e1->dimensions.height, e1->dimensions.width, e1->stride,
-			     e1->dequant_mult, e1->dequant_round, e1->dequant_zp, 32,
-			     k_anchors_stride32, in_w, in_h, cand, &ncand, score_thresh,
-			     PERSON_DET_HEAD_STRIDE_32);
+		if (!get_output_desc(model, &k_head_descs[i], &output)) {
+			continue;
+		}
+
+		decode_head_output(&k_head_descs[i], &output, &input_size, config, cand, &ncand);
 	}
 
-	if (model->extra_output_cnt >= 1) {
-		const nrf_axon_compiled_model_output_s *e0 = &model->extra_outputs[0];
-
-		decode_scale(e0->ptr, e0->dimensions.height, e0->dimensions.width, e0->stride,
-			     e0->dequant_mult, e0->dequant_round, e0->dequant_zp, 16,
-			     k_anchors_stride16, in_w, in_h, cand, &ncand, score_thresh,
-			     PERSON_DET_HEAD_STRIDE_16);
-	}
-
-	decode_scale(model->output_ptr, model->output_dimensions.height, model->output_dimensions.width,
-		     model->output_stride, model->output_dequant_mult, model->output_dequant_round,
-		     model->output_dequant_zp, 8, k_anchors_stride8, in_w, in_h, cand, &ncand,
-		     score_thresh, PERSON_DET_HEAD_STRIDE_8);
-
-	return nms(cand, ncand, out, max_out, nms_iou);
+	return nms(cand, ncand, out, config);
 }
