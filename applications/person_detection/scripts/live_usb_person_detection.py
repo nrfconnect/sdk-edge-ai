@@ -237,7 +237,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Live USB viewer for person_detection")
     ap.add_argument("--port", default="/dev/ttyACM2", help="CDC ACM serial port")
     ap.add_argument("--baud", type=int, default=115200, help="Baud rate (CDC ACM ignores this)")
-    ap.add_argument("--scale", type=int, default=4, help="Display upscale factor")
+    ap.add_argument("--scale", type=int, default=6, help="Display upscale factor")
     args = ap.parse_args()
 
     try:
@@ -290,22 +290,24 @@ def main() -> int:
             # Prepare display image (BGR for OpenCV)
             display = cv2.cvtColor(last_frame.rgb, cv2.COLOR_RGB2BGR)
 
-            # Overlay detection boxes
-            if last_det is not None and last_det.frame_id == last_frame.frame_id:
-                for box in last_det.boxes:
-                    x1 = int(clamp(box.x1 - last_det.pad_left, 0, last_frame.width))
-                    y1 = int(clamp(box.y1 - last_det.pad_top, 0, last_frame.height))
-                    x2 = int(clamp(box.x2 - last_det.pad_left, 0, last_frame.width))
-                    y2 = int(clamp(box.y2 - last_det.pad_top, 0, last_frame.height))
-                    cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 1)
-                    label = f"{HEAD_NAMES.get(box.head, '?')} {box.score:.2f}"
-                    cv2.putText(display, label, (x1, max(y1 - 3, 8)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 255, 0), 1)
-
             # Upscale
             if args.scale > 1:
                 display = cv2.resize(display, None, fx=args.scale, fy=args.scale,
                                      interpolation=cv2.INTER_NEAREST)
+
+            scale = max(1, args.scale)
+
+            # Overlay detection boxes
+            if last_det is not None and last_det.frame_id == last_frame.frame_id:
+                for box in last_det.boxes:
+                    x1 = int(clamp(box.x1 - last_det.pad_left, 0, last_frame.width) * scale)
+                    y1 = int(clamp(box.y1 - last_det.pad_top, 0, last_frame.height) * scale)
+                    x2 = int(clamp(box.x2 - last_det.pad_left, 0, last_frame.width) * scale)
+                    y2 = int(clamp(box.y2 - last_det.pad_top, 0, last_frame.height) * scale)
+                    cv2.rectangle(display, (x1, y1), (x2, y2), (0, 255, 0), 1)
+                    label = f"{HEAD_NAMES.get(box.head, '?')} {box.score:.2f}"
+                    cv2.putText(display, label, (x1, max(y1 - 3, 8)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
             # FPS overlay
             if len(fps_times) >= 2:
