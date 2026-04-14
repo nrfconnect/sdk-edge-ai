@@ -15,8 +15,6 @@
 
 #include <stdint.h>
 
-#include <zephyr/sys/atomic.h>
-
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
@@ -57,19 +55,6 @@ static uint8_t frame_rgb565[FRAME_RGB565_BYTES];
 
 static const struct gpio_dt_spec led_capture = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 static const struct gpio_dt_spec led_person = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
-
-static atomic_t capture_led_active;
-
-static void capture_led_timer_fn(struct k_timer *timer)
-{
-	ARG_UNUSED(timer);
-
-	if (atomic_get(&capture_led_active)) {
-		(void)gpio_pin_toggle_dt(&led_capture);
-	}
-}
-
-K_TIMER_DEFINE(capture_led_timer, capture_led_timer_fn, NULL);
 
 static inline int8_t quantize(const float value, const nrf_axon_nn_compiled_model_input_s *in)
 {
@@ -245,30 +230,19 @@ int main(void)
 
 	if (video_stream_start(video, VIDEO_BUF_TYPE_OUTPUT) != 0) {
 		LOG_ERR("video_stream_start failed");
-		atomic_set(&capture_led_active, 0);
-		k_timer_stop(&capture_led_timer);
-		gpio_pin_set_dt(&led_capture, 0);
 		return 0;
 	}
 
 	while (true) {
-		atomic_set(&capture_led_active, 1);
-		k_timer_start(&capture_led_timer, K_NO_WAIT, K_MSEC(55));
+		gpio_pin_toggle_dt(&led_capture);
 
 		nrf_gpio_pin_set(TRACE_PIN_CAPTURE);
 		if (capture_one_frame(video) != 0) {
 			(void)video_stream_stop(video, VIDEO_BUF_TYPE_OUTPUT);
-			atomic_set(&capture_led_active, 0);
-			k_timer_stop(&capture_led_timer);
-			gpio_pin_set_dt(&led_capture, 0);
 			k_msleep(500);
 			continue;
 		}
 		nrf_gpio_pin_clear(TRACE_PIN_CAPTURE);
-
-		atomic_set(&capture_led_active, 0);
-		k_timer_stop(&capture_led_timer);
-		gpio_pin_set_dt(&led_capture, 0);
 
 		usb_stream_send_frame(frame_id, CAM_W, CAM_H,
 				      frame_rgb565, FRAME_RGB565_BYTES);
@@ -307,7 +281,7 @@ int main(void)
 					(double)boxes[i].x1, (double)boxes[i].y1, (double)boxes[i].x2,
 					(double)boxes[i].y2, (double)boxes[i].score);
 			}
-			gpio_pin_toggle_dt(&led_person);
+			gpio_pin_set_dt(&led_person, 1);
 		} else {
 			gpio_pin_set_dt(&led_person, 0);
 		}
