@@ -29,6 +29,21 @@ int leds_init(void);
  */
 void leds_blink_led0(void);
 
+/**
+ * @brief Blink with LED1.
+ */
+void leds_blink_led1(void);
+
+/**
+ * @brief Turn on LED0.
+ */
+void leds_on_led0(void);
+
+/**
+ * @brief Turn off LED0.
+ */
+void leds_off_led0(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -7,25 +7,25 @@ Wakeword and Keyword Spotting
    :local:
    :depth: 2
 
-This application demonstrates wakeword detection from a digital microphone stream using |EAILib| and Axon-based inference.
+This application demonstrates wakeword detection and keyword spotting from a digital microphone stream using |EAILib| and Axon-based inference.
 
 Application overview
 ********************
 
-The application samples single-channel 16 kHz audio from a PDM microphone and feeds it to an nRF Edge AI wakeword model.
+The application samples single-channel 16 kHz audio from a PDM microphone and feeds it to nRF Edge AI models.
 The wakeword phrase used by the bundled model is "Okay Nordic".
-To reduce false detections, model output is postprocessed with a predictions history window.
+In wakeword detection stage, model output is postprocessed with a predictions history window.
 Parameters used for postprocessing are prediction probability threshold, predictions history length and number of predictions above threshold in predictions history.
-When a wakeword is detected, the application:
+When a wakeword is detected, the application switches to keyword detection stage.
 
-* Blinks **LED0** for one second.
-* Sends a status message on UART30.
+The bundled keyword spotting model supports keywords: Go, Stop, Up, Down, Yes, No, On, Off, Right, Left.
+In keyword spotting stage, the application applies exponential moving average postprocessing to class probability and reports detections when class-specific criteria are met.
+After period without any keywords spotted the application switches back to wakeword stage.
+
+You can also configure the application to stay in one of these stages using the application-specific Kconfig options.
 
 You can easily replace the bundled wakeword with a custom one using the Text to Wake Word feature of the `Nordic Edge AI Lab`_.
-
-.. note::
-   The current implementation in this application performs wakeword detection.
-   A separate keyword classification stage will be added in future releases.
+Text to Keyword feature is coming soon to the `Nordic Edge AI Lab`_.
 
 Requirements
 ************
@@ -68,13 +68,23 @@ User interface
 ***************
 
 LED0:
-   Blinks for one second when the wakeword is detected.
+   Behaviour depends on selected application mode:
+
+   * Is turned on while keyword spotting stage is active in wakeword-gated keyword spotting mode.
+   * Blinks for one second when wakeword is detected in wakeword only mode.
+   * Stays off in keyword spotting only mode.
+
+LED1:
+   Blinks for one second on each keyword spotted.
 
 UART30:
-   Prints wakeword state messages:
+   Prints runtime state messages:
 
    * ``Waiting for wakeword``
    * ``Wakeword detected``
+   * ``Waiting for keywords``
+   * ``Keyword spotted: <name>``
+   * ``Keyword spotting window timeout``
 
 Configuration
 *************
@@ -105,12 +115,23 @@ Testing
 #. |connect_terminal_kit| The application is using both serial ports.
 #. Open one terminal for Zephyr logs and one for control output from UART30.
 #. Say the wakeword phrase "Okay Nordic".
-#. Observe a one-second blink on **LED0** and the following messages:
+#. Observe **LED0** lit up.
+#. Say one of the bundled model keywords (for example, "Yes" or "No").
+#. Observe a one-second blink on **LED1**.
+#. Stop speaking and wait for timeout.
+
+Application output
+==================
+
+The application shows the following output from UART30:
 
 .. code-block:: console
 
    Waiting for wakeword
    Wakeword detected
+   Waiting for keywords
+   Keyword spotted: Yes
+   Keyword spotting window timeout
 
 Dependencies
 ************
