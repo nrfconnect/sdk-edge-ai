@@ -504,26 +504,27 @@ static int arducam_mega_soft_reset(const struct device *dev)
 	return ret;
 }
 
-static int arducam_mega_capture(const struct device *dev, uint32_t *length)
+static int arducam_mega_capture(const struct device *dev, uint32_t *length,
+				struct video_buffer *vbuf)
 {
 	const struct arducam_mega_config *cfg = dev->config;
 	struct arducam_mega_data *drv_data = dev->data;
-	uint8_t tries = 200;
 
-	arducam_mega_write_reg(&cfg->bus, ARDUCHIP_FIFO, FIFO_CLEAR_ID_MASK);
-	arducam_mega_write_reg(&cfg->bus, ARDUCHIP_FIFO, FIFO_START_MASK);
+	const uint8_t FIFO_FLUSH = 0x80;
+
+	arducam_mega_write_reg(&cfg->bus, ARDUCHIP_FIFO_2, FIFO_FLUSH);
+	arducam_mega_write_reg(&cfg->bus, ARDUCHIP_FIFO, FIFO_CLEAR_ID_MASK | FIFO_START_MASK);
+
+	uint32_t len = 0;
 
 	do {
-		if (tries-- == 0) {
-			LOG_ERR("Capture timeout!");
-			return -1;
-		}
+		len = arducam_mega_read_reg(&cfg->bus, FIFO_SIZE1);
+		len |= (arducam_mega_read_reg(&cfg->bus, FIFO_SIZE2) << 8);
+		len |= (arducam_mega_read_reg(&cfg->bus, FIFO_SIZE3) << 16);
 		k_msleep(2);
-	} while (!(arducam_mega_read_reg(&cfg->bus, ARDUCHIP_TRIG) & CAP_DONE_MASK));
+	} while (len < vbuf->size * 2);
 
-	drv_data->fifo_length = arducam_mega_read_reg(&cfg->bus, FIFO_SIZE1);
-	drv_data->fifo_length |= (arducam_mega_read_reg(&cfg->bus, FIFO_SIZE2) << 8);
-	drv_data->fifo_length |= (arducam_mega_read_reg(&cfg->bus, FIFO_SIZE3) << 16);
+	drv_data->fifo_length = drv_data->fmt.height * drv_data->fmt.pitch;
 
 	drv_data->fifo_first_read = 1;
 	*length = drv_data->fifo_length;
@@ -569,15 +570,13 @@ static void __buffer_work(struct k_work *work)
 	}
 
 	if (drv_data->fifo_length == 0) {
-		arducam_mega_capture(drv_data->dev, &f_length);
+		arducam_mega_capture(drv_data->dev, &f_length, vbuf);
 		f_timestamp = k_uptime_get_32();
 	}
 
 	arducam_mega_fifo_read(drv_data->dev, vbuf);
 
-	if (drv_data->fifo_length != 0) {
-		k_work_submit_to_queue(&ac_work_q, &drv_data->buf_work);
-	}
+	k_work_submit_to_queue(&ac_work_q, &drv_data->buf_work);
 
 	vbuf->timestamp = f_timestamp;
 	k_fifo_put(&drv_data->fifo_out, vbuf);
