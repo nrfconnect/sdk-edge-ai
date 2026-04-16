@@ -61,6 +61,20 @@ Users can see this value declared in the model header file macro ``NRF_AXON_MODE
 
 The synchronous and asynchronous inference APIs accept as parameters the input and output buffers, and will fill/drain the interlayer buffer with input/output in a thread safe manner.
 
+Power Management
+================
+
+The Axon NPU is automatically put in a low power state when not in use. No explicit power management steps are required of the user.
+
+Other System Resources
+======================
+
+The Axon NPU driver executes both in the caller's thread and  in a workqueue. 
+Jobs are initiated in the caller's thread, interrupts are processed in the workqueue, and in synchornous mode, job completion is signaled with a semaphore.
+User callbacks are invoked upon job complete in asynchronous mode; the user takes responsibility for signaling their owning thread.
+A mutex is used to serialize access to the axon npu hardware. 
+The workqueue, interrupt, semaphore, and mutex are all initialized by the function ``nrf_axon_platform_init``, which is called once at start up. The initialization process is described further below.
+
 Integration steps
 *****************
 
@@ -92,8 +106,7 @@ Follow these steps to initialize the Axon driver:
    You can obtain ``base_address`` from the device tree on Zephyr.
 
    During initialization, the driver powers on Axon by calling the ``nrf_axon_platform_vote_for_power()`` function.
-   The driver then verifies that Axon exists at the specified base address.
-   Axon remains powered on after initialization.
+   The driver then verifies that Axon NPU exists at the specified base address.
 
    .. note::
 
@@ -170,6 +183,11 @@ Follow these steps to execute inference with a compiled Axon model:
 
    * ``1`` for ``int8``
    * ``2`` for ``int16``
+
+   .. note::
+
+      The data ordering in Axon NPU input and output buffers differs from TFLite.
+      Axon NPU stores data with channels being the outermost dimension, while TFLite stores data with channels as the innermost dimension.
 
 #. Prepare an output buffer outside of the interlayer buffer, sized to hold the packed output::
 
@@ -283,7 +301,7 @@ Ensure you have completed the following:
 #. Updated the following Kconfig values in the application's :file:`prj.conf` file:
 
    * Enable the ``NRF_AXON`` Kconfig option.
-   * Set ``NRF_AXON_INTERLAYER_BUFFER_SIZE`` to the maximum value needed across all models in the application.
+   * Set ``NRF_AXON_INTERLAYER_BUFFER_SIZE`` to the maximum value needed across all models in the application. This value is printed near the top of the compiled model header file.
 
 #. Initialized driver one time at start-up.
 #. Initialized the model one-time at start-up for the desired mode of execution, synchronous (``nrf_axon_nn_model_validate``) or asynchronous (``nrf_axon_nn_model_async_init``).

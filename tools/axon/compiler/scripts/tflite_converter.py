@@ -173,7 +173,9 @@ def test_tflite_model(tflite_path, quantized_x_test, y_test=None, classification
     prediction_results = []
     prediction_digits = []
     for test_ in quantized_x_test:
-        test_ = np.expand_dims(test_, axis=0)
+        # test_ = np.expand_dims(test_, axis=0)
+        test_ = util.check_input_shape_for_inference(
+            test_, interpreter.get_input_details()[0]['shape'])
         interpreter.set_tensor(input_index, test_)
 
         # Run inference.
@@ -247,19 +249,24 @@ def test_scaled_model_on_simulator(tflite_model_path, x_test, y_test, simulator_
 
 
 def test_floating_point_model(keras_model_path, x_test, y_test=None, classification_model=True, get_results=False):
-    # logger = logging.getLogger(__name__)
-    # check accuracy of keras float model.
+    """
+    tests the floating point model.
+    returns the accuracy of the model if y_test is provided and it is a classification model,
+    model accuracy
+    presiction results
+    prediction_indices (if a classification model)
+    """
     model = tf.keras.models.load_model(keras_model_path)
     prediction_results = model.predict(x_test, verbose=0)
     prediction_indexes = []
-    if y_test is None:
+    if y_test is None: 
         if (get_results):
             return None, np.array(prediction_results).squeeze()
         return None
     if (classification_model):
         prediction_indexes = np.argmax(prediction_results, axis=1)
         acc_float = np.mean(y_test == prediction_indexes)
-    else:
+    else: #calculates mean error if it is not a classification model.
         prediction_indexes = prediction_results
         errors = np.sqrt(np.square(y_test - prediction_results))
         acc_float = np.mean(errors)

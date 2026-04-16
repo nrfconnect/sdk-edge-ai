@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_kws_transposed
- * Axon Neural Network Compiler Version: 1.0.1
+ * Axon Neural Network Compiler Version: 1.2.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -9,11 +9,8 @@ extern "C" {
 
 #define NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_MAX_IL_BUFFER_USED 9708
 #define NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_MAX_PSUM_BUFFER_USED 0
-
-#if AXON_COMPILE_TIME_BUFFER_CHECK
-static_assert(NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_MAX_IL_BUFFER_USED < sizeof(nrf_axon_interlayer_buffer), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
-
-#endif
+static_assert(NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_MAX_IL_BUFFER_USED < (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
+static_assert(NRF_AXON_VERSION >= 0x00010200, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
 
 const char* labels_tinyml_kws_transposed[] = {
 "DOWN",
@@ -999,7 +996,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed[
   uint32_t axon_model_tinyml_kws_transposed_packed_output_buf[NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_tinyml_kws_transposed = {
-    .compiler_version = 0x00010001,
+    .compiler_version = 0x00010200,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -1049,6 +1046,9 @@ const nrf_axon_nn_compiled_model_s model_tinyml_kws_transposed = {
     .output_dequant_zp = 0,
     .output_stride = 48,
     .is_layer_model = false,
+    .extra_output_cnt = 0,
+    .extra_outputs = NULL,
+    .min_driver_version_required = 0x00010200,
 };
 #ifdef __cplusplus
 }

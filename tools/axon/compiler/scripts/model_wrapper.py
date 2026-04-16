@@ -229,8 +229,8 @@ class CompilerResultsReturnClass():
 
 
 class ModelDescriptionBin:
-    MAJOR_VER = 0
-    MINOR_VER = 17
+    MAJOR_VER = 1
+    MINOR_VER = 2
     PATCH_VER = 0
     binary_title_string = "AXON_INTERMEDIATE_REPRESENTATION_FILE"
     MODEL_BIN_VER = (MAJOR_VER << 16) + (MINOR_VER << 8) + PATCH_VER
@@ -735,7 +735,7 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
             logger.debug(f"bias_vector : {bias_vector}")
         multiplier_length = model_layer_description_struct[layers].output_dimensions.channel_cnt
         if (np.array(model_layer_description_struct[layers].output_multipliers.offset).astype(np.int32) != -1):
-            if (axon_op_name == "NRF_AXON_NN_OP_AVERAGE_POOLING"):
+            if (axon_op_name == "NRF_AXON_NN_OP_AVERAGE_POOLING") or (axon_op_name == "NRF_AXON_NN_OP_MULTIPLY"):
                 multiplier_length = 1
             multiplier_vector = np.frombuffer(
                 model_const, offset=model_layer_description_struct[layers].output_multipliers.offset, dtype=np.int32, count=multiplier_length)
