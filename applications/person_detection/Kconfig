@@ -6,4 +6,15 @@
 
 source "Kconfig.zephyr"
 
+config SCORE_THRESHOLD
+	int "Model score threshold, in per mille"
+	range 0 1000
+	default 250
+
+config IOU_THRESHOLD
+	int "Boxes IoU threshold, in per mille"
+	range 0 1000
+	default 450
+
+
 source "samples/subsys/usb/common/Kconfig.sample_usbd"

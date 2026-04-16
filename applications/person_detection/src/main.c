@@ -169,8 +169,8 @@ int main(void)
 				   .pitch = CAM_W * 2};
 
 	struct person_det_box boxes[MAX_BOXES_LOG];
-	const float score_thresh = 0.25f;
-	const float nms_iou = 0.45f;
+	const float score_thresh = CONFIG_SCORE_THRESHOLD / 1000.f;
+	const float nms_iou = CONFIG_IOU_THRESHOLD / 1000.f;
 
 	if (!gpio_is_ready_dt(&led_capture) || !gpio_is_ready_dt(&led_person)) {
 		LOG_ERR("LED GPIO not ready");
