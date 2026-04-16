@@ -19,8 +19,18 @@
 
 int usb_stream_init(void);
 
-void usb_stream_send_frame(uint32_t frame_id, uint16_t w, uint16_t h,
-			   const uint8_t *rgb565, size_t len);
+/**
+ * Streaming frame API — overlaps USB TX with camera capture.
+ *
+ * Frame wire format (CRC is a trailer, not in the header):
+ *   [magic(4) ver(1) type(1) w(2) h(2) plen(4) fid(4)]  — 18 B header
+ *   [payload: RGB565 BE]                                  — plen bytes
+ *   [crc32(payload)]                                      — 4 B trailer
+ */
+void usb_stream_frame_begin(uint32_t frame_id, uint16_t w, uint16_t h,
+			    uint32_t payload_len);
+void usb_stream_frame_chunk(const uint8_t *data, size_t len);
+void usb_stream_frame_end(void);
 
 void usb_stream_send_detections(uint32_t frame_id, uint16_t model_w, uint16_t model_h,
 				uint16_t pad_left, uint16_t pad_top,

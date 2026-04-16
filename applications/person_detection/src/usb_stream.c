@@ -189,34 +189,66 @@ int usb_stream_init(void)
 	return 0;
 }
 
-void usb_stream_send_frame(uint32_t frame_id, uint16_t w, uint16_t h,
-			   const uint8_t *rgb565, size_t len)
+/* ------------------------------------------------------------------ */
+/* Streaming frame API                                                */
+/* ------------------------------------------------------------------ */
+
+static uint32_t frame_crc;
+static uint32_t frame_tx_id;
+static bool frame_active;
+
+void usb_stream_frame_begin(uint32_t frame_id, uint16_t w, uint16_t h,
+			    uint32_t payload_len)
 {
 	if (!atomic_get(&dtr_set)) {
+		frame_active = false;
 		return;
 	}
 
-	const uint32_t crc = crc32_ieee(rgb565, len);
+	frame_crc = 0U;
+	frame_tx_id = frame_id;
 
-	/* Build the full 22-byte header in one buffer:
-	 * magic(4) + version(1) + type(1) + width(2) + height(2) +
-	 * payload_len(4) + frame_id(4) + crc32(4)
+	/* 18-byte header: magic(4) + ver(1) + type(1) + w(2) + h(2) +
+	 * payload_len(4) + frame_id(4).  CRC follows payload as trailer.
 	 */
-	uint8_t hdr[22];
+	uint8_t hdr[18];
 
 	le32_put(&hdr[0], USB_STREAM_MAGIC);
 	hdr[4] = USB_STREAM_VERSION;
 	hdr[5] = USB_STREAM_TYPE_FRAME;
 	le16_put(&hdr[6], w);
 	le16_put(&hdr[8], h);
-	le32_put(&hdr[10], (uint32_t)len);
+	le32_put(&hdr[10], payload_len);
 	le32_put(&hdr[14], frame_id);
-	le32_put(&hdr[18], crc);
 
-	if (!tx_stage(hdr, sizeof(hdr))) {
+	frame_active = tx_stage(hdr, sizeof(hdr));
+}
+
+void usb_stream_frame_chunk(const uint8_t *data, size_t len)
+{
+	if (!frame_active) {
 		return;
 	}
-	tx_stage(rgb565, len);
+
+	frame_crc = crc32_ieee_update(frame_crc, data, len);
+
+	if (!tx_stage(data, len)) {
+		frame_active = false;
+	}
+}
+
+void usb_stream_frame_end(void)
+{
+	if (!frame_active) {
+		return;
+	}
+
+	uint8_t crc_buf[4];
+
+	le32_put(crc_buf, frame_crc);
+	tx_stage(crc_buf, sizeof(crc_buf));
+
+	frame_active = false;
 }
 
 void usb_stream_send_detections(uint32_t frame_id, uint16_t model_w, uint16_t model_h,

@@ -12,7 +12,7 @@ Binary protocol (little-endian):
 
   Frame message (type 0x01):
     [4B magic 0xA55A3412] [1B version] [1B type=0x01] [2B width] [2B height]
-    [4B payload_len] [4B frame_id] [4B crc32(payload)] [payload: RGB565 BE]
+    [4B payload_len] [4B frame_id] [payload: RGB565 BE] [4B crc32(payload)]
 
   Detection message (type 0x02):
     [4B magic] [1B version] [1B type=0x02] [4B frame_id] [2B model_w] [2B model_h]
@@ -47,7 +47,7 @@ VERSION = 1
 TYPE_FRAME = 0x01
 TYPE_DETECT = 0x02
 
-FRAME_HDR_SIZE = 22  # magic(4)+ver(1)+type(1)+w(2)+h(2)+plen(4)+fid(4)+crc(4)
+FRAME_HDR_SIZE = 18  # magic(4)+ver(1)+type(1)+w(2)+h(2)+plen(4)+fid(4)
 DETECT_HDR_SIZE = 19  # magic(4)+ver(1)+type(1)+fid(4)+mw(2)+mh(2)+pl(2)+pt(2)+cnt(1)
 BOX_SIZE = 21  # 4*f32 + f32 + u8
 
@@ -150,15 +150,17 @@ class StreamParser:
         if len(self._buf) < FRAME_HDR_SIZE:
             return False
 
-        _magic, ver, mtype, w, h, plen, fid, crc_expect = struct.unpack_from(
-            "<IBBHHIII", self._buf, 0
+        _magic, ver, mtype, w, h, plen, fid = struct.unpack_from(
+            "<IBBHHII", self._buf, 0
         )
 
-        total = FRAME_HDR_SIZE + plen
+        # total = header + payload + crc32 trailer
+        total = FRAME_HDR_SIZE + plen + 4
         if len(self._buf) < total:
             return False
 
-        payload = bytes(self._buf[FRAME_HDR_SIZE:total])
+        payload = bytes(self._buf[FRAME_HDR_SIZE:FRAME_HDR_SIZE + plen])
+        crc_expect = struct.unpack_from("<I", self._buf, FRAME_HDR_SIZE + plen)[0]
         crc_got = zlib.crc32(payload) & 0xFFFFFFFF
 
         if crc_got != crc_expect:

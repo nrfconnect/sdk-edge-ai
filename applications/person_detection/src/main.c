@@ -123,9 +123,11 @@ static void build_model_input_from_frame(const uint8_t *rgb565,
 	}
 }
 
-static int capture_one_frame(const struct device *video)
+static int capture_one_frame(const struct device *video, uint32_t frame_id)
 {
 	size_t total = 0;
+
+	usb_stream_frame_begin(frame_id, CAM_W, CAM_H, FRAME_RGB565_BYTES);
 
 	while (total < FRAME_RGB565_BYTES) {
 		struct video_buffer *vbuf;
@@ -140,11 +142,15 @@ static int capture_one_frame(const struct device *video)
 		size_t chunk = vbuf->bytesused < room ? vbuf->bytesused : room;
 
 		memcpy(frame_rgb565 + total, vbuf->buffer, chunk);
+		usb_stream_frame_chunk(vbuf->buffer, chunk);
+
 		total += chunk;
 
 		vbuf->type = VIDEO_BUF_TYPE_OUTPUT;
 		video_enqueue(video, vbuf);
 	}
+
+	usb_stream_frame_end();
 
 	return 0;
 }
@@ -237,15 +243,12 @@ int main(void)
 		gpio_pin_toggle_dt(&led_capture);
 
 		nrf_gpio_pin_set(TRACE_PIN_CAPTURE);
-		if (capture_one_frame(video) != 0) {
+		if (capture_one_frame(video, frame_id) != 0) {
 			(void)video_stream_stop(video, VIDEO_BUF_TYPE_OUTPUT);
 			k_msleep(500);
 			continue;
 		}
 		nrf_gpio_pin_clear(TRACE_PIN_CAPTURE);
-
-		usb_stream_send_frame(frame_id, CAM_W, CAM_H,
-				      frame_rgb565, FRAME_RGB565_BYTES);
 
 		nrf_gpio_pin_set(TRACE_PIN_PRE);
 		build_model_input_from_frame(frame_rgb565, model_inputs);
