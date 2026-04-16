@@ -18,6 +18,12 @@ manifest:
       revision: v3.3.0-preview2
       import: true
 
+    - name: zephyr
+      remote: ncs
+      repo-path: sdk-zephyr
+      revision: pull/3884/head
+      import: true
+
     - name: edge-impulse-sdk-zephyr
       url: https://github.com/edgeimpulse/edge-impulse-sdk-zephyr
       path: modules/edge-impulse-sdk-zephyr

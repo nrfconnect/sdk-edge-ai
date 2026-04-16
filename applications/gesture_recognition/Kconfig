@@ -86,6 +86,17 @@ config BLE_MODE_GATT_CUSTOM
 
 endchoice
 
+config IMU_FIFO_BATCH
+	bool "Use BMI270 FIFO watermark batch mode"
+	depends on BMI270_STREAM
+	depends on !DATA_COLLECTION_MODE
+	help
+	  When enabled, the IMU module uses the BMI270 FIFO with the Zephyr
+	  sensor stream (RTIO) API. Samples accumulate in the FIFO and the CPU
+	  wakes only on the watermark interrupt, reads the whole batch at once,
+	  and feeds each sample to inference. This greatly reduces wake-ups
+	  compared to per-sample data-ready interrupts or polling.
+
 choice BT_HIDS_DEFAULT_PERM
 	default BT_HIDS_DEFAULT_PERM_RW_ENCRYPT if BLE_MODE_HID
 endchoice
