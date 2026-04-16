@@ -51,7 +51,6 @@ BUILD_ASSERT(PAD_TOP + CAM_H + PAD_TOP == MODEL_H, "vertical pad");
 
 static int8_t output_buf[PACKED_OUTPUT_BYTES];
 static int8_t input_buf[MODEL_W * MODEL_H * 3];
-static uint8_t frame_rgb565[FRAME_RGB565_BYTES];
 
 static const struct gpio_dt_spec led_capture = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 static const struct gpio_dt_spec led_person = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
@@ -100,26 +99,25 @@ static void prepare_LUTs(const nrf_axon_nn_compiled_model_input_s *in)
 	}
 }
 
-static void build_model_input_from_frame(const uint8_t *rgb565,
-					 const nrf_axon_nn_compiled_model_input_s *in)
+static void convert_chunk_to_model_input(const uint8_t *chunk_buf, size_t pixel_start,
+					  size_t pixel_count)
 {
-	for (unsigned cam_row = 0; cam_row < CAM_H; cam_row++) {
+	for (size_t p = 0; p < pixel_count; p++) {
+		const size_t pixel_idx = pixel_start + p;
+		const unsigned cam_row = pixel_idx / CAM_W;
+		const unsigned cam_col = pixel_idx % CAM_W;
 		const unsigned model_row = PAD_TOP + cam_row;
+		const unsigned model_col = PAD_LEFT + cam_col;
+		const unsigned dst_offset = model_row * MODEL_W + model_col;
 
-		for (unsigned cam_col = 0; cam_col < CAM_W; cam_col++) {
-			const unsigned model_col = PAD_LEFT + cam_col;
+		const uint16_t pixel = rgb565_read_be(chunk_buf + p * 2);
+		const unsigned r5 = (pixel >> 11) & 0x1f;
+		const unsigned g6 = (pixel >> 5) & 0x3f;
+		const unsigned b5 = pixel & 0x1f;
 
-			const uint16_t pixel =
-				rgb565_read_be(&rgb565[(cam_row * CAM_W + cam_col) * 2]);
-			const unsigned r5 = (pixel >> 11) & 0x1f;
-			const unsigned g6 = (pixel >> 5) & 0x3f;
-			const unsigned b5 = pixel & 0x1f;
-			const unsigned dst_offset = model_row * MODEL_W + model_col;
-
-			input_buf[0 * MODEL_W * MODEL_H + dst_offset] = (int8_t)lut_5[r5];
-			input_buf[1 * MODEL_W * MODEL_H + dst_offset] = (int8_t)lut_6[g6];
-			input_buf[2 * MODEL_W * MODEL_H + dst_offset] = (int8_t)lut_5[b5];
-		}
+		input_buf[0 * MODEL_W * MODEL_H + dst_offset] = (int8_t)lut_5[r5];
+		input_buf[1 * MODEL_W * MODEL_H + dst_offset] = (int8_t)lut_6[g6];
+		input_buf[2 * MODEL_W * MODEL_H + dst_offset] = (int8_t)lut_5[b5];
 	}
 }
 
@@ -141,8 +139,10 @@ static int capture_one_frame(const struct device *video, uint32_t frame_id)
 		size_t room = FRAME_RGB565_BYTES - total;
 		size_t chunk = vbuf->bytesused < room ? vbuf->bytesused : room;
 
-		memcpy(frame_rgb565 + total, vbuf->buffer, chunk);
+		nrf_gpio_pin_set(TRACE_PIN_PRE);
 		usb_stream_frame_chunk(vbuf->buffer, chunk);
+		convert_chunk_to_model_input(vbuf->buffer, total / 2, chunk / 2);
+		nrf_gpio_pin_clear(TRACE_PIN_PRE);
 
 		total += chunk;
 
@@ -249,10 +249,6 @@ int main(void)
 			continue;
 		}
 		nrf_gpio_pin_clear(TRACE_PIN_CAPTURE);
-
-		nrf_gpio_pin_set(TRACE_PIN_PRE);
-		build_model_input_from_frame(frame_rgb565, model_inputs);
-		nrf_gpio_pin_clear(TRACE_PIN_PRE);
 
 		nrf_gpio_pin_set(TRACE_PIN_INFER);
 		result = nrf_axon_nn_model_infer_sync(model, input_buf, output_buf);
