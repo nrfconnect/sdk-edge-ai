@@ -114,6 +114,11 @@ options_from_kconfig_zephyr_dir = ZEPHYR_BASE
 # a list of builtin themes.
 #
 html_theme = 'sphinx_ncs_theme'
+html_theme_options = {
+    'docsets': {},
+}
+
+html_extra_path = ['versions.json']
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
