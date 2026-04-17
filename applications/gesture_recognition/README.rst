@@ -30,7 +30,7 @@ Based on accelerometer and gyroscope data, the nRF Edge AI model recognizes eigh
 * No gestures (IDLE)
 * Unknown gesture
 
-The neural network model is trained using the `Nordic Edge AI Lab platform`_.
+The neural network model is trained using the `Nordic Edge AI Lab`_.
 The whole process how to capture data and train the model is described in the `Nordic Edge AI Lab documentation`_.
 You can also see `Gesture recognition use-case demo video`_.
 
