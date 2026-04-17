@@ -1,6 +1,6 @@
 sample:
-  description: Wakeword and Keyword Spotting application
-  name: ww kws
+  description: Matter Switch application
+  name: Matter Switch
 
 common:
   sysbuild: true
@@ -8,41 +8,36 @@ common:
   tags:
     - ci_build
     - sysbuild
-    - ci_applications_ww_kws
-  harness: console
-  harness_config:
-    type: multi_line
-    regex:
-      - "Initialization completed"
-
 
 tests:
-  applications.matter_switch.generic_switch_debug:
+  applications.matter_switch.generic_switch_debug_dmic_adafruit:
     extra_args:
       - CONFIG_GENERIC_SWITCH=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_adafruit.dtsi
     platform_allow:
       - nrf54lm20dk/nrf54lm20b/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20b/cpuapp
-  applications.matter_switch.light_switch_debug:
+  applications.matter_switch.generic_switch_debug_dmic_low_power:
     extra_args:
-      - CONFIG_LIGHT_SWITCH=y
-    platform_allow:
-      - nrf54lm20dk/nrf54lm20b/cpuapp
-    integration_platforms:
-      - nrf54lm20dk/nrf54lm20b/cpuapp
-  applications.matter_switch.generic_switch_release:
-    extra_args:
-      - FILE_SUFFIX=release
       - CONFIG_GENERIC_SWITCH=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_low_power.dtsi
     platform_allow:
       - nrf54lm20dk/nrf54lm20b/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20b/cpuapp
-  applications.matter_switch.light_switch_release:
+  applications.matter_switch.light_switch_debug_dmic_adafruit:
     extra_args:
-      - FILE_SUFFIX=release
       - CONFIG_LIGHT_SWITCH=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_adafruit.dtsi
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+  applications.matter_switch.light_switch_debug_dmic_low_power:
+    extra_args:
+      - CONFIG_LIGHT_SWITCH=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_low_power.dtsi
     platform_allow:
       - nrf54lm20dk/nrf54lm20b/cpuapp
     integration_platforms:
