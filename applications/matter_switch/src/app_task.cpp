@@ -45,8 +45,11 @@ void ButtonEventHandler(Nrf::ButtonState state, Nrf::ButtonMask hasChanged)
 
 CHIP_ERROR AppTask::Init()
 {
-	/* Initialize Matter stack */
-	ReturnErrorOnFailure(Nrf::Matter::PrepareServer());
+	ReturnErrorOnFailure(
+		Nrf::Matter::PrepareServer(Nrf::Matter::InitData{.mPostServerInitClbk = [] {
+			Nrf::Matter::GetSwitch().Init();
+			return CHIP_NO_ERROR;
+		}}));
 
 	if (!Nrf::GetBoard().Init(ButtonEventHandler)) {
 		LOG_ERR("User interface initialization failed.");
