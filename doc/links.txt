@@ -14,8 +14,7 @@
 .. _`nRF54LM20 DK`: https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK/Hardware-files
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/signal_processing.html
-.. _`Nordic Edge AI Lab platform`: https://ai.lab.nordicsemi.com/
-.. _`Nordic Edge AI Lab`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Software#infotabs
+.. _`Nordic Edge AI Lab`: https://ai.lab.nordicsemi.com/
 .. _`nRF54LM20B`: https://www.nordicsemi.com/Products/nRF54LM20B
 .. _`Axon NPU`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Axon-NPU
 .. _`Neuton models`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Neuton-models
@@ -33,7 +32,7 @@
 .. _`nRF Connect for Visual Studio Code: Thread Viewer`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/reference/ui_panel.html#thread-viewer
 .. _`Nordic central UART sample`: https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/samples/bluetooth/central_uart/README.html
 .. _`nRF54L15TAG`: https://docs.nordicsemi.com/bundle/ncs-latest/page/zephyr/boards/nordic/nrf54l15tag/doc/index.html
-.. _`Nordic Edge AI Lab documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/index.html
+.. _`Nordic Edge AI Lab Documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/index.html
 .. _`Nordic Edge AI Lab Quick Start Guide`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
 .. _`Nordic Edge AI Lab Model Creating Pipeline`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline.html
 .. _`Nordic Edge AI Lab Model Dataset Requirements`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/dataset_requirements.html
