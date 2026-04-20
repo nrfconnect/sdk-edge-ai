@@ -87,6 +87,13 @@ config WW_COUNT_THRESHOLD
 	  Number of predictions above threshold in predictions history required to confirm wakeword
 	  detection.
 
+config KW_DETECTION_TIMEOUT_S
+	int "Timeout for keyword detection in seconds"
+	range 1 60
+	default 5
+	help
+	  Timeout for keyword detection in seconds after recognizing the wakeword.
+
 endmenu
 
 # Sample configuration used for Thread networking
