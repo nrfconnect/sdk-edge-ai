@@ -4,8 +4,6 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-source "Kconfig.zephyr"
-
 config LED_NOTIFICATION_BLINK
 	bool "Notification LED blink on event only"
 	help
@@ -89,3 +87,5 @@ endchoice
 choice BT_HIDS_DEFAULT_PERM
 	default BT_HIDS_DEFAULT_PERM_RW_ENCRYPT if BLE_MODE_HID
 endchoice
+
+source "Kconfig.zephyr"
