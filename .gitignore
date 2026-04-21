@@ -24,6 +24,7 @@ tags
 .envrc
 .vscode
 .devcontainer
+compliance.xml
 sanity-out*
 twister-out*
 map.yml

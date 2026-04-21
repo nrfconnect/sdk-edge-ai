@@ -84,7 +84,33 @@ config BLE_MODE_GATT_CUSTOM
 
 endchoice
 
+config BLE_MITM_AUTH
+	bool "Require MITM-protected pairing for BLE HID"
+	depends on BLE_MODE_HID
+	select BT_SMP
+	select BT_SMP_ENFORCE_MITM
+	select BT_SMP_SC_ONLY
+	default y
+	help
+	  Enforce Man-In-The-Middle (MITM) protection during BLE pairing,
+	  raising the link to Security Level 4 (Authenticated LE Secure
+	  Connections).
+
+	  With this option enabled, pairing requires an authenticated method
+	  such as Passkey Entry or Numeric Comparison, which prevents a nearby
+	  attacker from impersonating the host (or this device) during pairing
+	  and injecting or eavesdropping on HID traffic (e.g. keystrokes).
+
+	  Strongly recommended for BLE HID. Disable only for testing or when
+	  no I/O capability is available on the device.
+
+# Align HID characteristic permissions with the pairing security level:
+#   - MITM on  -> require authenticated access (Security Level 3/4)
+#   - MITM off -> require encryption only      (Security Level 2)
+# This prevents a mismatch where characteristics demand authenticated
+# access while pairing is unauthenticated (which would break connections).
 choice BT_HIDS_DEFAULT_PERM
+	default BT_HIDS_DEFAULT_PERM_RW_AUTHEN  if BLE_MITM_AUTH
 	default BT_HIDS_DEFAULT_PERM_RW_ENCRYPT if BLE_MODE_HID
 endchoice
 

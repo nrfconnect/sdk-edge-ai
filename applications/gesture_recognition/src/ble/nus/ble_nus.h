@@ -27,11 +27,9 @@ extern "C" {
 /**
  * @brief Initialize BLE NUS and start advertising
  *
- * @param cb Connection callback
- *
  * @return 0 on success, negative errno on failure
  */
-int ble_nus_init(ble_connection_cb_t cb);
+int ble_nus_init(void);
 
 /**
  * @brief Send raw IMU sample data over NUS

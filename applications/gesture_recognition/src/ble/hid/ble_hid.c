@@ -12,22 +12,24 @@
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/kernel.h>
 #include <zephyr/settings/settings.h>
 
 #include <bluetooth/services/hids.h>
+#include "ux_state_manager.h"
 
 LOG_MODULE_REGISTER(ble_hid);
 
 /* HID keyboard usage codes */
-#define KEY_ARROW_LEFT  0x50
+#define KEY_ARROW_LEFT	0x50
 #define KEY_ARROW_RIGHT 0x4F
-#define KEY_F5          0x3E
-#define KEY_ESC         0x29
+#define KEY_F5		0x3E
+#define KEY_ESC		0x29
 
 /* Consumer control bit positions (1-byte bitmap) */
 #define KEY_MEDIA_VOLUME_UP   BIT(0)
 #define KEY_MEDIA_VOLUME_DOWN BIT(1)
-#define KEY_MEDIA_MUTE        BIT(2)
+#define KEY_MEDIA_MUTE	      BIT(2)
 #define KEY_MEDIA_PLAY_PAUSE  BIT(3)
 #define KEY_MEDIA_PREV_TRACK  BIT(4)
 #define KEY_MEDIA_NEXT_TRACK  BIT(5)
@@ -48,22 +50,35 @@ LOG_MODULE_REGISTER(ble_hid);
 #define INPUT_REP_KEYBOARD_KEY_OFFSET 2
 #define INPUT_REP_CONSUMER_KEY_OFFSET 0
 
+/* Advertising retry configuration */
+#define ADV_RETRY_MAX     10
+#define ADV_RETRY_PERIOD  K_MSEC(500)
+
 #define BASE_USB_HID_SPEC_VERSION 0x0101
 
 BT_HIDS_DEF(hids_obj, INPUT_REP_KEYBOARD_LEN, INPUT_REP_CONSUMER_LEN);
 
+struct pairing_data_mitm {
+	struct bt_conn *conn;
+	unsigned int passkey;
+};
+
+/* Advertising related symbols */
+static void adv_work_handler(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(adv_work, adv_work_handler);
+static atomic_t adv_retry_count;
+
+K_MSGQ_DEFINE(mitm_queue, sizeof(struct pairing_data_mitm), 1, 4);
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
-				  BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL),
-				  BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
+	BT_DATA_BYTES(BT_DATA_UUID16_ALL, BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL),
+		      BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
 	BT_DATA_BYTES(BT_DATA_GAP_APPEARANCE,
-				  BT_BYTES_LIST_LE16(BT_APPEARANCE_HID_PRESENTATION_REMOTE)),
+		      BT_BYTES_LIST_LE16(BT_APPEARANCE_HID_PRESENTATION_REMOTE)),
 };
 
 static const struct bt_data sd[] = {
-	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME,
-		sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
 
 static const uint8_t report_map[] = {
@@ -132,12 +147,81 @@ static const uint8_t report_map[] = {
 	0xC0 /* End Collection */
 };
 
-static bool ble_connected;
-static ble_connection_cb_t user_conn_callback;
+/* HID notifications are only usable once the peer has subscribed by writing
+ * the CCCD of the corresponding input report. Until then bt_hids_inp_rep_send()
+ * fails (e.g. -ENOTSUP/-ENODATA) even though we are connected and encrypted.
+ * Track per-report subscription state so we can silently skip sending until
+ * the BLE stack is fully ready to deliver notifications.
+ */
+static bool kb_notif_enabled;
+static bool consumer_notif_enabled;
+
+static void kb_notif_handler(enum bt_hids_notify_evt evt)
+{
+	kb_notif_enabled = (evt == BT_HIDS_CCCD_EVT_NOTIFY_ENABLED);
+	LOG_DBG("Keyboard notifications %s", kb_notif_enabled ? "enabled" : "disabled");
+}
+
+static void consumer_notif_handler(enum bt_hids_notify_evt evt)
+{
+	consumer_notif_enabled = (evt == BT_HIDS_CCCD_EVT_NOTIFY_ENABLED);
+	LOG_DBG("Consumer notifications %s", consumer_notif_enabled ? "enabled" : "disabled");
+}
+
+static void adv_work_handler(struct k_work *work)
+{
+	ARG_UNUSED(work);
+
+	int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad),
+				  sd, ARRAY_SIZE(sd));
+
+	if (err == 0) {
+		int retries = atomic_get(&adv_retry_count);
+
+		atomic_set(&adv_retry_count, 0);
+
+		LOG_INF("Advertising successfully started%s",
+			retries ? " (after retry)" : "");
+
+		return;
+	}
+
+	if (err == -EALREADY) {
+		LOG_DBG("Advertising already running");
+		atomic_set(&adv_retry_count, 0);
+		return;
+	}
+
+	atomic_inc(&adv_retry_count);
+
+	int adv_retry_count_val = atomic_get(&adv_retry_count);
+
+	if (adv_retry_count_val < ADV_RETRY_MAX) {
+		LOG_WRN("Advertising start failed (err %d), retry %d/%d in 500 ms",
+			err, adv_retry_count_val, ADV_RETRY_MAX);
+		k_work_reschedule(&adv_work, ADV_RETRY_PERIOD);
+	} else {
+		LOG_ERR("Advertising failed to start after %d attempts (err %d)",
+			ADV_RETRY_MAX, err);
+		atomic_set(&adv_retry_count, 0);
+	}
+}
+
+static int start_advertising(void)
+{
+	/* Kick off (or reset) the asynchronous advertising-start sequence.
+	 * Actual bt_le_adv_start() is invoked from the system workqueue and
+	 * will retry up to ADV_RETRY_MAX times with ADV_RETRY_PERIOD spacing.
+	 */
+	atomic_set(&adv_retry_count, 0);
+	(void)k_work_reschedule(&adv_work, K_NO_WAIT);
+	return 0;
+}
 
 static void connected(struct bt_conn *conn, uint8_t conn_err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
+	bt_security_t required_level;
 	int err;
 
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
@@ -154,15 +238,28 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 		LOG_ERR("Failed to notify HIDS about connection (err %d)", err);
 	}
 
-	if (bt_conn_set_security(conn, BT_SECURITY_L2)) {
-		LOG_ERR("Failed to set security");
+	/* Application security policy:
+	 * - MITM enabled  -> authenticated LE Secure Connections (L4)
+	 * - MITM disabled -> encrypted link without authentication (L2)
+	 */
+	required_level = IS_ENABLED(CONFIG_BLE_MITM_AUTH) ? BT_SECURITY_L4 : BT_SECURITY_L2;
+
+	err = bt_conn_set_security(conn, required_level);
+	if (err) {
+		LOG_ERR("Failed to request security level %d (err %d), disconnecting %s",
+			required_level, err, addr);
+
+		err = bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);
+		if (err && err != -ENOTCONN) {
+			LOG_ERR("Failed to disconnect %s (err %d)", addr, err);
+		}
+		/* Do not mark as connected or notify the app; wait for the
+		 * disconnected() callback which will restart advertising.
+		 */
+		return;
 	}
 
-	ble_connected = true;
-
-	if (user_conn_callback) {
-		user_conn_callback(ble_connected);
-	}
+	ble_common_set_connected(true);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -174,37 +271,33 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	LOG_INF("Disconnected from %s (reason 0x%02x)", addr, reason);
 
+	kb_notif_enabled = false;
+	consumer_notif_enabled = false;
+
 	err = bt_hids_disconnected(&hids_obj, conn);
 	if (err) {
-		LOG_ERR("Failed to notify HIDS about disconnection (err %d)",
-			err);
+		LOG_ERR("Failed to notify HIDS about disconnection (err %d)", err);
 	}
 
-	ble_connected = false;
+	ble_common_set_connected(false);
 
-	if (user_conn_callback) {
-		user_conn_callback(ble_connected);
-	}
-
-	/* If disconnected due to authentication failure, clear all pairing info */
+	/* If disconnected due to authentication failure, clear connection pairing info */
 	if (reason == BT_HCI_ERR_AUTH_FAIL || reason == BT_HCI_ERR_PIN_OR_KEY_MISSING) {
 		LOG_INF("Authentication related disconnect, clearing pairing info");
-		bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
+		bt_unpair(BT_ID_DEFAULT, bt_conn_get_dst(conn));
 	}
+
+	/* Defensively get back to normal button function as we are not in pairing mode anymore */
+	uxsm_set_btn_func(UX_BTN_FUNC_NORMAL);
 
 	/* Restart advertising */
-	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-	if (err) {
-		LOG_ERR("Advertising failed to start (err %d)", err);
-		return;
-	}
-	LOG_INF("Advertising successfully started");
+	start_advertising();
 }
 
-static void security_changed(struct bt_conn *conn, bt_security_t level,
-			     enum bt_security_err err)
+static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
+	int disc_err;
 
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
@@ -212,7 +305,17 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,
 		LOG_INF("Security changed: %s level %u", addr, level);
 	} else {
 		LOG_ERR("Security failed: %s level %u err %d", addr, level, err);
-		bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
+		bt_unpair(BT_ID_DEFAULT, bt_conn_get_dst(conn));
+
+		/* The link is up but does not meet the required security level,
+		 * so force-disconnect. The disconnected() callback will restart
+		 * advertising.
+		 */
+		disc_err = bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);
+		if (disc_err && disc_err != -ENOTCONN) {
+			LOG_ERR("Failed to disconnect after security failure (err %d)",
+				disc_err);
+		}
 	}
 }
 
@@ -238,11 +341,13 @@ static int hids_service_init(void)
 	keyboard_rep = &hids_init_param.inp_rep_group_init.reports[INPUT_REP_KEYBOARD_IDX];
 	keyboard_rep->size = INPUT_REP_KEYBOARD_LEN;
 	keyboard_rep->id = INPUT_REP_KEYBOARD_ID;
+	keyboard_rep->handler = kb_notif_handler;
 	hids_init_param.inp_rep_group_init.cnt++;
 
 	consumer_rep = &hids_init_param.inp_rep_group_init.reports[INPUT_REP_CONSUMER_IDX];
 	consumer_rep->size = INPUT_REP_CONSUMER_LEN;
 	consumer_rep->id = INPUT_REP_CONSUMER_ID;
+	consumer_rep->handler = consumer_notif_handler;
 	hids_init_param.inp_rep_group_init.cnt++;
 
 	hids_init_param.is_kb = true;
@@ -263,18 +368,194 @@ static void bt_ready(int err)
 		settings_load();
 	}
 
-	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	start_advertising();
+}
+
+#if IS_ENABLED(CONFIG_BLE_MITM_AUTH)
+static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	LOG_INF("Passkey for %s: %06u", addr, passkey);
+}
+
+static void auth_passkey_confirm(struct bt_conn *conn, unsigned int passkey)
+{
+	int err;
+	char addr[BT_ADDR_LE_STR_LEN];
+	struct pairing_data_mitm pairing_data;
+
+	pairing_data.conn = bt_conn_ref(conn);
+	pairing_data.passkey = passkey;
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	err = k_msgq_put(&mitm_queue, &pairing_data, K_NO_WAIT);
+
 	if (err) {
-		LOG_ERR("Advertising failed to start (err %d)", err);
+		LOG_ERR("Failed to queue pairing confirmation for %s (err %d)", addr, err);
+		bt_conn_unref(pairing_data.conn);
+		bt_conn_auth_cancel(conn);
 		return;
 	}
 
-	LOG_INF("Advertising successfully started");
+	LOG_INF("Passkey for %s: %06u", addr, pairing_data.passkey);
+
+	/* Switch the application to pairing state. The state manager will print
+	 * user-facing instructions about which press confirms / rejects pairing.
+	 */
+	uxsm_set_btn_func(UX_BTN_FUNC_PAIRING);
+}
+#endif /* CONFIG_BLE_MITM_AUTH */
+
+static void auth_cancel(struct bt_conn *conn)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+	struct pairing_data_mitm pairing_data;
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+	LOG_INF("Pairing cancelled: %s", addr);
+
+	/* If we had queued a numeric-comparison request for this conn,
+	 * drop it and release the ref we took in auth_passkey_confirm().
+	 */
+	if (k_msgq_peek(&mitm_queue, &pairing_data) == 0 &&
+	    pairing_data.conn == conn) {
+		(void)k_msgq_get(&mitm_queue, &pairing_data, K_NO_WAIT);
+		bt_conn_unref(pairing_data.conn);
+	}
+
+	uxsm_set_btn_func(UX_BTN_FUNC_NORMAL);
 }
 
-int ble_hid_init(ble_connection_cb_t cb)
+static void pairing_complete(struct bt_conn *conn, bool bonded)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	LOG_INF("Pairing completed: %s, bonded: %d", addr, bonded);
+	uxsm_set_btn_func(UX_BTN_FUNC_NORMAL);
+}
+
+static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+	struct pairing_data_mitm pairing_data;
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	LOG_ERR("Pairing failed conn: %s, reason %d %s", addr, reason,
+		bt_security_err_to_str(reason));
+
+	if (k_msgq_peek(&mitm_queue, &pairing_data) == 0 && pairing_data.conn == conn) {
+		(void)k_msgq_get(&mitm_queue, &pairing_data, K_NO_WAIT);
+		bt_conn_unref(pairing_data.conn);
+	}
+
+	uxsm_set_btn_func(UX_BTN_FUNC_NORMAL);
+}
+
+static struct bt_conn_auth_cb conn_auth_callbacks = {
+#if IS_ENABLED(CONFIG_BLE_MITM_AUTH)
+	/* With MITM protection enabled, advertise DisplayYesNo I/O capabilities
+	 * so the stack negotiates Numeric Comparison (authenticated pairing).
+	 */
+	.passkey_display = auth_passkey_display,
+	.passkey_confirm = auth_passkey_confirm,
+#endif
+	.cancel = auth_cancel,
+};
+
+static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {.pairing_complete = pairing_complete,
+							       .pairing_failed = pairing_failed};
+
+static void disconnect_cb(struct bt_conn *conn, void *data)
+{
+	int *err_out = data;
+	char addr[BT_ADDR_LE_STR_LEN];
+	int err;
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+	LOG_INF("Disconnecting %s", addr);
+
+	err = bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+	if (err && err != -ENOTCONN) {
+		LOG_ERR("Failed to disconnect %s (err %d)", addr, err);
+		*err_out = err;
+	}
+}
+
+int ble_hid_confirm_pairing(bool accept)
+{
+	struct pairing_data_mitm pairing_data;
+
+	int err = k_msgq_get(&mitm_queue, &pairing_data, K_NO_WAIT);
+
+	if (err) {
+		return err;
+	}
+
+	if (accept) {
+		err = bt_conn_auth_passkey_confirm(pairing_data.conn);
+		if (err) {
+			LOG_ERR("Failed to confirm pairing (err %d)", err);
+		} else {
+			LOG_INF("Numeric Match, conn %p", pairing_data.conn);
+		}
+	} else {
+		err = bt_conn_auth_cancel(pairing_data.conn);
+
+		if (err) {
+			LOG_ERR("Failed to reject pairing (err %d)", err);
+		} else {
+			LOG_INF("Numeric Reject, conn %p", pairing_data.conn);
+		}
+	}
+	bt_conn_unref(pairing_data.conn);
+
+	return err;
+}
+
+int ble_hid_forget_bonds(void)
+{
+	int disc_err = 0;
+	int err;
+
+	/* Disconnect all active connections.
+	 * The disconnected() callback will call start_advertising() once each
+	 * connection tears down.
+	 */
+	bt_conn_foreach(BT_CONN_TYPE_LE, disconnect_cb, &disc_err);
+
+	/* Remove all local bond records */
+	LOG_INF("Clearing all bonding information");
+	err = bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
+	if (err) {
+		LOG_ERR("Failed to unpair (err %d)", err);
+		return err;
+	}
+
+	return disc_err;
+}
+
+int ble_hid_init(void)
 {
 	int err;
+
+	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
+	if (err) {
+		LOG_ERR("Failed to register authorization callbacks.");
+		return err;
+	}
+
+	err = bt_conn_auth_info_cb_register(&conn_auth_info_callbacks);
+	if (err) {
+		LOG_ERR("Failed to register authorization info callbacks.");
+		return err;
+	}
 
 	err = hids_service_init();
 
@@ -290,19 +571,21 @@ int ble_hid_init(ble_connection_cb_t cb)
 		return err;
 	}
 
-	user_conn_callback = cb;
-
 	return err;
 }
 
 int ble_hid_send_key(ble_hid_key_t key)
 {
+	if (uxsm_get_btn_func() == UX_BTN_FUNC_PAIRING) {
+		LOG_WRN("Currently in pairing mode, not sending key");
+		return -EBUSY;
+	}
 	int err;
 	uint8_t keyboard_report[INPUT_REP_KEYBOARD_LEN] = {0};
 	uint8_t consumer_report[INPUT_REP_CONSUMER_LEN] = {0};
 	bool is_consumer = false;
 
-	if (!ble_connected) {
+	if (!ble_common_is_connected()) {
 		return -ENOTCONN;
 	}
 
@@ -348,10 +631,19 @@ int ble_hid_send_key(ble_hid_key_t key)
 		return -EINVAL;
 	}
 
+	/* The peer subscribes to HID input notifications by writing the
+	 * corresponding CCCD some time after the link is encrypted. Calling
+	 * bt_hids_inp_rep_send() before that point fails with errors such as
+	 * -ENOTSUP / -ENODATA. Skip silently until the BLE stack is ready.
+	 */
+	if (is_consumer ? !consumer_notif_enabled : !kb_notif_enabled) {
+		LOG_WRN("Peer has not subscribed to HID input notifications yet "
+			"(CCCD not written); dropping key");
+		return -EAGAIN;
+	}
+
 	if (is_consumer) {
-		err = bt_hids_inp_rep_send(&hids_obj, NULL,
-					   INPUT_REP_CONSUMER_IDX,
-					   consumer_report,
+		err = bt_hids_inp_rep_send(&hids_obj, NULL, INPUT_REP_CONSUMER_IDX, consumer_report,
 					   sizeof(consumer_report), NULL);
 		if (err) {
 			LOG_ERR("Failed to send consumer key (err %d)", err);
@@ -359,14 +651,10 @@ int ble_hid_send_key(ble_hid_key_t key)
 		}
 
 		memset(consumer_report, 0, sizeof(consumer_report));
-		err = bt_hids_inp_rep_send(&hids_obj, NULL,
-					   INPUT_REP_CONSUMER_IDX,
-					   consumer_report,
+		err = bt_hids_inp_rep_send(&hids_obj, NULL, INPUT_REP_CONSUMER_IDX, consumer_report,
 					   sizeof(consumer_report), NULL);
 	} else {
-		err = bt_hids_inp_rep_send(&hids_obj, NULL,
-					   INPUT_REP_KEYBOARD_IDX,
-					   keyboard_report,
+		err = bt_hids_inp_rep_send(&hids_obj, NULL, INPUT_REP_KEYBOARD_IDX, keyboard_report,
 					   sizeof(keyboard_report), NULL);
 		if (err) {
 			LOG_ERR("Failed to send keyboard key (err %d)", err);
@@ -374,9 +662,7 @@ int ble_hid_send_key(ble_hid_key_t key)
 		}
 
 		memset(keyboard_report, 0, sizeof(keyboard_report));
-		err = bt_hids_inp_rep_send(&hids_obj, NULL,
-					   INPUT_REP_KEYBOARD_IDX,
-					   keyboard_report,
+		err = bt_hids_inp_rep_send(&hids_obj, NULL, INPUT_REP_KEYBOARD_IDX, keyboard_report,
 					   sizeof(keyboard_report), NULL);
 	}
 

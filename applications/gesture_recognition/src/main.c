@@ -16,66 +16,43 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/usb/usb_device.h>
+#include <zephyr/sys/atomic.h>
 
 #include <nrf_edgeai/nrf_edgeai.h>
 #include <nrf_edgeai_user_model.h>
 
-#include "hw_modules/button/button.h"
-#include "hw_modules/led/led.h"
-#include "hw_modules/sensor/imu/imu.h"
+#include "button/button.h"
+#include "led/led.h"
+#include "sensor/imu/imu.h"
 
+#if IS_ENABLED(CONFIG_BLE_MODE_HID)
+#include "ux_state_manager.h"
+#endif
 #include "inference_postprocessing.h"
+#include "ble/ble_common.h"
 
-#if defined(CONFIG_BLE_MODE_HID)
+#if IS_ENABLED(CONFIG_BLE_MODE_HID)
 #include "ble/hid/ble_hid.h"
-#elif defined(CONFIG_BLE_MODE_NUS)
+#elif IS_ENABLED(CONFIG_BLE_MODE_NUS)
 #include "ble/nus/ble_nus.h"
-#elif defined(CONFIG_BLE_MODE_GATT_CUSTOM)
+#elif IS_ENABLED(CONFIG_BLE_MODE_GATT_CUSTOM)
 #include "ble/gatt/ble_gatt.h"
 #endif
 
 #define NRF_EDGEAI_INPUT_DATA_LEN (ACCEL_AXIS_NUM + GYRO_AXIS_NUM)
 
 #if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
-#define LED_NOTIFY_BLINK_COUNT (3)
-#define LED_NOTIFY_BLINK_ON_MS (100)
+#define LED_NOTIFY_BLINK_COUNT	(3)
+#define LED_NOTIFY_BLINK_ON_MS	(100)
 #define LED_NOTIFY_BLINK_OFF_MS (200)
 #else
-#define BLINK_LED_TIMER_PERIOD_MS (30)
+#define BLINK_LED_TIMER_PERIOD_MS	 (30)
 #define LED_BLINK_CHANGE_BRIGHTNESS_STEP (0.005f)
 #endif
 
 #define LED_MAX_BRIGHTNESS (0.2f)
 
 LOG_MODULE_REGISTER(main);
-
-/**
- * @brief Application remote control mode
- */
-typedef enum app_remotectrl_mode_e {
-	/**
-	 * APP_REMOTECTRL_MODE_PRESENTATION used for slides control:
-	 * - Swipe Right                       = KEY_ARROW_RIGHT (Next slide)
-	 * - Swipe Left                        = KEY_ARROW_LEFT  (Previous slide)
-	 * - Double Tap                        = KEY_F5          (Enter fullscreen mode)
-	 * - Double Thumb                      = KEY_ESC         (Exit fullscreen mode)
-	 * - Rotation Clockwise (Right)        = Not used
-	 * - Rotation Counter Clockwise (Left) = Not used
-	 *
-	 */
-	APP_REMOTECTRL_MODE_PRESENTATION = 0,
-
-	/**
-	 * NEUTON_REMOTE_CTRL_MUSIC used for music/media control:
-	 * - Swipe Right                       = KEY_MEDIA_NEXT_TRACK  (Next track)
-	 * - Swipe Left                        = KEY_MEDIA_PREV_TRACK  (Previous track)
-	 * - Double Tap                        = KEY_MEDIA_PLAYPAUSE   (Play/Pause)
-	 * - Double Thumb                      = KEY_MEDIA_MUTE        (Mute)
-	 * - Rotation Clockwise (Right)        = KEY_MEDIA_VOLUMEUP    (Volume Up)
-	 * - Rotation Counter Clockwise (Left) = KEY_MEDIA_VOLUMEDOWN  (Volume Down)
-	 */
-	APP_REMOTECTRL_MODE_MUSIC
-} app_remotectrl_mode_t;
 
 typedef int (*led_set_func_t)(float brightness);
 
@@ -93,10 +70,7 @@ static void led_glowing_timer_handler(struct k_timer *timer);
 #endif
 static void handle_inference_result(nrf_edgeai_t *model);
 
-static bool ble_connected;
-static app_remotectrl_mode_t keyboard_ctrl_mode = APP_REMOTECTRL_MODE_MUSIC;
 static struct k_sem imu_data_ready_sem;
-
 
 /* Work queue items for deferring interrupt context LED operations to thread context */
 #if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
@@ -107,16 +81,41 @@ static int led_notify_remaining;
 static struct k_work led_update_work;
 #endif
 
-static struct k_work button_work;
 static nrf_edgeai_t *p_model;
 
 #if !IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
 K_TIMER_DEFINE(led_timer, led_glowing_timer_handler, NULL);
 #endif /* !CONFIG_LED_NOTIFICATION_BLINK */
 
+#if !IS_ENABLED(CONFIG_BLE_MODE_NONE)
+void main_ble_connection_notification(bool connected)
+{
+	(void)connected;
+	led_off();
+#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
+	k_work_submit(&led_notify_work);
+#endif
+}
+#endif
+
 int main(void)
 {
 	hw_modules_init();
+
+	int err = button_init();
+
+	if (err != 0) {
+		LOG_ERR("Failed to initialize button module (err %d)", err);
+		return err;
+	}
+
+#if IS_ENABLED(CONFIG_BLE_MODE_HID)
+	err = uxsm_init();
+	if (err != 0) {
+		LOG_ERR("Failed to initialize UX state manager (err %d)", err);
+		return err;
+	}
+#endif
 
 	p_model = nrf_edgeai_user_model();
 	__ASSERT_NO_MSG(p_model != NULL);
@@ -129,16 +128,14 @@ int main(void)
 	nrf_edgeai_rt_version_t version = nrf_edgeai_runtime_version();
 
 	LOG_INF("nRF Edge AI Gestures Recognition Demo:");
-	LOG_INF("nRF Edge AI Runtime Version: %d.%d.%d",
-		version.field.major, version.field.minor, version.field.patch);
-	LOG_INF("nRF Edge AI Lab Solution id: %s",
-		nrf_edgeai_solution_id_str(p_model));
+	LOG_INF("nRF Edge AI Runtime Version: %d.%d.%d", version.field.major, version.field.minor,
+		version.field.patch);
+	LOG_INF("nRF Edge AI Lab Solution id: %s", nrf_edgeai_solution_id_str(p_model));
 
 	imu_data_t imu_data = {0};
 
 	flt32_t input_data_f32[NRF_EDGEAI_INPUT_DATA_LEN];
 	int16_t input_data_i16[NRF_EDGEAI_INPUT_DATA_LEN];
-
 
 	for (;;) {
 		/* Wait for the semaphore to be released by IMU data ready interrupt */
@@ -181,30 +178,30 @@ static void imu_data_ready_cb(void)
 	k_sem_give(&imu_data_ready_sem);
 }
 
-#if !IS_ENABLED(CONFIG_BLE_MODE_NONE)
-static void ble_connection_cb(bool connected)
-{
-	ble_connected = connected;
-	led_off();
-#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
-	k_work_submit(&led_notify_work);
-#endif
-}
-#endif
-
 static void led_set_active(float brightness)
 {
-	static const led_set_func_t LED_VS_KEYBOARD_MODE[] = {
-		[APP_REMOTECTRL_MODE_PRESENTATION] = led_set_led2,
-		[APP_REMOTECTRL_MODE_MUSIC] = led_set_led1,
-	};
+	/* ble_common_is_connected() is safe to call in any BLE mode,
+	 * including CONFIG_BLE_MODE_NONE, because ble_common_init() is
+	 * always invoked during hw_modules_init().
+	 */
+	if (ble_common_is_connected()) {
 
-	if (ble_connected) {
-		__ASSERT_NO_MSG(keyboard_ctrl_mode < ARRAY_SIZE(LED_VS_KEYBOARD_MODE));
-		led_set_func_t led_set = LED_VS_KEYBOARD_MODE[keyboard_ctrl_mode];
+#if IS_ENABLED(CONFIG_BLE_MODE_HID)
+
+		static const led_set_func_t LED_VS_KEYBOARD_MODE[] = {
+			[UX_REMOTECTRL_MODE_PRESENTATION] = led_set_led2,
+			[UX_REMOTECTRL_MODE_MUSIC] = led_set_led1,
+		};
+		ux_remotectrl_mode_t mode = uxsm_get_remotectrl_mode();
+
+		__ASSERT_NO_MSG(mode < ARRAY_SIZE(LED_VS_KEYBOARD_MODE));
+		led_set_func_t led_set = LED_VS_KEYBOARD_MODE[mode];
 
 		__ASSERT_NO_MSG(led_set != NULL);
 		led_set(brightness);
+#else
+		led_set_led2(brightness);
+#endif
 	} else {
 		led_set_led0(brightness);
 	}
@@ -239,8 +236,7 @@ static void led_notify_blink_handler(struct k_work *work)
 		led_off();
 		led_notify_remaining--;
 		if (led_notify_remaining > 0) {
-			k_work_schedule(&led_notify_blink_work,
-					K_MSEC(LED_NOTIFY_BLINK_OFF_MS));
+			k_work_schedule(&led_notify_blink_work, K_MSEC(LED_NOTIFY_BLINK_OFF_MS));
 		}
 	}
 }
@@ -288,20 +284,6 @@ static void led_update_work_handler(struct k_work *work)
 
 #endif /* CONFIG_LED_NOTIFICATION_BLINK */
 
-static void button_work_handler(struct k_work *work)
-{
-	keyboard_ctrl_mode ^= 1;
-	led_off();
-#if IS_ENABLED(CONFIG_LED_NOTIFICATION_BLINK)
-	k_work_submit(&led_notify_work);
-#endif
-}
-
-static void button_click_handler(void)
-{
-	k_work_submit(&button_work);
-}
-
 static void hw_modules_init(void)
 {
 	int ret;
@@ -312,8 +294,6 @@ static void hw_modules_init(void)
 #else
 	k_work_init(&led_update_work, led_update_work_handler);
 #endif
-
-	k_work_init(&button_work, button_work_handler);
 
 	ret = led_init();
 	if (ret != 0) {
@@ -327,17 +307,9 @@ static void hw_modules_init(void)
 		      K_MSEC(BLINK_LED_TIMER_PERIOD_MS));
 #endif
 
-	ret = button_init();
-	if (ret != 0) {
-		LOG_ERR("Failed to initialize user button, error = %d", ret);
-	}
-	button_reg_click_handler(button_click_handler);
-
-	imu_config_t imu_config = {
-		.accel_fs_g = IMU_ACCEL_SCALE_4G,
-		.gyro_fs_dps = IMU_GYRO_SCALE_1000DPS,
-		.data_rate_hz = 100
-	};
+	imu_config_t imu_config = {.accel_fs_g = IMU_ACCEL_SCALE_4G,
+				   .gyro_fs_dps = IMU_GYRO_SCALE_1000DPS,
+				   .data_rate_hz = 100};
 
 	status_t status = imu_init(&imu_config, imu_data_ready_cb);
 
@@ -347,18 +319,24 @@ static void hw_modules_init(void)
 	}
 	k_sem_init(&imu_data_ready_sem, 0, 1);
 
+	/* Always initialize the common BLE state holder.
+	 * It is mode-agnostic and must be ready before any other module
+	 * (e.g. led_set_active()) queries ble_common_is_connected().
+	 */
+	ble_common_init();
+
 #if IS_ENABLED(CONFIG_BLE_MODE_HID)
-	ret = ble_hid_init(ble_connection_cb);
+	ret = ble_hid_init();
 	if (ret != 0) {
 		LOG_ERR("Failed to initialize BLE HID service");
 	}
 #elif IS_ENABLED(CONFIG_BLE_MODE_NUS)
-	ret = ble_nus_init(ble_connection_cb);
+	ret = ble_nus_init();
 	if (ret != 0) {
 		LOG_ERR("Failed to initialize BLE NUS service");
 	}
 #elif IS_ENABLED(CONFIG_BLE_MODE_GATT_CUSTOM)
-	ret = ble_gatt_init(ble_connection_cb, NULL);
+	ret = ble_gatt_init(NULL);
 	if (ret != 0) {
 		LOG_ERR("Failed to initialize BLE GATT service");
 	}
@@ -369,31 +347,33 @@ static void hw_modules_init(void)
 static void send_bt_keyboard_key(const class_label_t class_label)
 {
 	static const ble_hid_key_t LABEL_VS_KEY_BY_MODE[2][8] = {
-		[APP_REMOTECTRL_MODE_PRESENTATION] = {
-			[CLASS_LABEL_IDLE] = BLE_HID_KEYS_count,
-			[CLASS_LABEL_UNKNOWN] = BLE_HID_KEYS_count,
-			[CLASS_LABEL_SWIPE_RIGHT] = BLE_HID_KEY_ARROW_RIGHT,
-			[CLASS_LABEL_SWIPE_LEFT] = BLE_HID_KEY_ARROW_LEFT,
-			[CLASS_LABEL_DOUBLE_SHAKE] = BLE_HID_KEY_F5,
-			[CLASS_LABEL_DOUBLE_THUMB] = BLE_HID_KEY_ESC,
-			[CLASS_LABEL_ROTATION_RIGHT] = BLE_HID_KEYS_count,
-			[CLASS_LABEL_ROTATION_LEFT] = BLE_HID_KEYS_count,
-		},
-		[APP_REMOTECTRL_MODE_MUSIC] = {
-			[CLASS_LABEL_IDLE] = BLE_HID_KEYS_count,
-			[CLASS_LABEL_UNKNOWN] = BLE_HID_KEYS_count,
-			[CLASS_LABEL_SWIPE_RIGHT] = BLE_HID_KEY_MEDIA_NEXT_TRACK,
-			[CLASS_LABEL_SWIPE_LEFT] = BLE_HID_KEY_MEDIA_PREV_TRACK,
-			[CLASS_LABEL_DOUBLE_SHAKE] = BLE_HID_KEY_MEDIA_PLAY_PAUSE,
-			[CLASS_LABEL_DOUBLE_THUMB] = BLE_HID_KEY_MEDIA_MUTE,
-			[CLASS_LABEL_ROTATION_RIGHT] = BLE_HID_KEY_MEDIA_VOLUME_UP,
-			[CLASS_LABEL_ROTATION_LEFT] = BLE_HID_KEY_MEDIA_VOLUME_DOWN,
-		},
+		[UX_REMOTECTRL_MODE_PRESENTATION] = {
+				[CLASS_LABEL_IDLE] = BLE_HID_KEYS_count,
+				[CLASS_LABEL_UNKNOWN] = BLE_HID_KEYS_count,
+				[CLASS_LABEL_SWIPE_RIGHT] = BLE_HID_KEY_ARROW_RIGHT,
+				[CLASS_LABEL_SWIPE_LEFT] = BLE_HID_KEY_ARROW_LEFT,
+				[CLASS_LABEL_DOUBLE_SHAKE] = BLE_HID_KEY_F5,
+				[CLASS_LABEL_DOUBLE_THUMB] = BLE_HID_KEY_ESC,
+				[CLASS_LABEL_ROTATION_RIGHT] = BLE_HID_KEYS_count,
+				[CLASS_LABEL_ROTATION_LEFT] = BLE_HID_KEYS_count,
+			},
+		[UX_REMOTECTRL_MODE_MUSIC] = {
+				[CLASS_LABEL_IDLE] = BLE_HID_KEYS_count,
+				[CLASS_LABEL_UNKNOWN] = BLE_HID_KEYS_count,
+				[CLASS_LABEL_SWIPE_RIGHT] = BLE_HID_KEY_MEDIA_NEXT_TRACK,
+				[CLASS_LABEL_SWIPE_LEFT] = BLE_HID_KEY_MEDIA_PREV_TRACK,
+				[CLASS_LABEL_DOUBLE_SHAKE] = BLE_HID_KEY_MEDIA_PLAY_PAUSE,
+				[CLASS_LABEL_DOUBLE_THUMB] = BLE_HID_KEY_MEDIA_MUTE,
+				[CLASS_LABEL_ROTATION_RIGHT] = BLE_HID_KEY_MEDIA_VOLUME_UP,
+				[CLASS_LABEL_ROTATION_LEFT] = BLE_HID_KEY_MEDIA_VOLUME_DOWN,
+			},
 	};
 
+	ux_remotectrl_mode_t mode = uxsm_get_remotectrl_mode();
+
 	__ASSERT_NO_MSG(class_label < CLASS_LABEL_COUNT);
-	__ASSERT_NO_MSG(keyboard_ctrl_mode < ARRAY_SIZE(LABEL_VS_KEY_BY_MODE));
-	ble_hid_send_key(LABEL_VS_KEY_BY_MODE[keyboard_ctrl_mode][class_label]);
+	__ASSERT_NO_MSG(mode < ARRAY_SIZE(LABEL_VS_KEY_BY_MODE));
+	ble_hid_send_key(LABEL_VS_KEY_BY_MODE[mode][class_label]);
 }
 #endif
 
@@ -402,8 +382,8 @@ static void ble_send_recognized_class(const class_label_t class_label, size_t pr
 {
 	static char send_buff[15];
 
-	int message_len = snprintf(send_buff, sizeof(send_buff), "%d,%d",
-					(int)class_label, (int)probability_pct);
+	int message_len = snprintf(send_buff, sizeof(send_buff), "%d,%d", (int)class_label,
+				   (int)probability_pct);
 
 	__ASSERT_NO_MSG(message_len > 0 && message_len < sizeof(send_buff));
 	ble_gatt_send_raw_data((const uint8_t *)send_buff, (size_t)message_len);
@@ -428,7 +408,9 @@ static void execute_inference(int16_t *input_data)
 		} else {
 			LOG_WRN("Failed to run inference, error = %d", (int)res);
 		}
-	/* INPROGRESS is expected 32/33 times, as we have 33 samples in the INPUT_WINDOW_SHIFT */
+		/* INPROGRESS is expected 32/33 times, as we have 33 samples in the
+		 * INPUT_WINDOW_SHIFT
+		 */
 	} else if (res != NRF_EDGEAI_ERR_INPROGRESS) {
 		LOG_WRN("Failed to feed inputs, error = %d", (int)res);
 	}
@@ -439,8 +421,8 @@ static void send_imu_data(int16_t *input_data)
 #if IS_ENABLED(CONFIG_BLE_MODE_NUS)
 	(void)ble_nus_send(input_data);
 #else
-	printk("%d,%d,%d,%d,%d,%d\r\n", input_data[0], input_data[1],
-	       input_data[2], input_data[3], input_data[4], input_data[5]);
+	printk("%d,%d,%d,%d,%d,%d\r\n", input_data[0], input_data[1], input_data[2], input_data[3],
+	       input_data[4], input_data[5]);
 #endif
 }
 
@@ -484,13 +466,14 @@ static void handle_inference_result(nrf_edgeai_t *model)
 	p_probabilities = model->decoded_output.classif.probabilities.p_f32;
 	__ASSERT_NO_MSG(p_probabilities != NULL);
 
-	LOG_DBG("Predicted target: %d, Probability: %f",
-		predicted_target, (double)p_probabilities[predicted_target]);
+	LOG_DBG("Predicted target: %d, Probability: %f", predicted_target,
+		(double)p_probabilities[predicted_target]);
 
-	prediction_ctx_t result = inference_postprocess(predicted_target,
-							p_probabilities[predicted_target]);
+	prediction_ctx_t result =
+		inference_postprocess(predicted_target, p_probabilities[predicted_target]);
 	if (should_act_on_prediction((class_label_t)result.target)) {
 		const char *class_name = inference_get_class_name((class_label_t)result.target);
+
 		log_prediction_message(class_name, result.probability);
 #if IS_ENABLED(CONFIG_BLE_MODE_HID)
 		send_bt_keyboard_key((class_label_t)result.target);

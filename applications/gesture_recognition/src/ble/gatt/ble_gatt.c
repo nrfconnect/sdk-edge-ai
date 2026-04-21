@@ -33,8 +33,6 @@ static const struct bt_data sd[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
 
-static bool ble_connected;
-static ble_connection_cb_t user_conn_callback;
 static ble_data_received_cb_t user_data_received_callback;
 
 static bool ccc_enabled;
@@ -89,13 +87,10 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	}
 
 	LOG_INF("Connected %s", addr);
-	ble_connected = true;
 	if (!current_conn) {
 		current_conn = bt_conn_ref(conn);
 	}
-	if (user_conn_callback) {
-		user_conn_callback(ble_connected);
-	}
+	ble_common_set_connected(true);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -104,15 +99,12 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 	LOG_INF("Disconnected from %s (reason 0x%02x)", addr, reason);
-	ble_connected = false;
 	ccc_enabled = false;
 	if (current_conn) {
 		bt_conn_unref(current_conn);
 		current_conn = NULL;
 	}
-	if (user_conn_callback) {
-		user_conn_callback(ble_connected);
-	}
+	ble_common_set_connected(false);
 	if (reason == BT_HCI_ERR_AUTH_FAIL || reason == BT_HCI_ERR_PIN_OR_KEY_MISSING) {
 		LOG_INF("Authentication related disconnect, clearing pairing info");
 		bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
@@ -221,7 +213,7 @@ static int read_conn_rssi(struct bt_conn *conn, int8_t *out_rssi)
 	return rp->status;
 }
 
-int ble_gatt_init(ble_connection_cb_t connection_cb, ble_data_received_cb_t data_received_cb)
+int ble_gatt_init(ble_data_received_cb_t data_received_cb)
 {
 	int err;
 
@@ -231,7 +223,6 @@ int ble_gatt_init(ble_connection_cb_t connection_cb, ble_data_received_cb_t data
 		LOG_ERR("Bluetooth init failed (err %d)", err);
 		return err;
 	}
-	user_conn_callback = connection_cb;
 	user_data_received_callback = data_received_cb;
 	return err;
 }
@@ -240,7 +231,7 @@ int ble_gatt_send_raw_data(const uint8_t *data, size_t len)
 {
 	int res;
 
-	if (!ble_connected || !ccc_enabled) {
+	if (!ble_common_is_connected() || !ccc_enabled) {
 		return -ENOTCONN;
 	}
 
@@ -258,7 +249,7 @@ int ble_gatt_send_raw_data(const uint8_t *data, size_t len)
 
 int ble_gatt_start_advertising(void)
 {
-	if (ble_connected) {
+	if (ble_common_is_connected()) {
 		LOG_ERR("Cannot start advertising while connected");
 		return -EBUSY;
 	}

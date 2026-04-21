@@ -22,7 +22,6 @@ LOG_MODULE_REGISTER(ble_nus, LOG_LEVEL_INF);
 
 static struct bt_conn *nus_conn;
 static bool nus_send_enabled;
-static ble_connection_cb_t user_conn_cb;
 
 static const struct bt_data nus_ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -53,9 +52,7 @@ static void nus_connected(struct bt_conn *conn, uint8_t err)
 		nus_conn = bt_conn_ref(conn);
 	}
 
-	if (user_conn_cb) {
-		user_conn_cb(true);
-	}
+	ble_common_set_connected(true);
 	LOG_INF("NUS connected %s", addr);
 }
 
@@ -74,9 +71,7 @@ static void nus_disconnected(struct bt_conn *conn, uint8_t reason)
 
 	nus_send_enabled = false;
 
-	if (user_conn_cb) {
-		user_conn_cb(false);
-	}
+	ble_common_set_connected(false);
 
 	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, nus_ad, ARRAY_SIZE(nus_ad),
 			     nus_sd, ARRAY_SIZE(nus_sd));
@@ -94,11 +89,9 @@ static struct bt_conn_cb nus_conn_callbacks = {
 	.disconnected = nus_disconnected,
 };
 
-int ble_nus_init(ble_connection_cb_t cb)
+int ble_nus_init(void)
 {
 	int err;
-
-	user_conn_cb = cb;
 
 	err = bt_enable(NULL);
 	if (err) {

@@ -35,12 +35,11 @@ typedef void (*ble_data_received_cb_t)(const char *data, size_t len);
 /**
  * @brief Initialize BLE GATT profile and start advertising
  *
- * @param connection_cb     Connection callback @ref ble_connection_cb_t
  * @param data_received_cb  Data received callback @ref ble_data_received_cb_t
  *
  * @return Operation status, 0 for success
  */
-int ble_gatt_init(ble_connection_cb_t connection_cb, ble_data_received_cb_t data_received_cb);
+int ble_gatt_init(ble_data_received_cb_t data_received_cb);
 
 /**
  * @brief Send Neuton inference result over BLE GATT profile
