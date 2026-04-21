@@ -1,0 +1,91 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Matter Edge AI Switch"
+
+choice AMBIENT_SENSING_MODEL
+	prompt "Matter Ambient Sensing model"
+	default AMBIENT_SENSING_MODEL_SNORING
+	help
+	  Choose the type of ambient sensing source to use.
+
+config AMBIENT_SENSING_MODEL_SNORING
+	bool "Snoring"
+	help
+	  Use the Snoring model for ambient sensing.
+
+config AMBIENT_SENSING_MODEL_BABY_CRYING
+	bool "Crying"
+	help
+	  Use the Baby Crying model for ambient sensing.
+
+config AMBIENT_SENSING_MODEL_DOG_BARKING
+	bool "Barking"
+	help
+	  Use the Barking model for ambient sensing.
+
+config AMBIENT_SENSING_MODEL_CAT_MEOWING
+	bool "Cat Meowing"
+	help
+	  Use the Meowing model for ambient sensing.
+
+config AMBIENT_SENSING_MODEL_CUSTOM
+	bool "Custom model"
+	help
+	  Use a custom model for ambient sensing.
+
+endchoice
+
+config AMBIENT_SENSING_MODEL_CUSTOM_PATH
+	string "Path to the custom model"
+	default ""
+	help
+	  Path to the custom model,
+
+config AMBIENT_SENSING_ENDPOINT_ID
+	int "Ambient Sensing Endpoint ID"
+	default 1
+	help
+	  Endpoint ID for the ambient sensing.
+
+config AI_THREAD_STACK_SIZE
+	int "Edge AI thread stack size"
+	default 6144
+	help
+	  Stack size for AI thread.
+
+config AI_THREAD_PRIORITY
+	int "Edge AI thread priority"
+	default 8
+	help
+	  Preemptible thread priority.
+
+endmenu
+
+# Sample configuration used for Thread networking
+if OPENTHREAD
+
+choice OPENTHREAD_NORDIC_LIBRARY_CONFIGURATION
+	default OPENTHREAD_NORDIC_LIBRARY_MTD
+endchoice
+
+choice OPENTHREAD_DEVICE_TYPE
+	default OPENTHREAD_MTD
+endchoice
+
+config CHIP_ENABLE_ICD_SUPPORT
+	default y
+
+# Reduce Thread TX output power to 0 dBm for SED device
+config OPENTHREAD_DEFAULT_TX_POWER
+	default 0
+
+endif # OPENTHREAD
+
+source "$(ZEPHYR_CONNECTEDHOMEIP_MODULE_DIR)/config/nrfconnect/chip-module/Kconfig.features"
+source "$(ZEPHYR_CONNECTEDHOMEIP_MODULE_DIR)/config/nrfconnect/chip-module/Kconfig.defaults"
+source "$(ZEPHYR_NRF_MODULE_DIR)/samples/matter/common/src/Kconfig"
+source "Kconfig.zephyr"

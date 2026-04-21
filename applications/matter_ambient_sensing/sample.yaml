@@ -1,0 +1,76 @@
+sample:
+  description: Matter Switch application
+  name: Matter Switch
+
+common:
+  sysbuild: true
+  build_only: true
+  tags:
+    - ci_build
+    - sysbuild
+
+tests:
+  applications.matter_ambient_sensing.snoring_dmic_adafruit:
+    extra_args:
+      - CONFIG_AMBIENT_SENSING_MODEL_SNORING=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_adafruit.dtsi
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+  applications.matter_ambient_sensing.snoring_dmic_low_power:
+    extra_args:
+      - CONFIG_AMBIENT_SENSING_MODEL_SNORING=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_low_power.dtsi
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+  applications.matter_ambient_sensing.baby_crying_dmic_adafruit:
+    extra_args:
+      - CONFIG_AMBIENT_SENSING_MODEL_BABY_CRYING=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_adafruit.dtsi
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+  applications.matter_ambient_sensing.baby_crying_dmic_low_power:
+    extra_args:
+      - CONFIG_AMBIENT_SENSING_MODEL_BABY_CRYING=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_low_power.dtsi
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+  applications.matter_ambient_sensing.dog_barking_dmic_adafruit:
+    extra_args:
+      - CONFIG_AMBIENT_SENSING_MODEL_DOG_BARKING=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_adafruit.dtsi
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+  applications.matter_ambient_sensing.dog_barking_dmic_low_power:
+    extra_args:
+      - CONFIG_AMBIENT_SENSING_MODEL_DOG_BARKING=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_low_power.dtsi
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+  applications.matter_ambient_sensing.cat_meowing_dmic_adafruit:
+    extra_args:
+      - CONFIG_AMBIENT_SENSING_MODEL_CAT_MEOWING=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_adafruit.dtsi
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+  applications.matter_ambient_sensing.cat_meowing_dmic_low_power:
+    extra_args:
+      - CONFIG_AMBIENT_SENSING_MODEL_CAT_MEOWING=y
+      - EXTRA_DTC_OVERLAY_FILE=boards/dmic_low_power.dtsi
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
