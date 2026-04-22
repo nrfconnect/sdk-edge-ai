@@ -116,6 +116,8 @@ The project has two keyboard control modes: Presentation Control and Music Contr
 Depending on the control mode, recognized gestures are mapped to different keyboard keys.
 Switch between control modes by pressing the user button.
 
+When Bluetooth LE HID pairing with MITM protection is enabled, the application also supports explicit passkey confirmation and rejection using the user button with short and long presses.
+
 The following table explains the LED indications for control modes and Bluetooth connection states on each device, and shows which button switches between control modes:
 
 .. list-table:: LED indication in different device states
@@ -175,6 +177,17 @@ The following table explains the LED indications for control modes and Bluetooth
        .. figure:: images/device-led-ble-connect-music-mode_nrf54l15tag.jpeg
           :alt: nRF54L15 TAG LED green, music mode
 
+Bluetooth LE HID passkey confirmation
+=====================================
+
+In Bluetooth HID mode, when ``CONFIG_BLE_MITM_AUTH=y`` and passkey confirmation is requested, the serial log prints the passkey and the available button actions.
+The single user button changes its behavior temporarily while pairing confirmation is pending:
+
+* **Short press** (< 500 ms): Reject pairing
+* **Long press** (> 2000 ms): Confirm pairing
+
+The mode-switch button behavior is restored after pairing is completed or rejected.
+
 Configuration
 *************
 
@@ -190,6 +203,19 @@ The application supports two execution backends:
 
 The Neuton model is used by default on all boards that do not have the Axon NPU.
 You can use the Axon model by enabling the ``CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON`` Kconfig option.
+
+Choosing Bluetooth LE HID pairing security
+==========================================
+
+In Bluetooth HID mode, the pairing behavior is controlled by the ``CONFIG_BLE_MITM_AUTH`` Kconfig option:
+
+* ``CONFIG_BLE_MITM_AUTH=y`` enables MITM-protected pairing.
+   The application requests Bluetooth LE Security Level 4, and pairing uses passkey confirmation on the user button.
+* ``CONFIG_BLE_MITM_AUTH=n`` disables MITM protection.
+   The application requests Bluetooth LE Security Level 2, and pairing uses unauthenticated encrypted pairing without passkey confirmation.
+
+This option is relevant only when the ``CONFIG_BLE_MODE_HID`` option is enabled.
+By default, it is enabled in :file:`prj.conf` and disabled in :file:`prj_release.conf`.
 
 Build types
 ===========
@@ -207,10 +233,10 @@ The application supports the following build types:
      - Description
    * - Debug (default)
      - :file:`prj.conf`
-     - Debug version of the application with logging and assertions enabled.
+     - Debug version of the application with logging and assertions enabled. BLE HID MITM protection (``CONFIG_BLE_MITM_AUTH``) is enabled by default.
    * - Release
      - :file:`prj_release.conf`
-     - Release version of the application with logging disabled, compiler optimizations, and reduced LED activity for lower power consumption.
+     - Release version of the application with logging disabled, compiler optimizations, and reduced LED activity for lower power consumption. BLE HID MITM protection (``CONFIG_BLE_MITM_AUTH``) is disabled by default.
    * - Release without Bluetooth LE
      - :file:`prj_release_no_ble.conf`
      - Release version of the application without Bluetooth LE, but with serial logging enabled for diagnostics.
@@ -295,8 +321,8 @@ Testing
    .. parsed-literal::
       :class: highlight
 
-      \*\*\* Booting nRF Connect SDK v3.2.0-5dcc6bd39b0f \*\*\*
-      \*\*\* Using Zephyr OS v4.2.99-a57ad913cf4e \*\*\*
+      \*\*\* Booting nRF Connect SDK v3.3.0-ba167d9f3db4 \*\*\*
+      \*\*\* Using Zephyr OS v4.3.99-fd9204a02d52 \*\*\*
 
 #. When performing gestures with the device, the serial port terminal displays messages similar to the following:
 
@@ -316,7 +342,26 @@ Testing
    Devices can be connected in the same way as a regular Bluetooth keyboard.
 
 #. Pair the Bluetooth device with your PC.
-#. Once connected successfully, the serial port terminal returns the following log messages:
+#. Once connected successfully, the serial port terminal returns log messages similar to the following:
+
+   .. code-block::
+
+      Connected 9C:B6:D0:C0:CE:FC (public)
+      Security changed: 9C:B6:D0:C0:CE:FC (public) level 4
+
+   With ``CONFIG_BLE_MITM_AUTH=y``, the connection is raised to Security Level 4 and the terminal prints the passkey and available button actions:
+
+   .. code-block::
+
+      Passkey for 9C:B6:D0:C0:CE:FC (public): 123456
+      ===== Button Functionality (Pairing Confirmation Mode) =====
+      Short press (< 500 ms): Reject pairing
+      Long press  (> 2000 ms): Confirm pairing
+      ==============================================
+
+   Use a **long press** (> 2000 ms) on the user button to confirm the passkey, or a **short press** (< 500 ms) to reject it.
+
+   With ``CONFIG_BLE_MITM_AUTH=n``, pairing does not require passkey confirmation and the terminal log shows Security Level 2 instead:
 
    .. code-block::
 
