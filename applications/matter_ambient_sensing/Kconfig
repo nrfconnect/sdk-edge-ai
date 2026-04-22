@@ -4,6 +4,8 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
+rsource "../matter_common/Kconfig.edgeai"
+
 menu "Matter Edge AI Switch"
 
 choice AMBIENT_SENSING_MODEL
@@ -65,23 +67,26 @@ config AI_THREAD_PRIORITY
 
 endmenu
 
+config USE_OCCUPANCY_SENSOR_INSTEAD_OF_AMBIENT_SENSING
+	bool "Use occupancy sensor instead of ambient sensing"
+	default y
+	help
+	  Use occupancy sensor instead of ambient sensing for testing purposes.
+
+config NCS_SAMPLE_MATTER_ZAP_FILE_PATH
+	default "${APPLICATION_CONFIG_DIR}/src/occupancy_sensor_zap/occupancy_sensor.zap" if USE_OCCUPANCY_SENSOR_INSTEAD_OF_AMBIENT_SENSING
+	default "${APPLICATION_CONFIG_DIR}/src/ambient_sensing_zap/ambient_sensing.zap"
+
 # Sample configuration used for Thread networking
 if OPENTHREAD
 
 choice OPENTHREAD_NORDIC_LIBRARY_CONFIGURATION
-	default OPENTHREAD_NORDIC_LIBRARY_MTD
+	default OPENTHREAD_NORDIC_LIBRARY_FTD
 endchoice
 
 choice OPENTHREAD_DEVICE_TYPE
-	default OPENTHREAD_MTD
+	default OPENTHREAD_FTD
 endchoice
-
-config CHIP_ENABLE_ICD_SUPPORT
-	default y
-
-# Reduce Thread TX output power to 0 dBm for SED device
-config OPENTHREAD_DEFAULT_TX_POWER
-	default 0
 
 endif # OPENTHREAD
 

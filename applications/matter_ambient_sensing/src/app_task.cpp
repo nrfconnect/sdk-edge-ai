@@ -27,13 +27,36 @@ namespace
 {
 Nrf::Matter::IdentifyCluster sIdentifyCluster(CONFIG_AMBIENT_SENSING_ENDPOINT_ID);
 
+void matter_app_event_handler(const chip::DeviceLayer::ChipDeviceEvent *event, intptr_t arg)
+{
+	(void)arg;
+
+	switch (event->Type) {
+	case chip::DeviceLayer::DeviceEventType::kServerReady:
+		// Enable Edge AI task when Matter server is ready
+		EdgeAITask::Instance().Enable();
+		break;
+	case chip::DeviceLayer::DeviceEventType::kCHIPoBLEConnectionEstablished:
+		// Disable Edge AI task when commissioning is in progress
+		EdgeAITask::Instance().Disable();
+		break;
+	default:
+		break;
+	}
 }
+} // namespace
 
 CHIP_ERROR AppTask::Init()
 {
 	ReturnErrorOnFailure(Nrf::Matter::PrepareServer(
 		Nrf::Matter::InitData{.mPostServerInitClbk = [] { return CHIP_NO_ERROR; }}));
 
+	if (!Nrf::GetBoard().Init()) {
+		LOG_ERR("User interface initialization failed.");
+		return CHIP_ERROR_INCORRECT_STATE;
+	}
+
+	ReturnErrorOnFailure(Nrf::Matter::RegisterEventHandler(matter_app_event_handler, 0));
 	ReturnErrorOnFailure(
 		Nrf::Matter::RegisterEventHandler(Nrf::Board::DefaultMatterEventHandler, 0));
 

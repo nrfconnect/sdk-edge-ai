@@ -18,4 +18,5 @@ dmic_dev: &pdm20 {
 	pinctrl-0 = <&pdm20_default_alt>;
 	pinctrl-names = "default";
 	clock-source = "PCLK32M";
+	queue-size = <12>;
 };

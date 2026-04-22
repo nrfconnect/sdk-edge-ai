@@ -4,6 +4,8 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
+rsource "../matter_common/Kconfig.edgeai"
+
 menu "Matter Edge AI Switch"
 
 choice SWITCH_TYPE

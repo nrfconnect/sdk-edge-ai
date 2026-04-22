@@ -1,0 +1,22 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+config MATTER_EDGEAI_DMIC_MEM_SLAB_NUM_BLOCKS
+	int "DMIC PCM memory slab block count"
+	range 4 24
+	default 8
+	help
+	  Number of RX blocks for the Zephyr DMIC driver mem slab (matter_common dmic).
+	  Fewer blocks reduce RAM when the reader keeps up with capture; increase if you
+	  see audio underruns when inference occasionally stalls.
+
+config MATTER_EDGEAI_DIMMING_FX_TICK_MS
+	int "PWM dimming effect tick period (milliseconds)"
+	range 10 50
+	default 25
+	help
+	  Interval for the dimming work handler. Larger values reduce scheduling overhead
+	  at the cost of slightly coarser LED PWM steps.

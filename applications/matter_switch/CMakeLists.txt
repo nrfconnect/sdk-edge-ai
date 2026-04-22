@@ -23,11 +23,14 @@ include(${ZEPHYR_NRF_MODULE_DIR}/samples/matter/common/cmake/data_model.cmake)
 include(${ZEPHYR_NRF_MODULE_DIR}/samples/matter/common/cmake/zap_helpers.cmake)
 ncs_get_zap_parent_dir(ZAP_PARENT_DIR)
 
+set(MATTER_EDGEAI_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../matter_common)
+
 target_include_directories(app PRIVATE
   src
   src/nrf_edgeai_generated
   src/switch
   src/edgeAI
+  ${MATTER_EDGEAI_COMMON_DIR}
   ${ZAP_PARENT_DIR}
 )
 
@@ -40,9 +43,11 @@ target_sources(app PRIVATE
 
   src/switch/switch.cpp
 
-  src/edgeAI/dmic.c
-  src/edgeAI/wakeword.c
+  src/wakeword.c
   src/nrf_edgeai_generated/nrf_edgeai_user_model.c
+
+  ${MATTER_EDGEAI_COMMON_DIR}/dimming_effect.cpp
+  ${MATTER_EDGEAI_COMMON_DIR}/dmic.c
 )
 
 target_sources_ifdef(CONFIG_SWITCH_SHELL app PRIVATE src/switch/shell_commands.cpp)

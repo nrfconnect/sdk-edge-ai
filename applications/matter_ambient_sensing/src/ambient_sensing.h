@@ -13,6 +13,7 @@ namespace Nrf
 namespace AmbientSensing
 {
     bool process(nrf_edgeai_t *p_model);
+    const char* getModelName();
 
 } // namespace AmbientSensing
 } // namespace Nrf

@@ -1787,6 +1787,7 @@ endpoint 1 {
   }
 
   server cluster OccupancySensing {
+    emits event OccupancyChanged;
     ram      attribute occupancy;
     ram      attribute occupancySensorType;
     ram      attribute occupancySensorTypeBitmap;

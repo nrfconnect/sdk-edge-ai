@@ -373,7 +373,7 @@
 	}
 
 // clang-format off
-#define GENERATED_EVENT_COUNT 6
+#define GENERATED_EVENT_COUNT 7
 #define GENERATED_EVENTS { \
   /* Endpoint: 0, Cluster: Basic Information (server) */ \
   /* EventList (index=0) */ \
@@ -385,6 +385,9 @@
   0x00000000, /* StateTransition */ \
   0x00000001, /* VersionApplied */ \
   0x00000002, /* DownloadError */ \
+  /* Endpoint: 1, Cluster: Occupancy Sensing (server) */ \
+  /* EventList (index=6) */ \
+  0x00000000, /* OccupancyChanged */ \
 }
 
 // clang-format on
@@ -663,8 +666,8 @@
       .functions = chipFuncArrayOccupancySensingServer, \
       .acceptedCommandList = nullptr, \
       .generatedCommandList = nullptr, \
-      .eventList = nullptr, \
-      .eventCount = 0, \
+      .eventList = ZAP_GENERATED_EVENTS_INDEX( 6 ), \
+      .eventCount = 1, \
     },\
 }
 

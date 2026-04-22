@@ -23,9 +23,12 @@ include(${ZEPHYR_NRF_MODULE_DIR}/samples/matter/common/cmake/data_model.cmake)
 include(${ZEPHYR_NRF_MODULE_DIR}/samples/matter/common/cmake/zap_helpers.cmake)
 ncs_get_zap_parent_dir(ZAP_PARENT_DIR)
 
+set(MATTER_EDGEAI_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../matter_common)
+
 target_include_directories(app PRIVATE
   src
   src/edgeAI
+  ${MATTER_EDGEAI_COMMON_DIR}
   ${ZAP_PARENT_DIR}
 )
 
@@ -38,7 +41,8 @@ target_sources(app PRIVATE
 
   src/ambient_sensing.cpp
 
-  src/edgeAI/dmic.c
+  ${MATTER_EDGEAI_COMMON_DIR}/dmic.c
+  ${MATTER_EDGEAI_COMMON_DIR}/dimming_effect.cpp
 )
 
 target_sources_ifdef(CONFIG_AMBIENT_SENSING_MODEL_SNORING app PRIVATE src/models/snoring/nrf_edgeai_user_model.c)
