@@ -1,0 +1,24 @@
+sample:
+  description: Person detection application
+  name: person_detection
+
+common:
+  sysbuild: true
+  build_only: true
+  tags:
+    - ci_build
+    - sysbuild
+    - ci_applications_person_detection
+  harness: console
+  harness_config:
+    type: multi_line
+    regex:
+      - "Person detection start"
+      - "No detections|Bounding box"
+
+tests:
+  applications.person_detection.zdebug:
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
