@@ -17,4 +17,6 @@ Changelog
 
 This release is based on the |NCS| release v3.3.0-preview2.
 
-Nothing changed in this release.
+Updated:
+
+* Quantization function in :ref:`Hello Axon sample application <sample_hello_axon>`.
