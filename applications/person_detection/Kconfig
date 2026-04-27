@@ -20,6 +20,13 @@ config IOU_THRESHOLD
 	  The Intersection-over-Union threshold for Non-Maximum Suppression (NMS).
 	  Used to eliminate overlapping bounding boxes from multiple detections of the same person.
 
+config ARDUCAM_MEGA
+	bool
+	select EXPERIMENTAL
+	default y
+	help
+	  [Experimental]
+
 endmenu
 
 source "Kconfig.zephyr"
