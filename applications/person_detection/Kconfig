@@ -1,0 +1,25 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Person detection application"
+
+config SCORE_THRESHOLD
+	int "Model score threshold, in per mille"
+	range 0 1000
+	help
+	  The confidence score threshold for each person detection.
+	  Detections with confidence scores below this threshold are filtered out.
+
+config IOU_THRESHOLD
+	int "Boxes IoU threshold, in per mille"
+	range 0 1000
+	help
+	  The Intersection-over-Union threshold for Non-Maximum Suppression (NMS).
+	  Used to eliminate overlapping bounding boxes from multiple detections of the same person.
+
+endmenu
+
+source "Kconfig.zephyr"
