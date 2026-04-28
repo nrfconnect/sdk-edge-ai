@@ -6,6 +6,7 @@
 
 #include "light_switch.h"
 #include "binding/binding_handler.h"
+#include "nrf_edgeai_task.h"
 
 #ifdef CONFIG_SWITCH_SHELL
 #include "shell_commands.h"
@@ -33,7 +34,8 @@ void LightSwitch::Init()
 
 void LightSwitch::InitiateActionSwitch(Action action)
 {
-	Nrf::Matter::BindingHandler::BindingData *data = Platform::New<Nrf::Matter::BindingHandler::BindingData>();
+	Nrf::Matter::BindingHandler::BindingData *data =
+		Platform::New<Nrf::Matter::BindingHandler::BindingData>();
 	if (data) {
 		data->EndpointId = Nrf::Matter::GetSwitch().GetSwitchEndpointId();
 		data->ClusterId = Clusters::OnOff::Id;
@@ -59,13 +61,15 @@ void LightSwitch::InitiateActionSwitch(Action action)
 void LightSwitch::DimmerChangeBrightness()
 {
 	static uint16_t sBrightness;
-	Nrf::Matter::BindingHandler::BindingData *data = Platform::New<Nrf::Matter::BindingHandler::BindingData>();
+	Nrf::Matter::BindingHandler::BindingData *data =
+		Platform::New<Nrf::Matter::BindingHandler::BindingData>();
 	if (data) {
 		data->EndpointId = Nrf::Matter::GetSwitch().GetSwitchEndpointId();
 		data->CommandId = Clusters::LevelControl::Commands::MoveToLevel::Id;
 		data->ClusterId = Clusters::LevelControl::Id;
 		data->InvokeCommandFunc = SwitchChangedHandler;
-		/* add to brightness 3 to approximate 1% step of brightness after each call dimmer change. */
+		/* add to brightness 3 to approximate 1% step of brightness after each call dimmer
+		 * change. */
 		sBrightness += kOnePercentBrightnessApproximation;
 		if (sBrightness > kMaximumBrightness) {
 			sBrightness = 0;
@@ -75,7 +79,8 @@ void LightSwitch::DimmerChangeBrightness()
 	}
 }
 
-void LightSwitch::SwitchChangedHandler(const Binding::TableEntry &binding, OperationalDeviceProxy *deviceProxy,
+void LightSwitch::SwitchChangedHandler(const Binding::TableEntry &binding,
+				       OperationalDeviceProxy *deviceProxy,
 				       Nrf::Matter::BindingHandler::BindingData &bindingData)
 {
 	if (binding.type == Binding::MATTER_MULTICAST_BINDING) {
@@ -84,7 +89,8 @@ void LightSwitch::SwitchChangedHandler(const Binding::TableEntry &binding, Opera
 			OnOffProcessCommand(bindingData.CommandId, binding, nullptr, bindingData);
 			break;
 		case Clusters::LevelControl::Id:
-			LevelControlProcessCommand(bindingData.CommandId, binding, nullptr, bindingData);
+			LevelControlProcessCommand(bindingData.CommandId, binding, nullptr,
+						   bindingData);
 			break;
 		default:
 			LOG_ERR("Invalid binding group command data");
@@ -93,10 +99,12 @@ void LightSwitch::SwitchChangedHandler(const Binding::TableEntry &binding, Opera
 	} else if (binding.type == Binding::MATTER_UNICAST_BINDING) {
 		switch (bindingData.ClusterId) {
 		case Clusters::OnOff::Id:
-			OnOffProcessCommand(bindingData.CommandId, binding, deviceProxy, bindingData);
+			OnOffProcessCommand(bindingData.CommandId, binding, deviceProxy,
+					    bindingData);
 			break;
 		case Clusters::LevelControl::Id:
-			LevelControlProcessCommand(bindingData.CommandId, binding, deviceProxy, bindingData);
+			LevelControlProcessCommand(bindingData.CommandId, binding, deviceProxy,
+						   bindingData);
 			break;
 		default:
 			LOG_ERR("Invalid binding unicast command data");
@@ -111,20 +119,31 @@ void LightSwitch::OnOffProcessCommand(CommandId commandId, const Binding::TableE
 {
 	CHIP_ERROR ret = CHIP_NO_ERROR;
 
-	auto onSuccess = [dataPointer = Platform::New<Nrf::Matter::BindingHandler::BindingData>(bindingData)](
-				 const ConcreteCommandPath &commandPath, const StatusIB &status,
-				 const auto &dataResponse) {
-		Nrf::Matter::BindingHandler::OnInvokeCommandSucces(dataPointer);
+	Nrf::Matter::BindingHandler::BindingData *invokeCallbacksContext = nullptr;
+	if (device) {
+		invokeCallbacksContext =
+			Platform::New<Nrf::Matter::BindingHandler::BindingData>(bindingData);
+		VerifyOrDie(invokeCallbacksContext != nullptr);
+	}
+
+	auto onSuccess = [invokeCallbacksContext](const ConcreteCommandPath &commandPath,
+						  const StatusIB &status,
+						  const auto &dataResponse) {
+		if (invokeCallbacksContext != nullptr) {
+			Nrf::Matter::BindingHandler::OnInvokeCommandSucces(invokeCallbacksContext);
+		}
 	};
 
-	auto onFailure = [dataPointer = Platform::New<Nrf::Matter::BindingHandler::BindingData>(bindingData)](
-				 CHIP_ERROR aError) mutable {
-		Nrf::Matter::BindingHandler::OnInvokeCommandFailure(dataPointer, aError);
+	auto onFailure = [invokeCallbacksContext](CHIP_ERROR aError) mutable {
+		if (invokeCallbacksContext != nullptr) {
+			Nrf::Matter::BindingHandler::OnInvokeCommandFailure(invokeCallbacksContext,
+									    aError);
+		}
 	};
 
 	if (device) {
-		/* We are validating connection is ready once here instead of multiple times in each case
-		 * statement below. */
+		/* We are validating connection is ready once here instead of multiple times in each
+		 * case statement below. */
 		VerifyOrDie(device->ConnectionReady());
 	}
 
@@ -132,39 +151,42 @@ void LightSwitch::OnOffProcessCommand(CommandId commandId, const Binding::TableE
 	case Clusters::OnOff::Commands::Toggle::Id:
 		Clusters::OnOff::Commands::Toggle::Type toggleCommand;
 		if (device) {
-			ret = Controller::InvokeCommandRequest(device->GetExchangeManager(),
-							       device->GetSecureSession().Value(), binding.remote,
-							       toggleCommand, onSuccess, onFailure);
+			ret = Controller::InvokeCommandRequest(
+				device->GetExchangeManager(), device->GetSecureSession().Value(),
+				binding.remote, toggleCommand, onSuccess, onFailure);
 		} else {
-			Messaging::ExchangeManager &exchangeMgr = Server::GetInstance().GetExchangeManager();
-			ret = Controller::InvokeGroupCommandRequest(&exchangeMgr, binding.fabricIndex, binding.groupId,
-								    toggleCommand);
+			Messaging::ExchangeManager &exchangeMgr =
+				Server::GetInstance().GetExchangeManager();
+			ret = Controller::InvokeGroupCommandRequest(
+				&exchangeMgr, binding.fabricIndex, binding.groupId, toggleCommand);
 		}
 		break;
 
 	case Clusters::OnOff::Commands::On::Id:
 		Clusters::OnOff::Commands::On::Type onCommand;
 		if (device) {
-			ret = Controller::InvokeCommandRequest(device->GetExchangeManager(),
-							       device->GetSecureSession().Value(), binding.remote,
-							       onCommand, onSuccess, onFailure);
+			ret = Controller::InvokeCommandRequest(
+				device->GetExchangeManager(), device->GetSecureSession().Value(),
+				binding.remote, onCommand, onSuccess, onFailure);
 		} else {
-			Messaging::ExchangeManager &exchangeMgr = Server::GetInstance().GetExchangeManager();
-			ret = Controller::InvokeGroupCommandRequest(&exchangeMgr, binding.fabricIndex, binding.groupId,
-								    onCommand);
+			Messaging::ExchangeManager &exchangeMgr =
+				Server::GetInstance().GetExchangeManager();
+			ret = Controller::InvokeGroupCommandRequest(
+				&exchangeMgr, binding.fabricIndex, binding.groupId, onCommand);
 		}
 		break;
 
 	case Clusters::OnOff::Commands::Off::Id:
 		Clusters::OnOff::Commands::Off::Type offCommand;
 		if (device) {
-			ret = Controller::InvokeCommandRequest(device->GetExchangeManager(),
-							       device->GetSecureSession().Value(), binding.remote,
-							       offCommand, onSuccess, onFailure);
+			ret = Controller::InvokeCommandRequest(
+				device->GetExchangeManager(), device->GetSecureSession().Value(),
+				binding.remote, offCommand, onSuccess, onFailure);
 		} else {
-			Messaging::ExchangeManager &exchangeMgr = Server::GetInstance().GetExchangeManager();
-			ret = Controller::InvokeGroupCommandRequest(&exchangeMgr, binding.fabricIndex, binding.groupId,
-								    offCommand);
+			Messaging::ExchangeManager &exchangeMgr =
+				Server::GetInstance().GetExchangeManager();
+			ret = Controller::InvokeGroupCommandRequest(
+				&exchangeMgr, binding.fabricIndex, binding.groupId, offCommand);
 		}
 		break;
 	default:
@@ -176,26 +198,38 @@ void LightSwitch::OnOffProcessCommand(CommandId commandId, const Binding::TableE
 	}
 }
 
-void LightSwitch::LevelControlProcessCommand(CommandId commandId, const Binding::TableEntry &binding,
+void LightSwitch::LevelControlProcessCommand(CommandId commandId,
+					     const Binding::TableEntry &binding,
 					     OperationalDeviceProxy *device,
 					     Nrf::Matter::BindingHandler::BindingData &bindingData)
 {
-	auto onSuccess = [dataPointer = Platform::New<Nrf::Matter::BindingHandler::BindingData>(bindingData)](
-				 const ConcreteCommandPath &commandPath, const StatusIB &status,
-				 const auto &dataResponse) {
-		Nrf::Matter::BindingHandler::OnInvokeCommandSucces(dataPointer);
+	Nrf::Matter::BindingHandler::BindingData *invokeCallbacksContext = nullptr;
+	if (device) {
+		invokeCallbacksContext =
+			Platform::New<Nrf::Matter::BindingHandler::BindingData>(bindingData);
+		VerifyOrDie(invokeCallbacksContext != nullptr);
+	}
+
+	auto onSuccess = [invokeCallbacksContext](const ConcreteCommandPath &commandPath,
+						  const StatusIB &status,
+						  const auto &dataResponse) {
+		if (invokeCallbacksContext != nullptr) {
+			Nrf::Matter::BindingHandler::OnInvokeCommandSucces(invokeCallbacksContext);
+		}
 	};
 
-	auto onFailure = [dataPointer = Platform::New<Nrf::Matter::BindingHandler::BindingData>(bindingData)](
-				 CHIP_ERROR aError) mutable {
-		Nrf::Matter::BindingHandler::OnInvokeCommandFailure(dataPointer, aError);
+	auto onFailure = [invokeCallbacksContext](CHIP_ERROR aError) mutable {
+		if (invokeCallbacksContext != nullptr) {
+			Nrf::Matter::BindingHandler::OnInvokeCommandFailure(invokeCallbacksContext,
+									    aError);
+		}
 	};
 
 	CHIP_ERROR ret = CHIP_NO_ERROR;
 
 	if (device) {
-		/* We are validating connection is ready once here instead of multiple times in each case
-		 * statement below.
+		/* We are validating connection is ready once here instead of multiple times in each
+		 * case statement below.
 		 */
 		VerifyOrDie(device->ConnectionReady());
 	}
@@ -205,13 +239,15 @@ void LightSwitch::LevelControlProcessCommand(CommandId commandId, const Binding:
 		Clusters::LevelControl::Commands::MoveToLevel::Type moveToLevelCommand;
 		moveToLevelCommand.level = bindingData.Value;
 		if (device) {
-			ret = Controller::InvokeCommandRequest(device->GetExchangeManager(),
-							       device->GetSecureSession().Value(), binding.remote,
-							       moveToLevelCommand, onSuccess, onFailure);
+			ret = Controller::InvokeCommandRequest(
+				device->GetExchangeManager(), device->GetSecureSession().Value(),
+				binding.remote, moveToLevelCommand, onSuccess, onFailure);
 		} else {
-			Messaging::ExchangeManager &exchangeMgr = Server::GetInstance().GetExchangeManager();
-			ret = Controller::InvokeGroupCommandRequest(&exchangeMgr, binding.fabricIndex, binding.groupId,
-								    moveToLevelCommand);
+			Messaging::ExchangeManager &exchangeMgr =
+				Server::GetInstance().GetExchangeManager();
+			ret = Controller::InvokeGroupCommandRequest(
+				&exchangeMgr, binding.fabricIndex, binding.groupId,
+				moveToLevelCommand);
 		}
 	} break;
 	default:

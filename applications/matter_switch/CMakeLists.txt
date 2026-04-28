@@ -44,7 +44,9 @@ target_sources(app PRIVATE
   src/switch/switch.cpp
 
   src/wakeword.c
-  src/nrf_edgeai_generated/nrf_edgeai_user_model.c
+  src/keyword.c
+  src/models/wakeword/nrf_edgeai_generated/nrf_edgeai_user_model.c
+  src/models/kws/nrf_edgeai_generated/nrf_edgeai_user_model.c
 
   ${MATTER_EDGEAI_COMMON_DIR}/dimming_effect.cpp
   ${MATTER_EDGEAI_COMMON_DIR}/dmic.c

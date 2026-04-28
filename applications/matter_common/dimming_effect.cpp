@@ -20,9 +20,12 @@
 
 LOG_MODULE_REGISTER(dimming_effect, LOG_LEVEL_INF);
 
-namespace Nrf {
-namespace DimmingEffect {
-namespace {
+namespace Nrf
+{
+namespace DimmingEffect
+{
+namespace
+{
 
 #if defined(CONFIG_PWM) && DT_HAS_ALIAS(pwm_led0) && DT_HAS_ALIAS(pwm_led1) &&                     \
 	DT_HAS_ALIAS(pwm_led2) && DT_HAS_ALIAS(pwm_led3)
@@ -110,9 +113,9 @@ void dim_work_handler(struct k_work *work)
 		} else {
 			const int pos2 = pos - half_ms;
 
-			level = static_cast<uint8_t>(
-				(static_cast<uint32_t>(kPwmMaxLevel) * static_cast<unsigned>(pos2)) /
-				static_cast<unsigned>(up));
+			level = static_cast<uint8_t>((static_cast<uint32_t>(kPwmMaxLevel) *
+						      static_cast<unsigned>(pos2)) /
+						     static_cast<unsigned>(up));
 		}
 	}
 
@@ -180,6 +183,7 @@ void Start()
 {
 #if defined(CONFIG_PWM) && DT_HAS_ALIAS(pwm_led0) && DT_HAS_ALIAS(pwm_led1) &&                     \
 	DT_HAS_ALIAS(pwm_led2) && DT_HAS_ALIAS(pwm_led3)
+
 	(void)k_work_cancel_delayable(&s_dim_work);
 
 	s_elapsed_ms = 0;
@@ -196,6 +200,17 @@ void Start()
 	}
 
 	(void)k_work_schedule(&s_dim_work, K_NO_WAIT);
+#endif
+}
+
+void Stop()
+{
+#if defined(CONFIG_PWM) && DT_HAS_ALIAS(pwm_led0) && DT_HAS_ALIAS(pwm_led1) &&                     \
+	DT_HAS_ALIAS(pwm_led2) && DT_HAS_ALIAS(pwm_led3)
+	k_timer_stop(&s_effect_timer);
+	(void)k_work_cancel_delayable(&s_dim_work);
+	suppress_all_pwm_outputs();
+	Nrf::GetBoard().RunLedStateHandler();
 #endif
 }
 

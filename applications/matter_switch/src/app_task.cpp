@@ -19,6 +19,7 @@
 
 #include <app-common/zap-generated/attributes/Accessors.h>
 
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
@@ -28,6 +29,8 @@ using namespace ::chip::app;
 using namespace ::chip::app::Clusters;
 using namespace ::chip::app::Clusters::OnOff;
 using namespace ::chip::DeviceLayer;
+
+K_SEM_DEFINE(gMatterStartedSem, 0, 1);
 
 #define APPLICATION_BUTTON_MASK DK_BTN2_MSK
 
@@ -50,6 +53,7 @@ void matter_app_event_handler(const chip::DeviceLayer::ChipDeviceEvent *event, i
 	case chip::DeviceLayer::DeviceEventType::kServerReady:
 		// Enable Edge AI task when Matter server is ready
 		EdgeAITask::Instance().Enable();
+		k_sem_give(&gMatterStartedSem);
 		break;
 	case chip::DeviceLayer::DeviceEventType::kCHIPoBLEConnectionEstablished:
 		// Disable Edge AI task when commissioning is in progress

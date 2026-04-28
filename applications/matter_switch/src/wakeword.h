@@ -31,12 +31,15 @@ extern "C" {
  */
 int ww_init(void);
 
+void ww_reset_model(void);
 /**
  * @brief Process audio data by Wakeword model.
  *
- * @param audio_buffer Buffer of audio samples from dmic_read. Function takes ownership of pointer.
+ * @param audio_buffer Buffer of audio samples from dmic_read. Function takes ownership of
+ pointer.
  * @param num_samples Number of audio samples.
- * @param[out] ww_detected Result of wakeword detection. Valid if operation completed successfully.
+ * @param[out] ww_detected Result of wakeword detection. Valid if operation completed
+ successfully.
 
  * @retval 0 Operation successful.
  * @retval -EPERM Operation failed on nRF Edge AI Lib level.

@@ -7,11 +7,14 @@
 #pragma once
 
 #include <platform/CHIPDeviceLayer.h>
+#include <zephyr/kernel.h>
 #include "lib/support/CodeUtils.h"
+
+extern struct k_sem gMatterStartedSem;
 
 class AppTask
 {
-public:
+      public:
 	static AppTask &Instance()
 	{
 		static AppTask sAppTask;
@@ -20,6 +23,6 @@ public:
 
 	CHIP_ERROR StartApp();
 
-private:
+      private:
 	CHIP_ERROR Init();
 };

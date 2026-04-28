@@ -8,19 +8,21 @@
 
 #include <zephyr/autoconf.h>
 
-namespace Nrf {
-namespace DimmingEffect {
+namespace Nrf
+{
+namespace DimmingEffect
+{
 
 struct Config {
 	/** Total duration of the effect in seconds. */
-	int effect_timeout_s{ 5 };
+	int effect_timeout_s{5};
 	/**
 	 * Number of bright/dim pairs is MAX(10, blink_pairs_multiplier * effect_timeout_s),
 	 * matching the Matter ambient sensing / switch wakeword PWM behavior.
 	 */
-	int blink_pairs_multiplier{ 3 };
+	int blink_pairs_multiplier{3};
 	/** Work reschedule period in milliseconds (smaller = smoother, more CPU). */
-	int fx_tick_ms{ CONFIG_MATTER_EDGEAI_DIMMING_FX_TICK_MS };
+	int fx_tick_ms{CONFIG_MATTER_EDGEAI_DIMMING_FX_TICK_MS};
 };
 
 using OnComplete = void (*)(void *ctx);
@@ -38,6 +40,9 @@ int Init(const Config &cfg, OnComplete on_complete = nullptr, void *on_complete_
 
 /** Start the dimming animation (typically from Nrf::PostTask). */
 void Start();
+
+/** Stop the dimming animation */
+void Stop();
 
 /**
  * Restart the one-shot timer so expiry runs Start via Nrf::PostTask (switch wakeword path).

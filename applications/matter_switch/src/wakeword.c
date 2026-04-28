@@ -9,10 +9,11 @@
 
 #include <zephyr/logging/log.h>
 #include <nrf_edgeai/nrf_edgeai.h>
+#include <nrf_edgeai/rt/nrf_edgeai_runtime_aux.h>
 
 #include "dmic.h"
 #include "wakeword.h"
-#include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
+#include "models/wakeword/nrf_edgeai_generated/nrf_edgeai_user_model.h"
 
 LOG_MODULE_REGISTER(ww);
 
@@ -20,7 +21,7 @@ static nrf_edgeai_t *ww_model;
 
 int ww_init(void)
 {
-	ww_model = nrf_edgeai_user_model_wakeword();
+	ww_model = nrf_edgeai_user_model_92652();
 	__ASSERT_NO_MSG(ww_model);
 
 	nrf_edgeai_err_t err = nrf_edgeai_init(ww_model);
@@ -31,6 +32,11 @@ int ww_init(void)
 	}
 
 	return 0;
+}
+
+void ww_reset_model(void)
+{
+	nrf_edgeai_model_axon_init_persistent_vars(ww_model);
 }
 
 static bool ww_postprocess(void)
@@ -65,7 +71,7 @@ static bool ww_postprocess(void)
 int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *const ww_detected)
 {
 	__ASSERT_NO_MSG(audio_buffer);
-	__ASSERT_NO_MSG(num_samples == nrf_edgeai_input_window_size(ww_model));
+	__ASSERT_NO_MSG(ww_model);
 	__ASSERT_NO_MSG(ww_detected);
 
 	nrf_edgeai_err_t err;
