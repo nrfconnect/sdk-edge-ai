@@ -16,7 +16,20 @@ manifest:
       remote: ncs
       repo-path: sdk-nrf
       revision: v3.3.0-preview2
-      import: true
+      import:
+        name-allowlist:
+          - cmsis_6
+          - hal_nordic
+          - libmetal
+          - mbedtls
+          - mcuboot
+          - nrfxlib
+          - oberon-psa-crypto
+          - open-amp
+          - picolibc
+          - segger
+          - zcbor
+          - zephyr
 
     - name: edge-impulse-sdk-zephyr
       url: https://github.com/edgeimpulse/edge-impulse-sdk-zephyr
