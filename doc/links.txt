@@ -70,6 +70,8 @@
 .. _`Providing CMake options`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/nrf/app_dev/config_and_build/cmake/index.html#providing_cmake_options
 .. _`Custom build types`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/nrf/app_dev/config_and_build/config_and_build_system.html#app-build-additions-build-types
 .. _`software maturity`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/nrf/releases_and_maturity/software_maturity.html
+.. _`Environment Variables`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/zephyr/develop/env_vars.html
+.. _`Workspace application`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/zephyr/develop/west/workspaces.html#t2_star_topology_application_is_the_manifest_repository
 
 .. _`Simulated sensor driver`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/nrf/drivers/sensor_sim.html
 
@@ -109,6 +111,7 @@
 .. _`Anomaly detection training`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/anomaly_detection
 .. _`Anomaly score calculation script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/01_test.py
 .. _`Axon samples`: https://github.com/nrfconnect/sdk-axons-ml/tree/main/samples
+.. _`edge-impulse-sdk-zephyr`: https://github.com/edgeimpulse/edge-impulse-sdk-zephyr
 
 .. ### Source: other
 
