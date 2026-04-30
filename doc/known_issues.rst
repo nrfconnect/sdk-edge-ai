@@ -20,7 +20,7 @@ A known issue can list one or both of the following entries:
   Some known issues have a workaround.
   Sometimes, they are discovered later and added over time.
 
-List of known issues for v2.0.0 release
+List of known issues for v2.0.1 release
 ***************************************
 
 DRGN-27788: Bluetooth LE disables RRAM low-latency mode when using AXON NPU and Bluetooth LE simultaneously on the nRF54LM20B SoC
