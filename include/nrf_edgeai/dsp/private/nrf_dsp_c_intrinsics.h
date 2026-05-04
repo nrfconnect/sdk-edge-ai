@@ -51,10 +51,12 @@ __NRF_DSP_STATIC_FORCEINLINE int32_t __SSAT(int32_t val, uint32_t sat)
     {
         const int32_t max = (int32_t)((1U << (sat - 1U)) - 1U);
         const int32_t min = -1 - max;
-        if (val > max)
-            return max;
-        else if (val < min)
-            return min;
+
+		if (val > max) {
+			return max;
+		} else if (val < min) {
+			return min;
+		}
     }
     return val;
 }
@@ -76,10 +78,12 @@ __NRF_DSP_STATIC_FORCEINLINE uint32_t __USAT(int32_t val, uint32_t sat)
     if (sat <= 31U)
     {
         const uint32_t max = ((1U << sat) - 1U);
-        if (val > (int32_t)max)
-            return max;
-        else if (val < 0)
-            return 0U;
+
+		if (val > (int32_t)max) {
+			return max;
+		} else if (val < 0) {
+			return 0U;
+		}
     }
     return (uint32_t)val;
 }
@@ -98,35 +102,42 @@ __NRF_DSP_STATIC_FORCEINLINE uint32_t __ROR(uint32_t op1, uint32_t op2)
 }
 
 /**
-  * @brief Clips INT64 to INT32 values.
-  */
-__NRF_DSP_STATIC_FORCEINLINE int32_t clip_i64_to_i32(int64_t x)
+ * @brief Clips a Q63 value to Q31 range.
+ * @param[in] x  Q63 value to clip.
+ * @return       Saturated Q31 value.
+ */
+__NRF_DSP_STATIC_FORCEINLINE int32_t clip_q63_to_q31(int64_t x)
 {
     return ((int32_t)(x >> 32) != ((int32_t)x >> 31)) ? ((0x7FFFFFFF ^ ((int32_t)(x >> 63)))) :
                                                         (int32_t)x;
 }
 
 /**
- * @brief Clips INT64 to INT16 values.
+ * @brief Clips a Q63 value to Q15 range.
+ * @details The value is shifted right by 15 bits before the final saturation.
+ * @param[in] x  Q63 value to clip.
+ * @return       Saturated Q15 value.
  */
-__NRF_DSP_STATIC_FORCEINLINE int16_t clip_i64_to_i16(int64_t x)
+__NRF_DSP_STATIC_FORCEINLINE int16_t clip_q63_to_q15(int64_t x)
 {
     return ((int32_t)(x >> 32) != ((int32_t)x >> 31)) ? ((0x7FFF ^ ((int16_t)(x >> 63)))) :
                                                         (int16_t)(x >> 15);
 }
 
 /**
- * @brief Clips INT32 to INT8 values.
+ * @brief Clips a Q31 value to Q7 range.
+ * @param[in] x  Q31 value to clip.
+ * @return       Saturated Q7 value.
  */
-__NRF_DSP_STATIC_FORCEINLINE int8_t clip_i32_to_i8(int32_t x)
-{
-    return ((int32_t)(x >> 24) != ((int32_t)x >> 23)) ? ((0x7F ^ ((int8_t)(x >> 31)))) : (int8_t)x;
-}
+__NRF_DSP_STATIC_FORCEINLINE int8_t clip_q31_to_q7(int32_t x)
+{ return ((int32_t)(x >> 24) != ((int32_t)x >> 23)) ? ((0x7F ^ ((int8_t)(x >> 31)))) : (int8_t)x; }
 
 /**
- * @brief Clips INT32 to INT16 values.
+ * @brief Clips a Q31 value to Q15 range.
+ * @param[in] x  Q31 value to clip.
+ * @return       Saturated Q15 value.
  */
-__NRF_DSP_STATIC_FORCEINLINE int16_t clip_i32_to_i16(int32_t x)
+__NRF_DSP_STATIC_FORCEINLINE int16_t clip_q31_to_q15(int32_t x)
 {
     return ((int32_t)(x >> 16) != ((int32_t)x >> 15)) ? ((0x7FFF ^ ((int16_t)(x >> 31)))) :
                                                         (int16_t)x;

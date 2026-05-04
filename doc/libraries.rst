@@ -11,4 +11,5 @@ Nordic Semiconductor provides libraries and services that are used in samples an
    :caption: Subpages:
 
    libraries/nrf_edgeai
+   libraries/nrf_edgeai_changelog
    libraries/axon
