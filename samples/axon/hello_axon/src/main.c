@@ -4,11 +4,14 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+#include <assert.h>
+#include <math.h>
+
+#include <zephyr/logging/log.h>
+
+#include <axon/nrf_axon_platform.h>
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
-#include <axon/nrf_axon_platform.h>
-#include <zephyr/logging/log.h>
-#include <math.h>
 
 #include "generated/nrf_axon_model_hello_axon_.h"
 

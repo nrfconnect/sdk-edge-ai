@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: hello_axon
- * Axon Neural Network Compiler Version: 0.1.0
+ * Axon Neural Network Compiler Version: 1.2.1
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -9,11 +9,8 @@ extern "C" {
 
 #define NRF_AXON_MODEL_HELLO_AXON_MAX_IL_BUFFER_USED 16
 #define NRF_AXON_MODEL_HELLO_AXON_MAX_PSUM_BUFFER_USED 0
-
-#if AXON_COMPILE_TIME_BUFFER_CHECK
-static_assert(NRF_AXON_MODEL_HELLO_AXON_MAX_IL_BUFFER_USED < sizeof(nrf_axon_interlayer_buffer), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
-
-#endif
+static_assert(NRF_AXON_MODEL_HELLO_AXON_MAX_IL_BUFFER_USED < (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
+static_assert(NRF_AXON_VERSION >= 0x00010200, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
 // size of axon_model_const_hello_axon: 420
 const static struct {
 	int8_t l00_weights[16];
@@ -66,7 +63,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_hello_axon[69] = {
   uint32_t axon_model_hello_axon_packed_output_buf[NRF_AXON_MODEL_HELLO_AXON_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_hello_axon = {
-    .compiler_version = 0x00000100,
+    .compiler_version = 0x00010201,
     .model_name = "hello_axon",
     .labels = NULL,
     .inputs = {
@@ -116,6 +113,9 @@ const nrf_axon_nn_compiled_model_s model_hello_axon = {
     .output_dequant_zp = 4,
     .output_stride = 4,
     .is_layer_model = false,
+    .extra_output_cnt = 0,
+    .extra_outputs = NULL,
+    .min_driver_version_required = 0x00010200,
 };
 #ifdef __cplusplus
 }
