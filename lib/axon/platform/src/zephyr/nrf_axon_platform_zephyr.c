@@ -166,14 +166,6 @@ static void axon_enable() {
 
   /* Register an event starting now to make RRAM stay in standby mode. */
   sys_event_handle = nrf_sys_event_register(0, true);
-  /**
-   * @FIXME!!!!
-   * THE ABOVE CODE CLEARS OUT THE MAGIC BIT 0x20. LET'S RESTORE IT :)
-   * REMOVE THIS WHEN THE OFFICIAL FIX IS AVAILABLE!
-   */
-#if defined RRAMC_POWER_LOWPOWERCONFIG_MODE_Pos
-  NRF_RRAMC->POWER.LOWPOWERCONFIG |= 0x20;
-#endif
 }
 
 /**

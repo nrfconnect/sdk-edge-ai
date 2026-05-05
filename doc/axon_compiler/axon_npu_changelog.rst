@@ -17,6 +17,17 @@ Changelog
 
 See the list of changes for a specific release of the Axon NPU software.
 
+Release 1.2.1  05 May 2026
+==========================
+
+* Added support for ``v3.3.0`` tag of ``sdk-nrf`` (``SHA-1 ba167d9f3d``).
+
+  .. note::
+    The Add-on was tested and built with SDK toolchain version v3.3.0.
+    You should use this version for stable builds.
+
+* Removed RRAM const-lat work-around (compatible with Bluetooth LE).
+
 Release 1.2.0  16 Apr 2026
 ==========================
 
