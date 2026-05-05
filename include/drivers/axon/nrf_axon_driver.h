@@ -21,6 +21,9 @@ extern "C" {
  * NRF_AXON_VERSION applies to the entire axon software tool chain.
  * 
  * version history
+ * 1.2.1 05/05/2026
+ * - Remove RRAM work-around.
+ * 
  * 1.2.0
  * - Multiple outputs supported
  * - Resize_Nearest_Neighbor operater supported.
@@ -59,7 +62,7 @@ extern "C" {
  * - 1st versioned release
  */
 #define NRF_AXON_GENERATE_VERSION(major,minor,patch) ( ((major)<<16) | ((minor) << 8) | (patch))
-#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(1,2,0)
+#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(1, 2, 1)
 
 
 #if !defined(AXON_FORCE_32BIT_ADDR) && ((defined(__SIZEOF_POINTER__) && (__SIZEOF_POINTER__==8)) || defined(_WIN64))
