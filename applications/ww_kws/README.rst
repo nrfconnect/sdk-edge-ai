@@ -36,7 +36,30 @@ After period without any keywords spotted the application switches back to wakew
 
 You can also configure the application to stay in one of these stages using the application-specific Kconfig options.
 
-You can easily replace the bundled wakeword with a custom one using the Text to Wake Word feature of the `Nordic Edge AI Lab`_.
+Replacing models
+================
+
+You can replace the bundled models using the `Text to Wake Word Detection <Nordic Edge AI Lab Wake Word Detection_>`_ feature of the `Nordic Edge AI Lab`_ or one of `ready-to-use models <Nordic Edge AI Lab ready-to-use models_>`_.
+
+.. tabs::
+
+   .. group-tab:: Wakeword detection model
+
+      To replace the model used in wakeword detection stage complete the following steps:
+
+      1. Replace the files inside :file:`src/ww/nrf_edgeai_generated` directory with files downloaded from `Nordic Edge AI Lab`_.
+      #. Update :c:func:`ww_init` to get a pointer to the proper model instance from generated files.
+      #. Adjust the Kconfig options to tune wakeword detection postprocessing to your model.
+
+
+   .. group-tab:: Keyword spotting model
+
+      To replace the model used in keyword spotting stage complete the following steps:
+
+      1. Replace the files inside :file:`src/kws/nrf_edgeai_generated` directory with files downloaded from `Nordic Edge AI Lab`_.
+      #. Update :c:func:`kws_init` to get a pointer to the proper model instance from generated files.
+      #. Update the ``keyword_class`` enumeration and ``keyword_detection_ctxs`` array in the :file:`src/kws/kws.c` file to match keywords spotted by selected model.
+      #. Adjust the Kconfig options to tune keyword spotting postprocessing to selected model.
 
 Requirements
 ************

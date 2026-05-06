@@ -20,6 +20,7 @@
 .. _`Neuton models`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Neuton-models
 .. _`nRF Edge Impulse`: https://www.nordicsemi.com/Products/Development-tools/nRF-Edge-Impulse
 .. _`nRF Programmer`: https://www.nordicsemi.com/Products/Development-tools/nRF-Programmer
+.. _`Nordic Edge AI Lab ready-to-use models`: https://app.lab.nordicsemi.com/#/ready-to-use-models
 
 .. ### Source: docs.nordicsemi.com (do not update)
 
@@ -40,6 +41,7 @@
 .. _`Nordic Edge AI Lab preloaded datasets`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/data_uploading_and_setup.html#selecting_an_uploaded_or_preloaded_dataset
 .. _`Nordic Edge AI Lab Analytics Tools`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/analytics_tools.html
 .. _`Nordic Edge AI Lab Anomaly detection`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/anomaly_detection.html
+.. _`Nordic Edge AI Lab Wake Word Detection`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/wake_word.html
 .. _`Board Configurator`: https://docs.nordicsemi.com/bundle/swtools_docs/page/app/pc-nrfconnect-board-configurator/index.html
 
 .. ### Source: docs.nordicsemi.com (update for each release)
