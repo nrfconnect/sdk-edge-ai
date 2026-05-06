@@ -20,6 +20,12 @@ A known issue can list one or both of the following entries:
   Some known issues have a workaround.
   Sometimes, they are discovered later and added over time.
 
+
+List of known issues for v2.1.0 release
+***************************************
+
+There are no reported known issues for the v2.1.0 release.
+
 List of known issues for v2.0.0 release
 ***************************************
 
