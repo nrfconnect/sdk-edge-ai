@@ -15,5 +15,6 @@ This section provides information about various applications that can be built u
    :glob:
    :caption: Subpages:
 
-   /../applications/ww_kws/README.rst
    /../applications/gesture_recognition/README.rst
+   /../applications/person_detection/README.rst
+   /../applications/ww_kws/README.rst

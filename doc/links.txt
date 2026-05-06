@@ -40,6 +40,7 @@
 .. _`Nordic Edge AI Lab preloaded datasets`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/data_uploading_and_setup.html#selecting_an_uploaded_or_preloaded_dataset
 .. _`Nordic Edge AI Lab Analytics Tools`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/analytics_tools.html
 .. _`Nordic Edge AI Lab Anomaly detection`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/anomaly_detection.html
+.. _`Board Configurator`: https://docs.nordicsemi.com/bundle/swtools_docs/page/app/pc-nrfconnect-board-configurator/index.html
 
 .. ### Source: docs.nordicsemi.com (update for each release)
 
@@ -81,6 +82,7 @@
 .. _`Nordic UART Service (NUS)`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/nrf/libraries/bluetooth/services/nus.html
 .. _`TensorFlow Lite for Microcontrollers: Hello World`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/zephyr/samples/modules/tflite-micro/hello_world/README.html#tflite-hello-world
 .. _`HID Service`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/nrf/libraries/bluetooth/services/hids.html
+.. _`Video`: https://docs.nordicsemi.com/bundle/ncs-3.3.0-preview2/page/zephyr/hardware/peripherals/video.html
 
 .. ### Source: edgeimpulse.com
 
@@ -112,6 +114,7 @@
 .. _`Anomaly score calculation script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/01_test.py
 .. _`Axon samples`: https://github.com/nrfconnect/sdk-axons-ml/tree/main/samples
 .. _`edge-impulse-sdk-zephyr`: https://github.com/edgeimpulse/edge-impulse-sdk-zephyr
+.. _`MCUnet`: https://github.com/mit-han-lab/mcunet
 
 .. ### Source: other
 
@@ -122,6 +125,7 @@
 .. _`Evaluation Datasets documentation`: https://github.com/mlcommons/tiny/tree/master/benchmark/evaluation/datasets
 .. _`Training repository`: https://github.com/mlcommons/tiny/tree/master/benchmark/training
 .. _`Adafruit PDM MEMS Microphone`: https://www.adafruit.com/product/3492
+.. _`Arducam Mega 5MP`: https://www.arducam.com/presale-mega-5mp-color-rolling-shutter-camera-module-with-autofocus-lens-for-any-microcontroller.html
 
 .. ## External sources:
 
