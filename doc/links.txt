@@ -5,10 +5,6 @@
 
 .. ### Source: www.nordicsemi.com
 
-.. _`nRF Connect for Mobile`: https://www.nordicsemi.com/Software-and-Tools/Development-Tools/nRF-Connect-for-mobile
-.. _`nRF52 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
-.. _`nRF53 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
-.. _`nRF54 Series`: https://www.nordicsemi.com/Products/Wireless/Bluetooth-Low-Energy
 .. _`training dataset`: https://files.nordicsemi.com/ui/native/edge-ai/external/
 .. _`Nordic Thingy:53 Multi-protocol IoT prototyping platform`: https://www.nordicsemi.com/Products/Development-hardware/Nordic-Thingy-53
 .. _`nRF54LM20 DK`: https://www.nordicsemi.com/Products/Development-hardware/nRF54LM20-DK/Hardware-files
@@ -28,9 +24,7 @@
 .. _`nRF Connect SDK installation guide`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/installation/install_ncs.html
 .. _`Serial Terminal app`: https://docs.nordicsemi.com/bundle/nrf-connect-serial-terminal/page/index.html
 .. _`Power Profiler Kit II (PPK2)`: https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html
-.. _`Power Profiler app`: https://docs.nordicsemi.com/bundle/nrf-connect-ppk/page/index.html
 .. _`nRF Connect for Visual Studio Code`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/index.html
-.. _`nRF Connect for Visual Studio Code: Thread Viewer`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/reference/ui_panel.html#thread-viewer
 .. _`Nordic central UART sample`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/samples/bluetooth/central_uart/README.html
 .. _`Memfault in nRF Connect SDK`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/libraries/debug/memfault_ncs.html
 .. _`nRF54L15TAG`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/nrf54l15tag/doc/index.html
@@ -38,7 +32,6 @@
 .. _`Nordic Edge AI Lab Quick Start Guide`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
 .. _`Nordic Edge AI Lab Model Creating Pipeline`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline.html
 .. _`Nordic Edge AI Lab Model Dataset Requirements`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/dataset_requirements.html
-.. _`Nordic Edge AI Lab Model Dataset Uploading`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/data_uploading_and_setup.html
 .. _`Nordic Edge AI Lab preloaded datasets`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/data_uploading_and_setup.html#selecting_an_uploaded_or_preloaded_dataset
 .. _`Nordic Edge AI Lab Analytics Tools`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/analytics_tools.html
 .. _`Nordic Edge AI Lab Anomaly detection`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/anomaly_detection.html
@@ -103,10 +96,6 @@
 .. _`Continuous motion recognition tutorial`: https://docs.edgeimpulse.com/docs/continuous-motion-recognition
 .. _`Edge Impulse's data forwarder`: https://docs.edgeimpulse.com/docs/cli-data-forwarder
 .. _`Edge Impulse CLI installation guide`: https://docs.edgeimpulse.com/docs/cli-installation
-.. _`nRF Connect SDK simulated sensor machine learning model`: https://studio.edgeimpulse.com/public/18121/latest
-.. _`nRF Connect SDK hardware accelerometer machine learning model`: https://studio.edgeimpulse.com/public/33129/latest
-.. _`Nordic Semi nRF54L15 DK page`: https://docs.edgeimpulse.com/docs/nordic-semi-nrf54L15-dk
-.. _`Edge Impulse Zephyr Module Deployment`: https://docs.edgeimpulse.com/hardware/deployments/run-zephyr-module
 .. _`Automated Deployment with West Commands`: https://docs.edgeimpulse.com/hardware/deployments/run-zephyr-module#automated-deployment-with-west-commands-early-access-preview
 .. _`Using the library from C`: https://docs.edgeimpulse.com/hardware/deployments/run-cpp-desktop#using-the-library-from-c
 .. _`Edge Impulse data acquisition`: https://docs.edgeimpulse.com/studio/projects/data-acquisition
@@ -121,7 +110,6 @@
 .. _`Anomaly detection script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/get_dataset.sh
 .. _`Anomaly detection training`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/anomaly_detection
 .. _`Anomaly score calculation script`: https://github.com/mlcommons/tiny/blob/master/benchmark/training/anomaly_detection/01_test.py
-.. _`Axon samples`: https://github.com/nrfconnect/sdk-axons-ml/tree/main/samples
 .. _`edge-impulse-sdk-zephyr`: https://github.com/edgeimpulse/edge-impulse-sdk-zephyr
 .. _`MCUnet`: https://github.com/mit-han-lab/mcunet
 
@@ -151,4 +139,3 @@
 .. _`Visual wake word`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/visual_wake_words
 .. _`Setting up Podman container`: https://github.com/containers/podman/blob/main/docs/tutorials/podman_tutorial.md#running-a-sample-container
 .. _`Visual Studio Code`: https://code.visualstudio.com
-.. _`Configure VS Code for Microsoft C++`: https://code.visualstudio.com/docs/cpp/config-msvc
