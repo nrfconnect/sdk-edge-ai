@@ -62,7 +62,7 @@ Development kits
 
    .. tab:: nRF54LM20 DK
 
-      The `nRF54LM20 DK`_ development kit has two variants with different SoCs: nRF54LM20A and nRF54LM20B.
+      The `nRF54LM20 DK <nrf54lm20dk_>`_ development kit has two variants with different SoCs: nRF54LM20A and nRF54LM20B.
       Both variants require a sensor evaluation board:
 
       .. list-table::
