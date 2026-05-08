@@ -4,15 +4,9 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-/ {
-	aliases {
-		led0 = &led1_red;
-		led1 = &led1_green;
-		led2 = &led1_blue;
-	};
-};
-
-/* Shrink the MCUboot partition so FPROTECT can cover it on this SoC. */
+/* Match the MCUboot partition shrink applied to the application image so that
+ * FPROTECT inside MCUboot can cover the boot partition on this SoC.
+ */
 /delete-node/ &boot_partition;
 
 &cpuapp_rram {
