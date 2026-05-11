@@ -53,8 +53,10 @@ Once you enable the ``CONFIG_NRF_EDGEAI`` Kconfig option, the build system autom
 
 1. It locates the precompiled static library for your target architecture (for example, ``libnrf_edgeai_cortex-m4.a``).
 #. It includes the header files from the :file:`include/nrf_edgeai/` directory.
-#. It compiles and links your `Nordic Edge AI Lab`_-generated model sources with the your application. (for example, :file:`nrf_edgeai_user_model.c`)
+#. It compiles and links your `Nordic Edge AI Lab`_-generated model sources with your application (for example, :file:`nrf_edgeai_user_model.c`).
 #. It compiles and links your firmware application with the library.
+
+See also :ref:`nrf_edgeai_obsv_lib` for collecting runtime statistics from model output probabilities; it works with any inference engine, including this library, and can upload data to the `Memfault`_ cloud service.
 
 .. _nrf_edgeai_lib_api:
 
