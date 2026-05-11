@@ -3,3 +3,4 @@ sphinx>=7.2,<8.2
 sphinx-ncs-theme<1.1
 sphinx-tabs>=3.4
 sphinx-copybutton
+sphinxcontrib-plantuml>=0.27

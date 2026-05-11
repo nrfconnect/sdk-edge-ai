@@ -32,6 +32,7 @@
 .. _`nRF Connect for Visual Studio Code`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/index.html
 .. _`nRF Connect for Visual Studio Code: Thread Viewer`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/reference/ui_panel.html#thread-viewer
 .. _`Nordic central UART sample`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/nrf/samples/bluetooth/central_uart/README.html
+.. _`Memfault in nRF Connect SDK`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/nrf/libraries/debug/memfault_ncs.html
 .. _`nRF54L15TAG`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/zephyr/boards/nordic/nrf54l15tag/doc/index.html
 .. _`Nordic Edge AI Lab Documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/index.html
 .. _`Nordic Edge AI Lab Quick Start Guide`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
@@ -79,12 +80,18 @@
 .. _`Simulated sensor driver`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/nrf/drivers/sensor_sim.html
 
 .. _`Logging`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/zephyr/services/logging/index.html#logging-api
+.. _`ZCBOR`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/zephyr/services/serialization/cbor.html#cbor-api
 .. _`Power Management`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/zephyr/services/pm/index.html#power-management
 .. _`Sensor`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/zephyr/hardware/peripherals/sensor/index.html#sensor
 .. _`Nordic UART Service (NUS)`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/nrf/libraries/bluetooth/services/nus.html
 .. _`TensorFlow Lite for Microcontrollers: Hello World`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/zephyr/samples/modules/tflite-micro/hello_world/README.html#tflite-hello-world
 .. _`HID Service`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/nrf/libraries/bluetooth/services/hids.html
 .. _`Video`: https://docs.nordicsemi.com/bundle/ncs-3.3.0/page/zephyr/hardware/peripherals/video.html
+
+.. ### Source: memfault.com
+
+.. _`Memfault`: https://memfault.com/
+.. _`Memfault Custom Data Recording`: https://docs.memfault.com/docs/mcu/custom-data-recording
 
 .. ### Source: edgeimpulse.com
 

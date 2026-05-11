@@ -55,7 +55,11 @@ extensions = [
     'zephyr.doxyrunner',
     'zephyr.doxybridge',
     'zephyr.external_content',
+    'sphinxcontrib.plantuml',
 ]
+
+plantuml = 'plantuml'
+plantuml_output_format = 'svg_img'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -72,6 +76,7 @@ external_content_contents = [
     (EDGE_AI_BASE, "applications/**/*.rst"),
     (EDGE_AI_BASE, "samples/**/*.rst"),
     (EDGE_AI_BASE, "tests/**/*.rst"),
+    (EDGE_AI_BASE, "lib/**/Kconfig"),
 ]
 
 # -- Options for doxyrunner plugin ---------------------------------------------
@@ -123,7 +128,8 @@ html_extra_path = ['versions.json']
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static'] (currently not in use)
+html_static_path = [str(EDGE_AI_BASE / "doc" / "_static")]
+html_css_files = ['custom.css']
 
 rst_epilog = """
 .. include:: /links.txt

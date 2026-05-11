@@ -2404,6 +2404,8 @@ PREDEFINED             = __DOXYGEN__ \
                          "__syscall=" \
                          "__syscall_inline=" \
                          "__attribute(x)= DOXYGEN=1" \
+                         CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION \
+                         CONFIG_NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX \
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The

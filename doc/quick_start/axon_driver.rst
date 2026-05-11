@@ -117,3 +117,10 @@ Build your application and flash it to your Nordic device.
 
 Monitor performance metrics like inference time and current consumption to ensure your application meets requirements.
 The direct driver access gives you the control needed to fine-tune performance for demanding embedded AI applications.
+
+Next steps
+**********
+
+See further documentation:
+
+* Add runtime monitoring of model outputs with :ref:`nrf_edgeai_obsv_lib`.

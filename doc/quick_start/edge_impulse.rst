@@ -139,3 +139,4 @@ To work on advanced solutions, see further documentation:
 
 * Explore advanced features - Dive deeper into the `Edge Impulse C++ SDK`_ documentation to discover advanced capabilities like anomaly detection, continuous learning, and custom processing blocks.
 * Direct Axon NPU control - If you use Axon and need lower‑level access to the NPU beyond what |EI| provides, see :ref:`quick_start_axon_driver_app_development` to learn how to implement custom inference pipelines with the Axon driver API.
+* Add runtime monitoring of model outputs with :ref:`nrf_edgeai_obsv_lib`.

@@ -1,0 +1,6 @@
+/* Make PlantUML SVG diagrams responsive.
+ * svg_img format emits <p class="plantuml"><img src="...svg"> */
+p.plantuml > img {
+    max-width: 100%;
+    height: auto;
+}

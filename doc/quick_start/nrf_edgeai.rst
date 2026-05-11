@@ -151,3 +151,4 @@ Next steps
 See further documentation:
 
 * Read through :ref:`nrf_edgeai_lib` to understand more about the library and its capabilities.
+* Add runtime monitoring of model outputs with :ref:`nrf_edgeai_obsv_lib`.
