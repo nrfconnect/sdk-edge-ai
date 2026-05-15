@@ -95,6 +95,11 @@ Usage (paths relative to the sdk-edge-ai tree):
     # Optional --device with --cdr-id probes device-scoped download URLs if org-level paths 404.
     ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --from-cloud --cdr-id 12345 --device <SN>
 
+    # Fleet mode (all devices, mirrors https://app.memfault.com/.../custom-data-recordings)
+    ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --from-cloud --fleet
+    ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --from-cloud --fleet --limit 20
+    ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --from-cloud --fleet --reason "" --limit 5
+
 Requires Python 3.9+, with dependencies ``cbor2`` and ``requests`` installed.
 Install with: ``pip install -r scripts/decode_edgeai_obsv_cdr/requirements.txt``
 (from the sdk-edge-ai root), or ``pip install cbor2 requests``.
@@ -145,8 +150,8 @@ EVENT_TYPES = {
 DEFAULT_API_BASE = "https://api.memfault.com"
 DEFAULT_REASON = "edgeai_observability"
 
-# Listing: Memfault may ignore ``per_page`` or order oldest-first; see
-# ``_fetch_cloud`` for merge/sort and strict cap before downloading payloads.
+# Listing: Memfault may ignore ``per_page`` or return pages oldest-first; see
+# ``_cloud_list_all_cdrs`` (all pages) and ``_fetch_cloud_list`` (newest-first sort).
 CDR_LIST_PER_PAGE_DEFAULT = 100
 CDR_LIST_PER_PAGE_CAP = 250
 
@@ -527,6 +532,18 @@ def _cdr_list_url(cfg: CloudConfig, device: str) -> str:
     )
 
 
+def _cdr_fleet_list_url(cfg: CloudConfig) -> str:
+    """Project-level CDR list; mirrors the Fleet CDR Viewer UI (2026-04).
+
+    UI:  https://app.memfault.com/organizations/{org}/projects/{project}/custom-data-recordings
+    API: https://api.memfault.com/api/v0/organizations/{org}/projects/{project}/custom-data-recordings
+    """
+    return (
+        f"{cfg.api_base}/api/v0/organizations/{cfg.org}"
+        f"/projects/{cfg.project}/custom-data-recordings"
+    )
+
+
 def _unwrap_paginated(payload: Any) -> list[Any]:
     """Memfault APIs return either {"data": [...]} or a bare list."""
     if isinstance(payload, list):
@@ -561,8 +578,7 @@ def _dedupe_cdr_rows_by_id(rows: list[Any]) -> list[Any]:
 
 def _cloud_list_cdrs_page(
     session: Any,
-    cfg: CloudConfig,
-    device: str,
+    list_url: str,
     *,
     page: int,
     per_page: int,
@@ -571,8 +587,32 @@ def _cloud_list_cdrs_page(
     params: dict[str, Any] = {"page": page, "per_page": per_page}
     if reason:
         params["collection_reason"] = reason
-    payload = _cloud_get(session, _cdr_list_url(cfg, device), params=params)
+    payload = _cloud_get(session, list_url, params=params)
     return _unwrap_paginated(payload), _cdr_list_paging_meta(payload)
+
+
+def _cloud_list_all_cdrs(
+    session: Any,
+    list_url: str,
+    *,
+    per_page: int,
+    reason: str | None,
+) -> tuple[list[Any], int]:
+    """Fetch every page of a paginated CDR list; return deduplicated rows and page count."""
+    items_first, paging = _cloud_list_cdrs_page(
+        session, list_url, page=1, per_page=per_page, reason=reason,
+    )
+    total_pages = max(int(paging.get("total_pages") or 1), 1)
+    all_items: list[Any] = list(items_first)
+
+    for page in range(2, total_pages + 1):
+        page_items, _ = _cloud_list_cdrs_page(
+            session, list_url, page=page, per_page=per_page, reason=reason,
+        )
+        all_items.extend(page_items)
+        log.debug("CDR list page %s/%s: %s row(s)", page, total_pages, len(page_items))
+
+    return _dedupe_cdr_rows_by_id(all_items), total_pages
 
 
 def _parse_timestamp_for_sort(value: Any) -> float | None:
@@ -758,14 +798,19 @@ def _count_cloud(args: argparse.Namespace) -> dict[str, Any]:
     """List-only: hit the list endpoint with per_page=1 and read total_count
     from the paging block. One GET, no downloads.
     """
-    if not args.device:
-        raise SystemExit("error: --count requires --device")
     cfg = _cloud_config(args)
     session = _cloud_session(cfg)
+    if args.fleet:
+        list_url = _cdr_fleet_list_url(cfg)
+        scope = "fleet"
+    elif args.device:
+        list_url = _cdr_list_url(cfg, args.device)
+        scope = args.device
+    else:
+        raise SystemExit("error: --count requires --device or --fleet")
     _, paging = _cloud_list_cdrs_page(
         session,
-        cfg,
-        args.device,
+        list_url,
         page=1,
         per_page=1,
         reason=args.reason,
@@ -776,10 +821,66 @@ def _count_cloud(args: argparse.Namespace) -> dict[str, Any]:
             f"{json.dumps(paging, default=str)[:400]}"
         )
     return {
-        "device": args.device,
+        "scope": scope,
         "reason": args.reason or None,
         "total_count": paging["total_count"],
     }
+
+
+def _fetch_cloud_list(
+    session: Any,
+    cfg: CloudConfig,
+    list_url: str,
+    *,
+    limit: int,
+    reason: str | None,
+    device_hint: str | None,
+    validate: bool,
+) -> list[dict[str, Any]]:
+    """Shared list-and-download logic for per-device and fleet modes."""
+    per_page = min(max(limit, CDR_LIST_PER_PAGE_DEFAULT), CDR_LIST_PER_PAGE_CAP)
+
+    items, total_pages = _cloud_list_all_cdrs(
+        session, list_url, per_page=per_page, reason=reason,
+    )
+    log.debug(
+        "CDR list: per_page=%s pages=%s unique row(s)=%s",
+        per_page, total_pages, len(items),
+    )
+
+    dict_rows = [row for row in items if isinstance(row, dict)]
+    if dict_rows and all(_best_timestamp_unix(row) is None for row in dict_rows):
+        log.warning(
+            "CDR list rows had no parseable time fields %s; "
+            "falling back to numeric id descending (largest id first)",
+            _CDR_LIST_TIME_FIELDS,
+        )
+    items = sorted(items, key=_cdr_newest_first_sort_key, reverse=True)
+    items = items[:limit]
+
+    log.debug(
+        "CDR list after sort: downloading id(s) %s",
+        [row.get("id") if isinstance(row, dict) else None for row in items],
+    )
+
+    results: list[dict[str, Any]] = []
+    n_dl = len(items)
+    for i, summary in enumerate(items, start=1):
+        cdr_id = summary.get("id")
+        if cdr_id is None:
+            raise SystemExit(
+                f"error: list item missing 'id': {json.dumps(summary)[:400]}"
+            )
+        print(
+            f"decode_edgeai_obsv_cdr: fetching CDR id={cdr_id} ({i}/{n_dl})...",
+            file=sys.stderr,
+            flush=True,
+        )
+        raw = _download_cdr_bytes(session, cfg, cdr_id, device=device_hint)
+        results.append(
+            _decode_cloud_item(summary, raw, device_hint=device_hint, validate=validate)
+        )
+    return results
 
 
 def _fetch_cloud(args: argparse.Namespace) -> list[dict[str, Any]]:
@@ -796,87 +897,31 @@ def _fetch_cloud(args: argparse.Namespace) -> list[dict[str, Any]]:
             )
         ]
 
-    if not args.device:
-        raise SystemExit("error: --from-cloud requires either --device or --cdr-id")
-
-    # Wide list window + optional merge of page 1 and last page — otherwise
-    # ``per_page=--limit`` can yield one stale row, or the API may return many
-    # rows and we would download every payload sequentially (looks hung).
-    per_page = min(max(args.limit, CDR_LIST_PER_PAGE_DEFAULT), CDR_LIST_PER_PAGE_CAP)
-
-    items_first, paging = _cloud_list_cdrs_page(
-        session,
-        cfg,
-        args.device,
-        page=1,
-        per_page=per_page,
-        reason=args.reason,
-    )
-    total_pages = max(int(paging.get("total_pages") or 1), 1)
-
-    log.debug(
-        "CDR list: per_page=%s paging=%s rows_page1=%s",
-        per_page,
-        paging,
-        len(items_first),
-    )
-
-    if total_pages > 1:
-        items_last, _ = _cloud_list_cdrs_page(
+    if args.fleet:
+        return _fetch_cloud_list(
             session,
             cfg,
-            args.device,
-            page=total_pages,
-            per_page=per_page,
+            _cdr_fleet_list_url(cfg),
+            limit=args.limit,
             reason=args.reason,
+            device_hint=None,
+            validate=args.validate,
         )
-        items = _dedupe_cdr_rows_by_id(items_first + items_last)
-        log.debug(
-            "CDR list merged page 1 + page %s: %s unique row(s)",
-            total_pages,
-            len(items),
-        )
-    else:
-        items = items_first
 
-    dict_rows = [row for row in items if isinstance(row, dict)]
-    if dict_rows and all(_best_timestamp_unix(row) is None for row in dict_rows):
-        log.warning(
-            "CDR list rows had no parseable time fields %s; "
-            "falling back to numeric id descending (largest id first)",
-            _CDR_LIST_TIME_FIELDS,
+    if not args.device:
+        raise SystemExit(
+            "error: --from-cloud requires --device, --fleet, or --cdr-id"
         )
-    items = sorted(items, key=_cdr_newest_first_sort_key, reverse=True)
-    items = items[: args.limit]
 
-    log.debug(
-        "CDR list after sort: downloading id(s) %s",
-        [
-            row.get("id") if isinstance(row, dict) else None
-            for row in items
-        ],
+    return _fetch_cloud_list(
+        session,
+        cfg,
+        _cdr_list_url(cfg, args.device),
+        limit=args.limit,
+        reason=args.reason,
+        device_hint=args.device,
+        validate=args.validate,
     )
-
-    results: list[dict[str, Any]] = []
-    n_dl = len(items)
-    for i, summary in enumerate(items, start=1):
-        cdr_id = summary.get("id")
-        if cdr_id is None:
-            raise SystemExit(
-                f"error: list item missing 'id': {json.dumps(summary)[:400]}"
-            )
-        print(
-            f"decode_edgeai_obsv_cdr: fetching CDR id={cdr_id} ({i}/{n_dl})...",
-            file=sys.stderr,
-            flush=True,
-        )
-        raw = _download_cdr_bytes(session, cfg, cdr_id, device=args.device)
-        results.append(
-            _decode_cloud_item(
-                summary, raw, device_hint=args.device, validate=args.validate
-            )
-        )
-    return results
 
 
 def _decode_cloud_item(
@@ -964,7 +1009,16 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--device",
-        help="Device serial (used with --from-cloud).",
+        help="Device serial (used with --from-cloud for per-device listing or --cdr-id fallback).",
+    )
+    parser.add_argument(
+        "--fleet",
+        action="store_true",
+        help=(
+            "List CDRs across all devices in the project (fleet-wide). "
+            "Mirrors https://app.memfault.com/.../custom-data-recordings. "
+            "Used with --from-cloud; mutually exclusive with --device."
+        ),
     )
     parser.add_argument(
         "--cdr-id",
@@ -978,9 +1032,8 @@ def _build_parser() -> argparse.ArgumentParser:
         type=_cli_positive_int,
         default=1,
         help=(
-            "Number of most-recent CDRs to fetch from Memfault (--from-cloud "
-            "with --device only; default: 1). Ignored for local hex, --chunks, "
-            "and --cdr-id."
+            "Number of most-recent CDRs to fetch (--from-cloud with --device or "
+            "--fleet; default: 1). Ignored for local hex, --chunks, and --cdr-id."
         ),
     )
     parser.add_argument(
@@ -995,7 +1048,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--count",
         action="store_true",
         help=(
-            "List-only mode: print how many CDRs match --device (+--reason) "
+            "List-only mode: print how many CDRs match --device or --fleet (+--reason) "
             "and exit, without downloading payloads. Implies --from-cloud."
         ),
     )
@@ -1092,13 +1145,17 @@ def main() -> int:
         stream=sys.stderr,
     )
 
+    if args.device and args.fleet:
+        print("error: --device and --fleet are mutually exclusive", file=sys.stderr)
+        return 2
+
     if (
         _limit_flag_in_argv(sys.argv)
         and not args.from_cloud
         and not args.count
     ):
         log.warning(
-            "--limit applies only to --from-cloud when listing by --device; "
+            "--limit applies only to --from-cloud when listing by --device or --fleet; "
             "local decoding ignores it."
         )
 
