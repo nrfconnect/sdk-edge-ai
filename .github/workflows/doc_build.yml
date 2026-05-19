@@ -45,6 +45,8 @@ jobs:
 
       - name: Install system dependencies
         run: |
+          sudo apt update
+          sudo apt-get install -y graphviz plantuml
           wget --no-verbose "https://github.com/doxygen/doxygen/releases/download/Release_${DOXYGEN_VERSION//./_}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz"
           sudo tar xf doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz -C /opt
           echo "/opt/doxygen-${DOXYGEN_VERSION}/bin" >> $GITHUB_PATH
