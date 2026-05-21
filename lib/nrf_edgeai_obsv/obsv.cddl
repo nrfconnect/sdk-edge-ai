@@ -1,0 +1,38 @@
+; Copyright (c) 2026 Nordic Semiconductor ASA
+; SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+;
+; CDDL schema for the Edge AI observability CBOR wire format.
+;
+; obsv-payload is produced by nrf_edgeai_obsv_encode_cbor() for a single context.
+; obsv-list is produced by nrf_edgeai_obsv_encode_list() and wraps one
+; obsv-payload per registered context; it is the on-wire format for any transport
+; (e.g. Memfault CDR, UART, BLE) that carries multi-model observability data.
+
+obsv-list = [+ obsv-payload]
+
+obsv-payload = {
+    "format_version" : uint,    ; schema version; bumped on breaking changes
+    "num_inferences" : uint,    ; inferences consumed since last reset
+    "model"          : obsv-model,
+    "metrics"        : [* obsv-metric],
+}
+
+obsv-model = {
+    "id"          : uint,       ; application-defined model identifier
+    "num_classes" : uint,       ; output class count the model produces
+    "version"     : uint,       ; application-defined model version
+}
+
+; One element per registered metric. Keys are abbreviated because this map
+; repeats per metric; top-level keys use full words since they appear once.
+obsv-metric = {
+    "id" : uint,                ; nrf_edgeai_obsv_metric_id (on-wire id)
+    "v"  : uint,                ; metric payload version (per metric_id)
+    "d"  : [* [* uint]],        ; row-major num_rows x num_cols matrix
+}
+
+; Well-known metric id values. The schema does not constrain "id" to this set;
+; unknown ids are allowed for forward compatibility. See
+; enum nrf_edgeai_obsv_metric_id in nrf_edgeai_obsv_metrics.h.
+;   2 = transition matrix (num_classes x num_classes)
+;   3 = probability distribution (num_classes x num_bins)

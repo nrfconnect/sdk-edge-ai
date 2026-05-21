@@ -1,0 +1,65 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig NRF_EDGEAI_OBSV
+	bool "Edge AI Observability"
+	help
+	  Enable the Edge AI observability library.
+	  Collects runtime metrics from class probabilities and exposes them
+	  as typed snapshots that transport layers can serialize as they wish.
+
+if NRF_EDGEAI_OBSV
+
+config NRF_EDGEAI_OBSV_ENCODE
+	bool "CBOR observability encoder"
+	depends on ZCBOR
+	help
+	  Builds nrf_edgeai_obsv_encode.c and enables nrf_edgeai_obsv_encode()
+	  in the Zephyr wrapper.
+
+config NRF_EDGEAI_OBSV_EXTRA_ENCODE_BYTES
+	int "Extra bytes reserved in the encode buffer for custom metrics"
+	depends on NRF_EDGEAI_OBSV_ENCODE
+	default 0
+	help
+	  Additional bytes added to NRF_EDGEAI_OBSV_ENCODE_MAX_SIZE to
+	  accommodate custom metrics registered alongside the built-in ones.
+	  Set to at least the sum of NRF_EDGEAI_OBSV_ENCODE_METRIC_SIZE(n_rows,
+	  n_cols) evaluated for each custom metric. The Memfault staging buffer
+	  encode buffer are sized from NRF_EDGEAI_OBSV_ENCODE_MAX_SIZE,
+	  so they grow automatically.
+
+config NRF_EDGEAI_OBSV_MAX_CLASSES
+	int "Maximum number of model output classes"
+	default 4
+	range 1 65535
+	help
+	  Upper bound on model output classes tracked by observability metrics.
+	  Both metric counter storage and the CBOR encode buffer scale with the
+	  class count; the transition matrix grows as N^2.
+
+config NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION
+	bool "Probability distribution metric"
+	help
+	  Per-class histogram of inference probability values.
+
+if NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION
+
+config NRF_EDGEAI_OBSV_PROBS_DISTRIBUTION_BIN_NUM
+	int "Number of histogram bins"
+	default 4
+	range 2 16
+	help
+	  Number of bins in the probability histogram per class.
+
+endif # NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION
+
+config NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX
+	bool "Transition matrix metric"
+	help
+	  Tracks class-to-class transitions across consecutive inferences.
+
+endif # NRF_EDGEAI_OBSV
