@@ -1,0 +1,21 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+common:
+  tags: edgeai obsv memfault
+  platform_allow:
+    - native_sim/native/64
+    - qemu_cortex_m3
+  integration_platforms:
+    - native_sim/native/64
+
+tests:
+  edgeai.obsv_memfault: {}
+
+  edgeai.obsv_memfault.auto_collect:
+    extra_configs:
+      - CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT=y
+      - CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC=60
