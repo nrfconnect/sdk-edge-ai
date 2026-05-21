@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: axon_user_instance_36237
- * Axon Neural Network Compiler Version: 1.0.1
+ * Axon Neural Network Compiler Version: 1.2.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -9,11 +9,19 @@ extern "C" {
 
 #define NRF_AXON_MODEL_AXON_USER_INSTANCE_36237_MAX_IL_BUFFER_USED 344
 #define NRF_AXON_MODEL_AXON_USER_INSTANCE_36237_MAX_PSUM_BUFFER_USED 0
+static_assert(NRF_AXON_MODEL_AXON_USER_INSTANCE_36237_MAX_IL_BUFFER_USED <= (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
+static_assert(NRF_AXON_VERSION >= 0x00010200, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
 
-#if AXON_COMPILE_TIME_BUFFER_CHECK
-static_assert(NRF_AXON_MODEL_AXON_USER_INSTANCE_36237_MAX_IL_BUFFER_USED < sizeof(nrf_axon_interlayer_buffer), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
+const char* labels_axon_user_instance_36237[] = {
+"0",
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+};
 
-#endif
 // size of axon_model_const_axon_user_instance_36237: 8972
 const static struct {
 	int8_t l00_weights[1472];
@@ -300,9 +308,9 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_axon_user_instance_362
   uint32_t axon_model_axon_user_instance_36237_packed_output_buf[NRF_AXON_MODEL_AXON_USER_INSTANCE_36237_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_axon_user_instance_36237 = {
-    .compiler_version = 0x00010001,
+    .compiler_version = 0x00010200,
     .model_name = "axon_user_instance_36237",
-    .labels = NULL,
+    .labels = labels_axon_user_instance_36237,
     .inputs = {
       {// 0
         .ptr = (int8_t*)nrf_axon_interlayer_buffer,
@@ -350,6 +358,9 @@ const nrf_axon_nn_compiled_model_s model_axon_user_instance_36237 = {
     .output_dequant_zp = -128,
     .output_stride = 7,
     .is_layer_model = false,
+    .extra_output_cnt = 0,
+    .extra_outputs = NULL,
+    .min_driver_version_required = 0x00010200,
 };
 #ifdef __cplusplus
 }
