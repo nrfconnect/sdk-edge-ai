@@ -1,0 +1,77 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig NRF_EDGEAI_OBSV_MEMFAULT
+	bool "Memfault transport for Edge AI Observability"
+	depends on NRF_EDGEAI_OBSV
+	depends on MEMFAULT_CDR_ENABLE || ZTEST
+	depends on NRF_EDGEAI_OBSV_ENCODE || ZTEST
+	help
+	  Encodes observability snapshots as CBOR and publishes them to Memfault
+	  as a Custom Data Recording (CDR) binary blob.
+
+if NRF_EDGEAI_OBSV_MEMFAULT
+
+config NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS
+	int "Maximum number of observability contexts registered with Memfault"
+	default 1
+	range 1 8
+	help
+	  Upper bound on the number of nrf_edgeai_obsv_ctx_t instances that can
+	  be registered via nrf_edgeai_obsv_memfault_init(). Each additional
+	  context increases the staging buffer by NRF_EDGEAI_OBSV_ENCODE_MAX_SIZE
+	  bytes. The CDR payload is a CBOR array with one entry per context.
+
+config NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
+	bool "Periodically refresh the CDR payload"
+	help
+	  Spawns a delayable work item on the system workqueue that
+	  calls nrf_edgeai_obsv_memfault_collect() on a fixed
+	  interval. Use this when the transport drains opportunistically
+	  (BT_MDS, MEMFAULT_HTTP_PERIODIC_UPLOAD) and the application
+	  does not want to wire a timer itself. The first collect runs
+	  one interval after initialization.
+
+	  When enabled (and whenever collect can run concurrently with inference),
+	  bind the transport with nrf_edgeai_obsv_memfault_init and drive
+	  inference through nrf_edgeai_obsv_update (see nrf_edgeai_obsv.h)
+	  so encode inside collect does not race snapshot collection.
+
+	  collect() allocates a NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ-byte
+	  temporary buffer on the calling thread's stack. When AUTO_COLLECT is
+	  enabled, that thread is the system workqueue, so increase
+	  CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE accordingly (see
+	  nrf_edgeai_obsv/nrf_edgeai_obsv_encode_sizes.h for the exact value
+	  at your Kconfig dimensions). When calling collect() manually, ensure
+	  your thread's stack is large enough.
+
+config NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC
+	int "Auto-collect interval (seconds)"
+	depends on NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
+	default 86400
+	range 60 2592000
+	help
+	  How often the delayable work item refreshes the staged CDR payload.
+
+	  Memfault's backend accepts at most 1 CDR per device per day by default.
+	  The limit can be raised in the Memfault project settings, or bypassed
+	  entirely for devices in developer mode. The default matches the 1-per-day
+	  limit.
+
+	  With HTTP periodic upload: align this interval with
+	  MEMFAULT_HTTP_PERIODIC_UPLOAD_INTERVAL_SECS so every upload finds
+	  fresh data.
+
+	  With MDS (BLE GATT): the phone drives the drain cadence. Pick an
+	  interval short enough that the phone, whenever it connects,
+	  finds a recent-enough snapshot for your observability needs.
+
+
+module = NRF_EDGEAI_OBSV_MEMFAULT
+module-str = nrf_edgeai_obsv_mflt
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # NRF_EDGEAI_OBSV_MEMFAULT

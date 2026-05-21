@@ -7,3 +7,4 @@
 add_subdirectory_ifdef(CONFIG_NRF_AXON axon)
 add_subdirectory_ifdef(CONFIG_NRF_EDGEAI nrf_edgeai)
 add_subdirectory_ifdef(CONFIG_NRF_EDGEAI_OBSV nrf_edgeai_obsv)
+add_subdirectory_ifdef(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT nrf_edgeai_obsv_memfault)
