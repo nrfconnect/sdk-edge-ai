@@ -7,5 +7,6 @@
 menu "Libraries"
 
 rsource "nrf_edgeai/Kconfig"
+rsource "nrf_edgeai_obsv/Kconfig"
 
 endmenu
