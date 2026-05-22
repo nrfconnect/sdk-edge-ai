@@ -1,0 +1,7 @@
+/*
+ * Application-specific heartbeat metrics go here.
+ *
+ * This sample uses Memfault Custom Data Recording (CDR) to push the
+ * full serialized observability payload, so no per-metric heartbeat keys
+ * are required.
+ */

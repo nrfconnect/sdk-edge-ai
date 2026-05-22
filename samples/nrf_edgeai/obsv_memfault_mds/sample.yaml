@@ -1,0 +1,20 @@
+sample:
+  description: nRF Edge AI observability pushed to Memfault over BLE MDS with synthetic
+    4-class data
+  name: nRF Edge AI Observability over Memfault MDS
+tests:
+  sample.edgeai_obsv_memfault_mds:
+    build_only: true
+    extra_args:
+      - CONFIG_MEMFAULT_NCS_PROJECT_KEY="dummy-key"
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    tags:
+      - bluetooth
+      - memfault
+      - nrf_edgeai_sample_obsv
+      - ci_build

@@ -1,0 +1,27 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "nRF Edge AI Observability over Memfault MDS sample"
+
+config NRF_EDGEAI_OBSV_SAMPLE_INFERENCE_PERIOD_MS
+	int "Synthetic inference period (ms)"
+	default 1000
+	range 100 60000
+	help
+	  How often the sample produces a synthetic 4-class probability
+	  vector and feeds it to the observability context.
+
+config NRF_EDGEAI_OBSV_SAMPLE_ROTATION_PERIOD_SEC
+	int "Dominant class rotation period (seconds)"
+	default 30
+	range 5 3600
+	help
+	  How often the synthetic generator rotates the dominant class
+	  (round-robin over the 4 classes).
+
+endmenu
+
+source "Kconfig.zephyr"
