@@ -87,14 +87,20 @@ static void control_output_work_handler(struct k_work *work)
 		buffer_len = strlen(buffer);
 		break;
 
-	case CONTROL_MESSAGE_KW_SPOTTED:
-		buffer = output_buffer;
-		buffer_len = snprintf(output_buffer, sizeof(output_buffer),
-				      messages[message_item.type], message_item.name);
-		__ASSERT(buffer_len >= 0, "Error in snprintf call (%d)", buffer_len);
-		__ASSERT(buffer_len < sizeof(output_buffer), "Output buffer is too small");
+	case CONTROL_MESSAGE_KW_SPOTTED: {
+		int ret = snprintf(output_buffer, sizeof(output_buffer),
+				   messages[message_item.type], message_item.name);
 
+		if (ret < 0) {
+			atomic_set(&uart_busy, false);
+			k_msgq_get(&control_msg_queue, &message_item, K_NO_WAIT);
+			LOG_ERR("snprintf failed (%d)", ret);
+			return;
+		}
+		buffer = output_buffer;
+		buffer_len = MIN((size_t)ret, sizeof(output_buffer) - 1);
 		break;
+	}
 	default:
 		atomic_set(&uart_busy, false);
 		k_msgq_get(&control_msg_queue, &message_item, K_NO_WAIT);
