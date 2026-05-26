@@ -6,14 +6,6 @@
 
 # -- Path setup --------------------------------------------------------------
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-
 import os
 import sys
 from pathlib import Path
@@ -26,11 +18,19 @@ EDGE_AI_BASE = Path(manifest.repo_abspath)
 NRF_BASE = Path(manifest.get_projects(['nrf'])[0].abspath)
 ZEPHYR_BASE = Path(manifest.get_projects(['zephyr'])[0].abspath)
 
+sys.path.insert(0, str(EDGE_AI_BASE / 'doc' / '_extensions'))
 sys.path.insert(0, str(NRF_BASE / 'doc' / '_extensions'))
 sys.path.insert(0, str(ZEPHYR_BASE / 'doc' / '_extensions'))
 
 # Needed by options_from_kconfig extension which is not self contained
 sys.path.insert(0, str(ZEPHYR_BASE / 'scripts'))
+
+from edge_ai_project_info import (
+    get_manifest_revision,
+    get_version_string,
+    strip_v,
+    build_rst_epilog,
+)
 
 # -- Project information -----------------------------------------------------
 
@@ -38,8 +38,23 @@ project = 'nRF Connect SDK - Edge AI Add-on'
 copyright = '2026, Nordic Semiconductor'
 author = 'Nordic Semiconductor'
 
-# The full version, including alpha/beta/rc tags
-release = '2026'
+# The full version, including alpha/beta/rc tags.
+# Read from edge-ai/VERSION via the canonical Zephyr-format parser.
+# 'release' is a special symbol used by Sphinx for the version string in docs.
+release = get_version_string(EDGE_AI_BASE / 'VERSION')
+
+
+# -- Version information from west manifest ---------------------------------
+
+NCS_VERSION              = get_manifest_revision(manifest, "nrf")
+NCS_VERSION_NUMBER       = strip_v(NCS_VERSION)
+EDGE_IMPULSE_SDK_VERSION = get_manifest_revision(manifest, "edge-impulse-sdk-zephyr")
+TOOLCHAIN_NCS_ID         = NCS_VERSION
+ADDON_RELEASE            = release
+
+# Zephyr version — read from zephyr/VERSION (same format as edge-ai/VERSION).
+ZEPHYR_VERSION_NUMBER    = get_version_string(ZEPHYR_BASE / "VERSION")
+ZEPHYR_VERSION           = f"v{ZEPHYR_VERSION_NUMBER}"
 
 
 # -- General configuration ---------------------------------------------------
@@ -56,6 +71,7 @@ extensions = [
     'zephyr.doxybridge',
     'zephyr.external_content',
     'sphinxcontrib.plantuml',
+    'edge_ai_project_info',
 ]
 
 plantuml = 'plantuml'
@@ -131,7 +147,46 @@ html_extra_path = ['versions.json']
 html_static_path = [str(EDGE_AI_BASE / "doc" / "_static")]
 html_css_files = ['custom.css']
 
-rst_epilog = """
-.. include:: /links.txt
-.. include:: /shortcuts.txt
-"""
+# -- Project-wide string substitutions ---------------------------------------
+#
+# Single source of truth for project-wide string substitutions (the tokens
+# referenced in RST source as ``|name|``).
+#
+# Each entry is a ``(name, value)`` pair consumed by the
+# ``edge_ai_project_info`` extension, which:
+#
+#   1. Validates uniqueness of names at builder-init time.
+#
+#   2. Pre-expands ``|name|`` markers in raw RST source *before* docutils
+#      parses it (via a ``source-read`` hook).  This makes substitutions
+#      work uniformly everywhere, including inside ``code-block`` and
+#      ``literalinclude`` bodies.
+#
+#   3. Is used here via ``build_rst_epilog`` to pre-expand the same
+#      markers inside ``links.txt`` / ``shortcuts.txt`` URI targets before
+#      the text is handed to Sphinx as ``rst_epilog``.  (Docutils does not
+#      expand substitution references inside hyperlink target URIs.)
+#
+# List longer names before any name that is a substring of another to
+# ensure the longer match is applied first (the surrounding ``|``
+# delimiters already prevent overlap today, but the convention keeps the
+# file robust against future marker-syntax changes).
+#
+# Add new substitutions here only — do not redefine them elsewhere.
+
+SUBSTITUTIONS = [
+    ("release_version",             ADDON_RELEASE),
+    ("ncs_version_number",          NCS_VERSION_NUMBER),
+    ("ncs_version",                 NCS_VERSION),
+    ("toolchain_ncs_id",            TOOLCHAIN_NCS_ID),
+    ("edge_impulse_sdk_version",    EDGE_IMPULSE_SDK_VERSION),
+    ("zephyr_version_number",       ZEPHYR_VERSION_NUMBER),
+    ("zephyr_version",              ZEPHYR_VERSION),
+]
+
+# Consumed by the edge_ai_project_info extension (source-read handler).
+edge_ai_substitutions = SUBSTITUTIONS
+
+# -- rst_epilog: pre-expanded links.txt + shortcuts.txt ----------------------
+
+rst_epilog = build_rst_epilog(EDGE_AI_BASE / "doc", SUBSTITUTIONS)
