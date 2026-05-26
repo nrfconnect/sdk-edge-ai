@@ -5,7 +5,6 @@ permissions:
   pull-requests: write
 
 on:
-
   workflow_run:
     workflows: ["Documentation Build"]
     types:
@@ -47,47 +46,10 @@ jobs:
           NCS_DOC_SAS_MAIN: ${{ secrets.NCS_DOC_SAS_MAIN }}
         run: |
           if [[ "${{ github.event.workflow_run.event }}" == "pull_request" ]]; then
-            azcopy cp $OUTDIR "${{ vars.NCS_DOC_PR_STORAGE_URL }}addons/edge-ai?$NCS_DOC_SAS_PRS" --recursive=true
+            azcopy cp $OUTDIR "${{ vars.NCS_DOC_PR_STORAGE_URL }}addons/addon-edge-ai?$NCS_DOC_SAS_PRS" --recursive=true
           else
-            azcopy cp $OUTDIR "${{ vars.NCS_DOC_STORAGE_URL }}addons/edge-ai?$NCS_DOC_SAS_MAIN" --recursive=true
+            azcopy cp $OUTDIR "${{ vars.NCS_DOC_STORAGE_URL }}addons/addon-edge-ai?$NCS_DOC_SAS_MAIN" --recursive=true
           fi
-
-      - name: Upload Zoomin documentation
-        if: >
-          github.event.workflow_run.head_branch == 'main' &&
-          github.event.workflow_run.head_repository.full_name == github.repository
-        run: |
-          # trust server
-          mkdir -p ~/.ssh
-          ssh-keyscan ${{ vars.NCS_ZOOMIN_SERVER }} >> ~/.ssh/known_hosts
-
-          # prepare key
-          touch zoomin_key
-          chmod 600 zoomin_key
-          echo "${{ secrets.NCS_ZOOMIN_KEY }}" | base64 -d > zoomin_key
-
-          # upload files
-          for file in docs/*-apis*.zip; do
-            sftp -v -i zoomin_key ${{ vars.NCS_ZOOMIN_USER }}@${{ vars.NCS_ZOOMIN_SERVER }} <<EOF
-            cd docs-be.nordicsemi.com/doxygen/incoming
-            put ${file}
-            cd ../../../nordic-be-dev.zoominsoftware.io/doxygen/incoming
-            put ${file}
-            quit
-          EOF
-          done
-
-          for file in docs/addon-edge-ai*.zip; do
-            if [[ "$file" != *-apis* ]]; then
-            sftp -v -i zoomin_key ${{ vars.NCS_ZOOMIN_USER }}@${{ vars.NCS_ZOOMIN_SERVER }} <<EOF
-              cd docs-be.nordicsemi.com/sphinx-html/incoming
-              put ${file}
-              cd ../../../nordic-be-dev.zoominsoftware.io/sphinx-html/incoming
-              put ${file}
-              quit
-          EOF
-            fi
-          done
 
       - name: Find Comment
         if: ${{ github.event.workflow_run.event == 'pull_request' }}
@@ -105,5 +67,5 @@ jobs:
           comment-id: ${{ steps.fc.outputs.comment-id }}
           issue-number: ${{ env.PR }}
           body: |
-            You can find the documentation preview for this PR [here](${{ vars.NCS_DOC_PR_HOSTING_URL }}addons/edge-ai/PR-${{ env.PR }}/).
+            You can find the documentation preview for this PR [here](${{ vars.NCS_DOC_PR_HOSTING_URL }}addons/addon-edge-ai/PR-${{ env.PR }}/).
           edit-mode: replace
