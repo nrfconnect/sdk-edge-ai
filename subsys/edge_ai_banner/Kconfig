@@ -1,0 +1,12 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+config EDGE_AI_BOOT_BANNER
+	bool "Edge AI Add-on boot banner"
+	default y if BOOT_BANNER || NCS_BOOT_BANNER
+	help
+	  Prints the Edge AI Add-on version string at boot, immediately after
+	  the Zephyr boot banner. Uses SYS_INIT at APPLICATION level, priority 1.
