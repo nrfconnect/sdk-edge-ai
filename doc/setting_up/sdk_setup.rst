@@ -32,7 +32,7 @@ To get the nRF Edge AI Add-on code, you can either:
       Clone the nRF Edge AI Add-on code, together with the compatible |NCS|:
 
       1. Ensure you have installed `Visual Studio Code`_ and the `nRF Connect for Visual Studio Code`_ extension.
-      #. Follow the `nRF Connect SDK installation guide`_ to install |NCS| prerequisites and toolchain v3.3.0.
+      #. Follow the `nRF Connect SDK installation guide`_ to install |NCS| prerequisites and toolchain |toolchain_ncs_id|.
 
          .. note::
 
@@ -54,7 +54,7 @@ To get the nRF Edge AI Add-on code, you can either:
 
          Use this method when you wish to specifically evaluate Edge AI capabilities, but do not have the |NCS| setup yet.
 
-      1. Follow the `nRF Connect SDK installation guide`_ to install |NCS| prerequisites and toolchain v3.3.0.
+      1. Follow the `nRF Connect SDK installation guide`_ to install |NCS| prerequisites and toolchain |toolchain_ncs_id|.
 
          .. note::
 
@@ -69,19 +69,19 @@ To get the nRF Edge AI Add-on code, you can either:
 
                .. code-block:: console
 
-                  nrfutil sdk-manager toolchain launch --ncs-version v3.3.0 --terminal
+                  nrfutil sdk-manager toolchain launch --ncs-version |toolchain_ncs_id| --terminal
 
             .. group-tab:: Linux
 
                .. code-block:: console
 
-                  nrfutil sdk-manager toolchain launch --ncs-version v3.3.0 --shell
+                  nrfutil sdk-manager toolchain launch --ncs-version |toolchain_ncs_id| --shell
 
             .. group-tab:: MacOS
 
                .. code-block:: console
 
-                  nrfutil sdk-manager toolchain launch --ncs-version v3.3.0 --shell
+                  nrfutil sdk-manager toolchain launch --ncs-version |toolchain_ncs_id| --shell
 
       #. Initialize the nRF Edge AI repository, using one of the following methods:
 
@@ -93,7 +93,7 @@ To get the nRF Edge AI Add-on code, you can either:
 
                   .. code-block:: console
 
-                     west init --manifest-rev v2.0.0 --manifest-url https://github.com/nrfconnect/sdk-edge-ai
+                     west init --manifest-rev v|release_version| --manifest-url https://github.com/nrfconnect/sdk-edge-ai
 
             .. tab:: Manual cloning and initialization
 
@@ -101,7 +101,7 @@ To get the nRF Edge AI Add-on code, you can either:
 
                   .. code-block:: console
 
-                     git clone --branch v2.0.0 https://github.com/nrfconnect/sdk-edge-ai.git sdk-edge-ai
+                     git clone --branch v|release_version| https://github.com/nrfconnect/sdk-edge-ai.git sdk-edge-ai
 
                #. Initialize west with local manifest.
 
@@ -129,7 +129,7 @@ To get the nRF Edge AI Add-on code, you can either:
 
             - name: edge-ai
               url: https://github.com/nrfconnect/sdk-edge-ai
-              revision: v2.0.0
+              revision: v|release_version|
               import: true
 
          If you have already included the |NCS| in your west manifest, remove it or replace the above ``import`` key with the mapping:
@@ -159,7 +159,7 @@ To get the nRF Edge AI Add-on code, you can either:
 
          .. code-block:: console
 
-            git clone --branch v2.0.0 https://github.com/nrfconnect/sdk-edge-ai
+            git clone --branch v|release_version| https://github.com/nrfconnect/sdk-edge-ai
 
       #. Set the CMake or environment variable ``EXTRA_ZEPHYR_MODULES`` to the Add-on code path.
          Use absolute path to ensure proper path resolution.
