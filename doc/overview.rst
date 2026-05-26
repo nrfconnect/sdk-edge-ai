@@ -120,7 +120,7 @@ This solution uses the `Edge Impulse`_ platform to provide an end-to-end machine
 |EIS| offers a visual development interface for designing signal-processing and ML pipelines (called *Impulses*), and generates a portable C++ library that can be compiled together with your |NCS| application.
 Depending on the target device, inference can run on the CPU or be accelerated by the `Axon NPU`_ for higher throughput and lower power consumption.
 
-Use this solution when you prefer a guided, visual ML workflow, when you need built-in data collection tooling, or when you are already working within the Edge Impulse ecosystem.
+Use this solution when you prefer a guided, visual ML workflow, when you need built-in data collection tooling, or when you are already working within the |EI| ecosystem.
 
 Key characteristics:
 
@@ -128,7 +128,7 @@ Key characteristics:
 * Inference runs on the CPU or on the Axon NPU, depending on the target device.
 * Includes tools for sensor data collection, such as the :ref:`ei_data_forwarder_sample`, and supports data upload from mobile devices.
 * Deployed as a Zephyr library package that integrates directly into the |NCS| build system.
-* Extensive documentation and community-contributed datasets are available through the Edge Impulse platform.
+* Extensive documentation and community-contributed datasets are available through the |EI| platform.
 
 See :ref:`Edge Impulse quick start guide <quick_start_edge_impulse>` for details.
 

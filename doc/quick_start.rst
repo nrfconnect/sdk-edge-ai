@@ -25,10 +25,10 @@ These workflows rely on integrated toolchains and APIs to reduce setup effort:
 * :ref:`quick_start_nrf_edgeai` - Use it to train models with Nordic Edge AI Lab and deploy them with a unified API.
   It supports both CPU execution (Neuton) and NPU acceleration (Axon) on compatible devices.
   Use it for easy setup, standardized workflow, and the best Nordic Semiconductor device compatibility.
-* :ref:`quick_start_edge_impulse` - Use the Edge Impulse platform for an end-to-end machine learning solution.
+* :ref:`quick_start_edge_impulse` - Use the |EI| platform for an end-to-end machine learning solution.
   It includes visual development tools, extensive documentation, and community support.
   Models run on CPU or on the Axon NPU depending on the deployment target you select.
-  Use this option if you already work with Edge Impulse or require its tooling ecosystem.
+  Use this option if you already work with |EI| or require its tooling ecosystem.
 
 .. toctree::
    :maxdepth: 1

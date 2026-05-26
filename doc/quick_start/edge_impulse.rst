@@ -15,7 +15,7 @@ On devices equipped with the Axon NPU, |EI| automatically leverages hardware acc
 On devices without the NPU, the same model runs in software on the CPU.
 
 To follow this guide, you should be familiar with basic embedded systems development.
-The guide covers the steps required to collect data, train a model using Edge Impulse tools, and deploy the resulting model to a Nordic device.
+The guide covers the steps required to collect data, train a model using |EI| tools, and deploy the resulting model to a Nordic device.
 
 After completing this guide, you will have a machine learning application running on a Nordic Semiconductor device using |EI|.
 

@@ -169,7 +169,7 @@ running test vectors and estimating accuracy.
          The classification index is the index of the maximum value in the vector.
 
        ``edge_impulse_labels``
-         Label format used by Edge Impulse models.
+         Label format used by |EI| models.
          Labels are stored in the first column followed by three additional values.
          The executor reads the first column and subtracts 1, as labels are one‑based.
 
