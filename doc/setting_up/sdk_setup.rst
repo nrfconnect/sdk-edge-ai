@@ -12,9 +12,9 @@ This page outlines the requirements that you need to fulfill before you start wo
 Get the nRF Edge AI Add-on code
 *******************************
 
-The nRF Edge AI Add-on is distributed as a Git repository, and is managed through its own west manifest.
-The compatible nRF Connect SDK version is specified in the :file:`west.yml` file.
-To get the nRF Edge AI Add-on code, you can either:
+The |EAI| is distributed as a Git repository, and is managed through its own west manifest.
+The compatible |NCS| version is specified in the :file:`west.yml` file.
+To get the |EAI| code, you can either:
 
 * Use the `nRF Connect for Visual Studio Code`_ extension, which provides a convenient way to clone the Add-on and compatible |NCS| version.
 * Clone the Add-on repository and initialize west with the local manifest.
@@ -29,7 +29,7 @@ To get the nRF Edge AI Add-on code, you can either:
 
          Use this method when you wish to specifically evaluate Edge AI capabilities, but do not have the |NCS| setup yet.
 
-      Clone the nRF Edge AI Add-on code, together with the compatible |NCS|:
+      Clone the |EAI| code, together with the compatible |NCS|:
 
       1. Ensure you have installed `Visual Studio Code`_ and the `nRF Connect for Visual Studio Code`_ extension.
       #. Follow the `nRF Connect SDK installation guide`_ to install |NCS| prerequisites and toolchain |toolchain_ncs_id|.
@@ -149,7 +149,7 @@ To get the nRF Edge AI Add-on code, you can either:
       .. note::
 
          Use this method if you have a prior installation of the |NCS| and would like to evaluate or use the Edge-AI Add-On with that installation.
-         This method will allow you to keep the nRF Connect SDK manifest unmodified.
+         This method will allow you to keep the |NCS| manifest unmodified.
 
       Before using this approach, ensure that a compatible version of the |NCS| is installed.
       To identify the compatible |NCS| version, check the :file:`west.yml` file of the |EAI|.
@@ -169,5 +169,5 @@ To get the nRF Edge AI Add-on code, you can either:
 
             See the `edge-impulse-sdk-zephyr`_ repository in case you wish to:
 
-            * Use Edge Impulse in Zephyr library deployment.
-            * Use Edge Impulse samples from Add-on.
+            * Use |EI| in Zephyr library deployment.
+            * Use |EI| samples from Add-on.

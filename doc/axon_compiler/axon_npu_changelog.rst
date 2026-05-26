@@ -10,7 +10,7 @@ Axon NPU changelog
 This page tracks changes and updates as compared to the latest official release.
 For more information refer to the following section.
 
-For the list of Edge AI Add-on changelog information, see :ref:`edgeai_release_notes`.
+For the list of |EAI| changelog information, see :ref:`edgeai_release_notes`.
 
 Changelog
 *********
@@ -35,7 +35,7 @@ Release 1.2.0  16 Apr 2026
 
   * Compiler release 1.2.0
   * Support for ``v3.3.0-preview2`` tag of ``sdk-nrf`` (``SHA-1 ede152ec21``).
- 
+
     .. note::
       The compiler was tested and built with SDK toolchain version v3.2.0.
       You should use this version for stable builds.
@@ -55,7 +55,7 @@ Release 1.2.0  16 Apr 2026
 Compatibility
 =============
 
-* Older model versions are compatible with the latest driver. 
+* Older model versions are compatible with the latest driver.
   You should recompile models using the Add operator.
 * New model versions are compatible with older driver versions if they do not include multiple outputs or the ``RESIZE_NEAREST_NEIGHBOR`` operation.
 
@@ -69,19 +69,19 @@ Release 1.1.0  19 Mar 2026
 
   * Compiler release 1.1.0.
   * Support for the ``v3.3.0-preview2`` tag of ``sdk-nrf`` (``SHA-1 ede152ec21``).
-   
+
     .. note::
        The compiler was tested and built with SDK toolchain version v3.2.0.
        You should use this version for stable builds.
-   
-  * TFLite v2.19 as the officially supported version of TFLite. 
+
+  * TFLite v2.19 as the officially supported version of TFLite.
     Version 2.15 should still work.
-  * Build support for ``nRF54lm20b``, replacing ``nRF54lm20a``. 
+  * Build support for ``nRF54lm20b``, replacing ``nRF54lm20a``.
     The new board name is ``nrf54lm20dk/nrf54lm20b/cpuapp`` in the build command.
 
 * Fixed:
 
-  * Fully-connected layers with up to 2048 input length and 1024 output length now work correctly with TFLite 2.19. 
+  * Fully-connected layers with up to 2048 input length and 1024 output length now work correctly with TFLite 2.19.
     The previous version supported up to 2046 and 512, respectively.
   * Sigmoid and Tanh after fully-connected layers now work correctly with TFLite 2.19.
 

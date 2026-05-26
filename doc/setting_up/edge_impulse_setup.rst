@@ -32,5 +32,5 @@ To start working with the |EI| SDK, you must:
 
 1. Complete :ref:`setup_sdk` (includes |NCS|, toolchain, and |EI| SDK).
 #. Create an `Edge Impulse studio account <Edge Impulse studio signup_>`_ if you want to train and deploy your own machine learning models.
-#. Follow the `Edge Impulse CLI installation guide`_ to install Edge Impulse command line tools.
+#. Follow the `Edge Impulse CLI installation guide`_ to install |EI| command line tools.
    They include, for example, ``edge-impulse-data-forwarder`` which can be used to forward data from a board to |EIS| for training machine learning models.

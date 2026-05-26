@@ -316,18 +316,9 @@ Testing
 1. |connect_kit|
 #. |connect_terminal_kit|
    Connect to the serial device printing console output.
-   It can be identified by output similar to the following:
-
-   .. parsed-literal::
-      :class: highlight
-
-      \*\*\* Booting nRF Connect SDK v3.3.0-ba167d9f3db4 \*\*\*
-      \*\*\* Using Zephyr OS v4.3.99-fd9204a02d52 \*\*\*
-
 #. When performing gestures with the device, the serial port terminal displays messages similar to the following:
 
-   .. parsed-literal::
-      :class: highlight
+   .. code-block:: console
 
       Predicted class: DOUBLE SHAKE, with probability 96 %
       BLE HID key sent successfully

@@ -34,7 +34,7 @@ The library provides the following key features:
 Core modules
 ============
 
-See the available modules for nRF Edge AI Library:
+See the available modules for |EAILib|:
 
 .. toctree::
    :maxdepth: 1

@@ -7,7 +7,7 @@ nRF Edge AI Library changelog
    :local:
    :depth: 2
 
-See the list of changes for a specific release of the nRF Edge AI Library.
+See the list of changes for a specific release of the |EAILib|.
 
 Release v2.2.1 (09 April 2026)
 ******************************
