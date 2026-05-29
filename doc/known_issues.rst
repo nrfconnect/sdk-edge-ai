@@ -24,11 +24,6 @@ A known issue can list one or both of the following entries:
 List of known issues for v2.1.0 release
 ***************************************
 
-NCSDK-39293: Thingy:53 cannot pair successfully over Bluetooth LE
-  When using the Thingy:53 board, the device cannot complete Bluetooth LE pairing successfully.
-
-  **Affected platforms:** Thingy:53
-
 NCSDK-39297: CMake duplicates the board configuration directory in ``CONF_FILE`` paths when used with the nRF Connect for VS Code GUI
   The application's CMake setup sets ``APPLICATION_CONFIG_DIR`` to ``configuration/<board>_<qualifiers>/``, which causes Zephyr to resolve ``CONF_FILE`` relative to that directory instead of the application root.
   As a result, ``CONF_FILE`` must be set to a file name only (for example, :file:`prj_release.conf`), and must not include the ``configuration/<board>_<qualifiers>/`` prefix.
