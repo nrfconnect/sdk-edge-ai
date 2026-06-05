@@ -20,10 +20,10 @@ For additional background and reference material, see the `MLPerf Tiny GitHub re
 
 The following MLPerf Tiny models from the MLCommons repository are supported on Axon:
 
-* `Keyword spotting (KWS) <axon_compiler_kws>`_
-* `Image classification (IC) <axon_compiler_image_classification>`_
-* `Visual wake word (VWW) <axon_compiler_vww>`_
-* `Anomaly detection (AD) <axon_compiler_anomaly_detection>`_
+* :ref:`Keyword spotting (KWS) <axon_compiler_kws>`
+* :ref:`Image classification (IC) <axon_compiler_image_classification>`
+* :ref:`Visual wake word (VWW) <axon_compiler_vww>`
+* :ref:`Anomaly detection (AD) <axon_compiler_anomaly_detection>`
 
 Evaluation datasets
 *******************
