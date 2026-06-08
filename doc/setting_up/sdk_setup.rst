@@ -148,7 +148,7 @@ To get the |EAI| code, you can either:
 
       .. note::
 
-         Use this method if you have a prior installation of the |NCS| and would like to evaluate or use the Edge-AI Add-On with that installation.
+         Use this method if you have a prior installation of the |NCS| and would like to evaluate or use the |EAI| with that installation.
          This method will allow you to keep the |NCS| manifest unmodified.
 
       Before using this approach, ensure that a compatible version of the |NCS| is installed.
@@ -167,7 +167,10 @@ To get the |EAI| code, you can either:
 
          .. note::
 
-            See the `edge-impulse-sdk-zephyr`_ repository in case you wish to:
+            If you wish to:
 
             * Use |EI| in Zephyr library deployment.
             * Use |EI| samples from Add-on.
+
+            Repeat the steps above for `edge-impulse-sdk-zephyr`_.
+            The ``EXTRA_ZEPHYR_MODULES`` variable should be set to ``<path to Add-on>;<path to Edge Impulse SDK>``.
