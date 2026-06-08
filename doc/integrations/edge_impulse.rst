@@ -50,7 +50,7 @@ It relies on sensor data that can be provided by different sources, for example,
    As an alternative, modify the :ref:`ei_data_forwarder_sample` sample to forward data from a sensor connected to any board available in the |NCS|.
 
 The deployed machine learning model archive is then referenced from your |EAI| application, and the build system unpacks and compiles it automatically.
-When starting from the :ref:`hello_ei_sample` sample, you do not need to unpack the archive or write any CMake code manually, deployed machine learning model is referenced through the ``CONFIG_EDGE_IMPULSE_PATH`` Kconfig option.
+When starting from the :ref:`hello_ei_sample` sample, you do not need to unpack the archive or write any CMake code manually, deployed machine learning model is referenced through the ``CONFIG_EDGE_IMPULSE_MODEL_PATH`` Kconfig option.
 
 Integration steps
 *****************
@@ -176,9 +176,9 @@ To build the application with the integrated |EI| model, you need a :file:`<mode
 The instructions in this section cover the tested integration path based on the :ref:`hello_ei_sample` sample.
 The same build-system integration is used for both CPU and Axon NPU deployment formats.
 
-The :ref:`hello_ei_sample` sample integrates an |EI| model archive through the ``CONFIG_EDGE_IMPULSE_PATH`` Kconfig option and CMake's ``FetchContent``.
-At configuration time, CMake reads ``CONFIG_EDGE_IMPULSE_PATH``, unpacks the obtained :file:`<model_name>.zip` archive into the build tree, and adds it to the build.
-The integration step is the same for both formats (CPU archive and Axon NPU archive): set the ``CONFIG_EDGE_IMPULSE_PATH`` Kconfig option to point to your archive and build.
+The :ref:`hello_ei_sample` sample integrates an |EI| model archive through the ``CONFIG_EDGE_IMPULSE_MODEL_PATH`` Kconfig option and CMake's ``FetchContent``.
+At configuration time, CMake reads ``CONFIG_EDGE_IMPULSE_MODEL_PATH``, unpacks the obtained :file:`<model_name>.zip` archive into the build tree, and adds it to the build.
+The integration step is the same for both formats (CPU archive and Axon NPU archive): set the ``CONFIG_EDGE_IMPULSE_MODEL_PATH`` Kconfig option to point to your archive and build.
 
 .. tabs::
 
@@ -195,13 +195,13 @@ The integration step is the same for both formats (CPU archive and Axon NPU arch
          You can keep the auto-generated archive name, or rename it to a simpler name such as :file:`<model_name>.zip`.
          Do not unpack the archive, as ``FetchContent`` extracts it automatically at configuration time.
 
-      #. Set the ``CONFIG_EDGE_IMPULSE_PATH`` Kconfig option to the path of the archive.
+      #. Set the ``CONFIG_EDGE_IMPULSE_MODEL_PATH`` Kconfig option to the path of the archive.
          If the path is not absolute, it is resolved relative to the application source directory.
          For example, your application's :file:`prj.conf` will contain the following line:
 
          .. code-block:: cfg
 
-            CONFIG_EDGE_IMPULSE_PATH="<model_name>.zip"
+            CONFIG_EDGE_IMPULSE_MODEL_PATH="<model_name>.zip"
 
          Keep in mind that some tools might interpret the ``#`` character in the auto-generated name as a comment.
          If you encounter this, rename the archive to :file:`<model_name>.zip`.
@@ -245,12 +245,12 @@ The integration step is the same for both formats (CPU archive and Axon NPU arch
          You can keep the auto-generated archive name or rename it to :file:`<model_name>.zip`.
          Do not unpack the archive, as ``FetchContent`` extracts it automatically at configuration time.
 
-      #. Set the ``CONFIG_EDGE_IMPULSE_PATH`` Kconfig option to the path of the archive, relative to the application source directory or absolute.
+      #. Set the ``CONFIG_EDGE_IMPULSE_MODEL_PATH`` Kconfig option to the path of the archive, relative to the application source directory or absolute.
          For example, in your :file:`prj.conf` file it should look as follows:
 
          .. code-block:: cfg
 
-            CONFIG_EDGE_IMPULSE_PATH="<model_name>.zip"
+            CONFIG_EDGE_IMPULSE_MODEL_PATH="<model_name>.zip"
 
       #. Enable Axon in your device tree by adding the following lines to a board overlay file:
 
@@ -366,7 +366,7 @@ After building the application, flash it to your device and observe the output t
      |EI| also provides other deployment formats (for example, :guilabel:`WebAssembly` and :guilabel:`Arduino`) that produce different archive content and are not supported by this integration.
      If the downloaded archive has an unexpected structure after unpacking, regenerate it using one of the supported formats listed above.
 
-   * Ensure that the ``CONFIG_EDGE_IMPULSE_PATH`` Kconfig option points to an existing :file:`<model_name>.zip` file.
+   * Ensure that the ``CONFIG_EDGE_IMPULSE_MODEL_PATH`` Kconfig option points to an existing :file:`<model_name>.zip` file.
      If the path is not absolute, it is resolved relative to the application source directory.
      A missing or misnamed file typically produces a CMake error from ``FetchContent`` indicating that the resource is not available.
 
