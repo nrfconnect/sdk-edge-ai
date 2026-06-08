@@ -6,17 +6,12 @@
 
 mainmenu "Hello Edge Impulse sample application"
 
-config EDGE_IMPULSE_PATH
-	string "Edge Impulse library path"
+config EDGE_IMPULSE_MODEL_PATH
+	string "Edge Impulse model deployment path"
 	default 'ei_model_nrf_accel_sim_cpu_v55.zip'
 	help
-	  Specifies local file path of an archive containing Edge Impulse library.
-
-config EDGE_IMPULSE_DEBUG_MODE
-	bool "Run Edge Impulse library in debug mode"
-	imply NEWLIB_LIBC_FLOAT_PRINTF
-	help
-	  Enables additional log information from Edge Impulse library.
+	  Specifies local file path of an archive containing Edge Impulse model deployment.
+	  It can be either C++ Library, Zephyr library or Axon Library deployment.
 
 config HELLO_EI_DATA_BUF_SIZE
 	int "Size of input data buffer"

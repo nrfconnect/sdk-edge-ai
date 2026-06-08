@@ -34,12 +34,12 @@ zephyr_compile_options(
 )
 
 # Expand any ${VARIABLES} in the path
-string(CONFIGURE ${CONFIG_EDGE_IMPULSE_PATH} CONFIG_EDGE_IMPULSE_PATH)
+string(CONFIGURE ${CONFIG_EDGE_IMPULSE_MODEL_PATH} CONFIG_EDGE_IMPULSE_MODEL_PATH)
 
 # Convert relative paths to absolute paths
-if(NOT IS_ABSOLUTE ${CONFIG_EDGE_IMPULSE_PATH})
+if(NOT IS_ABSOLUTE ${CONFIG_EDGE_IMPULSE_MODEL_PATH})
   # Using application source directory as base directory for relative path
-  set(CONFIG_EDGE_IMPULSE_PATH ${APPLICATION_SOURCE_DIR}/${CONFIG_EDGE_IMPULSE_PATH})
+  set(CONFIG_EDGE_IMPULSE_MODEL_PATH ${APPLICATION_SOURCE_DIR}/${CONFIG_EDGE_IMPULSE_MODEL_PATH})
 endif()
 
 set(FETCH_CONTENT_NAME edge_impulse)
@@ -48,7 +48,7 @@ include(FetchContent)
 
 FetchContent_Declare(
     ${FETCH_CONTENT_NAME}
-    URL ${CONFIG_EDGE_IMPULSE_PATH}
+    URL ${CONFIG_EDGE_IMPULSE_MODEL_PATH}
 )
 
 FetchContent_MakeAvailable(${FETCH_CONTENT_NAME})
