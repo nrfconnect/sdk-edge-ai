@@ -17,10 +17,10 @@
 
 .. ### Source: docs.nordicsemi.com (not versioned)
 
-.. _`Serial Terminal app`: https://docs.nordicsemi.com/bundle/nrf-connect-serial-terminal/page/index.html
+.. _`Serial Terminal app`: https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/serial-terminal-app
 .. _`Power Profiler Kit II (PPK2)`: https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html
-.. _`nRF Connect for Visual Studio Code`: https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/index.html
-.. _`Board Configurator`: https://docs.nordicsemi.com/bundle/swtools_docs/page/app/pc-nrfconnect-board-configurator/index.html
+.. _`nRF Connect for Visual Studio Code`: https://docs.nordicsemi.com/r/bundle/nrf-connect-vscode
+.. _`Board Configurator`: https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/board-configurator-app
 
 .. _`Nordic Edge AI Lab Documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/index.html
 .. _`Nordic Edge AI Lab Quick Start Guide`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
