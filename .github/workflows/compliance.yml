@@ -128,9 +128,13 @@ jobs:
 
               if [[ "$status" -ne 200 ]]; then
                 echo "FAIL (HTTP code: ${status})"
-                exit 1
+                exit=1
               else
                 echo "OK"
               fi
             fi
           done <<< "$LINKS"
+
+          if [ "${exit}" == "1" ]; then
+            exit 1;
+          fi
