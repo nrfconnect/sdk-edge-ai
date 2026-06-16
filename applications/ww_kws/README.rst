@@ -48,7 +48,7 @@ You can replace the bundled models using the `Text to Wake Word Detection <Nordi
       To replace the model used in wakeword detection stage complete the following steps:
 
       1. Replace the files inside :file:`src/ww/nrf_edgeai_generated` directory with files downloaded from `Nordic Edge AI Lab`_.
-      #. Update :c:func:`ww_init` to get a pointer to the proper model instance from generated files.
+      #. In :c:func:`ww_init`, set the ``ww_model`` pointer using the model getter from the generated files.
       #. Adjust the Kconfig options to tune wakeword detection postprocessing to your model.
 
 
@@ -57,7 +57,7 @@ You can replace the bundled models using the `Text to Wake Word Detection <Nordi
       To replace the model used in keyword spotting stage complete the following steps:
 
       1. Replace the files inside :file:`src/kws/nrf_edgeai_generated` directory with files downloaded from `Nordic Edge AI Lab`_.
-      #. Update :c:func:`kws_init` to get a pointer to the proper model instance from generated files.
+      #. In :c:func:`kws_init`, set the ``kws_model`` pointer using the model getter from the generated files.
       #. Update the ``keyword_class`` enumeration and ``keyword_detection_ctxs`` array in the :file:`src/kws/kws.c` file to match keywords spotted by selected model.
       #. Adjust the Kconfig options to tune keyword spotting postprocessing to selected model.
 
