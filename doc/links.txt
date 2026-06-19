@@ -22,62 +22,62 @@
 .. _`nRF Connect for Visual Studio Code`: https://docs.nordicsemi.com/r/bundle/nrf-connect-vscode
 .. _`Board Configurator`: https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/board-configurator-app
 
-.. _`Nordic Edge AI Lab Documentation`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/index.html
-.. _`Nordic Edge AI Lab Quick Start Guide`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/get_started.html
-.. _`Nordic Edge AI Lab Model Creating Pipeline`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline.html
-.. _`Nordic Edge AI Lab Model Dataset Requirements`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/dataset_requirements.html
-.. _`Nordic Edge AI Lab preloaded datasets`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/data_uploading_and_setup.html#selecting_an_uploaded_or_preloaded_dataset
-.. _`Nordic Edge AI Lab Analytics Tools`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/analytics_tools.html
-.. _`Nordic Edge AI Lab Anomaly detection`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/anomaly_detection.html
-.. _`Nordic Edge AI Lab Wake Word Detection`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/wake_word.html
-.. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/run_inference_on_the_desktop.html
-.. _`Signal Processing Block`: https://docs.nordicsemi.com/bundle/edge-ai-lab/page/doc/model_creating_pipeline/signal_processing.html
+.. _`Nordic Edge AI Lab Documentation`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/index.html
+.. _`Nordic Edge AI Lab Quick Start Guide`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/get_started.html
+.. _`Nordic Edge AI Lab Model Creating Pipeline`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model-creating-pipeline
+.. _`Nordic Edge AI Lab Model Dataset Requirements`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model_creating_pipeline/dataset_requirements.html/requirements-for-training-datasets
+.. _`Nordic Edge AI Lab preloaded datasets`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model_creating_pipeline/data_uploading_and_setup.html
+.. _`Nordic Edge AI Lab Analytics Tools`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/analytics_tools.html
+.. _`Nordic Edge AI Lab Anomaly detection`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/anomaly_detection.html
+.. _`Nordic Edge AI Lab Wake Word Detection`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/wake_word.html
+.. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model_creating_pipeline/run_inference_on_the_desktop.html
+.. _`Signal Processing Block`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model_creating_pipeline/signal_processing.html
 
 .. ### Source: docs.nordicsemi.com (versioned)
 
-.. _`nRF54H20 ug`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_gs.html#ug-nrf54h20-gs
-.. _`nrf54h20dk`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/nrf54h20dk/doc/index.html#nrf54h20dk
+.. _`nRF54H20 ug`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_gs.html#ug-nrf54h20-gs
+.. _`nrf54h20dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54h20dk/doc/index.html#nrf54h20dk
 
-.. _`nRF54L ug`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/app_dev/device_guides/nrf54l/index.html#ug-nrf54l
-.. _`nrf54lm20dk`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/nrf54lm20dk/doc/index.html#nrf54lm20dk
-.. _`nrf54l15dk`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk
-.. _`nRF54L10 emulation`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk-nrf54l10
-.. _`nRF54L05 emulation`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk-nrf54l05
-.. _`nRF54L15TAG`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/nrf54l15tag/doc/index.html
+.. _`nRF54L ug`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/device_guides/nrf54l/index.html#ug-nrf54l
+.. _`nrf54lm20dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54lm20dk/doc/index.html#nrf54lm20dk
+.. _`nrf54l15dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk
+.. _`nRF54L10 emulation`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk-nrf54l10
+.. _`nRF54L05 emulation`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk-nrf54l05
+.. _`nRF54L15TAG`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54l15tag/doc/index.html
 
-.. _`nRF5340 ug`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/app_dev/device_guides/nrf53/index.html#ug-nrf5340
-.. _`nrf5340dk`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/nrf5340dk/doc/index.html#nrf5340dk
+.. _`nRF5340 ug`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/device_guides/nrf53/index.html#ug-nrf5340
+.. _`nrf5340dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf5340dk/doc/index.html#nrf5340dk
 
-.. _`Thingy:53`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/app_dev/device_guides/thingy53/index.html#ug-thingy53
-.. _`thingy53`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/thingy53/doc/index.html#thingy53
+.. _`Thingy:53`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/device_guides/thingy53/index.html#ug-thingy53
+.. _`thingy53`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/thingy53/doc/index.html#thingy53
 
-.. _`nRF52 ug`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/app_dev/device_guides/nrf52/index.html#ug-nrf52
-.. _`nrf52dk`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/nrf52dk/doc/index.html#nrf52dk
-.. _`nrf52840dk`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/boards/nordic/nrf52840dk/doc/index.html#nrf52840dk
+.. _`nRF52 ug`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/device_guides/nrf52/index.html#ug-nrf52
+.. _`nrf52dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf52dk/doc/index.html#nrf52dk
+.. _`nrf52840dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf52840dk/doc/index.html#nrf52840dk
 
-.. _`nRF Connect SDK`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/index.html
-.. _`nRF Connect SDK installation guide`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/installation/install_ncs.html
-.. _`Configuring and building`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/app_dev/config_and_build/index.html#configure-application
-.. _`Building an application`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/app_dev/config_and_build/building.html#building
-.. _`Programming`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/app_dev/programming.html#programming
-.. _`Testing and optimization`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/test_and_optimize.html#testing
-.. _`Providing CMake options`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/app_dev/config_and_build/cmake/index.html#providing_cmake_options
-.. _`Custom build types`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/app_dev/config_and_build/config_and_build_system.html#app-build-additions-build-types
-.. _`software maturity`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/releases_and_maturity/software_maturity.html
-.. _`Memfault in nRF Connect SDK`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/libraries/debug/memfault_ncs.html
-.. _`Nordic central UART sample`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/samples/bluetooth/central_uart/README.html
-.. _`Nordic UART Service (NUS)`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/libraries/bluetooth/services/nus.html
-.. _`HID Service`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/libraries/bluetooth/services/hids.html
-.. _`Simulated sensor driver`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/nrf/drivers/sensor_sim.html
+.. _`nRF Connect SDK`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/index.html
+.. _`nRF Connect SDK installation guide`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/installation/install_ncs.html
+.. _`Configuring and building`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/index.html#configure-application
+.. _`Building an application`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/building.html#building
+.. _`Programming`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/programming.html#programming
+.. _`Testing and optimization`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/test_and_optimize.html#testing
+.. _`Providing CMake options`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/cmake/index.html#providing_cmake_options
+.. _`Custom build types`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/config_and_build_system.html#app-build-additions-build-types
+.. _`software maturity`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/releases_and_maturity/software_maturity.html
+.. _`Memfault in nRF Connect SDK`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/libraries/debug/memfault_ncs.html
+.. _`Nordic central UART sample`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/samples/bluetooth/central_uart/README.html
+.. _`Nordic UART Service (NUS)`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/libraries/bluetooth/services/nus.html
+.. _`HID Service`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/libraries/bluetooth/services/hids.html
+.. _`Simulated sensor driver`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/drivers/sensor_sim.html
 
-.. _`Environment Variables`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/develop/env_vars.html
-.. _`Workspace application`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/develop/west/workspaces.html#t2_star_topology_application_is_the_manifest_repository
-.. _`Logging`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/services/logging/index.html#logging-api
-.. _`ZCBOR`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/services/serialization/cbor.html#cbor-api
-.. _`Power Management`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/services/pm/index.html#power-management
-.. _`Sensor`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/hardware/peripherals/sensor/index.html#sensor
-.. _`TensorFlow Lite for Microcontrollers: Hello World`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/samples/modules/tflite-micro/hello_world/README.html#tflite-hello-world
-.. _`Video`: https://docs.nordicsemi.com/bundle/ncs-|ncs_version_number|/page/zephyr/hardware/peripherals/video.html
+.. _`Environment Variables`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/develop/env_vars.html
+.. _`Workspace application`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/develop/west/workspaces.html#t2_star_topology_application_is_the_manifest_repository
+.. _`Logging`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/services/logging/index.html#logging-api
+.. _`ZCBOR`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/services/serialization/cbor.html#cbor-api
+.. _`Power Management`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/services/pm/index.html#power-management
+.. _`Sensor`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/hardware/peripherals/sensor/index.html#sensor
+.. _`TensorFlow Lite for Microcontrollers: Hello World`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/samples/modules/tflite-micro/hello_world/README.html#tflite-hello-world
+.. _`Video`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/hardware/peripherals/video.html
 
 .. ### Source: memfault.com
 
@@ -89,11 +89,11 @@
 .. _`Edge Impulse`: https://www.edgeimpulse.com/
 .. _`Edge Impulse studio`: https://studio.edgeimpulse.com/login
 .. _`Edge Impulse studio signup`: https://studio.edgeimpulse.com/signup
-.. _`Edge Impulse getting started guide`: https://docs.edgeimpulse.com/docs/getting-started
-.. _`embedded machine learning`: https://docs.edgeimpulse.com/docs/what-is-embedded-machine-learning-anyway
-.. _`Continuous motion recognition tutorial`: https://docs.edgeimpulse.com/docs/continuous-motion-recognition
-.. _`Edge Impulse's data forwarder`: https://docs.edgeimpulse.com/docs/cli-data-forwarder
-.. _`Edge Impulse CLI installation guide`: https://docs.edgeimpulse.com/docs/cli-installation
+.. _`Edge Impulse getting started guide`: https://docs.edgeimpulse.com/
+.. _`embedded machine learning`: https://docs.edgeimpulse.com/knowledge/concepts/what-is-embedded-machine-learning-anyway
+.. _`Continuous motion recognition tutorial`: https://docs.edgeimpulse.com/tutorials/end-to-end/motion-recognition
+.. _`Edge Impulse's data forwarder`: https://docs.edgeimpulse.com/tools/clis/edge-impulse-cli/data-forwarder
+.. _`Edge Impulse CLI installation guide`: https://docs.edgeimpulse.com/tools/clis/edge-impulse-cli/installation
 .. _`Automated Deployment with West Commands`: https://docs.edgeimpulse.com/hardware/deployments/run-zephyr-module#automated-deployment-with-west-commands-early-access-preview
 .. _`Using the library from C`: https://docs.edgeimpulse.com/hardware/deployments/run-cpp-desktop#using-the-library-from-c
 .. _`Edge Impulse data acquisition`: https://docs.edgeimpulse.com/studio/projects/data-acquisition
@@ -116,7 +116,7 @@
 .. _`Visual wake word trained model`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/visual_wake_words/trained_models
 .. _`Visual wake word`: https://github.com/mlcommons/tiny/tree/master/benchmark/training/visual_wake_words
 
-.. _`Setting up Podman container`: https://github.com/containers/podman/blob/main/docs/tutorials/podman_tutorial.md#running-a-sample-container
+.. _`Setting up Podman container`: https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/podman_tutorial.md#running-a-sample-container
 .. _`edge-impulse-sdk-zephyr`: https://github.com/edgeimpulse/edge-impulse-sdk-zephyr
 .. _`MCUnet`: https://github.com/mit-han-lab/mcunet
 
@@ -124,13 +124,13 @@
 
 .. _`Miniforge`: https://conda-forge.org/miniforge/#latest-release
 .. _`A beginner's guide to Docker`: https://www.freecodecamp.org/news/a-beginners-guide-to-docker-how-to-create-your-first-docker-application-cc03de9b639f
-.. _`Creating the Dockerfile`: https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/#creating-the-dockerfile>
+.. _`Creating the Dockerfile`: https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/#creating-the-dockerfile
 .. _`Intro Guide to Dockerfile Best Practices`: https://www.docker.com/blog/intro-guide-to-dockerfile-best-practices/
-.. _`Podman installation guide`: https://podman.io/docs/installation?
+.. _`Podman installation guide`: https://podman.io/docs/installation
 .. _`Python`: https://www.python.org/
-.. _`CIFAR dataset`: https://www.cs.toronto.edu/~kriz/cifar.html
+.. _`CIFAR dataset`: https://cave.cs.toronto.edu/kriz/cifar.html
 .. _`Visual Studio Code`: https://code.visualstudio.com
 .. _`Gesture recognition use-case demo video`: https://youtu.be/qDFdxapLbrA
-.. _`Bosch BMI270`: https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi270/
+.. _`Bosch BMI270`: https://www.bosch-sensortec.com/en/products/motion-sensors/imus/bmi270/
 .. _`Adafruit PDM MEMS Microphone`: https://www.adafruit.com/product/3492
 .. _`Arducam Mega 5MP`: https://www.arducam.com/presale-mega-5mp-color-rolling-shutter-camera-module-with-autofocus-lens-for-any-microcontroller.html
