@@ -1,0 +1,95 @@
+# Copyright (c) 2026 Nordic Semiconductor ASA
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "data-forwarder-host"
+version = "0.1.0"
+description = "Cross-platform host GUI that receives, visualises, records and exports sensor data forwarded from an nRF device."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "LicenseRef-Nordic-5-Clause" }
+authors = [{ name = "Nordic Semiconductor ASA" }]
+keywords = ["nordic", "nrf", "sensor", "edge-ai", "data-forwarder"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "cbor2>=5.6",
+    "pyserial>=3.5",
+    "cobs>=1.2",
+    "numpy>=1.26",
+    "platformdirs>=4.2",
+    "bleak>=0.21",
+    "psutil>=5.9",
+    "PySide6>=6.6",
+]
+
+[project.optional-dependencies]
+# Developer tooling (linters, formatter, type checker). Not needed to run
+# the app. Install the development environment from the package directory with:
+#   pip install -e ".[dev]"
+dev = [
+    "black>=24.3",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+data-forwarder-host = "data_forwarder_host.app:main"
+
+# The package directory IS the project root (flat layout): the import package
+# ``data_forwarder_host`` maps to ``.`` and every subpackage is listed
+# explicitly so build tools never pick up sibling dirs (``_other``, caches,
+# the ``recordings`` output dir) as top-level packages.
+[tool.setuptools]
+package-dir = { "data_forwarder_host" = "." }
+packages = [
+    "data_forwarder_host",
+    "data_forwarder_host.core",
+    "data_forwarder_host.gui",
+    "data_forwarder_host.gui.dialogs",
+    "data_forwarder_host.gui.widgets",
+    "data_forwarder_host.pipeline",
+    "data_forwarder_host.platform",
+    "data_forwarder_host.protocol",
+    "data_forwarder_host.session",
+    "data_forwarder_host.source",
+    "data_forwarder_host.utils",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM"]
+ignore = ["E501"]  # handled by Black
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = [
+    "platform",
+    "source",
+    "protocol",
+    "core",
+    "session",
+    "utils",
+]
+
+[[tool.mypy.overrides]]
+module = "data_forwarder_host.gui.*"
+strict = false
+strict_optional = true

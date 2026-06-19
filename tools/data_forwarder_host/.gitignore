@@ -1,0 +1,7 @@
+# Default recordings output directory (REQ-210/REQ-211)
+recordings/
+
+# Python caches & build artefacts
+__pycache__/
+*.py[cod]
+*.egg-info/

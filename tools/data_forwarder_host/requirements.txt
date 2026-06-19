@@ -1,0 +1,10 @@
+# Runtime install for data-forwarder-host.
+#
+# Single source of truth: dependencies are declared in pyproject.toml. This file
+# only installs the package (editable), so the dependency list lives in exactly
+# one place and cannot drift. The GUI (PySide6) is a base dependency, so it is
+# always installed.
+#
+#   pip install -r requirements.txt
+#
+-e .
