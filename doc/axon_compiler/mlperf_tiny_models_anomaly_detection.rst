@@ -47,7 +47,7 @@ Obtainig raw dataset
 ====================
 
 This section describes how to obtain the raw dataset used for training and evaluation.
-Download it by running the :file:`get_dataset.sh` script provided in the `reference repository <anomaly detection script_>`_.
+Download it by running the :file:`get_dataset.sh` script provided in the `reference repository <Anomaly detection script_>`_.
 
 Data pre-processing and model behavior
 ======================================
