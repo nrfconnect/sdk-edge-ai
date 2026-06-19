@@ -67,6 +67,10 @@ jobs:
           west init -l .
           west update -o=--depth=1 -n
 
+      - name: Check doc links (static)
+        working-directory: ncs/edge-ai
+        run: python3 scripts/check_links_txt.py
+
       - name: Build
         working-directory: ncs/edge-ai/doc
         run: |
