@@ -113,10 +113,27 @@ jobs:
                   grep "^+" || true | \
                   grep -Ev "^(---|\+\+\+)" || true)
 
+          NCS_VERSION_NUMBER=$(python3 -c "
+          import sys
+          import west.manifest
+          try:
+              projects = west.manifest.Manifest.from_topdir().get_projects(['nrf'])
+              if not projects or not projects[0].revision:
+                  raise RuntimeError('nrf project missing or has no revision')
+              rev = projects[0].revision
+              print(rev[1:] if rev.startswith('v') else rev)
+          except Exception as e:
+              print(f'::error ::Could not determine NCS version from west manifest: {e}', file=sys.stderr)
+              sys.exit(1)
+          ")
+
+          echo "Resolved NCS version from manifest: ${NCS_VERSION_NUMBER}"
+
           while IFS= read -r link; do
             if [[ $link =~ $RE ]]; then
               NAME=${BASH_REMATCH[1]}
               URL=${BASH_REMATCH[2]}
+              URL="${URL//|ncs_version_number|/${NCS_VERSION_NUMBER}}"
 
               echo -n "Checking URL for '$NAME' ($URL)... "
               if [[ "$URL" == *"files.nordicsemi.com"* ]]; then
