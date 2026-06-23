@@ -5,3 +5,13 @@ recordings/
 __pycache__/
 *.py[cod]
 *.egg-info/
+
+# Standalone binary build (PyInstaller) and its isolated build venv
+/build/
+/dist/
+/.build-venv/
+
+# A parent .gitignore ignores `build_*` (meant for build output dirs); that also
+# matches this build SCRIPT by name. It is a tracked source deliverable, so
+# re-include it explicitly.
+!scripts/build_linux_binary.sh

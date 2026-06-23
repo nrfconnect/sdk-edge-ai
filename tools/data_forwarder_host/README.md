@@ -71,6 +71,34 @@ By default, source acquisition (byte reading + COBS/CBOR decode) runs in a
 separate child process so the GUI stays responsive regardless of backend load.
 Set `DFH_SINGLE_PROCESS=1` to fall back to the legacy in-GUI acquisition path.
 
+## Standalone single-file binary (no install on the target)
+
+To run the application on a machine that has **no Python and no dependencies
+installed**, build a single self-contained executable with PyInstaller:
+
+```bash
+./scripts/build_linux_binary.sh
+```
+
+This produces one file, `dist/data-forwarder-host`, that bundles the Python
+interpreter, Qt6 and every dependency. Copy that single file to any reasonably
+recent x86_64 Ubuntu machine and run it directly — nothing has to be installed
+there:
+
+```bash
+./data-forwarder-host
+```
+
+Notes:
+
+- Build on the **oldest** Ubuntu you intend to support: glibc is forward- but
+  not backward-compatible, so a binary built on 22.04 runs on 22.04+, while one
+  built on 24.04 may not run on 22.04.
+- The build is driven by `data_forwarder_host.spec`; `scripts/build_linux_binary.sh`
+  just provisions an isolated build virtualenv (kept out of git) and invokes
+  PyInstaller against that spec.
+- The binary is large (~100 MB) because the whole Qt6 stack is embedded.
+
 ## First-time use
 
 1. Launch the application — it starts blank, with no session open and no tabs.
