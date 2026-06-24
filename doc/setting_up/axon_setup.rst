@@ -67,7 +67,7 @@ You can set up the Python environment using one of the methods below.
 
          .. code-block:: console
 
-            cd <project_root>/compiler/scripts
+            cd tools/axon/compiler/scripts
             pip install -r requirements.txt
 
       .. note::
