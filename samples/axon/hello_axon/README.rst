@@ -22,7 +22,7 @@ Overview
 
 The regression model runs on the Axon NPU and supports both synchronous and asynchronous inference modes.
 
-This regression model uses Zephyr's `TensorFlow Lite for Microcontrollers: Hello World`_ sample.
+This regression model uses Zephyr's :doc:`TensorFlow Lite for Microcontrollers: Hello World <zephyr:samples/modules/tflite-micro/hello_world/README>` sample.
 The model's task is to replicate the sine function in the range from 0 to 2π.
 The TensorFlow Lite file describing this model is processed by the Axon NPU Compiler to convert it into a format accepted by the Axon NPU.
 The compilation output is saved in :file:`src/generated/nrf_axon_model_hello_axon_.h`.
@@ -81,4 +81,4 @@ This sample uses the following |EAI| libraries:
 
 It uses the following Zephyr libraries:
 
-* `Logging`_
+* :ref:`zephyr:logging_api`

@@ -138,5 +138,5 @@ This application uses the following |EAI| library:
 
 This application uses the following Zephyr libraries:
 
-* `Logging`_
-* `Video`_
+* :ref:`zephyr:logging_api`
+* :ref:`zephyr:video_api`
