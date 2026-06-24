@@ -176,9 +176,9 @@ This application uses the following |EAI| library:
 
 This application uses the following Zephyr libraries:
 
-* `Logging`_
-* Audio (DMIC)
-* UART Driver
+* :ref:`zephyr:logging_api`
+* :ref:`zephyr:audio_dmic_api`
+* :ref:`zephyr:uart_api`
 
 API documentation
 *****************

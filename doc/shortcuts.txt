@@ -7,7 +7,7 @@
 
 .. ### Configuration and testing shortcuts
 
-.. |config| replace:: See `Configuring and building`_ for information about how to permanently or temporarily change the configuration.
+.. |config| replace:: See :ref:`nrf:configuration_and_build` for information about how to permanently or temporarily change the configuration.
 
 .. |sample_kconfig| replace:: The following sample-specific Kconfig options are used in this sample:
 
@@ -24,4 +24,4 @@
    Alternatively, check your operating system's device manager or its equivalent.
 
 .. |connect_terminal_kit| replace:: Connect to the kit with a terminal emulator (for example, the `Serial Terminal app`_).
-   See `Testing and optimization`_ for the required settings and steps.
+   See :ref:`nrf:test_and_optimize` for the required settings and steps.
