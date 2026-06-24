@@ -6,6 +6,7 @@
 .. ### Source: www.nordicsemi.com
 
 .. _`training dataset`: https://files.nordicsemi.com/ui/native/edge-ai/external/
+.. _`Data Forwarder Host artifacts`: https://files.nordicsemi.com/artifactory/edge-ai/external/tools/dfh
 .. _`Nordic Thingy:53 Multi-protocol IoT prototyping platform`: https://www.nordicsemi.com/Products/Development-hardware/Nordic-Thingy-53
 .. _`Nordic Edge AI Lab`: https://ai.lab.nordicsemi.com/
 .. _`nRF54LM20B`: https://www.nordicsemi.com/Products/nRF54LM20B

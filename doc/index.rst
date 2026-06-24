@@ -51,6 +51,7 @@ See the following documentation:
    integrations.rst
    axon_compiler.rst
    libraries.rst
+   tools.rst
    glossary.rst
    release_notes.rst
    known_issues.rst
