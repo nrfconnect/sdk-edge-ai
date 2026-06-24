@@ -105,36 +105,12 @@ jobs:
             exit 1;
           fi
 
-      - name: Check added or updated links
+      - name: Check doc links
         working-directory: ncs/edge-ai
+        if: contains(github.event.pull_request.user.login, 'dependabot[bot]') != true
+        env:
+          CHANGED_SINCE: ${{ github.event.pull_request.base.sha }}
         run: |
-          RE='.. _`(.*)`: (.*)'
-          LINKS=$(git diff --unified=0 "${{ github.event.pull_request.base.sha }}..HEAD" -- "doc/links.txt" | \
-                  grep "^+" || true | \
-                  grep -Ev "^(---|\+\+\+)" || true)
-
-          while IFS= read -r link; do
-            if [[ $link =~ $RE ]]; then
-              NAME=${BASH_REMATCH[1]}
-              URL=${BASH_REMATCH[2]}
-
-              echo -n "Checking URL for '$NAME' ($URL)... "
-              if [[ "$URL" == *"files.nordicsemi.com"* ]]; then
-                # files.nordicsemi.com server does not allow downloading only headers
-                status=$(curl --write-out "%{http_code}" --output /dev/null --silent "$URL" || true)
-              else
-                status=$(curl --write-out "%{http_code}" --output /dev/null --silent --head "$URL" || true)
-              fi
-
-              if [[ "$status" -ne 200 ]]; then
-                echo "FAIL (HTTP code: ${status})"
-                exit=1
-              else
-                echo "OK"
-              fi
-            fi
-          done <<< "$LINKS"
-
-          if [ "${exit}" == "1" ]; then
-            exit 1;
-          fi
+          python3 scripts/check_links_txt.py \
+            --online --changed-only --changed-since "${CHANGED_SINCE}" \
+            --fail-on-permanent-redirect --fail-on-403
