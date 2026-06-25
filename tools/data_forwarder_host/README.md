@@ -74,30 +74,23 @@ Set `DFH_SINGLE_PROCESS=1` to fall back to the legacy in-GUI acquisition path.
 ## Standalone single-file binary (no install on the target)
 
 To run the application on a machine that has **no Python and no dependencies
-installed**, build a single self-contained executable with PyInstaller:
+installed**, build a single self-contained executable with PyInstaller. Each
+platform script creates an isolated `.build-venv` (gitignored) from a standard
+system CPython — not nrfutil's toolchain Python — and runs PyInstaller from
+that environment against `data_forwarder_host.spec`. The result bundles the
+Python interpreter, Qt6 and every dependency into one file (~100 MB).
 
-```bash
-./scripts/build_linux_binary.sh
-```
+Build on the **oldest** OS version you intend to support. On Linux, glibc is
+forward-compatible only — a binary built on Ubuntu 22.04 runs on 22.04+, but one
+built on 24.04 may not run on 22.04.
 
-This produces one file, `dist/data-forwarder-host`, that bundles the Python
-interpreter, Qt6 and every dependency. Copy that single file to any reasonably
-recent x86_64 Ubuntu machine and run it directly — nothing has to be installed
-there:
+| Platform | Build command | Output |
+|----------|---------------|--------|
+| Linux | `./scripts/build_linux_binary.sh` | `dist/data-forwarder-host` |
+| Windows | `powershell -ExecutionPolicy Bypass -File .\scripts\build_windows_binary.ps1` | `dist\data-forwarder-host.exe` |
 
-```bash
-./data-forwarder-host
-```
-
-Notes:
-
-- Build on the **oldest** Ubuntu you intend to support: glibc is forward- but
-  not backward-compatible, so a binary built on 22.04 runs on 22.04+, while one
-  built on 24.04 may not run on 22.04.
-- The build is driven by `data_forwarder_host.spec`; `scripts/build_linux_binary.sh`
-  just provisions an isolated build virtualenv (kept out of git) and invokes
-  PyInstaller against that spec.
-- The binary is large (~100 MB) because the whole Qt6 stack is embedded.
+Copy the output file to a target machine and run it directly — nothing has to be
+installed there.
 
 ## First-time use
 
