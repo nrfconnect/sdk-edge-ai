@@ -7,6 +7,7 @@
 #include "nrf_edgeai_user_types.h"
 #include <nrf_edgeai/nrf_edgeai_platform.h>
 #include <nrf_edgeai/rt/private/nrf_edgeai_interfaces.h>
+#include <assert.h>
 
 //////////////////////////////////////////////////////////////////////////////
 /* Nordic EdgeAI Lab Solution ID and Runtime Version */

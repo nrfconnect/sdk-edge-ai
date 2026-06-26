@@ -7,7 +7,6 @@
 menuconfig NRF_EDGEAI
 	bool "nRF Edge AI Library"
 	depends on FPU
-	depends on NEWLIB_LIBC
 	help
 	  Enable Edge AI library.
 
