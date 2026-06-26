@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT arducam_mega
+#define DT_DRV_COMPAT nordic_arducam_mega
 
 #include "arducam_mega.h"
 

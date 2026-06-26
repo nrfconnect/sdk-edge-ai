@@ -22,8 +22,8 @@ Before you start using the nRF Edge AI integration, make sure you have completed
 Enabling the integration in Kconfig
 ===================================
 
-To enable Nordic Edge AI Lab model integration in your application, ensure you have enabled the ``CONFIG_NRF_EDGEAI`` and ``CONFIG_NEWLIB_LIBC`` Kconfig options.
-If your application prints model outputs (and they are floating-point), also enable ``CONFIG_NEWLIB_LIBC_FLOAT_PRINTF``.
+To enable Nordic Edge AI Lab model integration in your application, ensure you have enabled the ``CONFIG_NRF_EDGEAI`` Kconfig option.
+If your application prints model outputs (and they are floating-point), enable ``CONFIG_PICOLIBC_IO_FLOAT``.
 For better inference speed on supported hardware, enable the ``CONFIG_FPU`` Kconfig option.
 
 These options should be set in your application's :file:`prj.conf` file.
