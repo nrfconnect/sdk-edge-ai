@@ -1,0 +1,30 @@
+sample:
+  description: Stream sensor data with CBOR framing
+  name: Edge AI Data Forwarder
+
+common:
+  build_only: true
+  platform_allow:
+    - nrf54l15tag/nrf54l15/cpuapp
+  integration_platforms:
+    - nrf54l15tag/nrf54l15/cpuapp
+  harness: console
+  harness_config:
+    type: multi_line
+    regex:
+      - "transport: BLE NUS transport ready"
+      - "data_forwarder: Data forwarder started"
+      - "transport: BLE connected"
+
+tests:
+  sample.data_forwarder.bmi270.zdebug:
+    build_only: false
+
+  sample.data_forwarder.adxl367.zdebug:
+    extra_args:
+      - CONFIG_DATA_FWD_SENSOR_ADXL367=y
+
+  sample.data_forwarder.bme688.zdebug:
+    extra_args:
+      - CONFIG_DATA_FWD_SENSOR_BME688=y
+      - CONFIG_DATA_FWD_EXTRA_SENSOR_BME688=n
