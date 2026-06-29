@@ -34,6 +34,7 @@ int nrf_edgeai_obsv_core_reset(nrf_edgeai_obsv_core_t *p_ctx)
 	}
 
 	p_ctx->num_inferences = 0;
+	p_ctx->num_features = 0;
 
 	nrf_edgeai_obsv_metric_t *p_metric = p_ctx->p_metrics_list;
 
@@ -123,23 +124,42 @@ int nrf_edgeai_obsv_core_deregister(nrf_edgeai_obsv_core_t *p_ctx,
 	return 0;
 }
 
-int nrf_edgeai_obsv_core_update(nrf_edgeai_obsv_core_t *p_ctx, const float *p_probs)
+/* Route one data vector to every registered metric whose source matches. */
+static void dispatch(nrf_edgeai_obsv_core_t *p_ctx, uint8_t source, const float *p_data, uint16_t n)
+{
+	nrf_edgeai_obsv_metric_t *p_metric = p_ctx->p_metrics_list;
+
+	while (p_metric != NULL) {
+		if ((p_metric->source == source) && (p_metric->update != NULL)) {
+			p_metric->update(p_data, n, p_metric->priv);
+		}
+		p_metric = p_metric->p_next;
+	}
+}
+
+int nrf_edgeai_obsv_core_update_probs(nrf_edgeai_obsv_core_t *p_ctx, const float *p_probs)
 {
 	if ((p_ctx == NULL) || (p_probs == NULL)) {
 		return -EINVAL;
 	}
 
-	nrf_edgeai_obsv_metric_t *p_metric = p_ctx->p_metrics_list;
-	uint16_t num_classes = p_ctx->model.num_classes;
-
-	while (p_metric != NULL) {
-		if (p_metric->update != NULL) {
-			p_metric->update(p_probs, num_classes, p_metric->priv);
-		}
-		p_metric = p_metric->p_next;
-	}
+	dispatch(p_ctx, NRF_EDGEAI_OBSV_SOURCE_PROBS, p_probs, p_ctx->model.num_classes);
 
 	p_ctx->num_inferences++;
+
+	return 0;
+}
+
+int nrf_edgeai_obsv_core_update_features(nrf_edgeai_obsv_core_t *p_ctx, const float *p_feats,
+					 uint16_t n)
+{
+	if ((p_ctx == NULL) || (p_feats == NULL)) {
+		return -EINVAL;
+	}
+
+	dispatch(p_ctx, NRF_EDGEAI_OBSV_SOURCE_FEATURES, p_feats, n);
+
+	p_ctx->num_features++;
 
 	return 0;
 }

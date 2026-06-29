@@ -29,7 +29,7 @@ extern "C" {
 /**
  * @brief Zephyr RTOS synchronization for one observability context.
  *
- * Embeds @ref nrf_edgeai_obsv_core_t with a mutex so @ref nrf_edgeai_obsv_update,
+ * Embeds @ref nrf_edgeai_obsv_core_t with a mutex so @ref nrf_edgeai_obsv_update_probs,
  * @ref nrf_edgeai_obsv_encode / @ref nrf_edgeai_obsv_for_each_metric, and metric
  * registration can be serialized across threads.
  */
@@ -98,7 +98,21 @@ int nrf_edgeai_obsv_reset(nrf_edgeai_obsv_ctx_t *ctx);
  * @param probs Array of @c model.num_classes class probabilities.
  * @return 0 on success, -EINVAL if @p ctx or @p probs is NULL.
  */
-int nrf_edgeai_obsv_update(nrf_edgeai_obsv_ctx_t *ctx, const float *probs);
+int nrf_edgeai_obsv_update_probs(nrf_edgeai_obsv_ctx_t *ctx, const float *probs);
+
+/**
+ * @brief Feed one extracted-feature vector to all FEATURES-source metrics.
+ *
+ * Routes @p feats only to metrics registered with
+ * @c NRF_EDGEAI_OBSV_SOURCE_FEATURES. Does not advance the inference counter;
+ * an inference is counted when its output is fed via @ref nrf_edgeai_obsv_update_probs.
+ *
+ * @param ctx   Initialized context.
+ * @param feats Array of @p n feature values.
+ * @param n     Number of entries in @p feats.
+ * @return 0 on success, -EINVAL if @p ctx or @p feats is NULL.
+ */
+int nrf_edgeai_obsv_update_features(nrf_edgeai_obsv_ctx_t *ctx, const float *feats, uint16_t n);
 
 /**
  * @brief Iterate over all registered metrics under the context lock.

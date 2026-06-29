@@ -55,6 +55,7 @@ ZTEST(obsv_core, test_init_zeroes_state)
 {
 	zassert_is_null(ctx.p_metrics_list);
 	zassert_equal(ctx.num_inferences, 0);
+	zassert_equal(ctx.num_features, 0);
 	zassert_equal(ctx.num_metrics, 0);
 }
 
@@ -149,19 +150,45 @@ ZTEST(obsv_core, test_update_increments_counter)
 
 	const float probs[TEST_NUM_CLASSES] = {0.25f, 0.25f, 0.25f, 0.25f};
 
-	nrf_edgeai_obsv_core_update(&ctx, probs);
-	nrf_edgeai_obsv_core_update(&ctx, probs);
-	nrf_edgeai_obsv_core_update(&ctx, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
 
 	zassert_equal(ctx.num_inferences, 3);
+}
+
+ZTEST(obsv_core, test_update_features_increments_counter)
+{
+	const float feats[4] = {0.1f, 0.2f, 0.3f, 0.4f};
+	const float probs[TEST_NUM_CLASSES] = {0.25f, 0.25f, 0.25f, 0.25f};
+
+	nrf_edgeai_obsv_core_update_features(&ctx, feats, ARRAY_SIZE(feats));
+	nrf_edgeai_obsv_core_update_features(&ctx, feats, ARRAY_SIZE(feats));
+
+	zassert_equal(ctx.num_features, 2U);
+	zassert_equal(ctx.num_inferences, 0U, "feature updates must not count inferences");
+
+	/* The two stream counters are independent. */
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
+
+	zassert_equal(ctx.num_inferences, 1U);
+	zassert_equal(ctx.num_features, 2U, "inference updates must not count features");
+}
+
+ZTEST(obsv_core, test_update_features_null_params)
+{
+	const float feats[4] = {0.1f, 0.2f, 0.3f, 0.4f};
+
+	zassert_true(nrf_edgeai_obsv_core_update_features(NULL, feats, ARRAY_SIZE(feats)) < 0);
+	zassert_true(nrf_edgeai_obsv_core_update_features(&ctx, NULL, ARRAY_SIZE(feats)) < 0);
 }
 
 ZTEST(obsv_core, test_update_null_params)
 {
 	const float probs[TEST_NUM_CLASSES] = {0.25f, 0.25f, 0.25f, 0.25f};
 
-	zassert_true(nrf_edgeai_obsv_core_update(NULL, probs) < 0);
-	zassert_true(nrf_edgeai_obsv_core_update(&ctx, NULL) < 0);
+	zassert_true(nrf_edgeai_obsv_core_update_probs(NULL, probs) < 0);
+	zassert_true(nrf_edgeai_obsv_core_update_probs(&ctx, NULL) < 0);
 }
 
 ZTEST(obsv_core, test_reset_clears_inferences)
@@ -169,11 +196,14 @@ ZTEST(obsv_core, test_reset_clears_inferences)
 	nrf_edgeai_obsv_core_register(&ctx, &core_pd, NULL);
 
 	const float probs[TEST_NUM_CLASSES] = {1.0f, 0.0f, 0.0f, 0.0f};
+	const float feats[4] = {0.1f, 0.2f, 0.3f, 0.4f};
 
-	nrf_edgeai_obsv_core_update(&ctx, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
+	nrf_edgeai_obsv_core_update_features(&ctx, feats, ARRAY_SIZE(feats));
 	nrf_edgeai_obsv_core_reset(&ctx);
 
 	zassert_equal(ctx.num_inferences, 0);
+	zassert_equal(ctx.num_features, 0);
 	zassert_equal(ctx.num_metrics, 1, "reset must keep metrics");
 	zassert_equal(ctx.model.model_id, TEST_MODEL_ID, "reset must keep model");
 }
@@ -208,8 +238,8 @@ ZTEST(obsv_core, test_two_contexts_no_shared_state)
 	/* Feed 2 inferences exclusively to model A. */
 	const float probs[TEST_NUM_CLASSES] = {1.0f, 0.0f, 0.0f, 0.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx_a, probs);
-	nrf_edgeai_obsv_core_update(&ctx_a, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx_a, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx_a, probs);
 
 	zassert_equal(ctx_a.num_inferences, 2U);
 	zassert_equal(ctx_b.num_inferences, 0U);

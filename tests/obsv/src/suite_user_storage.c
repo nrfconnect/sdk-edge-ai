@@ -57,9 +57,9 @@ ZTEST(obsv_user_storage, test_tm_create_registers_and_snapshots)
 	const float p1[US_NUM_CLASSES] = {0.0f, 1.0f, 0.0f};
 	const float p2[US_NUM_CLASSES] = {0.0f, 0.0f, 1.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx, p0);
-	nrf_edgeai_obsv_core_update(&ctx, p1);
-	nrf_edgeai_obsv_core_update(&ctx, p2);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p0);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p1);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p2);
 
 	struct test_snapshots snaps = {0};
 
@@ -85,8 +85,8 @@ ZTEST(obsv_user_storage, test_tm_create_clear_resets_counters)
 	const float p0[US_NUM_CLASSES] = {1.0f, 0.0f, 0.0f};
 	const float p1[US_NUM_CLASSES] = {0.0f, 1.0f, 0.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx, p0);
-	nrf_edgeai_obsv_core_update(&ctx, p1);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p0);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p1);
 
 	zassert_equal(nrf_edgeai_obsv_core_reset(&ctx), 0);
 
@@ -115,7 +115,7 @@ ZTEST(obsv_user_storage, test_pd_create_registers_and_snapshots)
 	/* All classes at 1.0 — should land in the last bin for each class. */
 	const float p[US_NUM_CLASSES] = {1.0f, 1.0f, 1.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx, p);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p);
 
 	struct test_snapshots snaps = {0};
 
@@ -153,7 +153,7 @@ ZTEST(obsv_user_storage, test_pd_create_custom_edges)
 
 	const float p[US_NUM_CLASSES] = {0.0f, 0.5f, 1.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx, p);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p);
 
 	struct test_snapshots snaps = {0};
 

@@ -50,7 +50,7 @@ ZTEST(obsv_encoder, test_multi_encoder_conforms_to_cddl_schema)
 
 	const float probs[TEST_NUM_CLASSES] = {0.7f, 0.1f, 0.1f, 0.1f};
 
-	zassert_equal(nrf_edgeai_obsv_update(&ctx, probs), 0);
+	zassert_equal(nrf_edgeai_obsv_update_probs(&ctx, probs), 0);
 
 	nrf_edgeai_obsv_ctx_t *ctxs[] = {&ctx};
 	uint8_t buf[512];
@@ -73,7 +73,9 @@ ZTEST(obsv_encoder, test_multi_encoder_conforms_to_cddl_schema)
 
 	const struct obsv_payload *p = &cddl_decoded.obsv_list_obsv_payload_m[0];
 
-	zassert_equal(p->obsv_payload_format_version, 1);
+	zassert_equal(p->obsv_payload_format_version, 2);
 	zassert_equal(p->obsv_payload_num_inferences, 1);
+	zassert_equal(p->obsv_payload_num_features, 0,
+		      "no feature updates were fed, so the FEATURES counter must be 0");
 	zassert_equal(p->obsv_payload_metrics_obsv_metric_m_count, 2);
 }

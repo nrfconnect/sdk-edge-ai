@@ -32,15 +32,20 @@ static inline uint32_t *tm_matrix(const _nrf_obsv_tm_hdr_t *hdr)
 	return (uint32_t *)(hdr + 1);
 }
 
-static void tm_init(const void *p_cfg, void *priv)
+static void tm_clear(void *priv)
 {
-	(void)p_cfg;
-
 	_nrf_obsv_tm_hdr_t *hdr = priv;
 	uint32_t *matrix = tm_matrix(hdr);
 
 	memset(matrix, 0, sizeof(uint32_t) * (size_t)hdr->num_classes * hdr->num_classes);
 	hdr->prev = NO_PREV_CLASS;
+}
+
+static void tm_init(const void *p_cfg, void *priv)
+{
+	(void)p_cfg;
+
+	tm_clear(priv);
 }
 
 static void tm_update(const float *p_probs, uint16_t n, void *priv)
@@ -64,15 +69,6 @@ static void tm_update(const float *p_probs, uint16_t n, void *priv)
 	}
 
 	hdr->prev = cls;
-}
-
-static void tm_clear(void *priv)
-{
-	_nrf_obsv_tm_hdr_t *hdr = priv;
-	uint32_t *matrix = tm_matrix(hdr);
-
-	memset(matrix, 0, sizeof(uint32_t) * (size_t)hdr->num_classes * hdr->num_classes);
-	hdr->prev = NO_PREV_CLASS;
 }
 
 static void tm_snapshot(nrf_edgeai_obsv_metric_snapshot_t *out, void *priv)
@@ -102,6 +98,7 @@ void nrf_edgeai_obsv_metric_tm_create(nrf_edgeai_obsv_metric_t *metric, void *bu
 		.clear    = tm_clear,
 		.finalize = NULL,
 		.snapshot = tm_snapshot,
+		.source   = NRF_EDGEAI_OBSV_SOURCE_PROBS,
 		.priv     = buf,
 	};
 }

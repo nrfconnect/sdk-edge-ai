@@ -66,7 +66,7 @@ int nrf_edgeai_obsv_reset(nrf_edgeai_obsv_ctx_t *ctx)
 	return ret;
 }
 
-int nrf_edgeai_obsv_update(nrf_edgeai_obsv_ctx_t *ctx, const float *probs)
+int nrf_edgeai_obsv_update_probs(nrf_edgeai_obsv_ctx_t *ctx, const float *probs)
 {
 	if ((ctx == NULL) || (probs == NULL)) {
 		return -EINVAL;
@@ -74,7 +74,22 @@ int nrf_edgeai_obsv_update(nrf_edgeai_obsv_ctx_t *ctx, const float *probs)
 
 	k_mutex_lock(&ctx->lock, K_FOREVER);
 
-	int ret = nrf_edgeai_obsv_core_update(&ctx->state, probs);
+	int ret = nrf_edgeai_obsv_core_update_probs(&ctx->state, probs);
+
+	k_mutex_unlock(&ctx->lock);
+
+	return ret;
+}
+
+int nrf_edgeai_obsv_update_features(nrf_edgeai_obsv_ctx_t *ctx, const float *feats, uint16_t n)
+{
+	if ((ctx == NULL) || (feats == NULL)) {
+		return -EINVAL;
+	}
+
+	k_mutex_lock(&ctx->lock, K_FOREVER);
+
+	int ret = nrf_edgeai_obsv_core_update_features(&ctx->state, feats, n);
 
 	k_mutex_unlock(&ctx->lock);
 

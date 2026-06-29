@@ -74,10 +74,10 @@ ZTEST(obsv_memfault, test_obsv_update_null_returns_einval)
 {
 	const float probs[TEST_NUM_CLASSES] = {0.25f, 0.25f, 0.25f, 0.25f};
 
-	zassert_equal(nrf_edgeai_obsv_update(NULL, probs), -EINVAL);
+	zassert_equal(nrf_edgeai_obsv_update_probs(NULL, probs), -EINVAL);
 
 	setup_ctx();
-	zassert_equal(nrf_edgeai_obsv_update(&obsv, NULL), -EINVAL);
+	zassert_equal(nrf_edgeai_obsv_update_probs(&obsv, NULL), -EINVAL);
 }
 
 ZTEST(obsv_memfault, test_has_cdr_before_collect_returns_false)

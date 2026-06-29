@@ -60,9 +60,9 @@ ZTEST(obsv_payload, test_probs_distribution_default_bins)
 	const float p2[TEST_NUM_CLASSES] = {0.1f, 0.2f, 0.6f, 0.1f};
 	const float p3[TEST_NUM_CLASSES] = {0.0f, 0.2f, 0.8f, 0.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx, p1);
-	nrf_edgeai_obsv_core_update(&ctx, p2);
-	nrf_edgeai_obsv_core_update(&ctx, p3);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p1);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p2);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p3);
 
 	struct test_snapshots snaps;
 
@@ -95,7 +95,7 @@ ZTEST(obsv_payload, test_probs_distribution_custom_edges)
 
 	const float probs[TEST_NUM_CLASSES] = {0.05f, 0.3f, 0.95f, 1.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
 
 	struct test_snapshots snaps;
 
@@ -123,9 +123,9 @@ ZTEST(obsv_payload, test_transition_matrix_values)
 	const float p2[TEST_NUM_CLASSES] = {0.1f, 0.2f, 0.6f, 0.1f};
 	const float p3[TEST_NUM_CLASSES] = {0.0f, 0.2f, 0.8f, 0.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx, p1);
-	nrf_edgeai_obsv_core_update(&ctx, p2);
-	nrf_edgeai_obsv_core_update(&ctx, p3);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p1);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p2);
+	nrf_edgeai_obsv_core_update_probs(&ctx, p3);
 
 	struct test_snapshots snaps;
 
@@ -145,7 +145,7 @@ ZTEST(obsv_payload, test_reset_clears_metric_state)
 
 	const float probs[TEST_NUM_CLASSES] = {1.0f, 0.0f, 0.0f, 0.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
 	nrf_edgeai_obsv_core_reset(&ctx);
 
 	struct test_snapshots snaps;
@@ -176,7 +176,7 @@ ZTEST(obsv_payload, test_reset_preserves_custom_bin_edges)
 
 	const float before[TEST_NUM_CLASSES] = {0.3f, 0.0f, 0.0f, 0.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx, before);
+	nrf_edgeai_obsv_core_update_probs(&ctx, before);
 	nrf_edgeai_obsv_core_reset(&ctx);
 
 	/* 0.3 must still land in bin 0 ([0.0, 0.5)) after reset, not bin 1
@@ -184,7 +184,7 @@ ZTEST(obsv_payload, test_reset_preserves_custom_bin_edges)
 	 */
 	const float after[TEST_NUM_CLASSES] = {0.3f, 0.0f, 0.0f, 0.0f};
 
-	nrf_edgeai_obsv_core_update(&ctx, after);
+	nrf_edgeai_obsv_core_update_probs(&ctx, after);
 
 	struct test_snapshots snaps;
 

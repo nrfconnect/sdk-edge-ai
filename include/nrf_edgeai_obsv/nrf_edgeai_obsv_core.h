@@ -33,6 +33,10 @@ typedef struct nrf_edgeai_obsv_model_info_s {
 	uint16_t model_id;
 	/** @brief Number of model output classes. */
 	uint16_t num_classes;
+	/** @brief Length of the input-feature vector, in elements. 0 if the model
+	 *  has no FEATURES-source metrics (the feature stream is unused).
+	 */
+	uint16_t num_features;
 	/** @brief Model version identifier. */
 	uint32_t version;
 } nrf_edgeai_obsv_model_info_t;
@@ -49,8 +53,13 @@ typedef struct {
 	nrf_edgeai_obsv_model_info_t model;
 	/** @brief Head of registered metrics singly linked list. */
 	nrf_edgeai_obsv_metric_t *p_metrics_list;
-	/** @brief Total number of processed inferences. Wraps at UINT32_MAX. */
+	/** @brief Total number of processed inferences (PROBS stream). Wraps at UINT32_MAX. */
 	uint32_t num_inferences;
+	/** @brief Total number of processed feature-vector updates (FEATURES stream).
+	 *  Counter for the input stream, parallel to @ref num_inferences; advanced by
+	 *  @ref nrf_edgeai_obsv_core_update_features. Wraps at UINT32_MAX.
+	 */
+	uint32_t num_features;
 	/** @brief Total number of registered metrics. */
 	uint8_t num_metrics;
 } nrf_edgeai_obsv_core_t;
@@ -77,7 +86,7 @@ int nrf_edgeai_obsv_core_init(nrf_edgeai_obsv_core_t *p_ctx,
 			      const nrf_edgeai_obsv_model_info_t *p_model);
 
 /**
- * @brief Reset inference counter and clear all registered metrics.
+ * @brief Reset the inference and feature counters and clear all registered metrics.
  *
  * Calls each metric's @c clear callback to zero counters while preserving
  * configuration set at registration time. Metrics without a @c clear callback
@@ -126,7 +135,25 @@ int nrf_edgeai_obsv_core_deregister(nrf_edgeai_obsv_core_t *p_ctx,
  * @param p_probs Array of @c p_ctx->model.num_classes class probabilities.
  * @return 0 on success, -EINVAL if @p p_ctx or @p p_probs is NULL.
  */
-int nrf_edgeai_obsv_core_update(nrf_edgeai_obsv_core_t *p_ctx, const float *p_probs);
+int nrf_edgeai_obsv_core_update_probs(nrf_edgeai_obsv_core_t *p_ctx, const float *p_probs);
+
+/**
+ * @brief Feed one extracted-feature vector to all FEATURES-source metrics.
+ *
+ * Routes @p p_feats only to metrics registered with
+ * @c NRF_EDGEAI_OBSV_SOURCE_FEATURES, and advances the feature counter
+ * (@ref nrf_edgeai_obsv_core_t.num_features). It does NOT advance the inference
+ * counter (@ref nrf_edgeai_obsv_core_t.num_inferences): the two streams are
+ * counted independently — an inference is counted only when its output is fed
+ * via @ref nrf_edgeai_obsv_core_update_probs.
+ *
+ * @param p_ctx   Initialized core.
+ * @param p_feats Array of @p n feature values.
+ * @param n       Number of entries in @p p_feats.
+ * @return 0 on success, -EINVAL if @p p_ctx or @p p_feats is NULL.
+ */
+int nrf_edgeai_obsv_core_update_features(nrf_edgeai_obsv_core_t *p_ctx, const float *p_feats,
+					 uint16_t n);
 
 /**
  * @brief Iterate over all registered metrics.
