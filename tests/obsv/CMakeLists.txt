@@ -17,6 +17,11 @@ target_sources(app PRIVATE
   src/suite_iteration.c
   src/suite_payload.c
   src/suite_user_storage.c
+  src/suite_pred_switch_rate.c
+  src/suite_probs_entropy_dist.c
+  src/suite_probs_top2_margin_dist.c
+  src/suite_mel_energy_desc.c
+  src/suite_mel_spectral_desc.c
 )
 
 # Encoder CDDL conformance suite — only built when the encoder is enabled.

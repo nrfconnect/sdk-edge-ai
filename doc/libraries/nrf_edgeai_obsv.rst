@@ -18,7 +18,9 @@ Deployed Edge AI models behave differently in production then in controlled envi
 Class distributions shift, transitions between predicted labels change over time, and confidence scores drift as conditions change.
 The observability module gives you a structured way to capture these statistics on-device and send them off-device for analysis.
 
-Currently, metrics are driven only by the model output probability vector passed to :c:func:`nrf_edgeai_obsv_update`.
+Metrics are driven by two input streams.
+Output metrics consume the model's class-probability vector passed to :c:func:`nrf_edgeai_obsv_update_probs`, while input-feature metrics consume the extracted feature vector fed to the model and passed to :c:func:`nrf_edgeai_obsv_update_features`.
+Each metric declares which stream it consumes through its ``source`` field, and the library routes every update only to the metrics that match.
 
 Collected data enables the following:
 
@@ -131,9 +133,9 @@ The following diagram shows the detailed call sequence between the observability
    == Inference loop ==
 
    loop every inference
-     App -> Obsv : nrf_edgeai_obsv_update(ctx, probs)
+     App -> Obsv : nrf_edgeai_obsv_update_probs(ctx, probs)
      Obsv -> Obsv : lock ctx->lock
-     Obsv -> Core : nrf_edgeai_obsv_core_update()
+     Obsv -> Core : nrf_edgeai_obsv_core_update_probs()
      Core -> Metric : metric->update(probs, n)
      Obsv -> Obsv : unlock ctx->lock
    end
@@ -167,14 +169,15 @@ Metrics
 
 The module exposes model behavior through metrics that are updated on every inference and exported as snapshots.
 Each metric is a self-contained unit with its own storage and callbacks, which means you can mix built-in metrics with your own custom ones.
-The module includes two ready-to-use built-in metrics, and provides an interface for adding your own.
+The module includes several ready-to-use built-in metrics, and provides an interface for adding your own.
 
 .. _nrf_edgeai_obsv_metrics_built_in:
 
 Built-in metrics
 ================
 
-The module provides two built-in metrics that capture different aspects of model behavior over time.
+The built-in metrics capture different aspects of model behavior over time.
+They fall into two groups by the input stream they consume: *output metrics*, which observe the model's class-probability vector, and *input-feature metrics*, which observe the extracted feature vector fed to the model.
 See the :ref:`nrf_edgeai_obsv_buffer_config` section for the available options.
 
 .. _nrf_edgeai_obsv_metrics_built_in_transition:
@@ -182,7 +185,7 @@ See the :ref:`nrf_edgeai_obsv_buffer_config` section for the available options.
 Transition matrix
 -----------------
 
-The transition matrix counts how many times the dominant class (argmax of the probability vector) changed from class *i* to class *j* across consecutive calls to :c:func:`nrf_edgeai_obsv_update`.
+The transition matrix counts how many times the dominant class (argmax of the probability vector) changed from class *i* to class *j* across consecutive calls to :c:func:`nrf_edgeai_obsv_update_probs`.
 The result is a square ``num_classes × num_classes`` matrix of ``uint32_t`` counters stored in row-major order, where row *i* is the previous class and column *j* is the current class.
 
 The following table shows rows for the previous dominant class and columns for the current dominant class:
@@ -226,7 +229,7 @@ Probability distribution
 ------------------------
 
 The probability distribution metric builds a per-class histogram over the ``[0, 1]`` probability range.
-Each call to :c:func:`nrf_edgeai_obsv_update` function increments one bin per class based on that class's output probability.
+Each call to :c:func:`nrf_edgeai_obsv_update_probs` function increments one bin per class based on that class's output probability.
 The result is a ``num_classes × bin_num`` matrix of ``uint32_t`` bin counts, where row *i* is the class and each column is a histogram bin.
 
 The following table uses four uniform bins with inner edges at 0.25, 0.50, and 0.75.
@@ -265,13 +268,65 @@ Each row is a class; each column is a probability bin.
 
 The illustrative counts suggest *walk* is often predicted with high confidence (67 counts in the top bin), a bimodal spread for *idle*, and mostly low confidence for *run* and *jump*, which may indicate confusion between those classes.
 
+.. _nrf_edgeai_obsv_metrics_built_in_switching:
+
+Prediction switching rate
+-------------------------
+
+The prediction switching rate tracks temporal instability: how often the dominant class (argmax of the probability vector) changes between consecutive inferences.
+It exports two ``uint32_t`` counters as a ``1 × 2`` row, ``[switches, comparisons]``, from which the rate is derived off-device as ``switches / comparisons``.
+A high rate indicates an unstable or noisy input.
+
+.. _nrf_edgeai_obsv_metrics_built_in_entropy:
+
+Probability entropy distribution
+--------------------------------
+
+The probability entropy distribution builds a histogram of prediction uncertainty.
+For each inference it computes the normalized Shannon entropy ``H(p) / ln(N)`` of the probability vector and bins it over ``[0, 1]``, producing a ``1 × bin_num`` row.
+High entropy flags uncertain predictions or out-of-distribution inputs; low entropy flags confident predictions.
+
+.. _nrf_edgeai_obsv_metrics_built_in_margin:
+
+Probability top-2 margin distribution
+-------------------------------------
+
+The probability top-2 margin distribution builds a histogram of prediction decisiveness.
+For each inference it computes the margin between the two largest class probabilities, ``margin = p_top1 - p_top2``, and bins it over ``[0, 1]`` as a ``1 × bin_num`` row.
+A low margin flags ambiguous predictions even when the dominant probability is high.
+
+Input-feature metrics
+----------------------
+
+The following metrics consume the input-feature stream fed through :c:func:`nrf_edgeai_obsv_update_features`, rather than the output probabilities.
+They target audio mel-spectrogram features (for example, wake-word and keyword-spotting models), but apply to any non-negative feature vector.
+
+.. _nrf_edgeai_obsv_metrics_built_in_mel_energy:
+
+Mel energy descriptor
+---------------------
+
+The mel energy descriptor summarizes per-frame energy statistics of the input mel feature vector.
+It produces a ``4 × bin_num`` matrix with one ``[0, 1]`` histogram row per statistic: mean energy, max energy, dynamic range (q95 − q05), and the floor-bin ratio.
+Feature values are normalized into ``[0, 1]`` against a configured percentile range ``[p01, p99]`` (``CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P01_MILLI`` and ``_SCALE_P99_MILLI``, in thousandths of a feature unit), so the bins are comparable across devices.
+Measure the percentiles offline on a representative dataset; the defaults are placeholders.
+
+.. _nrf_edgeai_obsv_metrics_built_in_mel_spectral:
+
+Mel spectral descriptor
+-----------------------
+
+The mel spectral descriptor summarizes per-frame spectral shape of the input mel feature vector.
+It produces an ``8 × bin_num`` matrix with one ``[0, 1]`` histogram row per statistic: low, mid, and high band energy ratios, spectral centroid, spread, entropy, flatness, and contrast.
+Every statistic is scale-invariant (it divides by the total energy or the mean), so no amplitude calibration is needed.
+
 .. _nrf_edgeai_obsv_metrics_custom:
 
 Custom metrics
 ==============
 
 You can implement additional metrics by filling in an :c:struct:`nrf_edgeai_obsv_metric_t` operation table and registering it with the :c:func:`nrf_edgeai_obsv_register` function.
-A metric consists of five callbacks and a ``priv`` pointer to its own storage:
+A metric consists of five callbacks, a ``source`` field, and a ``priv`` pointer to its own storage:
 
 .. list-table:: Observability metric callbacks
    :widths: auto
@@ -283,9 +338,9 @@ A metric consists of five callbacks and a ``priv`` pointer to its own storage:
    * - ``init(cfg, priv)``
      - yes
      - Zero counters and apply optional configuration.
-   * - ``update(probs, n, priv)``
+   * - ``update(data, n, priv)``
      - yes
-     - Consume one inference result.
+     - Consume one vector from the metric's source stream: class probabilities or input features.
    * - ``clear(priv)``
      - no
      - Zero counters without touching configuration (called by :c:func:`nrf_edgeai_obsv_reset`). Set to ``NULL`` if reset is a no-op.
@@ -298,6 +353,9 @@ A metric consists of five callbacks and a ``priv`` pointer to its own storage:
 
 The snapshot exposes counters as a flat row-major ``uint32_t`` matrix of ``num_rows × num_cols`` elements.
 Metrics with a single scalar value use ``num_rows = 1, num_cols = 1``.
+
+Set the ``source`` field to select the input stream the metric consumes: ``NRF_EDGEAI_OBSV_SOURCE_PROBS`` (the default, ``0``) for the class-probability vector, or ``NRF_EDGEAI_OBSV_SOURCE_FEATURES`` for the input-feature vector.
+The ``update`` callback then receives that stream, and the ``n`` argument is the class count for probabilities or the feature-vector length for features.
 
 Custom metric IDs
 -----------------
@@ -413,6 +471,11 @@ Enable at least one metric to start collecting data:
   * For the :ref:`transition matrix <nrf_edgeai_obsv_metrics_built_in_transition>`, enable
     ``CONFIG_NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX``.
   * For the :ref:`probability distribution <nrf_edgeai_obsv_metrics_built_in_probability>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION``, and set the number of histogram bins through ``CONFIG_NRF_EDGEAI_OBSV_PROBS_DISTRIBUTION_BIN_NUM``.
+  * For the :ref:`prediction switching rate <nrf_edgeai_obsv_metrics_built_in_switching>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PREDICTION_SWITCHING_RATE``.
+  * For the :ref:`probability entropy distribution <nrf_edgeai_obsv_metrics_built_in_entropy>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST``, and set the bin count through ``CONFIG_NRF_EDGEAI_OBSV_PROBS_ENTROPY_DIST_BIN_NUM``.
+  * For the :ref:`probability top-2 margin distribution <nrf_edgeai_obsv_metrics_built_in_margin>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST``, and set the bin count through ``CONFIG_NRF_EDGEAI_OBSV_PROBS_TOP2_MARGIN_DIST_BIN_NUM``.
+  * For the :ref:`mel energy descriptor <nrf_edgeai_obsv_metrics_built_in_mel_energy>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC``, and set the bin count, the maximum feature length, and the ``[p01, p99]`` scaling percentiles through the matching ``CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_*`` options.
+  * For the :ref:`mel spectral descriptor <nrf_edgeai_obsv_metrics_built_in_mel_spectral>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_SPECTRAL_DESC``, and set the bin count through ``CONFIG_NRF_EDGEAI_OBSV_MEL_SPECTRAL_DESC_BIN_NUM``.
 
 * Custom metrics:
 
@@ -447,7 +510,8 @@ To integrate the library into your application, complete the following steps:
 #. Allocate metric storage and initialize each metric descriptor using the :c:func:`nrf_edgeai_obsv_metric_tm_create` and :c:func:`nrf_edgeai_obsv_metric_pd_create` functions.
 #. Register the metrics with the context using the :c:func:`nrf_edgeai_obsv_register` function.
 #. Bind the Memfault transport once at application startup using the :c:func:`nrf_edgeai_obsv_memfault_init` function.
-#. Call the :c:func:`nrf_edgeai_obsv_update` function after every inference.
+#. Call the :c:func:`nrf_edgeai_obsv_update_probs` function with the output probability vector after every inference.
+#. If you registered input-feature metrics, call the :c:func:`nrf_edgeai_obsv_update_features` function with the extracted feature vector. This routes only to feature-source metrics and does not advance the inference counter.
 #. Call the :c:func:`nrf_edgeai_obsv_memfault_collect` function periodically, or enable the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT`` Kconfig option.
 
 The following example shows minimal initialization with both built-in metrics and Memfault upload over Bluetooth using MDS:
@@ -491,7 +555,7 @@ The following example shows minimal initialization with both built-in metrics an
    void on_inference_done(const float *probs)
    {
        /* Feed inference result to all registered metrics. */
-       nrf_edgeai_obsv_update(&obsv_ctx, probs);
+       nrf_edgeai_obsv_update_probs(&obsv_ctx, probs);
    }
 
 When ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT`` is disabled, call :c:func:`nrf_edgeai_obsv_memfault_collect` manually at the interval that matches your transport's drain cadence (for example, once per hour for HTTP, or before each Bluetooth LE connection).
@@ -513,7 +577,8 @@ Thread safety
 
 The following functions acquire ``ctx->lock`` internally and are safe to call from different threads:
 
-* :c:func:`nrf_edgeai_obsv_update`
+* :c:func:`nrf_edgeai_obsv_update_probs`
+* :c:func:`nrf_edgeai_obsv_update_features`
 * :c:func:`nrf_edgeai_obsv_encode`
 * :c:func:`nrf_edgeai_obsv_for_each_metric`
 

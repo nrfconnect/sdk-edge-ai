@@ -114,8 +114,8 @@ ZTEST(obsv_custom_metric, test_register_update_snapshot)
 
 	const float probs[TEST_NUM_CLASSES] = {0.25f, 0.25f, 0.25f, 0.25f};
 
-	nrf_edgeai_obsv_core_update(&ctx, probs);
-	nrf_edgeai_obsv_core_update(&ctx, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
 
 	zassert_equal(ctx.num_inferences, 2U);
 
@@ -151,7 +151,7 @@ ZTEST(obsv_custom_metric, test_custom_alongside_builtin)
 
 	const float probs[TEST_NUM_CLASSES] = {0.25f, 0.25f, 0.25f, 0.25f};
 
-	nrf_edgeai_obsv_core_update(&ctx, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
 
 	zassert_equal(ctx.num_inferences, 1U);
 
@@ -182,7 +182,7 @@ ZTEST(obsv_custom_metric, test_reset_reinitializes_custom)
 
 	const float probs[TEST_NUM_CLASSES] = {0.25f, 0.25f, 0.25f, 0.25f};
 
-	nrf_edgeai_obsv_core_update(&ctx, probs);
+	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
 	zassert_equal(custom_counter, 1U);
 
 	zassert_equal(nrf_edgeai_obsv_core_reset(&ctx), 0);

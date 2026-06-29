@@ -37,7 +37,7 @@ config NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
 
 	  When enabled (and whenever collect can run concurrently with inference),
 	  bind the transport with nrf_edgeai_obsv_memfault_init and drive
-	  inference through nrf_edgeai_obsv_update (see nrf_edgeai_obsv.h)
+	  inference through nrf_edgeai_obsv_update_probs (see nrf_edgeai_obsv.h)
 	  so encode inside collect does not race snapshot collection.
 
 	  collect() allocates a NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ-byte

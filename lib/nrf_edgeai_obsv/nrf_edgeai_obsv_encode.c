@@ -19,9 +19,14 @@
 /* CBOR major type 4 (array), bits [7:5] = 0b100. */
 #define CBOR_MAJOR_TYPE_ARRAY 0x80U
 
-#define OBSV_FORMAT_VERSION	 1
-#define OBSV_TOP_MAP_ELEMENTS	 4
-#define OBSV_MODEL_MAP_ELEMENTS	 3
+/* v2: added "num_features" to the model map, and the "num_features" counter
+ * (FEATURES-stream) to the payload. Additive fields within the 2.x line keep
+ * format_version at 2; the encoder and the CDDL-generated decoder are
+ * regenerated together so in-tree consumers stay in sync.
+ */
+#define OBSV_FORMAT_VERSION	 2
+#define OBSV_TOP_MAP_ELEMENTS	 5
+#define OBSV_MODEL_MAP_ELEMENTS	 4
 #define OBSV_METRIC_MAP_ELEMENTS 3
 
 /* Five nesting levels: top map → metrics list → metric map → data list → row list. */
@@ -76,12 +81,17 @@ size_t nrf_edgeai_obsv_encode_cbor(nrf_edgeai_obsv_core_t *state, uint8_t *buf, 
 	ok = ok && zcbor_tstr_put_lit(zs, "num_inferences");
 	ok = ok && zcbor_uint32_put(zs, state->num_inferences);
 
+	ok = ok && zcbor_tstr_put_lit(zs, "num_features");
+	ok = ok && zcbor_uint32_put(zs, state->num_features);
+
 	ok = ok && zcbor_tstr_put_lit(zs, "model");
 	ok = ok && zcbor_map_start_encode(zs, OBSV_MODEL_MAP_ELEMENTS);
 	ok = ok && zcbor_tstr_put_lit(zs, "id");
 	ok = ok && zcbor_uint32_put(zs, state->model.model_id);
 	ok = ok && zcbor_tstr_put_lit(zs, "num_classes");
 	ok = ok && zcbor_uint32_put(zs, state->model.num_classes);
+	ok = ok && zcbor_tstr_put_lit(zs, "num_features");
+	ok = ok && zcbor_uint32_put(zs, state->model.num_features);
 	ok = ok && zcbor_tstr_put_lit(zs, "version");
 	ok = ok && zcbor_uint32_put(zs, state->model.version);
 	ok = ok && zcbor_map_end_encode(zs, OBSV_MODEL_MAP_ELEMENTS);

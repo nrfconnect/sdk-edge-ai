@@ -31,7 +31,7 @@ struct nrf_edgeai_obsv_ctx;
  * CBOR-encoded observability payload when the packetizer drains data.
  * Must be called once before nrf_edgeai_obsv_memfault_collect().
  *
- * Encode during collect is serialized against @ref nrf_edgeai_obsv_update using
+ * Encode during collect is serialized against @ref nrf_edgeai_obsv_update_probs using
  * @p ctx->lock so snapshots cannot race inference on this context.
  *
  * @param ctx Initialized observability context (@c nrf_edgeai_obsv_init).

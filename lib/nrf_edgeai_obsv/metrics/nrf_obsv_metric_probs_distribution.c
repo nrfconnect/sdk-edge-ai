@@ -10,6 +10,8 @@
 
 #include <nrf_edgeai_obsv/nrf_edgeai_obsv_metrics.h>
 
+#include "nrf_obsv_dist_binning.h"
+
 #define METRIC_PROBS_DISTRIBUTION_VERSION 1
 
 /*
@@ -33,32 +35,19 @@ static inline uint32_t *pd_counts(const _nrf_obsv_pd_hdr_t *hdr)
 	return (uint32_t *)(pd_edges(hdr) + hdr->bin_num - 1);
 }
 
-static void compute_uniform_edges(float *edges, uint8_t bin_num)
+static void pd_clear(void *priv)
 {
-	const float step = 1.0f / bin_num;
+	const _nrf_obsv_pd_hdr_t *hdr = priv;
 
-	for (int i = 0; i < bin_num - 1; i++) {
-		edges[i] = (i + 1) * step;
-	}
-}
-
-static uint8_t find_bin(const float *edges, uint8_t bin_num, float val)
-{
-	for (uint8_t b = 0; b < bin_num - 1; b++) {
-		if (val < edges[b]) {
-			return b;
-		}
-	}
-	return bin_num - 1;
+	memset(pd_counts(hdr), 0, sizeof(uint32_t) * (size_t)hdr->num_classes * hdr->bin_num);
 }
 
 static void pd_init(const void *p_cfg, void *priv)
 {
 	const _nrf_obsv_pd_hdr_t *hdr = priv;
 	float *edges = pd_edges(hdr);
-	uint32_t *counts = pd_counts(hdr);
 
-	memset(counts, 0, sizeof(uint32_t) * (size_t)hdr->num_classes * hdr->bin_num);
+	pd_clear(priv);
 
 	if (p_cfg != NULL) {
 		const nrf_obsv_probs_dist_cfg_t *c = p_cfg;
@@ -67,7 +56,7 @@ static void pd_init(const void *p_cfg, void *priv)
 		return;
 	}
 
-	compute_uniform_edges(edges, hdr->bin_num);
+	_dist_uniform_edges(edges, hdr->bin_num);
 }
 
 static void pd_update(const float *p_probs, uint16_t n, void *priv)
@@ -79,15 +68,9 @@ static void pd_update(const float *p_probs, uint16_t n, void *priv)
 	assert(n <= hdr->num_classes);
 
 	for (uint16_t i = 0; i < n; i++) {
-		counts[(size_t)i * hdr->bin_num + find_bin(edges, hdr->bin_num, p_probs[i])]++;
+		counts[(size_t)i * hdr->bin_num +
+		       _dist_find_bin(edges, hdr->bin_num, p_probs[i])]++;
 	}
-}
-
-static void pd_clear(void *priv)
-{
-	const _nrf_obsv_pd_hdr_t *hdr = priv;
-
-	memset(pd_counts(hdr), 0, sizeof(uint32_t) * (size_t)hdr->num_classes * hdr->bin_num);
 }
 
 static void pd_snapshot(nrf_edgeai_obsv_metric_snapshot_t *out, void *priv)
@@ -117,6 +100,7 @@ void nrf_edgeai_obsv_metric_pd_create(nrf_edgeai_obsv_metric_t *metric, void *bu
 		.clear    = pd_clear,
 		.finalize = NULL,
 		.snapshot = pd_snapshot,
+		.source   = NRF_EDGEAI_OBSV_SOURCE_PROBS,
 		.priv     = buf,
 	};
 }

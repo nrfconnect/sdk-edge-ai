@@ -12,15 +12,18 @@ obsv-list = [+ obsv-payload]
 
 obsv-payload = {
     "format_version" : uint,    ; schema version; bumped on breaking changes
-    "num_inferences" : uint,    ; inferences consumed since last reset
+    "num_inferences" : uint,    ; inferences (PROBS stream) consumed since last reset
+    "num_features"   : uint,    ; feature-vector updates (FEATURES stream) consumed
+                                ; since last reset (a counter; NOT obsv-model.num_features)
     "model"          : obsv-model,
     "metrics"        : [* obsv-metric],
 }
 
 obsv-model = {
-    "id"          : uint,       ; application-defined model identifier
-    "num_classes" : uint,       ; output class count the model produces
-    "version"     : uint,       ; application-defined model version
+    "id"           : uint,      ; application-defined model identifier
+    "num_classes"  : uint,      ; output class count the model produces
+    "num_features" : uint,      ; input feature vector length; 0 if unused
+    "version"      : uint,      ; application-defined model version
 }
 
 ; One element per registered metric. Keys are abbreviated because this map
@@ -36,3 +39,17 @@ obsv-metric = {
 ; enum nrf_edgeai_obsv_metric_id in nrf_edgeai_obsv_metrics.h.
 ;   2 = transition matrix (num_classes x num_classes)
 ;   3 = probability distribution (num_classes x num_bins)
+;   4 = prediction switching rate (1 x 2: [switches, comparisons];
+;       SwitchRate = switches / comparisons)
+;   5 = probability entropy distribution (1 x num_bins; histogram of
+;       normalized Shannon entropy H(p)/ln(N) over [0, 1])
+;   6 = probability top-2 margin distribution (1 x num_bins; histogram of
+;       margin = p_top1 - p_top2 over [0, 1]; low margin = ambiguous)
+;   7 = mel energy descriptor (4 x num_bins; per-frame stats over input mel
+;       features, rows: 0 mean energy, 1 max energy, 2 dynamic range (q95-q05),
+;       3 floor-bin ratio; features normalized to [0, 1] by a configured
+;       percentile range [p01, p99], all rows histogrammed over [0, 1])
+;   8 = mel spectral descriptor (8 x num_bins; per-frame scale-invariant shape
+;       stats over input mel features, rows: 0 low ratio, 1 mid ratio, 2 high
+;       ratio, 3 centroid, 4 spread, 5 entropy, 6 flatness, 7 contrast; all
+;       normalized to [0, 1])

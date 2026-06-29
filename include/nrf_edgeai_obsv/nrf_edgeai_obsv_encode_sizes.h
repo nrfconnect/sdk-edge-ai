@@ -64,13 +64,15 @@
  * Fixed outer document overhead, traced from nrf_edgeai_obsv_encode_cbor():
  *
  * @code
- *   map(4) {                              -- _CBOR_SMALL_HDR (count=4 <= 23)
+ *   map(5) {                              -- _CBOR_SMALL_HDR (count=5 <= 23)
  *     "format_version" : uint32,          -- _CBOR_TSTR + _U32
  *     "num_inferences" : uint32,          -- _CBOR_TSTR + _U32
- *     "model" : map(3) {                  -- _CBOR_TSTR + _CBOR_SMALL_HDR
- *       "id"          : uint32,           -- _CBOR_TSTR + _U32
- *       "num_classes" : uint32,           -- _CBOR_TSTR + _U32
- *       "version"     : uint32,           -- _CBOR_TSTR + _U32
+ *     "num_features"   : uint32,          -- _CBOR_TSTR + _U32
+ *     "model" : map(4) {                  -- _CBOR_TSTR + _CBOR_SMALL_HDR
+ *       "id"           : uint32,          -- _CBOR_TSTR + _U32
+ *       "num_classes"  : uint32,          -- _CBOR_TSTR + _U32
+ *       "num_features" : uint32,          -- _CBOR_TSTR + _U32
+ *       "version"      : uint32,          -- _CBOR_TSTR + _U32
  *     },
  *     "metrics" : [... metrics ...]       -- _CBOR_TSTR + _CBOR_LARGE_HDR
  *   }
@@ -80,10 +82,12 @@
 	(_CBOR_SMALL_HDR                                                       \
 	 + _CBOR_TSTR("format_version") + _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST \
 	 + _CBOR_TSTR("num_inferences") + _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST \
+	 + _CBOR_TSTR("num_features")   + _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST \
 	 + _CBOR_TSTR("model") + _CBOR_SMALL_HDR                               \
-	   + _CBOR_TSTR("id")          + _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST  \
-	   + _CBOR_TSTR("num_classes") + _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST  \
-	   + _CBOR_TSTR("version")     + _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST  \
+	   + _CBOR_TSTR("id")           + _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST \
+	   + _CBOR_TSTR("num_classes")  + _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST \
+	   + _CBOR_TSTR("num_features") + _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST \
+	   + _CBOR_TSTR("version")      + _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST \
 	 + _CBOR_TSTR("metrics") + _CBOR_LARGE_HDR)
 
 /**
@@ -140,6 +144,70 @@
 #define _NRF_EDGEAI_OBSV_ENCODE_TM 0
 #endif
 
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PREDICTION_SWITCHING_RATE)
+
+/* Prediction switching rate emits a fixed 1 x 2 row: [switches, comparisons]. */
+#define _NRF_EDGEAI_OBSV_ENCODE_PSR                                  \
+	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                \
+	 (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                  \
+	  (2U * _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST)))
+
+#else
+#define _NRF_EDGEAI_OBSV_ENCODE_PSR 0
+#endif
+
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST)
+
+/* Entropy distribution emits a single 1 x bin_num histogram row. */
+#define _NRF_EDGEAI_OBSV_ENCODE_PED                                            \
+	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                          \
+	 (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                            \
+	  (CONFIG_NRF_EDGEAI_OBSV_PROBS_ENTROPY_DIST_BIN_NUM *                 \
+	   _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST)))
+
+#else
+#define _NRF_EDGEAI_OBSV_ENCODE_PED 0
+#endif
+
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST)
+
+/* Top-2 margin distribution emits a single 1 x bin_num histogram row. */
+#define _NRF_EDGEAI_OBSV_ENCODE_PMD                                            \
+	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                          \
+	 (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                            \
+	  (CONFIG_NRF_EDGEAI_OBSV_PROBS_TOP2_MARGIN_DIST_BIN_NUM *             \
+	   _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST)))
+
+#else
+#define _NRF_EDGEAI_OBSV_ENCODE_PMD 0
+#endif
+
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC)
+
+/* Mel energy descriptor emits 4 rows (mean, max, dynamic range, floor) x bin_num. */
+#define _NRF_EDGEAI_OBSV_ENCODE_MED                                            \
+	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                          \
+	 (4U * (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                      \
+		(CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_BIN_NUM *              \
+		 _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST))))
+
+#else
+#define _NRF_EDGEAI_OBSV_ENCODE_MED 0
+#endif
+
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_SPECTRAL_DESC)
+
+/* Mel spectral descriptor emits 8 rows (band ratios + spectral shape) x bin_num. */
+#define _NRF_EDGEAI_OBSV_ENCODE_MSD                                            \
+	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                          \
+	 (8U * (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                      \
+		(CONFIG_NRF_EDGEAI_OBSV_MEL_SPECTRAL_DESC_BIN_NUM *            \
+		 _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST))))
+
+#else
+#define _NRF_EDGEAI_OBSV_ENCODE_MSD 0
+#endif
+
 /**
  * @brief CBOR encoded size budget for one custom metric.
  *
@@ -174,7 +242,10 @@
  */
 #define NRF_EDGEAI_OBSV_ENCODE_MAX_SIZE                                          \
 	(_NRF_EDGEAI_OBSV_ENCODE_OUTER_FIXED + _NRF_EDGEAI_OBSV_ENCODE_PD +      \
-	 _NRF_EDGEAI_OBSV_ENCODE_TM + CONFIG_NRF_EDGEAI_OBSV_EXTRA_ENCODE_BYTES)
+	 _NRF_EDGEAI_OBSV_ENCODE_TM + _NRF_EDGEAI_OBSV_ENCODE_PSR +              \
+	 _NRF_EDGEAI_OBSV_ENCODE_PED + _NRF_EDGEAI_OBSV_ENCODE_PMD +             \
+	 _NRF_EDGEAI_OBSV_ENCODE_MED + _NRF_EDGEAI_OBSV_ENCODE_MSD +             \
+	 CONFIG_NRF_EDGEAI_OBSV_EXTRA_ENCODE_BYTES)
 
 /**
  * @brief CBOR overhead for the outer array header in an obsv-list.

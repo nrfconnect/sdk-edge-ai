@@ -32,6 +32,12 @@ config NRF_EDGEAI_OBSV_EXTRA_ENCODE_BYTES
 	  encode buffer are sized from NRF_EDGEAI_OBSV_ENCODE_MAX_SIZE,
 	  so they grow automatically.
 
+config NRF_EDGEAI_OBSV_DIST_BINNING
+	bool
+	help
+	  Selected by distribution-style metrics that share the histogram-binning
+	  helpers in metrics/nrf_obsv_dist_binning.c. Not user-selectable.
+
 config NRF_EDGEAI_OBSV_MAX_CLASSES
 	int "Maximum number of model output classes"
 	default 4
@@ -43,6 +49,7 @@ config NRF_EDGEAI_OBSV_MAX_CLASSES
 
 config NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION
 	bool "Probability distribution metric"
+	select NRF_EDGEAI_OBSV_DIST_BINNING
 	help
 	  Per-class histogram of inference probability values.
 
@@ -61,5 +68,125 @@ config NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX
 	bool "Transition matrix metric"
 	help
 	  Tracks class-to-class transitions across consecutive inferences.
+
+config NRF_EDGEAI_OBSV_METRIC_PREDICTION_SWITCHING_RATE
+	bool "Prediction switching rate metric"
+	help
+	  Tracks temporal instability: how often the dominant class (argmax)
+	  changes between consecutive inferences. Exposes two raw counters,
+	  [switches, comparisons]; the rate is derived off-device as
+	  SwitchRate = switches / comparisons.
+
+config NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST
+	bool "Probability entropy distribution metric"
+	select NRF_EDGEAI_OBSV_DIST_BINNING
+	help
+	  Histogram of prediction uncertainty. Per inference, computes the
+	  Shannon entropy H(p) = -sum p_i*ln(p_i) of the output probability
+	  vector, normalizes it to [0, 1] by ln(num_classes), and bins it.
+	  High entropy indicates uncertain predictions or out-of-distribution
+	  inputs.
+
+if NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST
+
+config NRF_EDGEAI_OBSV_PROBS_ENTROPY_DIST_BIN_NUM
+	int "Number of entropy histogram bins"
+	default 4
+	range 2 16
+	help
+	  Number of bins in the normalized-entropy histogram.
+
+endif # NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST
+
+config NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST
+	bool "Probability top-2 margin distribution metric"
+	select NRF_EDGEAI_OBSV_DIST_BINNING
+	help
+	  Histogram of prediction decisiveness. Per inference, computes the
+	  margin = p_top1 - p_top2 between the two largest class probabilities
+	  and bins it over [0, 1]. A low margin indicates ambiguous predictions.
+
+if NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST
+
+config NRF_EDGEAI_OBSV_PROBS_TOP2_MARGIN_DIST_BIN_NUM
+	int "Number of margin histogram bins"
+	default 4
+	range 2 16
+	help
+	  Number of bins in the top-2 margin histogram.
+
+endif # NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST
+
+config NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC
+	bool "Mel energy descriptor metric"
+	select NRF_EDGEAI_OBSV_DIST_BINNING
+	help
+	  Per-frame summary statistics of the mel feature vector (mean energy,
+	  max energy, dynamic range, floor-bin ratio), each accumulated into a
+	  [0, 1] histogram. Feature values are normalized into [0, 1] against a
+	  configured percentile range [p01, p99] (see SCALE_P01/P99_MILLI below).
+	  Consumes the input-feature stream (NRF_EDGEAI_OBSV_SOURCE_FEATURES).
+
+if NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC
+
+config NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_BIN_NUM
+	int "Number of histogram bins per descriptor row"
+	default 4
+	range 2 16
+	help
+	  Number of bins in each descriptor histogram row.
+
+config NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_MAX_FEATURES
+	int "Maximum mel feature vector length"
+	default 40
+	range 1 64
+	help
+	  Upper bound on the feature vector length. Sizes a stack scratch buffer
+	  used for the per-frame quantile (dynamic range) computation.
+
+config NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P01_MILLI
+	int "Lower scaling percentile (p01), in thousandths of a feature unit"
+	default 0
+	help
+	  Lower bound used to normalize feature values into [0, 1]:
+	  x_norm = clamp((x - p01) / (p99 - p01), 0, 1). Expressed in thousandths
+	  (e.g. 40 means 0.040 in feature units, where features are the float mel
+	  values passed to nrf_edgeai_obsv_update_features). Measure p01 offline on
+	  a representative dataset. Kconfig has no float type, hence the x1000 int.
+
+config NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P99_MILLI
+	int "Upper scaling percentile (p99), in thousandths of a feature unit"
+	default 4000
+	help
+	  Upper bound used to normalize feature values into [0, 1]; see
+	  NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P01_MILLI. Must be greater than the
+	  lower bound. The default (4.0) is a rough order-of-magnitude placeholder
+	  for the mel feature range and MUST be recalibrated against a representative
+	  dataset: a value far below the true p99 saturates the mean/max/range rows
+	  into the top bin, while a value far above it collapses them into bin 0.
+
+endif # NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC
+
+config NRF_EDGEAI_OBSV_METRIC_MEL_SPECTRAL_DESC
+	bool "Mel spectral descriptor metric"
+	select NRF_EDGEAI_OBSV_DIST_BINNING
+	help
+	  Per-frame spectral-shape statistics of the mel feature vector
+	  (low/mid/high band energy ratios, spectral centroid, spread, entropy,
+	  flatness, contrast), each accumulated into a [0, 1] histogram. All rows
+	  are scale-invariant (they divide by total energy or mean), so no
+	  amplitude calibration is needed. Uses logf/expf/sqrtf (libm). Consumes
+	  the input-feature stream (NRF_EDGEAI_OBSV_SOURCE_FEATURES).
+
+if NRF_EDGEAI_OBSV_METRIC_MEL_SPECTRAL_DESC
+
+config NRF_EDGEAI_OBSV_MEL_SPECTRAL_DESC_BIN_NUM
+	int "Number of histogram bins per descriptor row"
+	default 4
+	range 2 16
+	help
+	  Number of bins in each descriptor histogram row.
+
+endif # NRF_EDGEAI_OBSV_METRIC_MEL_SPECTRAL_DESC
 
 endif # NRF_EDGEAI_OBSV

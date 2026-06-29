@@ -63,8 +63,9 @@ It is a CBOR array with one entry per observed model:
     [
       {
         "format_version": ...,
-        "num_inferences": ...,
-        "model": { "id": ..., "num_classes": ..., "version": ... },
+        "num_inferences": ...,   # PROBS-stream updates since last reset
+        "num_features": ...,     # FEATURES-stream updates since last reset (counter)
+        "model": { "id": ..., "num_classes": ..., "num_features": ..., "version": ... },
         "metrics": [
           { "id": metric_id, "v": metric_version, "d": [[...], [...], ...] },
           ...
@@ -166,11 +167,13 @@ def _decode_one_obsv_payload(decoded: dict, validate: bool = False) -> dict[str,
     result: dict[str, Any] = {
         "format_version": decoded.get("format_version"),
         "num_inferences": decoded.get("num_inferences"),
+        "num_features": decoded.get("num_features"),
         "model": decoded.get("model"),
         "metrics": [],
     }
 
     n = decoded.get("num_inferences")
+    nf = decoded.get("num_features")
     for metric in decoded.get("metrics", []):
         if not isinstance(metric, dict):
             continue
@@ -196,6 +199,10 @@ def _decode_one_obsv_payload(decoded: dict, validate: bool = False) -> dict[str,
                 entry["total_transitions"] = total
                 # First inference has no predecessor => (n - 1) transitions total.
                 entry["matches_n_minus_one"] = total == max(n - 1, 0)
+            if mid in (7, 8) and isinstance(nf, int):
+                # FEATURES-stream descriptors histogram one entry per feature
+                # update, so every row must total num_features.
+                entry["row_sums_match_num_features"] = all(s == nf for s in row_sums)
 
         result["metrics"].append(entry)
 
