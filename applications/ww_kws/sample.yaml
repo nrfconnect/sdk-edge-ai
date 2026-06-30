@@ -22,3 +22,11 @@ tests:
       - nrf54lm20dk/nrf54lm20b/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+
+  applications.ww_kws.zrelease:
+    extra_args:
+      - FILE_SUFFIX=release
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp

@@ -133,6 +133,26 @@ Configuration options
 .. options-from-kconfig::
    :show-type:
 
+Build types
+===========
+
+For build type overview and guidance on how to run them, see `Custom build types`_ and `Providing CMake options`_.
+The application supports the following build types:
+
+.. list-table:: Wakeword and Keyword Spotting build types
+   :widths: auto
+   :header-rows: 1
+
+   * - Build type
+     - File name
+     - Description
+   * - Debug (default)
+     - :file:`prj.conf`
+     - Debug version of the application with logging and assertions enabled.
+   * - Release
+     - :file:`prj_release.conf`
+     - Release version of the application with logging disabled and compiler optimizations.
+
 Building and running
 ********************
 
