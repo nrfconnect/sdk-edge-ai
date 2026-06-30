@@ -10,8 +10,12 @@
 #include <zephyr/logging/log.h>
 #include <nrf_edgeai/nrf_edgeai.h>
 #include <nrf_edgeai/rt/nrf_edgeai_runtime_aux.h>
+#include <nrf_edgeai_obsv/nrf_edgeai_obsv.h>
+#include <nrf_edgeai_obsv/nrf_edgeai_obsv_memfault.h>
+#include <nrf_edgeai_obsv/nrf_edgeai_obsv_metrics.h>
 
 #include "../dmic.h"
+#include "../model_utils.h"
 #include "kws.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 
@@ -65,6 +69,59 @@ BUILD_ASSERT(KEYWORDS_COUNT == ARRAY_SIZE(keyword_detection_ctxs),
 
 static nrf_edgeai_t *kws_model;
 
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
+
+static nrf_edgeai_obsv_ctx_t kws_ctx;
+
+static uint32_t kws_pd_buf[NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(KEYWORDS_COUNT) / sizeof(uint32_t)];
+static uint32_t kws_tm_buf[NRF_EDGEAI_OBSV_TM_STORAGE_BYTES(KEYWORDS_COUNT) / sizeof(uint32_t)];
+static nrf_edgeai_obsv_metric_t kws_pd;
+static nrf_edgeai_obsv_metric_t kws_tm;
+
+BUILD_ASSERT(CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES >= KEYWORDS_COUNT,
+	     "Observability will not fit all keyword spotting classes");
+
+static int kws_obsv_init(nrf_edgeai_t *model)
+{
+	nrf_edgeai_obsv_model_info_t info;
+	int err;
+
+	err = obsv_model_info_from_model(model, KEYWORDS_COUNT, &info);
+	if (err) {
+		return err;
+	}
+
+	err = nrf_edgeai_obsv_init(&kws_ctx, &info);
+	if (err) {
+		LOG_ERR("Observability init failed (err %d)", err);
+		return err;
+	}
+
+	nrf_edgeai_obsv_metric_pd_create(&kws_pd, kws_pd_buf, KEYWORDS_COUNT);
+	nrf_edgeai_obsv_metric_tm_create(&kws_tm, kws_tm_buf, KEYWORDS_COUNT);
+	err = nrf_edgeai_obsv_register(&kws_ctx, &kws_pd, NULL);
+	if (err) {
+		LOG_ERR("PD metric registration failed (err %d)", err);
+		return err;
+	}
+
+	err = nrf_edgeai_obsv_register(&kws_ctx, &kws_tm, NULL);
+	if (err) {
+		LOG_ERR("TM metric registration failed (err %d)", err);
+		return err;
+	}
+
+	err = nrf_edgeai_obsv_memfault_init(&kws_ctx);
+	if (err) {
+		LOG_ERR("Memfault transport init failed (err %d)", err);
+		return err;
+	}
+
+	return 0;
+}
+
+#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY) */
+
 int kws_init(void)
 {
 	kws_model = nrf_edgeai_user_model_kws();
@@ -78,6 +135,10 @@ int kws_init(void)
 		LOG_ERR("Model initialization failed (err %d)", err);
 		return -ENOENT;
 	}
+
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
+	return kws_obsv_init(kws_model);
+#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY) */
 
 	return 0;
 }
@@ -162,6 +223,14 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 	}
 
 	kws_postprocess(prediction);
+
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
+	err = nrf_edgeai_obsv_update(&kws_ctx,
+				     kws_model->decoded_output.classif.probabilities.p_f32);
+	if (err) {
+		LOG_ERR("Failed to update obsv (err %d)", err);
+	}
+#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY) */
 
 	return 0;
 }

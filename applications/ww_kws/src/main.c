@@ -12,6 +12,7 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/logging/log.h>
 
+#include "ble/ble_mds.h"
 #include "control_output.h"
 #include "dmic.h"
 #include "kws/kws.h"
@@ -137,6 +138,11 @@ int main(void)
 		if (err) {
 			return err;
 		}
+	}
+
+	err = init_app_ble();
+	if (err) {
+		return err;
 	}
 
 	LOG_INF("Initialization completed, check output on VCOM0");

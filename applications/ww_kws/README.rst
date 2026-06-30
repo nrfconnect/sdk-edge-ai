@@ -8,6 +8,7 @@ Wakeword and Keyword Spotting
    :depth: 2
 
 This application demonstrates wakeword detection and keyword spotting from a digital microphone stream using |EAILib| and Axon-based inference.
+It also features integrated model observability, allowing you to monitor and analyze inference metrics during operation.
 
 Application overview
 ********************
@@ -36,6 +37,18 @@ After period without any keywords spotted the application switches back to wakew
 
 You can also configure the application to stay in one of these stages using the application-specific Kconfig options.
 
+Observability
+=============
+
+The application collects runtime observability metrics using the :ref:`nrf_edgeai_obsv_lib`.
+Enable the ``CONFIG_MODELS_OBSERVABILITY`` Kconfig option to wire metrics into the bundled models.
+Each model stage owns its observability context and Memfault transport binding in the :file:`src/ww/wakeword.c` and :file:`src/kws/kws.c` files.
+
+The wakeword stage only registers the :ref:`nrf_edgeai_obsv_metrics_built_in_probability` metric.
+The keyword spotting stage registers the :ref:`nrf_edgeai_obsv_metrics_built_in_probability` and :ref:`nrf_edgeai_obsv_metrics_built_in_transition` metrics.
+
+Metrics are collected every 24 hours (see the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT`` Kconfig option) and sent to the `Memfault`_ using `Custom Data Recording <Memfault Custom Data Recording_>`_ registered by the :ref:`nrf_edgeai_obsv_lib`.
+
 Replacing models
 ================
 
@@ -59,6 +72,7 @@ You can replace the bundled models using the `Text to Wake Word Detection <Nordi
       1. Replace the files inside :file:`src/kws/nrf_edgeai_generated` directory with files downloaded from `Nordic Edge AI Lab`_.
       #. In :c:func:`kws_init`, set the ``kws_model`` pointer using the model getter from the generated files.
       #. Update the ``keyword_class`` enumeration and ``keyword_detection_ctxs`` array in the :file:`src/kws/kws.c` file to match keywords spotted by selected model.
+      #. When using the observability feature, set the ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` Kconfig option to number of keywords spotted plus 2 for auxiliary classes.
       #. Adjust the Kconfig options to tune keyword spotting postprocessing to selected model.
 
 Requirements
@@ -133,6 +147,16 @@ Configuration options
 .. options-from-kconfig::
    :show-type:
 
+Additional configuration
+========================
+
+Check and configure the following library options that are used by the application:
+
+* ``CONFIG_MEMFAULT_NCS_PROJECT_KEY`` - A key to your `Memfault`_ project
+* ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` - Number of classes the observed model predicts
+* ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC`` - Interval of automatic metrics collection.
+  For testing, use a shorter interval and enable server debug mode for the device in the  `Memfault`_ dashboard.
+
 Build types
 ===========
 
@@ -152,6 +176,17 @@ The application supports the following build types:
    * - Release
      - :file:`prj_release.conf`
      - Release version of the application with logging disabled and compiler optimizations.
+
+Configuration files
+===================
+
+The application provides predefined :file:`observability.conf` configuration file for enabling observability.
+This file enables the ``CONFIG_MODELS_OBSERVABILITY`` Kconfig option, Bluetooth LE, Memfault Diagnostic Service and required dependencies to provide observability for bundled models.
+
+Check `Providing CMake options`_ and use :makevar:`EXTRA_CONF_FILE` variable to include this configuration file.
+
+.. note::
+   Set the ``CONFIG_MEMFAULT_NCS_PROJECT_KEY`` Kconfig option to your `Memfault`_ project key to successfully send metrics to Memfault.
 
 Building and running
 ********************
@@ -174,6 +209,19 @@ Testing
 #. Observe that **LED1**  blinks for one second.
 #. Stop speaking and wait for timeout.
 
+If you have enabled the model observability, also complete the following steps:
+
+#. Connect gateway to your device.
+   Ready-to-use gateways are `nRF Connect Device Manager`_ or `Memfault WebBluetooth Client`_.
+   Check `Peripheral MDS sample <Peripheral MDS sample: Testing_>`_ for details.
+#. Wait for a duration set by the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC`` Kconfig option.
+#. In a web browser, navigate to `Memfault`_.
+#. In the left-hand menu, go to :guilabel:`CDR Payloads`.
+#. Select a CDR payload from your test device with "edgeai_observability" as reason.
+   You can filter the list of CDR payloads by device name and time.
+#. Download the payload for metrics analysis.
+   Payload format is defined in the :file:`lib/nrf_edgeai_obsv/obsv.cddl` file.
+
 Application output
 ==================
 
@@ -193,6 +241,7 @@ Dependencies
 This application uses the following |EAI| library:
 
 * :ref:`nrf_edgeai_lib`
+* :ref:`nrf_edgeai_obsv_lib`
 
 This application uses the following Zephyr libraries:
 

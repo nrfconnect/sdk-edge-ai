@@ -30,3 +30,20 @@ tests:
       - nrf54lm20dk/nrf54lm20b/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+
+  applications.ww_kws.obsv.zdebug:
+    extra_args:
+      - EXTRA_CONF_FILE="observability.conf"
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+
+  applications.ww_kws.obsv.zrelease:
+    extra_args:
+      - FILE_SUFFIX=release
+      - EXTRA_CONF_FILE="observability.conf"
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp

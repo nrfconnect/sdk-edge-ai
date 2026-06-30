@@ -64,6 +64,27 @@ config KWS_EMA_ALPHA
 	  Coefficient for new entries in exponential moving average calculation for average class
 	  probability. The value is expressed in units of 1/1000.
 
+config MODELS_OBSERVABILITY
+	bool "Edge AI observability metrics"
+	depends on NRF_EDGEAI_OBSV
+	depends on NRF_EDGEAI_OBSV_MEMFAULT
+	depends on NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION
+	depends on NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX || APP_MODE_WW_ONLY
+	depends on NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS >= 2 || !APP_MODE_WW_GATED_KWS
+	help
+	  Wire observability into the bundled models. Each model file owns its observability context
+	  and Memfault transport binding.
+
+if MODELS_OBSERVABILITY
+
+config MODELS_OBSERVABILITY_MDS
+	def_bool y
+	depends on BT_MDS
+	depends on BT_SMP
+	depends on NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
+
+endif # MODELS_OBSERVABILITY
+
 endmenu
 
 source "Kconfig.zephyr"
