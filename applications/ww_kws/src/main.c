@@ -125,14 +125,18 @@ int main(void)
 		return err;
 	}
 
-	err = ww_init();
-	if (err) {
-		return err;
+	if (IS_ENABLED(CONFIG_APP_MODE_WW_GATED_KWS) || IS_ENABLED(CONFIG_APP_MODE_WW_ONLY)) {
+		err = ww_init();
+		if (err) {
+			return err;
+		}
 	}
 
-	err = kws_init();
-	if (err) {
-		return err;
+	if (IS_ENABLED(CONFIG_APP_MODE_WW_GATED_KWS) || IS_ENABLED(CONFIG_APP_MODE_KWS_ONLY)) {
+		err = kws_init();
+		if (err) {
+			return err;
+		}
 	}
 
 	LOG_INF("Initialization completed, check output on VCOM0");
