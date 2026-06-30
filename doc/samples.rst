@@ -26,3 +26,4 @@ There are also additional samples demonstrating the integration of `Edge Impulse
    samples/edge_ai.rst
    samples/edge_impulse.rst
    samples/axon.rst
+   samples/other.rst

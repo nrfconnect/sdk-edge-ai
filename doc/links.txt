@@ -69,6 +69,7 @@
 .. _`Nordic UART Service (NUS)`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/libraries/bluetooth/services/nus.html
 .. _`HID Service`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/libraries/bluetooth/services/hids.html
 .. _`Simulated sensor driver`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/drivers/sensor_sim.html
+.. _`Configuring devicetree`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/hardware/index.html#configuring-devicetree
 
 .. _`Environment Variables`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/develop/env_vars.html
 .. _`Workspace application`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/develop/west/workspaces.html#t2_star_topology_application_is_the_manifest_repository
@@ -78,6 +79,10 @@
 .. _`Sensor`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/hardware/peripherals/sensor/index.html#sensor
 .. _`TensorFlow Lite for Microcontrollers: Hello World`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/samples/modules/tflite-micro/hello_world/README.html#tflite-hello-world
 .. _`Video`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/hardware/peripherals/video.html
+.. _`Use devicetree overlays`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/build/dts/howtos.html#use-devicetree-overlays
+.. _`CRC`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/services/crc/index.html
+.. _`Ring Buffers`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/kernel/data_structures/ring_buffers.html
+.. _`UART`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/hardware/peripherals/uart.html
 
 .. ### Source: memfault.com
 
