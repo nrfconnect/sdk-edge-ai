@@ -14,6 +14,7 @@
 .. _`nRF Edge Impulse`: https://www.nordicsemi.com/Products/Development-tools/nRF-Edge-Impulse
 .. _`nRF Programmer`: https://www.nordicsemi.com/Products/Development-tools/nRF-Programmer
 .. _`Nordic Edge AI Lab ready-to-use models`: https://app.lab.nordicsemi.com/#/ready-to-use-models
+.. _`nRF Connect Device Manager`: https://www.nordicsemi.com/Products/Development-tools/nrf-connect-device-manager
 
 .. ### Source: docs.nordicsemi.com (not versioned)
 
@@ -69,6 +70,7 @@
 .. _`Nordic UART Service (NUS)`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/libraries/bluetooth/services/nus.html
 .. _`HID Service`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/libraries/bluetooth/services/hids.html
 .. _`Simulated sensor driver`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/drivers/sensor_sim.html
+.. _`Peripheral MDS sample: Testing`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/samples/bluetooth/peripheral_mds/README.html#testing
 
 .. _`Environment Variables`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/develop/env_vars.html
 .. _`Workspace application`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/develop/west/workspaces.html#t2_star_topology_application_is_the_manifest_repository
@@ -119,6 +121,8 @@
 .. _`Setting up Podman container`: https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/podman_tutorial.md#running-a-sample-container
 .. _`edge-impulse-sdk-zephyr`: https://github.com/edgeimpulse/edge-impulse-sdk-zephyr
 .. _`MCUnet`: https://github.com/mit-han-lab/mcunet
+
+.. _`Memfault WebBluetooth Client`: https://memfault.github.io/web-ble-example/
 
 .. ## External sources:
 
