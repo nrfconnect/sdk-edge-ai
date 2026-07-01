@@ -1,4 +1,4 @@
-/* 2026-03-05T09:24:58.380929 */
+/* 2026-05-20T16:18:07.907650 */
 /*
 * Copyright (c) 2026 Nordic Semiconductor ASA
 * SPDX-License-Identifier: Apache-2.0
@@ -7,6 +7,7 @@
 #include "nrf_edgeai_user_types.h"
 #include <nrf_edgeai/nrf_edgeai_platform.h>
 #include <nrf_edgeai/rt/private/nrf_edgeai_interfaces.h>
+#include <assert.h>
 
 //////////////////////////////////////////////////////////////////////////////
 /* Nordic EdgeAI Lab Solution ID and Runtime Version */
@@ -191,5 +192,3 @@ uint32_t nrf_edgeai_user_model_neuton_size_36025(void)
 
     return model_meta_size;
 }
-
-
