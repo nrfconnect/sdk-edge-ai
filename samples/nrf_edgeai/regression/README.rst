@@ -63,12 +63,11 @@ In your :file:`prj.conf` file, the following settings are applied to ensure the 
 .. code-block:: ini
 
    CONFIG_NRF_EDGEAI=y
-   CONFIG_NEWLIB_LIBC=y
    CONFIG_FPU=y
    CONFIG_CONSOLE=y
    CONFIG_UART_CONSOLE=y
    CONFIG_RTT_CONSOLE=n
-   CONFIG_NEWLIB_LIBC_FLOAT_PRINTF=y
+   CONFIG_PICOLIBC_IO_FLOAT=y
 
 .. include:: /includes/include_kconfig_edgeai.txt
 
