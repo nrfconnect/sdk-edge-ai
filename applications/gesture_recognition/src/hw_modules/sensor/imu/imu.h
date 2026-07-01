@@ -86,6 +86,10 @@ status_t imu_init(const imu_config_t *p_config, generic_cb_t data_ready_cb);
 /**
  * @brief Read IMU sensor data
  *
+ * In normal mode fetches one sample from the sensor.
+ * In FIFO batch mode (CONFIG_IMU_FIFO_BATCH) pops the next buffered
+ * sample and returns STATUS_UNAVAILABLE when the ring buffer is empty.
+ *
  * @param p_data        Pointer to data to be filled @ref imu_data_t
  *
  * @return Operation status @ref status_t
