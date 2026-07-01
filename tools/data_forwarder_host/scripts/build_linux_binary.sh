@@ -65,9 +65,12 @@ python -m pip install --upgrade pip wheel >/dev/null
 python -m pip install "." "pyinstaller>=6.6"
 
 # 3. Clean previous artefacts and build from the spec.
+#    -I (isolated): the package root contains a `platform/` subpackage; without
+#    isolation, CWD on sys.path shadows stdlib `platform` and PyInstaller dies
+#    with "module 'platform' has no attribute 'system'" / missing `win32_ver`.
 echo ">> Building single-file binary"
 rm -rf build dist
-pyinstaller --noconfirm --clean data_forwarder_host.spec
+python -I -m PyInstaller --noconfirm --clean data_forwarder_host.spec
 
 BIN="$PKG_DIR/dist/data-forwarder-host"
 if [ -x "$BIN" ]; then
