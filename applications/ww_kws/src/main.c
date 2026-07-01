@@ -12,6 +12,7 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/logging/log.h>
 
+#include "ble/ble_mds.h"
 #include "control_output.h"
 #include "dmic.h"
 #include "kws/kws.h"
@@ -125,12 +126,21 @@ int main(void)
 		return err;
 	}
 
-	err = ww_init();
-	if (err) {
-		return err;
+	if (IS_ENABLED(CONFIG_APP_MODE_WW_GATED_KWS) || IS_ENABLED(CONFIG_APP_MODE_WW_ONLY)) {
+		err = ww_init();
+		if (err) {
+			return err;
+		}
 	}
 
-	err = kws_init();
+	if (IS_ENABLED(CONFIG_APP_MODE_WW_GATED_KWS) || IS_ENABLED(CONFIG_APP_MODE_KWS_ONLY)) {
+		err = kws_init();
+		if (err) {
+			return err;
+		}
+	}
+
+	err = init_app_ble();
 	if (err) {
 		return err;
 	}
