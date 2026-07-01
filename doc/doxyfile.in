@@ -959,6 +959,8 @@ WARN_LOGFILE           =
 INPUT                  = @DOCSET_SOURCE_BASE@/applications \
                          @DOCSET_SOURCE_BASE@/include \
                          @DOCSET_SOURCE_BASE@/lib \
+                         @DOCSET_SOURCE_BASE@/samples/data_forwarder/src/protocol \
+                         @DOCSET_SOURCE_BASE@/samples/data_forwarder/src/sensor/data_fwd_sensor.h \
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses

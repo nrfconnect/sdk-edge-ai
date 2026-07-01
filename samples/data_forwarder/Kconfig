@@ -1,0 +1,116 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Data Forwarder sample"
+
+menuconfig DATA_FWD_PROTO
+	bool "Data Forwarder protocol"
+	select ENTROPY_GENERATOR if ENTROPY_NODE_ENABLED
+
+if DATA_FWD_PROTO
+
+if !DATA_FWD_PROTO_ASCII_MODE
+
+config DATA_FWD_PROTO
+	depends on ZCBOR
+	depends on COBS
+
+endif
+
+config DATA_FWD_PROTO_RING_BUF_SIZE
+	int "Ring buffer size in bytes"
+	default 4096
+	help
+	  Size of protocol producer queue in bytes.
+
+config DATA_FWD_PROTO_ASCII_MODE
+	bool "ASCII output mode"
+	help
+	  Replaces CBOR binary framing with CSV output limited to just sensor values.
+
+config DATA_FWD_PROTO_CRC
+	bool "Append CRC-16 to every frame"
+	depends on !DATA_FWD_PROTO_ASCII_MODE
+	depends on CRC
+	help
+	  Enabled for integrity checking on host side.
+
+config DATA_FWD_PROTO_META_RESEND_S
+	int "Session info resend period (s)"
+	range 1 600
+	default 5
+	help
+	  Periodic resend of session-info for late joining hosts.
+
+config DATA_FWD_PROTO_MAX_CHANNELS
+	int "Max number of sensor channels"
+	range 1 255
+	help
+	  Derived maximum count for zcbor generated arrays.
+
+config DATA_FWD_PROTO_INT32_VALUES
+	bool "32-bit integers for channel values"
+	help
+	  Use 32-bit integers instead of floats in the protocol.
+
+endif
+
+choice DATA_FWD_TRANSPORT
+	prompt "Transport"
+	default DATA_FWD_TRANSPORT_BLE_NUS
+
+config DATA_FWD_TRANSPORT_BLE_NUS
+	bool "BLE NUS"
+	depends on BT
+	depends on BT_PERIPHERAL
+	depends on BT_NUS
+
+config DATA_FWD_TRANSPORT_UART
+	bool "UART"
+	depends on SERIAL
+	depends on UART_ASYNC_API
+
+endchoice
+
+choice DATA_FWD_SENSOR
+	prompt "Main sensor used in Data Forwarder"
+
+config DATA_FWD_SENSOR_BMI270
+	bool "BMI270 (6-axis IMU)"
+	depends on SENSOR
+	depends on BMI270
+
+config DATA_FWD_SENSOR_ADXL367
+	bool "ADXL367 (3-axis accelerometer)"
+	depends on SENSOR
+	depends on ADXL367
+
+config DATA_FWD_SENSOR_BME688
+	bool "BME688 (environmental)"
+	depends on SENSOR
+	depends on BME680
+
+endchoice
+
+config DATA_FWD_EXTRA_SENSOR_BME688
+	bool "Append BME688 (duplication as upsampling)"
+	depends on DATA_FWD_SENSOR_BMI270 || DATA_FWD_SENSOR_ADXL367
+	depends on SENSOR
+	depends on BME680
+	help
+	  Extend streamed samples with temperature, humidity, and pressure from BME688 at its native
+	  rate by upsampling (repeating the latest reading between fetches).
+
+config DATA_FWD_PROTO_MAX_CHANNELS
+	default 9 if DATA_FWD_SENSOR_BMI270 && DATA_FWD_EXTRA_SENSOR_BME688
+	default 6 if DATA_FWD_SENSOR_BMI270
+	default 6 if DATA_FWD_SENSOR_ADXL367 && DATA_FWD_EXTRA_SENSOR_BME688
+	default 3 if DATA_FWD_SENSOR_ADXL367
+	default 3 if DATA_FWD_SENSOR_BME688
+
+endmenu
+
+source "Kconfig.zephyr"
