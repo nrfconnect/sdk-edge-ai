@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_kws_transposed
- * Axon Neural Network Compiler Version: 1.2.0
+ * Axon Neural Network Compiler Version: 1.3.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -85,7 +85,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_0_0 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -137,6 +137,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_0_0 = {
   .layer_ndx = 0,
   .input0_layer_ndx = -1,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=1) && (AXON_LAYER_TEST_STOP_LAYER>=1)
@@ -218,7 +220,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_1_1 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -267,6 +269,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_1_1 = {
   .layer_ndx = 1,
   .input0_layer_ndx = 0,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=2) && (AXON_LAYER_TEST_STOP_LAYER>=2)
@@ -415,7 +419,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_2_2 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -464,6 +468,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_2_2 = {
   .layer_ndx = 2,
   .input0_layer_ndx = 1,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=3) && (AXON_LAYER_TEST_STOP_LAYER>=3)
@@ -545,7 +551,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_3_3 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -594,6 +600,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_3_3 = {
   .layer_ndx = 3,
   .input0_layer_ndx = 2,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=4) && (AXON_LAYER_TEST_STOP_LAYER>=4)
@@ -742,7 +750,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_4_4 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -791,6 +799,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_4_4 = {
   .layer_ndx = 4,
   .input0_layer_ndx = 3,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=5) && (AXON_LAYER_TEST_STOP_LAYER>=5)
@@ -872,7 +882,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_5_5 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -921,6 +931,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_5_5 = {
   .layer_ndx = 5,
   .input0_layer_ndx = 4,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=6) && (AXON_LAYER_TEST_STOP_LAYER>=6)
@@ -1069,7 +1081,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_6_6 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -1118,6 +1130,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_6_6 = {
   .layer_ndx = 6,
   .input0_layer_ndx = 5,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=7) && (AXON_LAYER_TEST_STOP_LAYER>=7)
@@ -1199,7 +1213,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_7_7 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -1248,6 +1262,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_7_7 = {
   .layer_ndx = 7,
   .input0_layer_ndx = 6,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=8) && (AXON_LAYER_TEST_STOP_LAYER>=8)
@@ -1396,7 +1412,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_8_8 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -1445,6 +1461,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_8_8 = {
   .layer_ndx = 8,
   .input0_layer_ndx = 7,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=9) && (AXON_LAYER_TEST_STOP_LAYER>=9)
@@ -1464,7 +1482,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_9_9 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -1513,6 +1531,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_9_9 = {
   .layer_ndx = 9,
   .input0_layer_ndx = 8,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=10) && (AXON_LAYER_TEST_STOP_LAYER>=10)
@@ -1536,7 +1556,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_10_10 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -1585,6 +1605,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_10_10 = {
   .layer_ndx = 10,
   .input0_layer_ndx = 9,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=11) && (AXON_LAYER_TEST_STOP_LAYER>=11)
@@ -1597,7 +1619,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed_
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_11_11 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
     .inputs = {
@@ -1646,6 +1668,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_kws_transposed_11_11 = {
   .layer_ndx = 11,
   .input0_layer_ndx = 10,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #define MODEL_tinyml_kws_transposed_FIRST_COMPUTE_LAYER (0)

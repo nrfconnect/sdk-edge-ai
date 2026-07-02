@@ -21,7 +21,7 @@ extern uint8_t ML_LOGGING_DISABLE_PRINT;
  * For example
  * int32_t my_int32_vector[10]=
  * {1,-1,3,0,7,-1000,-10,8,9,10}
- * 
+ *
  * @param[in] name Symbol name of the vector.
  * @param[in] vector_ptr pointer to the vector to print.
  * @param[in] count Number of elements in vector_ptr to print.
@@ -63,18 +63,18 @@ void nrf_axon_print_int16_circ_buffer(const char *name, const int16_t *vector_pt
 void nrf_axon_print_int8_vector(const char *name, const int8_t *vector_ptr, uint32_t count);
 
 /**
- * @brief prints an vector in decimal. 
+ * @brief prints an vector in decimal.
  * @param[in] element_size determines the type of the input (4=int32, 2=int16, 1=int8)
  */
 void nrf_axon_print_vector(const char *name, const uint8_t *vector_ptr, uint32_t count, uint8_t element_size);
 
 /**
  * @brief Group of funcitons for comparing 2 vectors
- * 
+ *
  * Prints a message in the format:
  * verify <msg>...
  * Logs an error whenever abs(output[ndx] - expected_output[ndx]) > margin.
- * 
+ *
  * @param[in] msg Initial message to display before starting the comparison.
  * @param[in] output Test values.
  * @param[in] expected_output Values output should match.
@@ -82,17 +82,27 @@ void nrf_axon_print_vector(const char *name, const uint8_t *vector_ptr, uint32_t
  * @param[in] margin Maximum tolerated difference betwee output[ndx] and expected_output[ndx]. 0 means exact match.
  * @retval Number of mismatches.
  */
-int nrf_axon_verify_vectors(const char *msg, const int32_t *output, const int32_t* expected_output, uint32_t count, uint32_t margin);
-int nrf_axon_verify_vectors_8(const char *msg, const int8_t *output, const int8_t* expected_output, uint32_t count, uint32_t margin);
-int nrf_axon_verify_vectors_16(const char *msg, const int16_t *output, const int16_t* expected_output, uint32_t count, uint32_t margin);
-int nrf_axon_verify_scalar_output_stride(const char *msg, const int32_t *output, const int32_t expected_output, uint32_t count, uint32_t margin, uint8_t extra_output_stride);
-int nrf_axon_verify_vectors_output_stride(const char *msg, const int32_t *output, const int32_t* expected_output, uint32_t count, uint32_t margin, uint8_t extra_output_stride);
+int nrf_axon_verify_vectors(const char *msg, const int32_t *output,
+	const int32_t *expected_output, uint32_t count, uint32_t margin);
+int nrf_axon_verify_vectors_8(const char *msg, const int8_t *output,
+	const int8_t *expected_output, uint32_t count, uint32_t margin);
+int nrf_axon_verify_vectors_16(const char *msg, const int16_t *output,
+	const int16_t *expected_output, uint32_t count, uint32_t margin);
+int nrf_axon_verify_scalar_output_stride(const char *msg, const int32_t *output,
+	const int32_t expected_output, uint32_t count, uint32_t margin,
+	uint8_t extra_output_stride);
+int nrf_axon_verify_vectors_output_stride(const char *msg, const int32_t *output,
+	const int32_t *expected_output, uint32_t count, uint32_t margin,
+	uint8_t extra_output_stride);
+int nrf_axon_verify_vectors_expected_stride(const char *msg, const int32_t *output,
+	const int32_t *expected_output, uint32_t count, uint32_t margin,
+	uint8_t extra_expected_stride, uint8_t saturate_bits);
 
 /**
  * @brief Controls a GPIO that has been designated as the Axon profiling GPIO in the board.dts file.
  */
-void nrf_axon_platform_set_profiling_gpio();
-void nrf_axon_platform_clear_profiling_gpio();
+void nrf_axon_platform_set_profiling_gpio(void);
+void nrf_axon_platform_clear_profiling_gpio(void);
 
 
 #ifdef __cplusplus

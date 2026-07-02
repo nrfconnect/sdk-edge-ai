@@ -201,7 +201,7 @@ def get_max_min_ndx(array):
     min_value, min_index = np.min(array), np.unravel_index(
         np.argmin(array), array.shape)
     print(
-        f"max @index {max_value, max_index } min @index {min_value, min_index}")
+        f"max @index {max_value, max_index} min @index {min_value, min_index}")
     return max_index[0], min_index[0]
 
 
