@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_vww
- * Axon Neural Network Compiler Version: 1.2.0
+ * Axon Neural Network Compiler Version: 1.3.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -490,7 +490,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_0_0[1252] =
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_0_0 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -542,6 +542,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_0_0 = {
   .layer_ndx = 0,
   .input0_layer_ndx = -1,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=1) && (AXON_LAYER_TEST_STOP_LAYER>=1)
@@ -567,7 +569,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_1_1[60] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_1_1 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -616,6 +618,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_1_1 = {
   .layer_ndx = 1,
   .input0_layer_ndx = 0,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=2) && (AXON_LAYER_TEST_STOP_LAYER>=2)
@@ -725,7 +729,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_2_2[301] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_2_2 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -774,6 +778,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_2_2 = {
   .layer_ndx = 2,
   .input0_layer_ndx = 1,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=3) && (AXON_LAYER_TEST_STOP_LAYER>=3)
@@ -807,7 +813,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_3_3[84] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_3_3 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -856,6 +862,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_3_3 = {
   .layer_ndx = 3,
   .input0_layer_ndx = 2,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=4) && (AXON_LAYER_TEST_STOP_LAYER>=4)
@@ -940,7 +948,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_4_4[235] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_4_4 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -989,6 +997,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_4_4 = {
   .layer_ndx = 4,
   .input0_layer_ndx = 3,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=5) && (AXON_LAYER_TEST_STOP_LAYER>=5)
@@ -1038,7 +1048,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_5_5[132] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_5_5 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1087,6 +1097,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_5_5 = {
   .layer_ndx = 5,
   .input0_layer_ndx = 4,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=6) && (AXON_LAYER_TEST_STOP_LAYER>=6)
@@ -1241,7 +1253,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_6_6[439] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_6_6 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1290,6 +1302,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_6_6 = {
   .layer_ndx = 6,
   .input0_layer_ndx = 5,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=7) && (AXON_LAYER_TEST_STOP_LAYER>=7)
@@ -1339,7 +1353,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_7_7[132] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_7_7 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1388,6 +1402,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_7_7 = {
   .layer_ndx = 7,
   .input0_layer_ndx = 6,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=8) && (AXON_LAYER_TEST_STOP_LAYER>=8)
@@ -1469,7 +1485,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_8_8[227] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_8_8 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1518,6 +1534,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_8_8 = {
   .layer_ndx = 8,
   .input0_layer_ndx = 7,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=9) && (AXON_LAYER_TEST_STOP_LAYER>=9)
@@ -1599,7 +1617,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_9_9[228] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_9_9 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1648,6 +1666,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_9_9 = {
   .layer_ndx = 9,
   .input0_layer_ndx = 8,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=10) && (AXON_LAYER_TEST_STOP_LAYER>=10)
@@ -1796,7 +1816,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_10_10[427] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_10_10 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1845,6 +1865,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_10_10 = {
   .layer_ndx = 10,
   .input0_layer_ndx = 9,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=11) && (AXON_LAYER_TEST_STOP_LAYER>=11)
@@ -1926,7 +1948,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_11_11[228] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_11_11 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1975,6 +1997,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_11_11 = {
   .layer_ndx = 11,
   .input0_layer_ndx = 10,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=12) && (AXON_LAYER_TEST_STOP_LAYER>=12)
@@ -2120,7 +2144,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_12_12[419] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_12_12 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -2169,6 +2193,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_12_12 = {
   .layer_ndx = 12,
   .input0_layer_ndx = 11,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=13) && (AXON_LAYER_TEST_STOP_LAYER>=13)
@@ -2314,7 +2340,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_13_13[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_13_13 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -2363,6 +2389,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_13_13 = {
   .layer_ndx = 13,
   .input0_layer_ndx = 12,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=14) && (AXON_LAYER_TEST_STOP_LAYER>=14)
@@ -2639,7 +2667,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_14_14[811] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_14_14 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -2688,6 +2716,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_14_14 = {
   .layer_ndx = 14,
   .input0_layer_ndx = 13,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=15) && (AXON_LAYER_TEST_STOP_LAYER>=15)
@@ -2833,7 +2863,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_15_15[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_15_15 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -2882,6 +2912,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_15_15 = {
   .layer_ndx = 15,
   .input0_layer_ndx = 14,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=16) && (AXON_LAYER_TEST_STOP_LAYER>=16)
@@ -3158,7 +3190,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_16_16[811] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_16_16 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -3207,6 +3239,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_16_16 = {
   .layer_ndx = 16,
   .input0_layer_ndx = 15,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=17) && (AXON_LAYER_TEST_STOP_LAYER>=17)
@@ -3352,7 +3386,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_17_17[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_17_17 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -3401,6 +3435,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_17_17 = {
   .layer_ndx = 17,
   .input0_layer_ndx = 16,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=18) && (AXON_LAYER_TEST_STOP_LAYER>=18)
@@ -3677,7 +3713,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_18_18[811] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_18_18 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -3726,6 +3762,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_18_18 = {
   .layer_ndx = 18,
   .input0_layer_ndx = 17,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=19) && (AXON_LAYER_TEST_STOP_LAYER>=19)
@@ -3871,7 +3909,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_19_19[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_19_19 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -3920,6 +3958,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_19_19 = {
   .layer_ndx = 19,
   .input0_layer_ndx = 18,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=20) && (AXON_LAYER_TEST_STOP_LAYER>=20)
@@ -4196,7 +4236,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_20_20[811] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_20_20 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -4245,6 +4285,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_20_20 = {
   .layer_ndx = 20,
   .input0_layer_ndx = 19,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=21) && (AXON_LAYER_TEST_STOP_LAYER>=21)
@@ -4390,7 +4432,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_21_21[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_21_21 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -4439,6 +4481,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_21_21 = {
   .layer_ndx = 21,
   .input0_layer_ndx = 20,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=22) && (AXON_LAYER_TEST_STOP_LAYER>=22)
@@ -4715,7 +4759,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_22_22[811] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_22_22 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -4764,6 +4808,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_22_22 = {
   .layer_ndx = 22,
   .input0_layer_ndx = 21,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=23) && (AXON_LAYER_TEST_STOP_LAYER>=23)
@@ -4909,7 +4955,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_23_23[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_23_23 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -4958,6 +5004,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_23_23 = {
   .layer_ndx = 23,
   .input0_layer_ndx = 22,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=24) && (AXON_LAYER_TEST_STOP_LAYER>=24)
@@ -5231,7 +5279,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_24_24[803] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_24_24 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -5280,6 +5328,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_24_24 = {
   .layer_ndx = 24,
   .input0_layer_ndx = 23,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=25) && (AXON_LAYER_TEST_STOP_LAYER>=25)
@@ -5553,7 +5603,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_25_25[804] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_25_25 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -5602,6 +5652,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_25_25 = {
   .layer_ndx = 25,
   .input0_layer_ndx = 24,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=26) && (AXON_LAYER_TEST_STOP_LAYER>=26)
@@ -5875,7 +5927,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_26_26[803] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_26_26 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -5924,6 +5976,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_26_26 = {
   .layer_ndx = 26,
   .input0_layer_ndx = 25,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=27) && (AXON_LAYER_TEST_STOP_LAYER>=27)
@@ -5943,7 +5997,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_27_27[36] =
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_27_27 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -5992,6 +6046,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_27_27 = {
   .layer_ndx = 27,
   .input0_layer_ndx = 26,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=28) && (AXON_LAYER_TEST_STOP_LAYER>=28)
@@ -6015,7 +6071,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_28_28[61] =
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_28_28 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -6064,6 +6120,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_28_28 = {
   .layer_ndx = 28,
   .input0_layer_ndx = 27,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=29) && (AXON_LAYER_TEST_STOP_LAYER>=29)
@@ -6076,7 +6134,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_29_29[10] =
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_29_29 = {
   .base = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -6125,6 +6183,8 @@ const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_29_29 = {
   .layer_ndx = 29,
   .input0_layer_ndx = 28,
   .input1_layer_ndx = -1,
+  .input_batch_cnt = 1,
+  .output_batch_cnt = 1,
 };
 #endif
 #define MODEL_tinyml_vww_FIRST_COMPUTE_LAYER (0)

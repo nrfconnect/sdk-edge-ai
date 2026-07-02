@@ -343,6 +343,8 @@ class CpuReshape(CpuExtension):
         """
         options = operator_object.SetOperatorOptionObject(
             tflite.ReshapeOptions())
+        # new_shape = options.NewShapeAsNumpy()
+        # operator_object.SetOperatorMetaAttributesString(f"new_shape : {new_shape}")
         # determine if this is a reshape operator
         if operator_object.operation_detail is not None:
             if operator_object.operation_detail['operator_support'] == ops_options.OperatorSupportEnum.PASSTHROUGH:
@@ -388,8 +390,12 @@ class CpuReshape(CpuExtension):
             operator_object.operators_detail_graph[op_index]['inputs'][0]).shape)
         op_of_reshape = ops_options.TensorShape(operator_object.tflite_interpreter.get_tensor(
             operator_object.operators_detail_graph[op_index]['outputs'][0]).shape)
-        shape = operator_object.tflite_interpreter.get_tensor(
-            operator_object.operators_detail_graph[op_index]['inputs'][1])
+        # as some reshape have the shape in as an attribute
+        if len(operator_object.operators_detail_graph[op_index]['inputs']) > 1:
+            shape = operator_object.tflite_interpreter.get_tensor(
+                operator_object.operators_detail_graph[op_index]['inputs'][1])
+        else:
+            shape = op_of_reshape.shape
         if cls.determine_reshape_is_passthrough(ip_to_reshape, op_of_reshape, shape, op_list, op_index):
             return ops_options.OperatorSupportEnum.PASSTHROUGH
         return ops_options.OperatorSupportEnum.SUPPORTED
@@ -397,7 +403,6 @@ class CpuReshape(CpuExtension):
 
 class CpuResizeNearestNeighbor(CpuExtension):
     cpu_extension_axon_enum_string = "ResizeNearestNeigbor"
-
 
     def HandleOperatorOptions(self, operator_object):
         """
@@ -412,9 +417,11 @@ class CpuResizeNearestNeighbor(CpuExtension):
             tflite.ResizeNearestNeighborOptions())
         align_corners = options.AlignCorners()
         half_pixel_centers = options.HalfPixelCenters()
-        operator_object.SetOperatorMetaAttributesString(f"align_corners value : {align_corners}, half_pixel_centers value : {half_pixel_centers}")
+        operator_object.SetOperatorMetaAttributesString(
+            f"align_corners value : {align_corners}, half_pixel_centers value : {half_pixel_centers}")
         # @FIXME!! REMOVE THE 175; IT'S JUST THERE TO CONFIRM THAT THE 2 PRECEDING 0s ARE FOR THIS PURPOSE.
-        operator_object.FillAdditionalCpuAttributes([align_corners, half_pixel_centers, 175])
+        operator_object.FillAdditionalCpuAttributes(
+            [align_corners, half_pixel_centers, 175])
         # getting quantization parameters
         ip_q, w_q, bias_q = operator_object.GetIpQuantizationParameters()
         op_q = operator_object.GetOpQuantizationParameters()
@@ -448,6 +455,7 @@ class CpuResizeNearestNeighbor(CpuExtension):
     @classmethod
     def DetermineCpuExtensionSupport(cls, operator_object, op_list, op_index):
         return ops_options.OperatorSupportEnum.SUPPORTED
+
 
 """
 add the function to get the custom attributes and other options for a specific cpu operator 

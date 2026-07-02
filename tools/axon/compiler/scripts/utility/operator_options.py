@@ -346,6 +346,48 @@ class OperatorOptions:
                 return tensor.transpose(1, 0)
         return tensor
 
+    def dilate_tensor_if_needed(self, tensor):
+        dilate_y = self.dilation_y
+        dilate_x = self.dilation_x
+        if ((self.dilation_y <= 1) or (self.op_shape.height <= 1) or (self.dilation_y == self.option.StrideH())):
+            dilate_y = 1
+        if ((self.dilation_x <= 1) or (self.op_shape.width <= 1) or (self.dilation_x == self.option.StrideW())):
+            dilate_x = 1
+        # no need to dilate the tensor here, compiler can handle it
+        if (dilate_y <= 1) and (dilate_x <= 1):
+            return tensor
+        else:
+            tensor_shape = TensorShape(np.array(tensor.shape))
+            if tensor_shape.shape_size < 3:
+                print(
+                    f"dilate_tensor_if_needed: error: unsupported tensor shape size {tensor_shape.shape_size}")
+
+            count = tensor_shape.shape[0]
+            height_original = tensor_shape.shape[-3]
+            width_original = tensor_shape.shape[-2]
+            channels = tensor_shape.shape[-1]
+            height_dilated = height_original
+            width_dilated = width_original
+            if (dilate_y > 1):
+                height_dilated = (height_original-1)*self.dilation_y + 1
+            if (dilate_x > 1):
+                width_dilated = (width_original-1)*self.dilation_x + 1
+
+            if tensor_shape.shape_size == 4:
+                tensor_dilated = np.zeros(
+                    (count, height_dilated, width_dilated, channels), dtype=tensor.dtype)
+                tensor_dilated[:, ::dilate_y, ::dilate_x, :] = tensor
+            elif tensor_shape.shape_size == 3:
+                tensor_dilated = np.zeros(
+                    (height_dilated, width_dilated, channels), dtype=tensor.dtype)
+                tensor_dilated[::dilate_y, ::dilate_x, :] = tensor
+
+            if (dilate_y > 1):
+                self.dilation_y = 1
+            if (dilate_x > 1):
+                self.dilation_x = 1
+            return tensor_dilated
+
     def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
         self.initialize_all_class_variables()
         # now throw errors here directly as operation calling this init are passthrough operators, mostly
@@ -388,7 +430,8 @@ class OperatorOptions:
             self.ip_q = copy.deepcopy(
                 tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
             self.kernel_shape = TensorShape(
-                tensor_details[operator.InputsAsNumpy()[1]]['shape'])  # may not be kernel
+                # may not be kernel
+                tensor_details[operator.InputsAsNumpy()[1]]['shape'])
             self.w_q = tensor_details[self.ip_ndxs[1]
                                       ]['quantization_parameters']
         elif (self.input_count == 3):
@@ -397,9 +440,11 @@ class OperatorOptions:
             self.ip_q = copy.deepcopy(
                 tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
             self.kernel_shape = TensorShape(
-                tensor_details[operator.InputsAsNumpy()[1]]['shape'])  # may not be kernel
+                # may not be kernel
+                tensor_details[operator.InputsAsNumpy()[1]]['shape'])
             self.bias_shape = TensorShape(
-                tensor_details[operator.InputsAsNumpy()[2]]['shape'])  # may not be bias
+                # may not be bias
+                tensor_details[operator.InputsAsNumpy()[2]]['shape'])
             self.w_q = tensor_details[self.ip_ndxs[1]
                                       ]['quantization_parameters']
             self.bias_q = tensor_details[self.ip_ndxs[2]
@@ -410,7 +455,8 @@ class OperatorOptions:
             self.ip_q = copy.deepcopy(
                 tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
             self.kernel_shape = TensorShape(
-                tensor_details[operator.InputsAsNumpy()[1]]['shape'])  # is begin
+                # is begin
+                tensor_details[operator.InputsAsNumpy()[1]]['shape'])
             self.bias_shape = TensorShape(
                 tensor_details[operator.InputsAsNumpy()[2]]['shape'])  # is end
             self.w_q = tensor_details[self.ip_ndxs[1]
@@ -418,7 +464,8 @@ class OperatorOptions:
             self.bias_q = tensor_details[self.ip_ndxs[2]
                                          ]['quantization_parameters']
             self.stride_shape = TensorShape(
-                tensor_details[operator.InputsAsNumpy()[3]]['shape'])  # is strides
+                # is strides
+                tensor_details[operator.InputsAsNumpy()[3]]['shape'])
             self.stride_q = tensor_details[operator.InputsAsNumpy(
             )[3]]['quantization_parameters']  # is strides
         else:
@@ -687,12 +734,13 @@ class OperatorOptions:
             if (kernel_shape.shape_size == 4):
                 op_channel = kernel_shape.batch
                 x = [-np.sum(kernel_tensor[j].astype(int)*self.ip_q_zeropoint[0])
-                    for j in range(op_channel)]
-            elif( kernel_shape.shape_size == 2):#this is one where it has no channel information, for example a FC
-              op_dim = kernel_shape.height
-              x = [-np.sum(kernel_tensor[j].astype(int)*self.ip_q_zeropoint[0])
-                    for j in range(op_dim)]
-            
+                     for j in range(op_channel)]
+            # this is one where it has no channel information, for example a FC
+            elif (kernel_shape.shape_size == 2):
+                op_dim = kernel_shape.height
+                x = [-np.sum(kernel_tensor[j].astype(int)*self.ip_q_zeropoint[0])
+                     for j in range(op_dim)]
+
             b_prime = self.bias_tensor.astype(int) + x
             self.b_prime_tensor = b_prime.astype(np.int32)
         else:
@@ -917,7 +965,9 @@ class OperatorOptions:
         #         return self.filter_tensor.transpose(0, 2, 1, 3)
         #     elif filter_shape.shape_size == 2:
         #         return self.filter_tensor.transpose(1, 0)
-        return self.transpose_tensor_if_needed(self.filter_tensor, self.transpose_kernel)
+        tensor = self.transpose_tensor_if_needed(
+            self.filter_tensor, self.transpose_kernel)
+        return tensor
 
     def GetBPrimeTensor(self):
         if not self.custom_cpu_op:
@@ -1076,29 +1126,32 @@ class ConvolutionOptions(OperatorOptions):
             previous_pad_op = operator_graph[previous_op_index]
             # get the padding details
             self.ops_ip_shape = TensorShape(np.array(
-                previous_pad_op['operator_options'].GetInputShapes()[0]))  # only the input shape
+                # only the input shape
+                previous_pad_op['operator_options'].GetInputShapes()[0]))
             self.pad_info = copy.deepcopy(
                 previous_pad_op['operator_options'].GetOperationPaddings())
             self.previous_pad = True
-        return self.previous_pad 
+        return self.previous_pad
 
     def check_for_pad_before_convolution(self, operator_graph, operator_graph_info, current_op_ndx):
         previous_op_index = SupportedOperators.get_index_from_tf_index(
             operator_graph, operator_graph_info['index']-1)
         previous_valid_axon_op_ndx = self.get_previous_valid_axon_operator_index(
-                operator_graph, current_op_ndx)
-        if previous_op_index == 0 :
-            self.set_flag_if_previous_op_is_pad(operator_graph,previous_op_index)
+            operator_graph, current_op_ndx)
+        if previous_op_index == 0:
+            self.set_flag_if_previous_op_is_pad(
+                operator_graph, previous_op_index)
         elif previous_valid_axon_op_ndx is not None:
             if self.ip_shape != operator_graph[previous_valid_axon_op_ndx]['operator_options'].op_shape:
-                for i in range(previous_op_index, previous_valid_axon_op_ndx, -1) :
-                    if self.set_flag_if_previous_op_is_pad(operator_graph,i) :
+                for i in range(previous_op_index, previous_valid_axon_op_ndx, -1):
+                    if self.set_flag_if_previous_op_is_pad(operator_graph, i):
                         break
         elif previous_valid_axon_op_ndx is None:
             if self.ip_shape != operator_graph[previous_op_index]['operator_options'].op_shape:
-                    for i in range(previous_op_index, 0, -1) :
-                        if self.set_flag_if_previous_op_is_pad(operator_graph,i) :
-                            break
+                for i in range(previous_op_index, 0, -1):
+                    if self.set_flag_if_previous_op_is_pad(operator_graph, i):
+                        break
+
 
 class Conv2dOperatorOptions(ConvolutionOptions):
     multi_channel_input_convolution = False
@@ -1108,7 +1161,7 @@ class Conv2dOperatorOptions(ConvolutionOptions):
     @classmethod
     def get_conv_operator_tflite_options(cls):
         return tflite.Conv2DOptions()
-      
+
     def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
         self.InitOperatorOption(operator_code, operator, operation_detail,
                                 tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper)
@@ -1140,9 +1193,12 @@ class Conv2dOperatorOptions(ConvolutionOptions):
         if operator_graph is not None:
             current_op_ndx = operation_detail['index']
             operator_graph_info = operator_graph[operation_detail['index']]
-            self.check_for_pad_before_convolution(operator_graph, operator_graph_info, current_op_ndx)
+            self.check_for_pad_before_convolution(
+                operator_graph, operator_graph_info, current_op_ndx)
         # get the filter and bias tensor
         self.filter_tensor = tflite_interpreter.get_tensor(self.ip_ndxs[1])
+        self.filter_tensor = self.dilate_tensor_if_needed(self.filter_tensor)
+        self.kernel_shape = TensorShape(self.filter_tensor.shape)
         self.bias_tensor = tflite_interpreter.get_tensor(self.ip_ndxs[2])
 
     def PrintAttributes(self):
@@ -1262,11 +1318,11 @@ class Conv2dOperatorOptions(ConvolutionOptions):
             kernel_shape = TensorShape(kernel_tensor.shape)
             op_channel = kernel_shape.batch
             x = [-np.sum(kernel_tensor[j].astype(int)*self.ip_q_zeropoint[0])
-                for j in range(op_channel)]
+                 for j in range(op_channel)]
             b_prime = self.bias_tensor.astype(int) + x
             self.b_prime_tensor = b_prime.astype(np.int32)
         else:
-            self.b_prime_tensor = np.array([])            
+            self.b_prime_tensor = np.array([])
 
 
 class DepthwiseConv2DOperatorOptions(ConvolutionOptions):
@@ -1298,7 +1354,8 @@ class DepthwiseConv2DOperatorOptions(ConvolutionOptions):
         if operator_graph is not None:
             current_op_ndx = operation_detail['index']
             operator_graph_info = operator_graph[operation_detail['index']]
-            self.check_for_pad_before_convolution(operator_graph, operator_graph_info, current_op_ndx)
+            self.check_for_pad_before_convolution(
+                operator_graph, operator_graph_info, current_op_ndx)
         # get the filter and bias tensor
         self.filter_tensor = tflite_interpreter.get_tensor(self.ip_ndxs[1])
         self.bias_tensor = tflite_interpreter.get_tensor(self.ip_ndxs[2])
@@ -1436,13 +1493,13 @@ class DepthwiseConv2DOperatorOptions(ConvolutionOptions):
             kernel_tensor = self.filter_tensor
             kernel_shape = TensorShape(kernel_tensor.shape)
             op_channel = kernel_shape.depth
-            kernel_tensor = kernel_tensor.transpose(0,3,1,2)[0]
+            kernel_tensor = kernel_tensor.transpose(0, 3, 1, 2)[0]
             x = [-np.sum(kernel_tensor[j].astype(int)*self.ip_q_zeropoint[0])
-                for j in range(op_channel)]
+                 for j in range(op_channel)]
             b_prime = self.bias_tensor.astype(int) + x
             self.b_prime_tensor = b_prime.astype(np.int32)
         else:
-            self.b_prime_tensor = np.array([]) 
+            self.b_prime_tensor = np.array([])
 
 
 class FullyConnectedOperatorOptions(OperatorOptions):
@@ -1577,7 +1634,8 @@ class FullyConnectedOperatorOptions(OperatorOptions):
             "["+info_string+"_FILTER_HEIGHT]["+info_string+"_FILTER_WIDTH]={\n"
         for h in range(tensor.shape[0]):
             file_string += np.array2string(tensor[h], separator=',', max_line_width=10000,
-                                           threshold=np.inf).replace('[', '{').replace(']', '}')  # .replace("\n","")
+                                           # .replace("\n","")
+                                           threshold=np.inf).replace('[', '{').replace(']', '}')
             file_string += ",\n"
         file_string = file_string[:-1] + "};"
         return file_string
@@ -1610,11 +1668,11 @@ class FullyConnectedOperatorOptions(OperatorOptions):
     def CalculateBPrime(self):
         if self.bias_tensor.size != 0:
             kernel_tensor = self.filter_tensor
-            kernel_shape = TensorShape(kernel_tensor.shape)        
+            kernel_shape = TensorShape(kernel_tensor.shape)
             op_dim = kernel_shape.height
             x = [-np.sum(kernel_tensor[j].astype(int)*self.ip_q_zeropoint[0])
-                for j in range(op_dim)]
-            
+                 for j in range(op_dim)]
+
             b_prime = self.bias_tensor.astype(int) + x
             self.b_prime_tensor = b_prime.astype(np.int32)
         else:
@@ -2146,7 +2204,7 @@ class PadOptions(OperatorOptions):
                         "CONV_2D"), "No Supported Operation after Pad : ERR_NO_SUPPORTED_OP_AFTER_PAD"
 
     def PrintAttributes(self):
-        self.meta_data = f"padding values (top, bottom) : {self.pad_info.pad_top,self.pad_info.pad_bottom}, (left,right) : {self.pad_info.pad_left,self.pad_info.pad_right}, (front, back) : {self.pad_info.pad_front,self.pad_info.pad_back}"
+        self.meta_data = f"padding values (top, bottom) : {self.pad_info.pad_top, self.pad_info.pad_bottom}, (left,right) : {self.pad_info.pad_left, self.pad_info.pad_right}, (front, back) : {self.pad_info.pad_front, self.pad_info.pad_back}"
         # print(self.meta_data)
         return self.meta_data
 
@@ -2810,6 +2868,66 @@ class OperatorSupportEnum(Enum):
     CONVERTED_PASSTHROUGH = "CONVERTED_PASSTHROUGH"
 
 
+class BatchAndSpaceOptions(OperatorOptions):
+    block_size = None
+
+    def CalculateMultiplierandScaleshift(self):
+        scale_q = self.ip_q['scales']/self.op_q['scales']
+        result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        # error = result[0]
+        scaleshift = result[1]
+        self.scale_multipliers = np.array(
+            [abs(int(np.round((scale_q)*2**scaleshift)))])
+        self.scale_shifts = np.array([scaleshift])
+
+    def GetBlockSize(self):
+        return self.block_size[0], self.block_size[1]
+
+
+class BatchToSpaceNDOptions(BatchAndSpaceOptions):
+    crops = None
+
+    def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, model_wrapper_ffi):
+        self.InitOperatorOption(operator_code, operator, operation_detail,
+                                tensor_details, tflite_interpreter, operator_graph, model_wrapper_ffi)
+        self.option = tflite.BatchToSpaceNDOptions()
+        self.option.Init(self.bytes, self.pos)
+        self.axons_operation_enum = "NRF_AXON_NN_OP_BATCH_TO_SPACE"
+        self.block_size = tflite_interpreter.get_tensor(self.ip_ndxs[1])
+        self.crops = tflite_interpreter.get_tensor(self.ip_ndxs[2])
+        assert len(
+            self.crops) == 2, "BatchToSpace is only supported for HxW dimensions!"
+        self.pad_info.pad_top, self.pad_info.pad_bottom = self.crops[0]
+        self.pad_info.pad_left, self.pad_info.pad_right = self.crops[1]
+
+    def PrintAttributes(self):
+        self.meta_data = f"block size [Spatial_Dimensions] : [{self.block_size[0], self.block_size[1]}], croppings [top, bottom]: [{self.pad_info.pad_top, self.pad_info.pad_bottom}], [left, right] : [{self.pad_info.pad_left, self.pad_info.pad_right}]"
+        # print(self.meta_data)
+        return self.meta_data
+
+
+class SpaceToBatchNDOptions(BatchAndSpaceOptions):
+    pads = None
+
+    def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, model_wrapper_ffi):
+        self.InitOperatorOption(operator_code, operator, operation_detail,
+                                tensor_details, tflite_interpreter, operator_graph, model_wrapper_ffi)
+        self.option = tflite.SpaceToBatchNDOptions()
+        self.option.Init(self.bytes, self.pos)
+        self.axons_operation_enum = "NRF_AXON_NN_OP_SPACE_TO_BATCH"
+        self.block_size = tflite_interpreter.get_tensor(self.ip_ndxs[1])
+        self.pads = tflite_interpreter.get_tensor(self.ip_ndxs[2])
+        assert len(
+            self.pads) == 2, "SpaceToBatch is only supported for HxW dimensions!"
+        self.pad_info.pad_top, self.pad_info.pad_bottom = self.pads[0]
+        self.pad_info.pad_left, self.pad_info.pad_right = self.pads[1]
+
+    def PrintAttributes(self):
+        self.meta_data = f"block size [Spatial_Dimensions] : [{self.block_size[0], self.block_size[1]}], paddings [top, bottom]: [{self.pad_info.pad_top, self.pad_info.pad_bottom}], [left, right] : [{self.pad_info.pad_left, self.pad_info.pad_right}]"
+        # print(self.meta_data)
+        return self.meta_data
+
+
 class SupportedOperators():
     supported_operators = {}
     variable_operators = {}
@@ -2871,6 +2989,8 @@ class SupportedOperators():
                                     tflite.BuiltinOperator.STRIDED_SLICE: StridedSliceOptions,
                                     tflite.BuiltinOperator.SPLIT_V: SplitVOptions,
                                     tflite.BuiltinOperator.MUL: MultiplyOptions,
+                                    tflite.BuiltinOperator.BATCH_TO_SPACE_ND: BatchToSpaceNDOptions,
+                                    tflite.BuiltinOperator.SPACE_TO_BATCH_ND: SpaceToBatchNDOptions,
                                     }
         self.pass_through_operators = [
             tflite.BuiltinOperator.QUANTIZE,
@@ -2996,17 +3116,17 @@ class SupportedOperators():
                 #     if ReshapeOptions.determine_reshape_is_passthrough(ip_to_reshape, op_of_reshape, shape,operation_list, i):
                 #         self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
                 #         self.pass_through_ops_present = True
-                                
+
                 if self.operators_detail_graph[i]["operator_options"] == CpuOperatorOptions:
-                    # by default all the CPU operations are supported 
-                    # but certain operations might be determined to be passthroughs 
+                    # by default all the CPU operations are supported
+                    # but certain operations might be determined to be passthroughs
                     # and this API allows for checking for the same
                     operator_support = cpu_operator_options.DetermineOperatorSupportforCpuExtension(
                         self, self.operators_detail_graph[i]["op_code"], operation_list, i)
                     if operator_support == OperatorSupportEnum.PASSTHROUGH:
                         self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
                         self.pass_through_ops_present = True
-                    elif operator_support == OperatorSupportEnum.VARIABLE:                        
+                    elif operator_support == OperatorSupportEnum.VARIABLE:
                         self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.VARIABLE
                         self.variable_ops_present = True
             elif (operation_code in self.pass_through_operators):
@@ -3177,7 +3297,7 @@ class SupportedOperators():
                         else:
                             raise Exception(
                                 f"{ops['op_name']} @index {ndx} connected to an unsupported operator {new_graph[ops['outputs'][i]]['op_name']}")
-                    logger.debug(f"{ops['op_name']} @index {ops['index']} connects read_variable_op : {read_variable_op['op_name']} and assign_variable_op : {assign_variable_op['op_name']} @ index {read_variable_op['index'],assign_variable_op['index']}")
+                    logger.debug(f"{ops['op_name']} @index {ops['index']} connects read_variable_op : {read_variable_op['op_name']} and assign_variable_op : {assign_variable_op['op_name']} @ index {read_variable_op['index'], assign_variable_op['index']}")
                     # print(f"{ops['op_name']} @index {ops['index']} connects read_variable_op : {read_variable_op['op_name']} and assign_variable_op : {assign_variable_op['op_name']} @ index {read_variable_op['index'],assign_variable_op['index']}")
 
                     # get the write operators in the VAR_HANDLE
@@ -3246,7 +3366,7 @@ class SupportedOperators():
                     # for i, op_o in enumerate(split_op['outputs']):
                     for i, op_t in enumerate(split_op['op_tensors']):
                         new_split_op = copy.deepcopy(split_op)
-                        connecting_op_index = i #this may not always be true
+                        connecting_op_index = i  # this may not always be true
                         """
                         
                         """
@@ -3515,6 +3635,7 @@ class SupportedOperators():
 
 
 class TfLiteAxonGraph(SupportedOperators):
+    tflite_filename = None
     tflite_graph_dict = None
     axon_supported_operators_object = None
     operator_graph_info = None
@@ -3544,15 +3665,15 @@ class TfLiteAxonGraph(SupportedOperators):
         self.tflite_graph_dict['model'] = tflite.Model.GetRootAsModel(buf, 0)
         self.tflite_graph_dict['subgraph'] = self.tflite_graph_dict['model'].Subgraphs(
             0)
+        self.tflite_filename = tflite_filename
         self.tflite_graph_dict['operators_length'] = self.tflite_graph_dict['subgraph'].OperatorsLength(
         )
         self.tflite_graph_dict['interpreter'] = tf.lite.Interpreter(
-            model_path=tflite_filename, experimental_preserve_all_tensors=True)
+            model_path=self.tflite_filename, experimental_preserve_all_tensors=True)
         self.tflite_graph_dict['interpreter'].allocate_tensors()
-        
-        self.multiple_output_model = len(self.get_tflite_output_details()) > 1
 
     def is_tflite_model_multiple_output(self):
+        self.multiple_output_model = len(self.get_tflite_output_details()) > 1
         return self.multiple_output_model
 
     def get_tflite_graph_dict(self):
@@ -3565,6 +3686,12 @@ class TfLiteAxonGraph(SupportedOperators):
         return self.tflite_graph_dict['operators_length']
 
     def get_tflite_interpreter(self):
+        if self.tflite_graph_dict['interpreter'] is not None:
+            # attempting to reset the interpreter
+            self.tflite_graph_dict['interpreter'] = None
+        self.tflite_graph_dict['interpreter'] = tf.lite.Interpreter(
+            model_path=self.tflite_filename, experimental_preserve_all_tensors=True)
+        self.tflite_graph_dict['interpreter'].allocate_tensors()
         return self.tflite_graph_dict['interpreter']
 
     def get_tflite_input_details(self):
@@ -3575,6 +3702,8 @@ class TfLiteAxonGraph(SupportedOperators):
 
     def get_tflite_output_details(self):
         if self.tflite_graph_dict['tflite_outputs'] is None:
+            if self.tflite_graph_dict['interpreter'] is None:
+                self.get_tflite_interpreter()
             self.tflite_graph_dict['tflite_outputs'] = self.tflite_graph_dict['interpreter'].get_output_details(
             )
         return self.tflite_graph_dict['tflite_outputs']
@@ -3663,39 +3792,35 @@ class TfLiteAxonGraph(SupportedOperators):
                 return node
 
     def get_axon_output_op_graph_details(self):
-        op_graph = self.get_axon_operator_graph_info()        
+        op_graph = self.get_axon_operator_graph_info()
         if len(op_graph) == 1:
             return [op_graph[0]]
         axon_output_graph_details = []
         for ndx, node in enumerate(op_graph):
-            if node['axon_op_ops'] == [] and node['axon_layer_num'] >= 0:                
-                #map the tflite output to the axon graph detail
+            if node['axon_op_ops'] == [] and node['axon_layer_num'] >= 0:
+                # map the tflite output to the axon graph detail
                 axon_output_graph_details.append(node)
         return axon_output_graph_details
-    
+
     def get_tflite_axon_output_details_mapping(self):
-        #we need to map the tflite output details with the axon output op graph details
+        # we need to map the tflite output details with the axon output op graph details
         tflite_output_details = self.get_tflite_output_details()
         tflite_output_indices = []
         tflite_output_detail_copy = []
-        for op_details in tflite_output_details :
+        for op_details in tflite_output_details:
             tflite_output_indices.append(op_details['index'])
             tflite_output_detail_copy.append(op_details)
-        #we need to sort this array based on the order of occurence in the axon graph.
-        #look up into the operator details
+        # we need to sort this array based on the order of occurrence in the axon graph.
+        # look up into the operator details
         tflite_output_nodes = []
         tflite_output_mapping = {}
         order = 0
-        for n, nodes in enumerate(self.get_tflite_operator_details()) :
-            if nodes['outputs'].shape[0]!=0 and nodes['outputs'][0] in tflite_output_indices :
-                #this is an output node
+        for n, nodes in enumerate(self.get_tflite_operator_details()):
+            if nodes['outputs'].shape[0] != 0 and nodes['outputs'][0] in tflite_output_indices:
+                # this is an output node
                 tflite_output_nodes.append(nodes)
                 location = tflite_output_indices.index(nodes['outputs'][0])
                 tflite_output_mapping[order] = tflite_output_detail_copy[location]
-                order+=1
-        
+                order += 1
+
         return tflite_output_mapping
-
-
-
-
