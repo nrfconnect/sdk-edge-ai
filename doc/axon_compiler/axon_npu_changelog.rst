@@ -17,6 +17,21 @@ Changelog
 
 See the list of changes for a specific release of the Axon NPU software.
 
+Release 1.3.0  02 Jul 2026
+==========================
+
+* Added:
+
+  * Compiler release 1.3.0
+  * Support depthwise and 2D convolutions for dilation (thorugh Space_to_Batch and Batch_to_Space operators).
+  * TFLite Compiler - Generic classification labels are now added for ``just_labels`` and ``last_layer_vectors`` labels type if you do not provide it.
+
+* Fixed the following items for TFLite Compiler:
+
+  * Handling of 'NewShape' attribute in the RESHAPE Operator.
+  * Classification labels do not require test vectors to be populated in the model header file.
+  * Static assert on the interlayer buffer size now uses "<=" instead of "<".
+
 Release 1.2.1  05 May 2026
 ==========================
 
