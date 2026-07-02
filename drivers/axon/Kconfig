@@ -6,7 +6,7 @@
 
 config NRF_AXON
 	bool "Axon Neural Processing Unit"
-	select NRF_SYS_EVENT
+	select NRF_SYS_EVENT if !SOC_SERIES_NRF92
 
 config NRF_AXON_INTERLAYER_BUFFER_SIZE
 	int "Axon Interlayer buffer size (in bytes)"

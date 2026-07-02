@@ -112,7 +112,8 @@ def scale_error(data_, scaling_shift):
     data_ += 1e-8  # to avoid divide by zero errors
     scaling_shift = np.int32(scaling_shift)
     if bool(np.array(data_).any()):
-        error = (((np.round(data_*(2**scaling_shift)) / (2**scaling_shift))-data_)/(data_) )
+        error = (((np.round(data_*(2**scaling_shift)) /
+                 (2**scaling_shift))-data_)/(data_))
     else:
         error = 0
     return abs(error*100)
@@ -171,7 +172,7 @@ def compare_outputs(tflite_vector, calc_vector, layer_name):
         for e in range(number_of_errors):
             if (len(non_zero) == 3):
                 # print(f"non zero at [{non_zero[0][l],non_zero[1][l],non_zero[2][l]}] tflite : {tflite_vector[non_zero[0][l]][non_zero[1][l]][non_zero[2][l]]} calculated : {calc_vector[non_zero[0][l]][non_zero[1][l]][non_zero[2][l]]} difference {diff_vector[non_zero[0][l]][non_zero[1][l]][non_zero[2][l]]}\n")
-                print_string += f"non zero at [{non_zero[0][e],non_zero[1][e],non_zero[2][e]}] tflite : {tflite_vector[non_zero[0][e]][non_zero[1][e]][non_zero[2][e]]} calculated : {calc_vector[non_zero[0][e]][non_zero[1][e]][non_zero[2][e]]} difference {diff_vector[non_zero[0][e]][non_zero[1][e]][non_zero[2][e]]}\n"
+                print_string += f"non zero at [{non_zero[0][e], non_zero[1][e], non_zero[2][e]}] tflite : {tflite_vector[non_zero[0][e]][non_zero[1][e]][non_zero[2][e]]} calculated : {calc_vector[non_zero[0][e]][non_zero[1][e]][non_zero[2][e]]} difference {diff_vector[non_zero[0][e]][non_zero[1][e]][non_zero[2][e]]}\n"
             elif len(non_zero) == 1:
                 print_string += f"non zero at [{non_zero[0][e]}] tflite : {tflite_vector[non_zero[0][e]]} calculated : {calc_vector[non_zero[0][e]]} difference {diff_vector[non_zero[0][e]]}\n"
     else:
@@ -1703,6 +1704,12 @@ def get_unit_test_model_name(test_op_info_dict):
         model_name = model_name + f"_kernel_{kernel_string}"
         # model_name = model_name + f"_krnl_{kernel_string}"
 
+    if 'DILATION' in test_op_info_dict:
+        dilation_string = get_string_from_array_values(
+            test_op_info_dict['DILATION'])
+        model_name = model_name + f"_dilation_{dilation_string}"
+        # model_name = model_name + f"_dltn_{dilation_string}"
+
     if 'PADDING_TYPE' in test_op_info_dict:
         model_name = model_name + \
             f"_padding_{test_op_info_dict['PADDING_TYPE']}"
@@ -1755,13 +1762,20 @@ def get_unit_test_model_name(test_op_info_dict):
                 test_op_info_dict['BROADCAST_AXIS'])
             model_name = model_name + \
                 f"_broadcast_axis_{broadcast_axis_string}"
-    
+
     if OP_TYPE == "Dense":
         if 'OUT_DIM' in test_op_info_dict:
             out_dim_string = get_string_from_array_values(
                 test_op_info_dict['OUT_DIM'])
             model_name = model_name + \
                 f"_out_dim_{out_dim_string}"
+
+    if OP_TYPE == "SpaceNBatch":
+        if 'BLOCK_SIZE' in test_op_info_dict:
+            block_size_string = get_string_from_array_values(
+                test_op_info_dict['BLOCK_SIZE'])
+            model_name = model_name + \
+                f"_block_size_{block_size_string}"
     return model_name.lower()
 
 
@@ -1783,6 +1797,7 @@ def check_input_shape_for_inference(data, expected_shape):
             )
     return data
 
+
 def plot_histogram_0_255(hist):
     x = np.arange(256)  # 0–255 index space
 
@@ -1792,6 +1807,7 @@ def plot_histogram_0_255(hist):
     plt.xlabel("Index (diff)")
     plt.ylabel("Count")
     plt.show()
+
 
 def compute_value_diff_histogram(tflite_tensor, hw_tensor):
 
@@ -1805,17 +1821,19 @@ def compute_value_diff_histogram(tflite_tensor, hw_tensor):
 
     return hist, diff
 
+
 def get_histogram_text_on_console(hist, diff_threshold=2, ratio_threshold=0.01, width=100, n=""):
     total = np.sum(hist)
     diff_values = np.arange(0, 256)
     nonzero = np.where(hist > 0)[0]
-    histogram_text = print_with_borders(f"\tBit Comparison Histogram {n} ({total} data points)", border="", get_text=True)
+    histogram_text = print_with_borders(
+        f"\tBit Comparison Histogram {n} ({total} data points)", border="", get_text=True)
     max_count = np.max(hist)
-    #get histogram for zero index
+    # get histogram for zero index
     ratio = hist[0] / total
     bar_len = int((hist[0] / max_count) * width)
     # bar =  "█" * bar_len
-    bar =  "|" * bar_len
+    bar = "|" * bar_len
     d = diff_values[0]
     histogram_text += f"\n\t\tDiff\t||graph|| (count, percent of full data points)"
     histogram_text += f"\n\t\t{d:4d}\t|{bar} ({hist[0]}, {ratio:.2%})"
@@ -1839,8 +1857,9 @@ def get_histogram_text_on_console(hist, diff_threshold=2, ratio_threshold=0.01, 
         # bar = "H" * bar_len
 
         histogram_text += f"\n\t\t{d:4d}\t|{bar} ({count}, {ratio:.2%})"
-    
+
     return histogram_text
+
 
 def evaluate_bit_comparison_pass_fail(diff, tolerance=1, pass_ratio=0.99):
     """
@@ -1859,19 +1878,21 @@ def evaluate_bit_comparison_pass_fail(diff, tolerance=1, pass_ratio=0.99):
     results_text += f"\nRequired ratio  : {pass_ratio:.2%}"
 
     if ratio >= pass_ratio:
-        results_text += "\nRESULT: PASS"        
+        results_text += "\nRESULT: PASS"
         print(hdr+results_text)
         return True
     else:
         results_text += "\nRESULT: FAIL"
         print(hdr+results_text)
         return False
-    
+
+
 def save_histogram(hist, filename="value_diff_histogram.txt"):
     with open(filename, "w") as f:
         for i, count in enumerate(hist):
             # if count > 0:
             f.write(f"{i},{count}\n")
+
 
 def print_with_borders(text, border="=", get_text=False):
     text = f"{border}{border} {text} {border}{border}"

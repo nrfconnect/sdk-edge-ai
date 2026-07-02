@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_ic
- * Axon Neural Network Compiler Version: 1.2.0
+ * Axon Neural Network Compiler Version: 1.3.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -9,7 +9,7 @@ extern "C" {
 
 #define NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED 52224
 #define NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED 0
-static_assert(NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED < (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
+static_assert(NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED <= (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
 static_assert(NRF_AXON_VERSION >= 0x00010200, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
 
 const char* labels_tinyml_ic[] = {
@@ -3773,7 +3773,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic[9670] = {
   uint32_t axon_model_tinyml_ic_packed_output_buf[NRF_AXON_MODEL_TINYML_IC_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_tinyml_ic = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = {

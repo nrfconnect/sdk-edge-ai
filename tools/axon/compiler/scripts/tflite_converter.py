@@ -259,14 +259,14 @@ def test_floating_point_model(keras_model_path, x_test, y_test=None, classificat
     model = tf.keras.models.load_model(keras_model_path)
     prediction_results = model.predict(x_test, verbose=0)
     prediction_indexes = []
-    if y_test is None: 
+    if y_test is None:
         if (get_results):
             return None, np.array(prediction_results).squeeze()
         return None
     if (classification_model):
         prediction_indexes = np.argmax(prediction_results, axis=1)
         acc_float = np.mean(y_test == prediction_indexes)
-    else: #calculates mean error if it is not a classification model.
+    else:  # calculates mean error if it is not a classification model.
         prediction_indexes = prediction_results
         errors = np.sqrt(np.square(y_test - prediction_results))
         acc_float = np.mean(errors)

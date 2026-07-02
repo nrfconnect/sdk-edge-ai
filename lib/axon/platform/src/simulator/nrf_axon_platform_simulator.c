@@ -295,7 +295,7 @@ void nrf_axon_simulator_perfmodel_init() {
   perfmodel_init();
 }
 
-uint64_t nrf_axon_simulator_perfmodel_get_cycles() 
+uint64_t nrf_axon_simulator_perfmodel_get_cycles(void)
 {
  return nn_o_cycles + dsp_o_cycles;
 }
