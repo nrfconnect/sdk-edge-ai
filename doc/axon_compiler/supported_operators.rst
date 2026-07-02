@@ -78,7 +78,7 @@ Convolution operators
      - Target
      - Compiler version
    * - Conv1D
-     - | Dilation not supported.
+     - | Dilation supported as of v1.3.0 with Space to Batch/Batch to Space.
        | Implemented as a 2D convolution with either height or width = 1.
        | Max filter width: 32 (when height is 1)
        | Max filter height: 16 (when width is 1)
@@ -89,6 +89,7 @@ Convolution operators
      - | Max filter width: 32
        | Max filter height: 16
        | Max stride: 31
+       | Dilation supported as of v1.3.0 with Space to Batch/Batch to Space.
      - Axon NPU
      - 1.0.0
    * - Conv2D
@@ -99,7 +100,7 @@ Convolution operators
      - 1.0.0
    * - Depthwise Conv2D
      - | Channel multipliers not supported
-       | Dilation not supported
+       | Dilation supported as of v1.3.0 with Space to Batch/Batch to Space.
        | Max filter dimensions: 16 x 16
        | Max stride: 31
      - Axon NPU
@@ -235,6 +236,10 @@ Tensor manipulation operators
      - No additional limitations specified
      - CPU
      - 1.2.0
+   * - Space to Batch/Batch to Space
+     - Supports dilation for convolution and depthwise convolution.
+     - CPU
+     - 1.3.0
 
 Model design recommendations
 ****************************
@@ -276,11 +281,6 @@ To stay within compiler and hardware limits, ensure that the model structure adh
 
   * Using no more than two inputs per node
   * Avoiding complex reshape patterns between convolutional and dense layers
-
-* Avoiding unsupported convolution patterns:
-
-  * Dilation, unless the output dimension is 1 x 1
-  * Depthwise convolution with dilation
 
 Quantization guidance
 =====================
