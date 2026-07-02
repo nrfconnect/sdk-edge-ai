@@ -47,6 +47,10 @@ Three input modes:
    Memfault REST API. The cloud strips the chunk/event envelope during
    ingest, so the downloaded bytes are the inner payload only.
 
+4. Plain CBOR file (--binary --file) - decode a raw ``.bin`` saved from the
+   Memfault web UI "Download" button. Those files are the inner nrf_edgeai_obsv
+   CBOR array/map with no Memfault chunk or event wrapper. Pass ``--binary``.
+
    CAVEAT: as of 2026-04 the Memfault public API (api-docs.memfault.com)
    documents only *upload* endpoints for CDRs (POST /upload/... /Commit
    Custom Data Recording). The list and download endpoints used below
@@ -82,6 +86,10 @@ Usage (paths relative to the sdk-edge-ai tree):
     ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py <hex-string>
     ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --file chunk.hex
     echo <hex> | ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py -
+
+    # Plain CBOR downloaded from Memfault's "CDR Payloads" menu (.bin)
+    ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --binary --file recording.bin
+    ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --binary - < recording.bin
 
     # Multi-chunk reassembly (each arg is one complete chunk)
     ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --chunks <hex-chunk1> <hex-chunk2> ...
@@ -139,6 +147,11 @@ def _redact_url_for_log(url: str) -> str:
 METRIC_NAMES = {
     2: "transition_matrix",
     3: "probs_distribution",
+    4: "prediction_switching_rate",
+    5: "probs_entropy_dist",
+    6: "probs_top2_margin_dist",
+    7: "mel_energy_desc",
+    8: "mel_spectral_desc",
 }
 
 EVENT_TYPES = {
@@ -266,6 +279,15 @@ def _strip_hex(text: str) -> bytes:
         return bytes.fromhex(cleaned)
     except ValueError as exc:
         raise ValueError(f"invalid hex characters: {exc}") from None
+
+
+def decode_plain_cbor(raw: bytes, validate: bool = False) -> dict[str, Any]:
+    """Decode a raw inner CDR CBOR blob (Memfault web download or API body)."""
+    return {
+        "source": "plain_cbor",
+        "payload_size_bytes": len(raw),
+        "payloads": _decode_obsv_cdr(raw, validate=validate),
+    }
 
 
 def _unwrap_chunk(raw: bytes) -> tuple[int, int, bytes, bytes]:
@@ -416,9 +438,11 @@ def decode_chunks(hex_list: list[str], validate: bool = False) -> dict[str, Any]
     }
 
 
+def _read_file_bytes(path: str) -> bytes:
+    return Path(path).read_bytes()
+
+
 def _read_hex_input(args: argparse.Namespace) -> str:
-    if args.file:
-        return Path(args.file).read_text(encoding="utf-8")
     if args.hex == "-":
         return sys.stdin.read()
     if args.hex:
@@ -431,6 +455,36 @@ def _read_hex_input(args: argparse.Namespace) -> str:
         "error: provide a hex chunk as an argument, via --file, on stdin, "
         "or use --from-cloud"
     )
+
+
+def _decode_local_input(args: argparse.Namespace) -> dict[str, Any]:
+    """Decode local input: Memfault chunk hex or plain CBOR binary (--binary)."""
+    if args.binary:
+        if args.file:
+            raw = _read_file_bytes(args.file)
+        elif args.hex == "-" or not sys.stdin.isatty():
+            raw = sys.stdin.buffer.read()
+        else:
+            raise SystemExit(
+                "error: --binary requires --file PATH or binary data on stdin"
+            )
+        if not raw:
+            raise ValueError("empty binary input")
+        return decode_plain_cbor(raw, validate=args.validate)
+
+    if args.file:
+        try:
+            text = Path(args.file).read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            raise SystemExit(
+                "error: file is not UTF-8 hex text; for a Memfault web "
+                "download (.bin), pass --binary"
+            ) from exc
+        raw = _strip_hex(text)
+        return decode_chunk(raw, validate=args.validate)
+
+    raw = _strip_hex(_read_hex_input(args))
+    return decode_chunk(raw, validate=args.validate)
 
 
 # ---------------------------------------------------------------------------
@@ -994,7 +1048,15 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--file",
         "-f",
-        help="Read the hex chunk from a file instead of argv/stdin.",
+        help="Read a hex-encoded Memfault chunk from a file (use with --binary for .bin).",
+    )
+    parser.add_argument(
+        "--binary",
+        action="store_true",
+        help=(
+            "Read raw CBOR bytes from --file or stdin (inner nrf_edgeai_obsv "
+            "payload from a Memfault web download)."
+        ),
     )
     parser.add_argument(
         "--chunks",
@@ -1174,8 +1236,7 @@ def main() -> int:
         elif args.chunks:
             records = [decode_chunks(args.chunks, validate=args.validate)]
         else:
-            raw = _strip_hex(_read_hex_input(args))
-            records = [decode_chunk(raw, validate=args.validate)]
+            records = [_decode_local_input(args)]
         _write_output(records, args)
     except (ValueError, cbor2.CBORDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
