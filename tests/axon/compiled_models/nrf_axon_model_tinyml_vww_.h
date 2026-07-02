@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_vww
- * Axon Neural Network Compiler Version: 1.2.0
+ * Axon Neural Network Compiler Version: 1.3.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -9,7 +9,7 @@ extern "C" {
 
 #define NRF_AXON_MODEL_TINYML_VWW_MAX_IL_BUFFER_USED 46080
 #define NRF_AXON_MODEL_TINYML_VWW_MAX_PSUM_BUFFER_USED 0
-static_assert(NRF_AXON_MODEL_TINYML_VWW_MAX_IL_BUFFER_USED < (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
+static_assert(NRF_AXON_MODEL_TINYML_VWW_MAX_IL_BUFFER_USED <= (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
 static_assert(NRF_AXON_VERSION >= 0x00010200, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
 
 const char* labels_tinyml_vww[] = {
@@ -4428,7 +4428,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww[12836] = {
   uint32_t axon_model_tinyml_vww_packed_output_buf[NRF_AXON_MODEL_TINYML_VWW_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_tinyml_vww = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00010300,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {

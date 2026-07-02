@@ -121,7 +121,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     input_shape = inputs[0]['shape']
     model_ip_datawidth = inputs[0]['dtype']
 
-    if model_ip_datawidth == np.float32 :
+    if model_ip_datawidth == np.float32:
         if operators_detail_graph[0]['op_name'] == "QUANTIZE":
             logger.debug(
                 "input is float, getting the input quantization from QUANTIZE operator")
@@ -151,10 +151,10 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     #         axon_last_layer_num[0]-1)
 
     if skip_softmax_op:
-        for ndx,layer_ndx in enumerate(last_layer_ndx) :
+        for ndx, layer_ndx in enumerate(last_layer_ndx):
             if ops_details[layer_ndx]['op_name'] == "SOFTMAX":
                 last_layer_ndx[ndx] = tflite_axon_graph_object.get_index_for_axon_layer_num(
-                axon_last_layer_num[ndx]-1)
+                    axon_last_layer_num[ndx]-1)
 
     # getting the output scale of the actual final output
     model_op_scale, model_op_zeropoint = copy.deepcopy(
@@ -262,7 +262,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 # have to perform special handling if RESHAPE is the first operator
                 # check if the test input needs to be transposed
                 # we only transpose the test input if the reshape puts some element in the channel
-                reshape_ip_shape = ops.TensorShape(tensor_details[subgraph.Operators(i).InputsAsNumpy()[0]]['shape'])
+                reshape_ip_shape = ops.TensorShape(
+                    tensor_details[subgraph.Operators(i).InputsAsNumpy()[0]]['shape'])
                 reshape_op_shape = ops.TensorShape(
                     tensor_details[subgraph.Operators(i).OutputsAsNumpy()[0]]['shape'])
                 if (reshape_op_shape.depth != reshape_ip_shape.depth) and test_flag:
@@ -562,6 +563,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                     input_datatype_enum = tflite_axon_wrapper.GetAxonByteWidthEnum(
                         tensor_details[input_operators[0]]['dtype'])
                     model_descriptor_layer_struct[0].input_ids[input_idx] = new_op['axon_ip_ops'][input_idx]
+                    model_descriptor_layer_struct[0].input_dimensions[input_idx].batch_cnt = input_ops_shape.batch
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].height = input_ops_shape.height
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].width = input_ops_shape.width
                     shape_text = "shapes_(C,H,W,DW)"
@@ -574,9 +576,10 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].channel_cnt = input_ops_shape.depth
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].byte_width = input_datatype_enum.value
                     model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx} = {model_descriptor_layer_struct[0].input_ids[input_idx]}, "
-                    model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_{shape_text} = {model_descriptor_layer_struct[0].input_dimensions[input_idx].channel_cnt, model_descriptor_layer_struct[0].input_dimensions[input_idx].height,model_descriptor_layer_struct[0].input_dimensions[input_idx].width,model_descriptor_layer_struct[0].input_dimensions[input_idx].byte_width}, "
+                    model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_{shape_text} = {model_descriptor_layer_struct[0].input_dimensions[input_idx].channel_cnt, model_descriptor_layer_struct[0].input_dimensions[input_idx].height, model_descriptor_layer_struct[0].input_dimensions[input_idx].width, model_descriptor_layer_struct[0].input_dimensions[input_idx].byte_width}, "
             else:
                 model_descriptor_layer_struct[0].input_ids[0] = new_op['axon_ip_ops'][0]
+                model_descriptor_layer_struct[0].input_dimensions[0].batch_cnt = ops_ip_shape.batch
                 model_descriptor_layer_struct[0].input_dimensions[0].height = ops_ip_shape.height
                 model_descriptor_layer_struct[0].input_dimensions[0].width = ops_ip_shape.width
                 if transpose_layer:
@@ -587,14 +590,20 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 model_descriptor_layer_struct[0].input_dimensions[0].channel_cnt = ops_ip_shape.depth
                 model_descriptor_layer_struct[0].input_dimensions[0].byte_width = ip_bytewidth_enum.value
                 model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0 = {model_descriptor_layer_struct[0].input_ids[0]}, "
-                model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0_shapes_(C,H,W,DW) = {model_descriptor_layer_struct[0].input_dimensions[0].channel_cnt,model_descriptor_layer_struct[0].input_dimensions[0].height,model_descriptor_layer_struct[0].input_dimensions[0].width,model_descriptor_layer_struct[0].input_dimensions[0].byte_width}, "
+                model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0_shapes_(C,H,W,DW) = {model_descriptor_layer_struct[0].input_dimensions[0].channel_cnt, model_descriptor_layer_struct[0].input_dimensions[0].height, model_descriptor_layer_struct[0].input_dimensions[0].width, model_descriptor_layer_struct[0].input_dimensions[0].byte_width}, "
 
             model_descriptor_layer_struct[0].nn_operation = (
                 axons_operation_enum.value)
             model_descriptor_layer_struct[0].filter_dimensions.height = ops_kernel_shape.height
             model_descriptor_layer_struct[0].filter_dimensions.width = ops_kernel_shape.width
+            if op_name == "SPACE_TO_BATCH_ND" or op_name == "BATCH_TO_SPACE_ND":
+                model_descriptor_layer_struct[0].block_shape.height_size, model_descriptor_layer_struct[
+                    0].block_shape.width_size = options.GetBlockSize()
+
             model_descriptor_layer_struct[0].filter_dimensions.channel_cnt = ops_kernel_shape.depth
             model_descriptor_layer_struct[0].filter_dimensions.byte_width = filter_bytewidth_enum.value
+
+            model_descriptor_layer_struct[0].output_dimensions.batch_cnt = ops_op_shape.batch
             model_descriptor_layer_struct[0].output_dimensions.height = ops_op_shape.height
             model_descriptor_layer_struct[0].output_dimensions.width = ops_op_shape.width
             model_descriptor_layer_struct[0].output_dimensions.channel_cnt = ops_op_shape.depth
@@ -1055,7 +1064,7 @@ def run_compiler_library(test_vectors_flag,
                     command_string_array.append(
                         "-r" + relative_compiler_outputs_dir + "/"+csv_per_layer_results_file_name)
             command_string_array.append(
-                    "-s" + relative_compiler_outputs_dir + "/sim_env")
+                "-s" + relative_compiler_outputs_dir + "/sim_env")
             command_string_array.append(
                 "-f" + relative_compiler_outputs_dir + "/"+file_name_prefix)
             command_string_array.append(

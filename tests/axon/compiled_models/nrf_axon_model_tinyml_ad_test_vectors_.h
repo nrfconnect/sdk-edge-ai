@@ -143,4 +143,3 @@ const int32_t* tinyml_ad_layer_expected_output_vectors[] = {
   NULL,
 #endif
 };
-

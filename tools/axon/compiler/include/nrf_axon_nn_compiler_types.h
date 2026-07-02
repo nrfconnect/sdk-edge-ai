@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
+ * Copyright (c) 2025-2026 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -7,9 +7,9 @@
 /*
   File used by the cross compiler to generate the binary file.
   The file acts as an interface file for the cross compiler and has the common definitions used by the axon compiler and the tflite cross compiler
-  
+
   This file will be referenced using its direct path by the cross compiler.
-  The file needs to satisfy the following conditions to ensure that it is valid and can be used an interface header file 
+  The file needs to satisfy the following conditions to ensure that it is valid and can be used an interface header file
   Condition 1 : The file should not have any #include directories
   Condition 2 : Macros defined in the file should have fixed integer values
                 for example #define AXONPRO_MACRO (1) and not #define AXONPRO_MACRO(X) (X<<2)
@@ -20,6 +20,7 @@
 #pragma once
 
 typedef enum {
+  NRF_AXON_COMPILER_RESULT_INVALID_BATCH_CNT          = -242, /**< Compiler failed due to invalid batch count parameters. */
   NRF_AXON_COMPILER_RESULT_INVALID_DILATION           = -242, /**< Compiler failed due to invalid dilation parameters. */
   NRF_AXON_COMPILER_RESULT_INVALID_ROUNDING           = -241, /**< Compiler failed due to invalid rounding parameters. */
   NRF_AXON_COMPILER_RESULT_INVALID_INPUT_SIZE         = -240, /**< Compiler failed due to input height/width/depth violation.*/
@@ -77,11 +78,11 @@ typedef enum {
 typedef enum {
   NRF_AXON_NN_OP_FULLY_CONNECTED,
   NRF_AXON_NN_OP_CONV2D,
-  NRF_AXON_NN_OP_DEPTHWISE_CONV2D,                    
+  NRF_AXON_NN_OP_DEPTHWISE_CONV2D,
   NRF_AXON_NN_OP_POINTWISE_CONV2D,
   NRF_AXON_NN_OP_AVERAGE_POOLING,
   NRF_AXON_NN_OP_MAX_POOLING,
-  NRF_AXON_NN_OP_ADD2, 
+  NRF_AXON_NN_OP_ADD2,
   NRF_AXON_NN_OP_CHANNEL_PADDING,                         /**< special handling for channel padding. */
   NRF_AXON_NN_OP_PERSISTENT_VAR,
   NRF_AXON_NN_OP_CONCATENATE,
@@ -93,6 +94,8 @@ typedef enum {
   NRF_AXON_NN_OP_SIGMOID,                                 /**< Sigmoid activation implemented as an op extension */
   NRF_AXON_NN_OP_TANH,                                    /**< tanh activation implemented as an op extension */
   NRF_AXON_NN_OP_RESHAPE,                                 /**< handles reshapes that require physical movement of data due to difference between axon and tflite data organization */
+  NRF_AXON_NN_OP_SPACE_TO_BATCH,                          /**< introduced in v1.2.9 */
+  NRF_AXON_NN_OP_BATCH_TO_SPACE,                          /**< introduced in v1.2.9 */
   NRF_AXON_NN_OP_RESIZE_NEAREST_NEIGHBOR,
 } nrf_axon_nn_op_e;
 
@@ -107,7 +110,7 @@ typedef enum{
 
 /**
  * @brief Option for using a dedicated PSUM buffer or using the interlayer buffer for PSUM.
- * 
+ *
  * PSUM buffer is used for scratch memory by operatoins.
 */
 typedef enum {
@@ -141,8 +144,16 @@ typedef struct {
   uint16_t width;
   uint16_t channel_cnt;
   nrf_axon_nn_byte_width_e byte_width;
+  uint16_t batch_cnt;   /**< introduced 1.2.9 */
 } nrf_axon_nn_compiler_model_layer_dimensions_s;
 
+/**
+ * @brief Block shape parameters for space_to_batch and batch_to_space.
+ */
+typedef struct {
+  uint16_t height_size;
+  uint16_t width_size;
+} nrf_axon_nn_compiler_model_block_shape;
 /**
  * @brief parameters for strided slice operation
  */
@@ -154,7 +165,7 @@ typedef struct {
 
 /**
  * @brief Interface structure between nn compiler executor and shared library.
- * 
+ *
  * The executor creates a binary file with an instance of this structure per model layer. Pointers
  * in this structure are populated as offsets within the binary file to the relevant data.
  */
@@ -164,7 +175,10 @@ typedef struct {
   int16_t input_ids[NRF_AXON_NN_MAX_LAYER_INPUTS];                  /**< layer ids of the inputs (input_id is the index into the array of nrf_axon_nn_model_layer_desc_s). 1st inputid_cnt entries are valid, negative ID indicates external input. */
   nrf_axon_nn_op_e nn_operation;                                    /**< operation this layer performs */
   nrf_axon_nn_compiler_model_layer_dimensions_s input_dimensions[NRF_AXON_NN_MAX_LAYER_INPUTS]; /**< dimensions of the inputs */
-  nrf_axon_nn_compiler_model_layer_dimensions_s filter_dimensions;  /**< dimensions of the filter */
+  union {
+    nrf_axon_nn_compiler_model_layer_dimensions_s filter_dimensions;  /**< dimensions of the filter */
+    nrf_axon_nn_compiler_model_block_shape block_shape;      /**<  */
+  };
   nrf_axon_nn_compiler_model_layer_dimensions_s output_dimensions;  /**< dimensions of the output. */
   uint8_t concatenate_axis;                                         /**< For concatenate only. one of nrf_axon_nn_axis_e */
   uint8_t stride_x;                                                 /**< stride in the width dimension. */
@@ -190,7 +204,7 @@ typedef struct {
   uint16_t scale_shift_cnt;                                         /**< 0 if no output quantization, 1 if scale_shift is the same for all channels, else = output_dimensions.channel_cnt */
   nrf_axon_nn_activation_function_e activation_function;            /**< fused activationn function for layer. */
   union {
-    struct {                                                        /**< convolution and max-pooling padding. */
+    struct {                                                        /**< convolution, max-pooling, and block_shape padding. */
       uint8_t pad_left;
       uint8_t pad_right;
       uint8_t pad_top;
@@ -201,7 +215,7 @@ typedef struct {
   union {                                                           /**< filter/weights/strided_slice paramters. */
     uint64_t offset;                                                /**< populated w/ an offset into the bin file by the executor... */
     int8_t* ptr;                                                   /**< ...replaced with a resolved pointer by the compiler. */
-    nrf_axon_nn_compiler_strided_slice_parameters_s *ss_ptr; 
+    nrf_axon_nn_compiler_strided_slice_parameters_s *ss_ptr;
   } filter;
   uint32_t cpu_op_additional_attributes_count;                      /**< CPU operations (op extensions) can have additional attributes. Specifies how large the cpu_op_additional_attributes vector is.*/
   union {                                                           /**< Addional CPU operation attributes. */
@@ -232,14 +246,14 @@ typedef struct {
 
 /**
  * @brief structure to hold model input/output quantization/dequantization parameters
- * 
+ *
  * quantized input = (float input) * mult / 2^round + zero_point
  * float output = ((quantized input)-zero_point) *  / 2^^round
  * float = (quantized-zero_point) * 2^round/mult
  */
 typedef struct {
   uint32_t mult;
-  uint8_t round; 
+  uint8_t round;
   int8_t zero_point;
 } nrf_axon_nn_model_quant_paramters_s;
 
@@ -252,11 +266,11 @@ typedef struct {
   uint32_t model_layer_cnt;                           /**< number of layers (operations) in the model. */
   nrf_axon_nn_model_quant_paramters_s input_quant;    /**< quantization for the model input. All other layers can infer the input quantization from the output quantization of their inputs. */
   nrf_axon_nn_model_quant_paramters_s output_dequant; /**< dequantization paramters for the model output. */
-} nrf_axon_nn_model_meta_info_s; 
+} nrf_axon_nn_model_meta_info_s;
 
 /**
  * @brief binary file header structure.
- * 
+ *
  * This describes where the various components of the model are located in the binary file.
  * It resides at the very beginning of the file.
  */

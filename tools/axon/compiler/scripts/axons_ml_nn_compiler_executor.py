@@ -150,7 +150,6 @@ def axons_compiler(parsed_dict):
     if 'perform_bit_comparison' not in parsed_dict:
         parsed_dict['perform_bit_comparison'] = True
 
-
     """set the requested log level"""
     if parsed_dict['log_level'] == "debug":
         log_lvl = logging.DEBUG
@@ -336,11 +335,13 @@ def axons_compiler(parsed_dict):
             if type(parsed_dict['transpose_kernel']) is bool:
                 parsed_dict['transpose_kernel'] = [
                     parsed_dict['transpose_kernel']]
-        
+
         if parsed_dict['perform_bit_comparison'] is not None:
-            assert type(parsed_dict['get_histogram_plot']) is bool, "must be bool"
+            assert type(parsed_dict['get_histogram_plot']
+                        ) is bool, "must be bool"
         if parsed_dict['get_histogram_plot'] is not None:
-            assert type(parsed_dict['get_histogram_plot']) is bool, "must be bool"
+            assert type(parsed_dict['get_histogram_plot']
+                        ) is bool, "must be bool"
 
     except AssertionError as e:
         logger.critical(f"ASSERT! {e}")
@@ -438,25 +439,37 @@ def axons_compiler(parsed_dict):
                 y_test = np.load(parsed_dict['test_labels']).astype(np.int32)
                 logger.debug(
                     f"test labels are loaded from : {parsed_dict['test_labels']} and are in the format {parsed_dict['test_labels_format']}")
-                if (parsed_dict['test_labels_format'] == "last_layer_vector" and (y_test.shape[1] == len(parsed_dict['classification_labels']))):
-                    # this format has last layer values and we need the labels so getting the maximum value to get the labels
-                    y_test = np.argmax(y_test, axis=1)
-                elif (parsed_dict['test_labels_format'] == "edge_impulse_labels"):
-                    # edge impulse has labels in the first row and has labels from 1-n instead of 0-n-1
-                    y_test = y_test[:, 0]  # labels in first column
-                    y_test = y_test - 1
-                elif (parsed_dict['test_labels_format'] is None) and (parsed_dict['classification_labels'] is not None and parsed_dict['test_data'] is not None):
-                    # we have test vectors and labels, classification labels but no test label format, RECIPE FOR DISASTER
-                    logger.critical(
-                        "invalid test labels format, Please provide a valid test label format from 'just_labels','edge_impulse_labels','last_layer_vector' or 'custom',exiting.....")
-                    return -905, "invalid test labels format"
+                # and (y_test.shape[1] == len(parsed_dict['classification_labels']))):
+                if (parsed_dict['user_handle_accuracy_results'] is None):
+                    if (parsed_dict['test_labels_format'] == "last_layer_vector"):
+                        # this format has last layer values and we need the labels so getting the maximum value to get the labels
+                        y_test = np.argmax(y_test, axis=1)
+                    elif (parsed_dict['test_labels_format'] == "edge_impulse_labels"):
+                        # edge impulse has labels in the first row and has labels from 1-n instead of 0-n-1
+                        y_test = y_test[:, 0]  # labels in first column
+                        y_test = y_test - 1
+                    # (parsed_dict['classification_labels'] is not None and parsed_dict['test_data'] is not None):
+                    elif (parsed_dict['test_labels_format'] is None) and (parsed_dict['test_data'] is not None):
+                        # we have test vectors and labels, classification labels but no test label format, RECIPE FOR DISASTER
+                        logger.critical(
+                            "invalid test labels format, Please provide a valid test label format from 'just_labels','edge_impulse_labels','last_layer_vector' or 'custom',exiting.....")
+                        return -905, "invalid test labels format"
+                    if parsed_dict['classification_labels'] is None:
+                        # need to populate the classification labels if they are none and the y_test is provided
+                        logger.debug(
+                            "classification_labels are 'None', adding generic labels to enable classification accuracy results!")
+                        parsed_dict['classification_labels'] = [
+                            f"label_x{i}" for i in range(y_test.max()+1)]
+                # else:
+                #     logger.info(f"Accuracy results will be calculated using the user added function : {parsed_dict['user_handle_accuracy_results']}")
         else:
             y_test = None  # np.zeros(1)
-            parsed_dict['classification_labels'] = None
-            parsed_dict['test_labels_format'] = None
+            # not resetting the classification_labels and the labels format so that they are populated in the AIRbin file.
+            # parsed_dict['classification_labels'] = None
+            # parsed_dict['test_labels_format'] = None
         # FIXME put this code inside a "get-accuracy results flag"
         if (parsed_dict['test_data'] is not None) and (parsed_dict['test_labels'] is not None):
-            if (parsed_dict['user_handle_accuracy_results'] is None):  #MOP FIXHERE
+            if (parsed_dict['user_handle_accuracy_results'] is None):  # MOP FIXHERE
                 if (parsed_dict['float_model'] is not None):  # test the float model
                     test_result_float = tc.test_floating_point_model(
                         parsed_dict['float_model'], x_test, y_test, classification_model=(parsed_dict['classification_labels'] is not None))
@@ -576,7 +589,7 @@ def axons_compiler(parsed_dict):
                     tr_support_text = "INFO: Transposing the model might support it in Axon"
                 raise Exception(
                     f"Model is not supported due to the following reasons/constraints :\n{constraint_reasons} \n{tr_support_text}")
-            
+
             if tflite_axon_graph_object.is_tflite_model_multiple_output():
                 MULTIPLE_OUTPUT_MODEL = True
                 logger.info("Model has multiple outputs")
@@ -630,7 +643,7 @@ def axons_compiler(parsed_dict):
             ops_details = tflite_axon_graph_object.get_tflite_operator_details()
             inputs = tflite_axon_graph_object.get_tflite_input_details()
             outputs = tflite_axon_graph_object.get_tflite_output_details()
-            tensor_details = tflite_axon_graph_object.get_tflite_tensor_details()            
+            tensor_details = tflite_axon_graph_object.get_tflite_tensor_details()
             axon_output_op_graph_details = tflite_axon_graph_object.get_axon_output_op_graph_details()
             tflite_axon_op_detail_mapped = tflite_axon_graph_object.get_tflite_axon_output_details_mapping()
             test_ip_vector = []
@@ -650,25 +663,27 @@ def axons_compiler(parsed_dict):
             #     last_layer_ndx[0] = tflite_axon_graph_object.get_index_for_axon_layer_num(
             #         axon_last_layer[0]-1)
             if parsed_dict['skip_softmax_op']:
-                for ndx,layer_ndx in enumerate(last_layer_ndx) :
+                for ndx, layer_ndx in enumerate(last_layer_ndx):
                     if ops_details[layer_ndx]['op_name'] == "SOFTMAX":
                         last_layer_ndx[ndx] = tflite_axon_graph_object.get_index_for_axon_layer_num(
-                        axon_last_layer[ndx]-1)
+                            axon_last_layer[ndx]-1)
 
             reshape_input = False
             transpose_model_input_flag = False
-            
+
             model_ip_datawidth = inputs[0]['dtype']
             x_test_q = quantized_x_test
             if model_ip_datawidth != np.int8 and x_test_q.dtype != np.int8:
                 if ops_details[0]['op_name'] == "QUANTIZE":
                     scale, model_ip_zeropoint = tensor_details[operators_detail_graph[0]
-                                                            ['op_tensors'][0]]['quantization']
-                    x_test_q = np.round((x_test_q/scale)+model_ip_zeropoint).astype(np.int8)
+                                                               ['op_tensors'][0]]['quantization']
+                    x_test_q = np.round(
+                        (x_test_q/scale)+model_ip_zeropoint).astype(np.int8)
             if (ops_details[0]["op_name"] == "RESHAPE"):
                 # check if the test input needs to be transposed
                 # we only transpose the test input if the reshape puts some element in the channel
-                reshape_ip_shape = ops.TensorShape(tensor_details[subgraph.Operators(0).InputsAsNumpy()[0]]['shape'])
+                reshape_ip_shape = ops.TensorShape(
+                    tensor_details[subgraph.Operators(0).InputsAsNumpy()[0]]['shape'])
                 reshape_op_shape = ops.TensorShape(
                     tensor_details[subgraph.Operators(0).OutputsAsNumpy()[0]]['shape'])
                 reshape_input = True
@@ -719,7 +734,7 @@ def axons_compiler(parsed_dict):
             for i, ndx in enumerate(test_io_vector_ndx[0:parsed_dict['header_file_test_vector_cnt']]):
                 # test_ = np.expand_dims(quantized_x_test[ndx], axis=0)
                 test_ = util.check_input_shape_for_inference(
-                        quantized_x_test[ndx], inputs[0]['shape'])
+                    quantized_x_test[ndx], inputs[0]['shape'])
                 tflite_interpreter.set_tensor(inputs[0]['index'], test_)
                 # Run inference.
                 tflite_interpreter.invoke()
@@ -813,7 +828,7 @@ def axons_compiler(parsed_dict):
                             op_dw = np.int8
                         # and (parsed_dict['op_radix'] > 8):#last layer
                         # if (ops_graph_index == last_layer_ndx[0]) and (parsed_dict['disable_op_quantization']):
-                        if (ops_graph_index in last_layer_ndx) :
+                        if (ops_graph_index in last_layer_ndx):
                             if (parsed_dict['disable_op_quantization']):
                                 # check for the radix here and multiply by that after dequantization
                                 # parsed_dict['op_radix'] = util.get_output_radix(parsed_dict['op_radix'],np.array(30), op_q_new['scales'][0], op_q_new['zero_points'][0],op_dw)
@@ -857,19 +872,20 @@ def axons_compiler(parsed_dict):
                     # tflite_test_layer_vectors +="  " + layer_name.lower()+"_tflite_op,\n  "
 
                 # Save the class predictions for all test samples.
-                for n, tf_op in enumerate(tflite_axon_op_detail_mapped) :                    
-                    tflite_op_dw = tflite_axon_op_detail_mapped[n]['dtype']    
-                    if tflite_op_dw == np.float32:                        
-                        op_scale, op_zeropoint = tensor_details[axon_output_op_graph_details[n]['op_tensors'][0]]['quantization']                    
+                for n, tf_op in enumerate(tflite_axon_op_detail_mapped):
+                    tflite_op_dw = tflite_axon_op_detail_mapped[n]['dtype']
+                    if tflite_op_dw == np.float32:
+                        op_scale, op_zeropoint = tensor_details[axon_output_op_graph_details[n]
+                                                                ['op_tensors'][0]]['quantization']
                     tflite_op_tensor_index = tflite_axon_op_detail_mapped[n]['index']
                     if axon_output_op_graph_details[n]['op_tensors'][0] != tflite_op_tensor_index and tflite_op_dw == np.float32:
                         tflite_op_tensor_index = axon_output_op_graph_details[n]['op_tensors'][0]
-                    #also update the op_dw here
+                    # also update the op_dw here
                     tflite_op_dw = tensor_details[tflite_op_tensor_index]['dtype']
                     # tflite_shape = tflite_interpreter.tensor(
                     #     tflite_op_tensor_index)().shape
                     tflite_op = util.get_array_from_tensor(
-                        tflite_interpreter.tensor(tflite_op_tensor_index)())                                        
+                        tflite_interpreter.tensor(tflite_op_tensor_index)())
                     # if (parsed_dict['disable_op_quantization']):
                     #     # deaquantize the output
                     #     # check for the radix and adjust accordingly
@@ -877,10 +893,10 @@ def axons_compiler(parsed_dict):
                     #     op = ((op - op_q_new['zero_points'][0]) *
                     #         op_q_new['scales']) * (2**(parsed_dict['op_radix']))
                     #     op = op.astype(output_datawidth)
-                    if n not in tflite_hist_output :
-                        tflite_hist_output[n] = []                
-                    tflite_hist_output[n].append(tflite_op) 
-                                        
+                    if n not in tflite_hist_output:
+                        tflite_hist_output[n] = []
+                    tflite_hist_output[n].append(tflite_op)
+
                 if GET_INTERMEDIATE_FILES:
                     csv_test_vectors_op += util.write_array_to_file(
                         tflite_op.squeeze(), "", array_bitwidth=tflite_op.dtype)
@@ -984,43 +1000,46 @@ def axons_compiler(parsed_dict):
             # output_length = model_op_shape.get_length()
             # csv_output = util.load_csv_lines_to_np_array(
             #     compiler_inference_results_filepath)
-            #check here if the model has multiple outputs and if not convert it to a numpy array.
+            # check here if the model has multiple outputs and if not convert it to a numpy array.
             hist = []
             if MULTIPLE_OUTPUT_MODEL:
                 histogram_text = "\t"
                 csv_output = util.load_csv_lines_to_dict(
-                compiler_inference_results_filepath)                
+                    compiler_inference_results_filepath)
                 for i, ndx in enumerate(test_io_vector_ndx[0:parsed_dict['header_file_test_vector_cnt']]):
-                    for n, tf_op in enumerate(tflite_axon_op_detail_mapped) :
-                        axon_multiple_op_ndx = len(tflite_axon_op_detail_mapped)*i+n
+                    for n, tf_op in enumerate(tflite_axon_op_detail_mapped):
+                        axon_multiple_op_ndx = len(
+                            tflite_axon_op_detail_mapped)*i+n
                         axon_end_to_end_vector = csv_output[axon_multiple_op_ndx]
                         # if parsed_dict['disable_op_quantization'] :
                         #     axon_op_q_new = tensor_details[axon_output_op_graph_details[n]['op_tensors'][0]]['quantization_parameters']
-                        #     axon_end_to_end_vector = np.round((axon_end_to_end_vector/(2**parsed_dict['op_radix']))/ axon_op_q_new['scales'][0] + axon_op_q_new['zero_points'][0]).astype(np.int8)                    
+                        #     axon_end_to_end_vector = np.round((axon_end_to_end_vector/(2**parsed_dict['op_radix']))/ axon_op_q_new['scales'][0] + axon_op_q_new['zero_points'][0]).astype(np.int8)
                         tflite_op_tensor_index = tflite_axon_op_detail_mapped[n]['index']
                         # tflite_shape = tflite_axon_op_detail_mapped[n]['shape']
                         # axon_end_to_end_vector = axon_end_to_end_vector.reshape(
                         #     tflite_shape)
-                        if n not in axon_hw_hist_output :
-                            axon_hw_hist_output[n] = []    
+                        if n not in axon_hw_hist_output:
+                            axon_hw_hist_output[n] = []
                         axon_hw_hist_output[n].append(axon_end_to_end_vector)
-                if GET_BIT_COMPARISON and (not parsed_dict['disable_op_quantization']):                    
-                    for n, tf_op in enumerate(tflite_hist_output) :        
-                        hist_array, diff = util.compute_value_diff_histogram(np.array(tflite_hist_output[n]), np.array(axon_hw_hist_output[n]))
+                if GET_BIT_COMPARISON and (not parsed_dict['disable_op_quantization']):
+                    for n, tf_op in enumerate(tflite_hist_output):
+                        hist_array, diff = util.compute_value_diff_histogram(
+                            np.array(tflite_hist_output[n]), np.array(axon_hw_hist_output[n]))
                         DIFF_THRESHOLD = 0
                         RATIO_THRESHOLD = 0
-                        histogram_text += util.get_histogram_text_on_console(hist_array, DIFF_THRESHOLD, RATIO_THRESHOLD, n=str(n))
+                        histogram_text += util.get_histogram_text_on_console(
+                            hist_array, DIFF_THRESHOLD, RATIO_THRESHOLD, n=str(n))
                         hist.append(hist_array)
             else:
                 csv_output = util.load_csv_lines_to_np_array(
-                compiler_inference_results_filepath)                
+                    compiler_inference_results_filepath)
                 if (len(csv_output.shape) == 1):  # doing it for just one vector
                     csv_output = csv_output.reshape(1, csv_output.shape[0])
                 # accuracy_results_text = f"\n\tAccuracy (test data set size {len(test_io_vector_ndx)})\n"
-                #get the bit comparison between the axon output and tflite output
+                # get the bit comparison between the axon output and tflite output
                 histogram_text = "\t"
                 if GET_BIT_COMPARISON and (not parsed_dict['disable_op_quantization']):
-                    #get for the input range or select the first 10 values.
+                    # get for the input range or select the first 10 values.
                     # if len(test_io_vector_ndx)>10:
                     #     bit_comparison_range = test_io_vector_ndx[0:10]
                     # else:
@@ -1028,37 +1047,43 @@ def axons_compiler(parsed_dict):
                     bit_comparison_range = test_io_vector_ndx
                     axon_bit_comparison_output = csv_output
                     # if parsed_dict['disable_op_quantization'] :
-                    #     axon_op_q_new = tensor_details[axon_output_op_graph_details[0]['op_tensors'][0]]['quantization_parameters']                            
-                    #     axon_bit_comparison_output = (axon_bit_comparison_output/(2**parsed_dict['op_radix'])/ axon_op_q_new['scales'][0] + axon_op_q_new['zero_points'][0]).astype(np.float32)                   
+                    #     axon_op_q_new = tensor_details[axon_output_op_graph_details[0]['op_tensors'][0]]['quantization_parameters']
+                    #     axon_bit_comparison_output = (axon_bit_comparison_output/(2**parsed_dict['op_radix'])/ axon_op_q_new['scales'][0] + axon_op_q_new['zero_points'][0]).astype(np.float32)
 
                     input_to_tflite = x_test[bit_comparison_range]
-                    #FIXME Use the already calculated tflite outputs here and do not run the output inference again
-                    _ , tflite_output = tc.test_tflite_model(parsed_dict['tflite_model'], input_to_tflite, get_results=True)                    
+                    # FIXME Use the already calculated tflite outputs here and do not run the output inference again
+                    _, tflite_output = tc.test_tflite_model(
+                        parsed_dict['tflite_model'], input_to_tflite, get_results=True)
                     if (model_op_shape.depth > 1) and model_op_shape.shape_size > 3:
-                        tflite_output = tflite_output.transpose(0, 3, 1, 2)                    
+                        tflite_output = tflite_output.transpose(0, 3, 1, 2)
                     if tflite_output.dtype == np.uint8:
                         # add 128
-                        axon_bit_comparison_output += 128                    
+                        axon_bit_comparison_output += 128
                     elif tflite_output.dtype == np.float32:
-                        op_scale, op_zeropoint = tensor_details[axon_output_op_graph_details[0]['op_tensors'][0]]['quantization']
-                        tflite_output = ((tflite_output/op_scale) + op_zeropoint).astype(np.int8)
-                    hist, diff = util.compute_value_diff_histogram(tflite_output, axon_bit_comparison_output)
+                        op_scale, op_zeropoint = tensor_details[axon_output_op_graph_details[0]
+                                                                ['op_tensors'][0]]['quantization']
+                        tflite_output = (
+                            (tflite_output/op_scale) + op_zeropoint).astype(np.int8)
+                    hist, diff = util.compute_value_diff_histogram(
+                        tflite_output, axon_bit_comparison_output)
                     DIFF_THRESHOLD = 0
                     RATIO_THRESHOLD = 0
                     PRINT_WIDTH = 100
-                    histogram_text += util.get_histogram_text_on_console(hist, DIFF_THRESHOLD, RATIO_THRESHOLD, PRINT_WIDTH)
+                    histogram_text += util.get_histogram_text_on_console(
+                        hist, DIFF_THRESHOLD, RATIO_THRESHOLD, PRINT_WIDTH)
                     # TOLERANCE = 0
                     # PASS_RATIO = 0.99
-                    # util.evaluate_bit_comparison_pass_fail(diff, TOLERANCE, PASS_RATIO)                    
+                    # util.evaluate_bit_comparison_pass_fail(diff, TOLERANCE, PASS_RATIO)
                 if (parsed_dict['test_labels'] is not None and parsed_dict['classification_labels'] is not None) and not (MULTIPLE_OUTPUT_MODEL):
                     accuracy_results_text = f"\n\tAccuracy (test data set size {len(test_io_vector_ndx)})\n"
                     true_labels = np.array([y_test[test_vector_ndx]
-                                        for test_vector_ndx in test_io_vector_ndx])
+                                            for test_vector_ndx in test_io_vector_ndx])
                     sampled_x_test = np.array(
                         [x_test[test_vector_ndx] for test_vector_ndx in test_io_vector_ndx])
                     classification_labels = copy.deepcopy(
                         parsed_dict['classification_labels'])
-                    total_labels_count = len(parsed_dict['classification_labels'])
+                    total_labels_count = len(
+                        parsed_dict['classification_labels'])
                     compiler_op_labels = compare_models.get_labels(csv_output)
                     if (not parsed_dict['skip_softmax_op']) and (not parsed_dict['disable_op_quantization']):
                         # calculate the probability values and the find the labels accordingly, also add inconclusive to it
@@ -1080,7 +1105,8 @@ def axons_compiler(parsed_dict):
                     # logger.debug(classification_report_text)
                     precision_score_text, precision_value = compare_models.get_precision_score_text(
                         true_labels, compiler_op_labels, classification_labels, total_labels_count, GET_PER_CLASS_PRECISION)
-                    variants_object.set_precision_result(variant, precision_value)
+                    variants_object.set_precision_result(
+                        variant, precision_value)
                     # logger.info(precision_score)
                     accuracy_results, labels = compare_models.get_model_accuracy(
                         sampled_x_test, true_labels, compiler_op_labels, parsed_dict['tflite_model'], parsed_dict['float_model'], get_results=True)
@@ -1102,7 +1128,8 @@ def axons_compiler(parsed_dict):
                         true_labels, labels['float_label'], labels['tflite_label'], compiler_op_labels, classification_labels)
                     accuracy_results_text += f"\t\tTflite int8 model:\t{accuracy_results['tflite']:.4f}\n"
                     accuracy_results_text += f"\t\tAxons int8 model:\t{accuracy_results['simulator']:.4f}\n"
-                    variants_object.set_accuracy_results(variant, accuracy_results)
+                    variants_object.set_accuracy_results(
+                        variant, accuracy_results)
                     # accuracy_results_text = util.print_util(f"[ndx, true_label, simulator_label]\n{compare_models.get_vectors_where_reference_inferred_correctly(true_label=true_labels,reference_label=labels['tflite_label'],test_label=compiler_op_labels)}", accuracy_results_text)
                 else:
                     # the output inference csv file from the compiler will have the last layer output vectors directly
@@ -1123,10 +1150,11 @@ def axons_compiler(parsed_dict):
                                 f"Exception occured when calling user handle function [{parsed_dict['user_handle_accuracy_results']}], exception {e}")
                     else:
                         accuracy_results_text += "\n\tAccuracy/Results NA, Labels are not provided!\n"
-            if parsed_dict['get_histogram_plot'] and not (parsed_dict['disable_op_quantization']) :
+            if parsed_dict['get_histogram_plot'] and not (parsed_dict['disable_op_quantization']):
                 util.plot_histogram_0_255(hist)
-            if GET_INTERMEDIATE_FILES :
-                util.save_histogram(hist,intermediate_outputs_dir + file_name_prefix + "_histogram_result.txt" )
+            if GET_INTERMEDIATE_FILES:
+                util.save_histogram(
+                    hist, intermediate_outputs_dir + file_name_prefix + "_histogram_result.txt")
             model_results_text += accuracy_results_text + histogram_text + quantization_loss_results_text + \
                 precision_score_text + confusion_matrix_text  # + classification_report_text
             variants_object.set_test_data_set_size(
@@ -1214,7 +1242,7 @@ def run_app():
     logger.addHandler(console_handler)
     log_file_name = log_file_name + str(Path(__file__).name.split('.')[0])+"_"+str(
         dt.datetime.now().strftime("%Y%m%d_%H%M%S"))+".log"
-    
+
     if (len(sys.argv) > 2):
         parser = util.parse_compiler_arguments()
         arguments_dict = vars(parser.parse_args())
@@ -1263,7 +1291,7 @@ def run_app():
                     if app_return != 0:
                         logger.error(
                             f"return code {app_return}, {app_return_text}")
-                        exit_code = -1 
+                        exit_code = -1
                     else:
                         logger.info(
                             f"completed running {test}, return code {app_return}({app_return_text}), took {(time.time() - start_time):.2f} seconds")
@@ -1271,7 +1299,7 @@ def run_app():
             else:
                 raise Exception(f"yaml file doesn't exist at {path}!")
         else:
-            raise Exception("provide a yaml file!")        
+            raise Exception("provide a yaml file!")
         return exit_code
 
 
@@ -1280,5 +1308,5 @@ if __name__ == "__main__":
         exit_code = run_app()
         sys.exit(exit_code)
     except Exception as e:
-        print(f"Unhandled Exception {e}. exiting.....")       
+        print(f"Unhandled Exception {e}. exiting.....")
         sys.exit(-1)

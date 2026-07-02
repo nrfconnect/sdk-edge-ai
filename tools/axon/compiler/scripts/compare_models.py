@@ -647,7 +647,8 @@ if __name__ == '__main__':
         '--labels_order',
         type=str,
         default=["Down", "Go", "Left", "No", "Off", "On", "Right", "Stop",
-                 "Up", "Yes", "Silence", "Unknown"],  # ["person", "non_person"],#
+                 # ["person", "non_person"],#
+                 "Up", "Yes", "Silence", "Unknown"],
         nargs="+",
         help="""\
     Shows what each number in labels represents. This is saved by order.

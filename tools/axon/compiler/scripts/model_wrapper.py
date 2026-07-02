@@ -231,7 +231,7 @@ class CompilerResultsReturnClass():
 class ModelDescriptionBin:
     MAJOR_VER = 1
     MINOR_VER = 2
-    PATCH_VER = 0
+    PATCH_VER = 9
     binary_title_string = "AXON_INTERMEDIATE_REPRESENTATION_FILE"
     MODEL_BIN_VER = (MAJOR_VER << 16) + (MINOR_VER << 8) + PATCH_VER
     model_ver_bin = bytearray(np.array([MODEL_BIN_VER], dtype=np.uint32))
@@ -645,18 +645,21 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
             f"input count : {model_layer_description_struct[layers].input_id_cnt}")
         for input_ids in range(model_layer_description_struct[layers].input_id_cnt):
             logger.debug(
-                f"input id : {model_layer_description_struct[layers].input_ids[input_ids] }")  # 2
-            logger.debug(f" id {model_layer_description_struct[layers].input_ids[input_ids]} : input shape (C, H, W) : {model_layer_description_struct[layers].input_dimensions[input_ids].channel_cnt,model_layer_description_struct[layers].input_dimensions[input_ids].height,model_layer_description_struct[layers].input_dimensions[input_ids].width}")  # 3
+                # 2
+                f"input id : {model_layer_description_struct[layers].input_ids[input_ids]}")
+            logger.debug(f" id {model_layer_description_struct[layers].input_ids[input_ids]} : input shape (C, H, W) : {model_layer_description_struct[layers].input_dimensions[input_ids].channel_cnt, model_layer_description_struct[layers].input_dimensions[input_ids].height, model_layer_description_struct[layers].input_dimensions[input_ids].width}")  # 3
             input_byte_width_name = ffi_object.string(ffi_object.cast(
                 "nrf_axon_nn_byte_width_e", model_layer_description_struct[layers].input_dimensions[input_ids].byte_width))
             input_bitwidth = tflite_axon_enum_wrapper.get_bitwidth_from_bytewidth_enum(
                 model_layer_description_struct[layers].input_dimensions[input_ids].byte_width)
             logger.debug(
-                f" id {model_layer_description_struct[layers].input_ids[input_ids]} : input byte_width : { model_layer_description_struct[layers].input_dimensions[input_ids].byte_width} , {input_byte_width_name} : bitwidth : {input_bitwidth}")  # 4
+                # 4
+                f" id {model_layer_description_struct[layers].input_ids[input_ids]} : input byte_width : {model_layer_description_struct[layers].input_dimensions[input_ids].byte_width} , {input_byte_width_name} : bitwidth : {input_bitwidth}")
         axon_op_name = ffi_object.string(ffi_object.cast(
             "nrf_axon_nn_op_e", model_layer_description_struct[layers].nn_operation))
         logger.debug(
-            f"nn_operation : {model_layer_description_struct[layers].nn_operation } : {axon_op_name}")  # 6
+            # 6
+            f"nn_operation : {model_layer_description_struct[layers].nn_operation} : {axon_op_name}")
         if (axon_op_name == "NRF_AXON_NN_OP_CONCATENATE"):
             logger.debug(
                 f"concatenation axis : {model_layer_description_struct[layers].concatenate_axis}")
@@ -664,25 +667,32 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
         # logger.debug(f"input width : {model_layer_description_struct[layers].input_dimensions.width }")#96
         # logger.debug(f"input channel count : {model_layer_description_struct[layers].input_dimensions.channel_cnt }")#96
         logger.debug(
-            f"filter height : {model_layer_description_struct[layers].filter_dimensions.height }")  # 3
+            # 3
+            f"filter height : {model_layer_description_struct[layers].filter_dimensions.height}")
         logger.debug(
-            f"filter width : {model_layer_description_struct[layers].filter_dimensions.width }")  # 3
+            # 3
+            f"filter width : {model_layer_description_struct[layers].filter_dimensions.width}")
         logger.debug(
-            f"filter channel count : {model_layer_description_struct[layers].filter_dimensions.channel_cnt }")  # 16
+            # 16
+            f"filter channel count : {model_layer_description_struct[layers].filter_dimensions.channel_cnt}")
         filter_byte_width_name = ffi_object.string(ffi_object.cast(
             "nrf_axon_nn_byte_width_e", model_layer_description_struct[layers].filter_dimensions.byte_width))
         filter_bitwidth = tflite_axon_enum_wrapper.get_bitwidth_from_bytewidth_enum(
             model_layer_description_struct[layers].filter_dimensions.byte_width)
         logger.debug(
-            f"filter byte_width : {model_layer_description_struct[layers].filter_dimensions.byte_width }, {filter_byte_width_name} : bitwidth : {filter_bitwidth}")  # 2
+            # 2
+            f"filter byte_width : {model_layer_description_struct[layers].filter_dimensions.byte_width}, {filter_byte_width_name} : bitwidth : {filter_bitwidth}")
         filter_np_datatype = tflite_axon_enum_wrapper.GetNpDataTypeFromAxonByteWidth(
             model_layer_description_struct[layers].filter_dimensions.byte_width)
         logger.debug(
-            f"output height : {model_layer_description_struct[layers].output_dimensions.height }")  # 48
+            # 48
+            f"output height : {model_layer_description_struct[layers].output_dimensions.height}")
         logger.debug(
-            f"output width : {model_layer_description_struct[layers].output_dimensions.width }")  # 48
+            # 48
+            f"output width : {model_layer_description_struct[layers].output_dimensions.width}")
         logger.debug(
-            f"output channel count : {model_layer_description_struct[layers].output_dimensions.channel_cnt }")  # 16
+            # 16
+            f"output channel count : {model_layer_description_struct[layers].output_dimensions.channel_cnt}")
         output_length = model_layer_description_struct[layers].output_dimensions.channel_cnt
         output_bitwidth = tflite_axon_enum_wrapper.get_bitwidth_from_bytewidth_enum(
             model_layer_description_struct[layers].output_dimensions.byte_width)
@@ -692,34 +702,44 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
         output_byte_width_name = ffi_object.string(ffi_object.cast(
             "nrf_axon_nn_byte_width_e", model_layer_description_struct[layers].output_dimensions.byte_width))
         logger.debug(
-            f"output byte_width : {model_layer_description_struct[layers].output_dimensions.byte_width } , {output_byte_width_name} : bitwidth : {output_bitwidth}")  # 3
+            # 3
+            f"output byte_width : {model_layer_description_struct[layers].output_dimensions.byte_width} , {output_byte_width_name} : bitwidth : {output_bitwidth}")
         logger.debug(
-            f"stride x : {model_layer_description_struct[layers].stride_x }")  # 1
+            # 1
+            f"stride x : {model_layer_description_struct[layers].stride_x}")
         logger.debug(
-            f"stride y : {model_layer_description_struct[layers].stride_y }")  # 2
+            # 2
+            f"stride y : {model_layer_description_struct[layers].stride_y}")
         logger.debug(
-            f"output zp : {model_layer_description_struct[layers].output_zero_point }")  # -128
+            # -128
+            f"output zp : {model_layer_description_struct[layers].output_zero_point}")
         logger.debug(
-            f"scale shift cnt : {model_layer_description_struct[layers].scale_shift_cnt }")  # 1
+            # 1
+            f"scale shift cnt : {model_layer_description_struct[layers].scale_shift_cnt}")
         af_name = ffi_object.string(ffi_object.cast(
             "nrf_axon_nn_activation_function_e", model_layer_description_struct[layers].activation_function))
         logger.debug(
-            f"activation function : {model_layer_description_struct[layers].activation_function } : {af_name}")  # 3
+            # 3
+            f"activation function : {model_layer_description_struct[layers].activation_function} : {af_name}")
         logger.debug(
-            f"pad left : {model_layer_description_struct[layers].pad_left }")  # layers
+            # layers
+            f"pad left : {model_layer_description_struct[layers].pad_left}")
         logger.debug(
-            f"pad right : {model_layer_description_struct[layers].pad_right }")  # 1
+            # 1
+            f"pad right : {model_layer_description_struct[layers].pad_right}")
         logger.debug(
-            f"pad top : {model_layer_description_struct[layers].pad_top }")  # layers
+            # layers
+            f"pad top : {model_layer_description_struct[layers].pad_top}")
         logger.debug(
-            f"pad bottom : {model_layer_description_struct[layers].pad_bottom }")  # 1
+            # 1
+            f"pad bottom : {model_layer_description_struct[layers].pad_bottom}")
         filter_length = model_layer_description_struct[layers].filter_dimensions.height*model_layer_description_struct[layers].filter_dimensions.width*model_layer_description_struct[
             layers].filter_dimensions.channel_cnt * model_layer_description_struct[layers].output_dimensions.channel_cnt*model_layer_description_struct[layers].filter_dimensions.byte_width
         if (axon_op_name == "NRF_AXON_NN_OP_DEPTHWISE_CONV2D") or axon_op_name == "NRF_AXON_NN_OP_STRIDED_SLICE":
             filter_length = int(
                 filter_length / model_layer_description_struct[layers].output_dimensions.channel_cnt)
         logger.debug(
-            f"filter ptr offset : {model_layer_description_struct[layers].filter.offset }, length : {filter_length}")
+            f"filter ptr offset : {model_layer_description_struct[layers].filter.offset}, length : {filter_length}")
         if (np.array(model_layer_description_struct[layers].filter.offset).astype(np.int32) != -1):
             filter_count = int(
                 filter_length / model_layer_description_struct[layers].filter_dimensions.byte_width)
@@ -728,7 +748,7 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
             logger.debug(f"filter_vector : {filter_vector}")
         bias_prime_length = output_length
         logger.debug(
-            f"bias_prime offset : {model_layer_description_struct[layers].bias_prime.offset }, length : {bias_prime_length}")
+            f"bias_prime offset : {model_layer_description_struct[layers].bias_prime.offset}, length : {bias_prime_length}")
         if (np.array(model_layer_description_struct[layers].bias_prime.offset).astype(np.int32) != -1):
             bias_vector = np.frombuffer(
                 model_const, offset=model_layer_description_struct[layers].bias_prime.offset, dtype=np.int32, count=bias_prime_length)
@@ -741,10 +761,10 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
                 model_const, offset=model_layer_description_struct[layers].output_multipliers.offset, dtype=np.int32, count=multiplier_length)
             logger.debug(f"multiplier_vector : {multiplier_vector}")
         logger.debug(
-            f"output multipliers offset : {model_layer_description_struct[layers].output_multipliers.offset } length : {multiplier_length}")
+            f"output multipliers offset : {model_layer_description_struct[layers].output_multipliers.offset} length : {multiplier_length}")
         # 0x2FFFEEEE
         logger.debug(
-            f"scale shifts offset : {model_layer_description_struct[layers].scale_shifts.offset }, scaleshift count : {model_layer_description_struct[layers].scale_shift_cnt}")
+            f"scale shifts offset : {model_layer_description_struct[layers].scale_shifts.offset}, scaleshift count : {model_layer_description_struct[layers].scale_shift_cnt}")
         if (np.array(model_layer_description_struct[layers].scale_shifts.offset).astype(np.int32) != -1):
             scaleshift_vector = np.frombuffer(
                 model_const, offset=model_layer_description_struct[layers].scale_shifts.offset, dtype=np.int8, count=model_layer_description_struct[layers].scale_shift_cnt)
@@ -753,7 +773,7 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
             cpu_op_additional_attribs = np.frombuffer(
                 model_const, offset=model_layer_description_struct[layers].cpu_op_additional_attributes.offset, dtype=np.int32, count=model_layer_description_struct[layers].cpu_op_additional_attributes_count)
             logger.debug(
-                f"cpu ops additional attrib list offset : {model_layer_description_struct[layers].cpu_op_additional_attributes.offset }, cpu ops additional attrib count : {model_layer_description_struct[layers].cpu_op_additional_attributes_count}")
+                f"cpu ops additional attrib list offset : {model_layer_description_struct[layers].cpu_op_additional_attributes.offset}, cpu ops additional attrib count : {model_layer_description_struct[layers].cpu_op_additional_attributes_count}")
             logger.debug(
                 f"cpu ops additional attrib list : {cpu_op_additional_attribs}")
 
