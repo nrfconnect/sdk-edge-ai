@@ -44,7 +44,7 @@ To get the |EAI| code, you can either:
          The list of actions appears in the Visual Studio Code's quick pick.
       #. Click :guilabel:`Browse nRF Connect SDK Add-on Index`.
          The list of available nRF Connect SDK Add-ons appears in the Visual Studio Code's quick pick.
-      #. Select :guilabel:`nRF Edge AI Add-on`.
+      #. Select :guilabel:`Edge AI Add-on`.
       #. Select the Add-on version to install.
          Depending on the speed of your internet connection, the update might take some time.
 

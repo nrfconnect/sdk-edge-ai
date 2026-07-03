@@ -7,12 +7,14 @@ Axon NPU: Hardware Accelerated Machine Learning
    :local:
    :depth: 2
 
+The Axon NPU library provides the driver, compiler toolchain, samples, and simulator for deploying neural networks on Nordic hardware accelerators.
+
 Overview
 ********
 
 The Axon NPU accelerates neural networks.
-This repository contains the driver, sample, simulator, and tool chain files to support Axon NPU.
-Applications can be created to target the SoC (running zephyr) or a software simulator running on the host machine.
+This repository contains the driver, sample, simulator, and toolchain files to support Axon NPU.
+You can create applications that target the SoC (running zephyr) or a software simulator running on the host machine.
 
 Neural Net Workflow
 *******************

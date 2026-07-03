@@ -1,4 +1,5 @@
 .. _quick_start:
+.. _setting_up_environment:
 
 Quick start guide
 #################
@@ -7,14 +8,19 @@ Quick start guide
    :local:
    :depth: 2
 
-
-This section includes quick start guides for running machine learning workloads on Nordic Semiconductor devices using nRF Edge AI.
+This section includes quick start guides for setting up your environment and running machine learning workloads on Nordic Semiconductor devices using nRF Edge AI.
 These pages cover common development paths, from simplified end‑to‑end solutions to lower‑level integrations with direct hardware control.
 
 Select the guide that best matches your required level of control, tooling preferences, and target hardware.
 Each guide walks through the required setup steps and shows how to deploy and run an edge AI application.
 
 If you are unsure which approach fits your use case, see the :ref:`solution_comparison` page for a comparison of features, performance characteristics, and supported workflows.
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   quick_start/sdk_setup
 
 Basic setup variants
 ********************

@@ -1,4 +1,5 @@
 .. _quick_start_edge_impulse:
+.. _setup_edge_impulse:
 
 Edge Impulse
 ############
@@ -10,14 +11,36 @@ Edge Impulse
 The following guide explains how to develop and deploy machine learning applications on Nordic Semiconductor devices using |EI|.
 It is ideal if you want an end‑to‑end workflow for data collection, model training, and deployment on embedded targets.
 
-|EI| models can run on CPU or on the `Axon NPU`_, depending on the target device you select during the deployment process.
-On devices equipped with the Axon NPU, |EI| automatically leverages hardware acceleration for supported operations, resulting in faster inference and lower power consumption.
-On devices without the NPU, the same model runs in software on the CPU.
-
 To follow this guide, you should be familiar with basic embedded systems development.
 The guide covers the steps required to collect data, train a model using |EI| tools, and deploy the resulting model to a Nordic device.
 
 After completing this guide, you will have a machine learning application running on a Nordic Semiconductor device using |EI|.
+
+.. _edge_impulse_requirements_hardware:
+
+Hardware requirements
+*********************
+
+The support of specific hardware platforms depends on the sample application you wish to run.
+For details, see the :ref:`edge_impulse_samples` page, or refer to individual samples' :file:`sample.yaml` files in the :file:`samples/edge_impulse/<sample>/` directory.
+
+|EI| SDK is provided in form of source code and can be built during the application build process for a hardware architecture of the target device.
+This means SDK and models can be built for any Nordic Semiconductor's device with ARM Cortex-M4F and Cortex-M33F architectures.
+
+You can also deploy |EI| models utilizing Axon NPU, which is designed to accelerate machine learning inference on selected Nordic Semiconductor's devices.
+Currently, these models can be run only on the `nRF54LM20B`_ device.
+
+.. _edge_impulse_requirements_software:
+
+Software requirements
+*********************
+
+To start working with the |EI| SDK, you must:
+
+1. Complete :ref:`setup_sdk` (includes |NCS|, toolchain, and |EI| SDK).
+#. Create an `Edge Impulse studio account <Edge Impulse studio signup_>`_ if you want to train and deploy your own machine learning models.
+#. Follow the `Edge Impulse CLI installation guide`_ to install |EI| command line tools.
+   They include, for example, ``edge-impulse-data-forwarder`` which can be used to forward data from a board to |EIS| for training machine learning models.
 
 Model training
 ***************
