@@ -4,6 +4,14 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+/**
+ * @defgroup app_gr Gesture Recognition Application
+ *
+ * @defgroup inference_postprocessing Inference Postprocessing
+ * @{
+ * @ingroup app_gr
+ */
+
 #ifndef __INFERENCE_POSTPROCESSING_H__
 #define __INFERENCE_POSTPROCESSING_H__
 
@@ -52,3 +60,7 @@ const char *inference_get_class_name(const class_label_t class_label);
 
 
 #endif /* __INFERENCE_POSTPROCESSING_H__ */
+
+/**
+ * @}
+ */

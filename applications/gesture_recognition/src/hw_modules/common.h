@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-/** @defgroup hw_modules HW modules for GR */
+/**
+ * @defgroup hw_modules HW modules for GR
+ * @ingroup app_gr
+ */
 
 /**
  *

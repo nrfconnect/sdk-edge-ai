@@ -7,6 +7,7 @@
 /**
  * @defgroup uxsm UX State Machine
  * @{
+ * @ingroup app_gr
  *
  * uxsm means ux_state_machine.
  *

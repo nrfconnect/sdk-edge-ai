@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-/** @defgroup ble BLE interface for GR */
+/**
+ * @defgroup ble BLE interface for GR
+ * @ingroup app_gr
+ */
 
 /**
  *
