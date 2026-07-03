@@ -220,6 +220,13 @@ If you have enabled the model observability, also complete the following steps:
 #. Select a CDR payload from your test device with "edgeai_observability" as reason.
    You can filter the list of CDR payloads by device name and time.
 #. Download the payload for metrics analysis.
+#. Decode it on a host PC using :file:`scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py` script in binary mode:
+
+   .. code-block:: shell
+
+      ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --binary --file <downloaded>.bin
+
+   See :ref:`nrf_edgeai_obsv_script` for installation and other input modes.
    Payload format is defined in the :file:`lib/nrf_edgeai_obsv/obsv.cddl` file.
 
 Application output
