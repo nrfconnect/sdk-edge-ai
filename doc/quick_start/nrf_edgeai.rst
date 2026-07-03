@@ -1,4 +1,5 @@
 .. _quick_start_nrf_edgeai:
+.. _setup_nrf_edgeai_lib:
 
 nRF Edge AI API
 ###############
@@ -17,6 +18,28 @@ The nRF Edge AI solution supports two types of models:
 * `Axon NPU`_ models - Designed for NPU acceleration on devices equipped with the `Axon NPU`_.
 
 After completing this guide, you will have a trained machine learning model running on your Nordic development board.
+
+This page outlines the requirements that you need to fulfill before you start working with the |EAILib|.
+
+.. _nrf_edgeai_requirements_hardware:
+
+Hardware requirements
+*********************
+
+The support of specific hardware platforms depends on the sample application you wish to run.
+For details, see the :ref:`samples_nrf_edgeai_overview` page, or refer to individual samples' :file:`sample.yaml` files in the :file:`samples/nrf_edgeai/<sample>/sample.yaml` or :file:`applications/<application>/sample.yaml` directory.
+
+The |EAILib| is provided as compiled binaries for ARM Cortex-M4F and Cortex-M33F architectures.
+
+.. _nrf_edgeai_requirements_software:
+
+Software requirements
+*********************
+
+Complete :ref:`setup_sdk` to install |NCS|, toolchain, and |EAILib|.
+
+You can also create a `Nordic Edge AI Lab`_ account if you want to prepare and deploy your own machine learning models.
+The samples and applications provided in the |EAI| use pre-deployed models, so an account is not required to run them.
 
 Model training
 **************
@@ -101,11 +124,9 @@ You will set up your development environment, learn to use the nRF Edge AI API, 
 Prepare your environment
 ========================
 
-Before you can start developing, you need to set up your development environment with the necessary tools and libraries.
-This is a one-time setup that will enable you to build, flash, and debug AI applications on Nordic devices.
+Before you can start developing, ensure you have set up your development environment with the necessary tools and libraries as per the :ref:`nrf_edgeai_requirements_software` section.
 
-1. :ref:`Set up Edge AI library <setup_nrf_edgeai_lib>`.
-#. Build and run one of the :ref:`nRF Edge AI Samples <samples_nrf_edgeai_overview>` or the :ref:`app_gesture_recognition` application to verify the setup.
+Once confirmed, build and run one of the :ref:`nRF Edge AI Samples <samples_nrf_edgeai_overview>` or the :ref:`app_gesture_recognition` application to verify the setup.
 
 .. rst-class:: numbered-step
 

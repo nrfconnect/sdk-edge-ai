@@ -44,7 +44,6 @@ See the following documentation:
 
    overview.rst
    quick_start.rst
-   setting_up_environment.rst
    applications.rst
    samples.rst
    integrations.rst
