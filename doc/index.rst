@@ -47,6 +47,7 @@ See the following documentation:
    setting_up_environment.rst
    applications.rst
    samples.rst
+   demos.rst
    integrations.rst
    axon_compiler.rst
    libraries.rst

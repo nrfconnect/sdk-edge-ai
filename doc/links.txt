@@ -121,6 +121,7 @@
 .. _`Setting up Podman container`: https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/podman_tutorial.md#running-a-sample-container
 .. _`edge-impulse-sdk-zephyr`: https://github.com/edgeimpulse/edge-impulse-sdk-zephyr
 .. _`MCUnet`: https://github.com/mit-han-lab/mcunet
+.. _`Person detection demo repository`: https://github.com/nordicsemi/app-axon-person-detection
 
 .. _`Memfault WebBluetooth Client`: https://memfault.github.io/web-ble-example/
 
