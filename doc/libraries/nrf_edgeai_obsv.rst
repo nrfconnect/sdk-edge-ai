@@ -589,6 +589,34 @@ The :c:func:`nrf_edgeai_obsv_memfault_collect` function uses two mutexes:
 
 To avoid lock inversion, ``obsv_mflt_lock`` is released before encoding begins, so inference is never blocked by an ongoing collect.
 
+.. _nrf_edgeai_obsv_script:
+
+Decoding CDR payloads
+*********************
+
+Use the :file:`scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py` script on a host PC to inspect collected observability data as JSON (per-model counters and metric tables).
+Run it on payloads that are already in Memfault, or on hex data captured from UART or Bluetooth LE when debugging transport and encoding.
+
+The script accepts Memfault web UI downloads (``--binary --file``), Memfault API fetch (``--from-cloud``), hex-encoded chunks from UART or Bluetooth LE, and multi-chunk reassembly (``--chunks``).
+
+Install the Python dependencies from the sdk-edge-ai tree root:
+
+.. code-block:: shell
+
+   pip install -r scripts/decode_edgeai_obsv_cdr/requirements.txt
+
+The following examples show common usage:
+
+.. code-block:: shell
+
+   # Memfault web UI download
+   ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --binary --file recording.bin
+
+   # Hex from a serial log
+   ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py 04a1b2c3d4...
+
+Run ``--help`` on the script for the full option list and Memfault API authentication details.
+
 Dependencies
 ************
 
