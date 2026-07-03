@@ -123,7 +123,7 @@ static EI_IMPULSE_ERROR run_ei_classification(ei_impulse_result_t *ei_result, si
 	};
 
 	return run_classifier(&features_signal, ei_result,
-		IS_ENABLED(CONFIG_EI_WRAPPER_DEBUG_MODE));
+			      IS_ENABLED(CONFIG_HELLO_EI_DEBUG_MODE));
 }
 
 static int run_model(const float *input_data, size_t input_data_size)
