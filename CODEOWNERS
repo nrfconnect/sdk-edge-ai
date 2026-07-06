@@ -1,0 +1,10 @@
+# CODEOWNERS for autoreview assigning in github
+
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# Order is important; the last matching pattern takes the most
+# precedence.
+
+# Documentation changes require review from the tech writer team.
+doc/**/*      @nrfconnect/ncs-sdk-edge-ai-doc
+**/*.rst      @nrfconnect/ncs-sdk-edge-ai-doc
+**/*.md       @nrfconnect/ncs-sdk-edge-ai-doc
