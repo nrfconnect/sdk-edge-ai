@@ -9,6 +9,28 @@ nRF Edge AI Library changelog
 
 See the list of changes for a specific release of the |EAILib|.
 
+Release v2.2.2 (03 July 2026)
+******************************
+
+This release is tagged as ``NRF-EDGEAI-RELEASE-2.2.2`` (internal release commit ``d33025f8dcb96859626bdabc671b108983f1c0d8``).
+
+* Added support for Axon driver version 1.3.0.
+
+* Fixed:
+
+  * Compatibility of the library with PicoLib in the |NCS|. ``_impure_ptr`` references are now removed from the audio microfrontend utils.
+
+Known issues
+============
+
+There are no critical known issues identified for this release.
+
+Compatibility
+=============
+
+* Nordic Edge AI Lab solutions version: 2.2.0 - 2.2.2
+* Axon driver version: 1.1.0 - 1.3.0
+
 Release v2.2.1 (09 April 2026)
 ******************************
 

@@ -7,8 +7,7 @@
  *
  * @defgroup nrf_dsp_debug Debug Utils & Macros
  * @{
- *
- * @brief
+ * @ingroup nrf_dsp
  *
  */
 

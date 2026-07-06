@@ -7,9 +7,7 @@
  *
  * @defgroup nrf_edgeai_debug Debug Utils & Macros
  * @{
- *
- * @brief
- *
+ * @ingroup nrf_edgeai
  */
 
 #ifndef _NRF_EDGEAI_DEBUG_H_
