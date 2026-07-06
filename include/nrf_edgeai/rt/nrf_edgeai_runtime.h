@@ -26,12 +26,13 @@ extern "C" {
  ***********************************************************************************************************************/
 
 /**
- * @brief Set up the internal components of the Edge AI runtime 
- *        should be called first and once
- * 
+ * @brief Set up the internal components of the Edge AI runtime
+ *
+ * @note Should be called first and once per @p p_edgeai user context
+ *
  * @param[in, out] p_edgeai     Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- *  
- * @return Operation status code @ref nrf_edgeai_err_t 
+ *
+ * @return Operation status code @ref nrf_edgeai_err_t
  */
 nrf_edgeai_err_t nrf_edgeai_init(nrf_edgeai_t* p_edgeai);
 
