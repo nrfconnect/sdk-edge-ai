@@ -1,4 +1,4 @@
-/* 2026-03-06T10:48:27.216005 */
+/* 2026-05-20T15:18:33.269318 */
 /*
 * Copyright (c) 2026 Nordic Semiconductor ASA
 * SPDX-License-Identifier: Apache-2.0
