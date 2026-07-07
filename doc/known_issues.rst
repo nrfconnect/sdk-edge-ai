@@ -20,6 +20,24 @@ A known issue can list one or both of the following entries:
   Some known issues have a workaround.
   Sometimes, they are discovered later and added over time.
 
+
+List of known issues for v2.2.0 release
+***************************************
+
+NCSDK-40250: Bootloader Serial Recovery mode is disabled in release configurations on Thingy:53
+  In the :ref:`Gesture Recognition application <app_gesture_recognition>`, bootloader Serial Recovery mode is disabled in release configurations.
+
+  **Workaround:** Enable the following Kconfig options in the MCUboot configuration file :file:`configuration/thingy53_nrf5340_cpuapp/images/mcuboot/prj_release.conf`:
+
+  .. code-block:: ini
+
+     CONFIG_MCUBOOT_SERIAL=y
+     CONFIG_GPIO=y
+
+  This restores Serial Recovery mode at the cost of increased current consumption.
+
+  **Affected platforms:** Thingy:53
+
 List of known issues for v2.1.0 release
 ***************************************
 
