@@ -68,8 +68,10 @@ You will need representative samples that capture the patterns, events, or condi
 
 Choose the method that works best for your project:
 
-* Directly from your development board - Use or modify the :ref:`ei_data_forwarder_sample` to stream sensor data directly from your Nordic board to |EIS|.
+* Directly from your development board - Use or modify the :ref:`data_forwarder_sample` to stream sensor data from your Nordic board.
   Use it for custom hardware setups to have full control over data collection.
+  Enable the ``CONFIG_DATA_FWD_PROTO_ASCII_MODE`` Kconfig option when streaming directly to |EIS| using the `Edge Impulse's data forwarder`_ CLI.
+  You can also use the :ref:`data_forwarder_host_tool` to visualize and save the streamed sensor data to your local machine and than upload it to |EIS| manually.
 
 * Quick start with Thingy:53 - If you have a Thingy:53, install the Edge Impulse - Wi-Fi firmware using the `nRF Programmer`_ mobile app, then use the `nRF Edge Impulse`_ mobile app to forward sensor data wirelessly.
   This is the fastest way to start collecting data without writing any code.
@@ -137,7 +139,7 @@ The |EI| SDK makes it easy to load your model, feed it sensor data, and get pred
 #. Implement your application logic using the |EI| SDK API:
 
    * See :ref:`hello_ei_sample` for a simple example showing the basic API flow from initialization to inference.
-   * Explore :ref:`ei_data_forwarder_sample` if you want to add data forwarding capabilities for continuous learning and debugging.
+   * Explore :ref:`data_forwarder_sample` if you want to add data forwarding capabilities for continuous learning and debugging.
    * Read the `Edge Impulse C++ SDK`_ documentation for comprehensive API reference and advanced features.
 
 .. tip::

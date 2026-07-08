@@ -47,7 +47,9 @@ It relies on sensor data that can be provided by different sources, for example,
 
 .. note::
    To collect data, use either a development board supported directly by |EI|, or your mobile phone.
-   As an alternative, modify the :ref:`ei_data_forwarder_sample` sample to forward data from a sensor connected to any board available in the |NCS|.
+   As an alternative, use or modify the :ref:`data_forwarder_sample` sample to forward data from a sensor connected to any board available in the |NCS|.
+   Enable the ``CONFIG_DATA_FWD_PROTO_ASCII_MODE`` Kconfig option when using the `Edge Impulse's data forwarder`_ CLI.
+   You can also use :ref:`data_forwarder_host_tool` to visualize and save the streamed sensor data to your local machine.
 
 The deployed machine learning model archive is then referenced from your |EAI| application, and the build system unpacks and compiles it automatically.
 When starting from the :ref:`hello_ei_sample` sample, you do not need to unpack the archive or write any CMake code manually, deployed machine learning model is referenced through the ``CONFIG_EDGE_IMPULSE_MODEL_PATH`` Kconfig option.
@@ -380,5 +382,5 @@ Applications and samples
 
 The following samples demonstrate the |EI| integration in the |EAI|:
 
-* :ref:`ei_data_forwarder_sample` sample - Demonstrates how you can send sensor data to |EIS| using `Edge Impulse's data forwarder`_.
 * :ref:`hello_ei_sample` sample - Demonstrates the deployment of models in |EI| and usage of the inference engine provided by |EI| SDK.
+* :ref:`data_forwarder_sample` sample - Demonstrates how you can send sensor data to |EIS| using `Edge Impulse's data forwarder`_.
