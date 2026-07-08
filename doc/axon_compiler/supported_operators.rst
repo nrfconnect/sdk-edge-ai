@@ -15,7 +15,7 @@ Model structure
 The Axon Compiler has the following constraints on model structure:
 
 * Allows a maximum of 1 external input to the model.
-* Allows a maximum of 20 ouputs of the model.
+* Allows a maximum of 20 outputs of the model.
 * Supports 8-bit quantized input and output for all layers, with an option to use int32 model output with a configurable radix.
 * Supports stateful behavior between inferences when declared using VarHandle, ReadVariable, or AssignVariable.
 * Allows a maximum of two inputs per node.
@@ -27,6 +27,13 @@ The Axon Compiler has the following constraints on model structure:
 
 * Provides native activation functions: ReLU, ReLU6, and LeakyReLU.
 * Provides CPU activation functions: Sigmoid, Tanh, and Softmax.
+
+Performance considerations
+==========================
+
+The Axon performs best with a wider aspect ratio, so models with a greater width than height perform better on the NPU.
+If your model height is bigger than its width, use the ``TRANSPOSE_KERNEL`` option of :ref:`Axon Compiler <axon_npu_tflite_compiler>`.
+Note that this option requires you to transpose the input and output data as well.
 
 .. _supported_operators_reshape:
 
@@ -286,6 +293,10 @@ Quantization guidance
 =====================
 
 To achieve optimal performance and predictable accuracy, train models using 8‑bit quantization awareness when targeting deployment on Axon.
+
+Axon NPU supports per‑tensor and per‑channel quantization for fully connected layers.
+Per‑channel quantization often produces better accuracy, but at the expense of larger :term:`interlayer buffer <Axon interlayer buffer>` and :term:`command buffer <Axon command buffer>` requirements.
+Per‑channel quantization for fully‑connected layers is enabled by default in TensorFlow, but can be disabled with ``converter._experimental_disable_per_channel_quantization_for_dense_layers = True``.
 
 Deployment strategy
 ===================
