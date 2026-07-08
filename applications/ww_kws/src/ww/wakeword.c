@@ -68,7 +68,7 @@ static int ww_obsv_init(nrf_edgeai_t *model)
 
 int ww_init(void)
 {
-	ww_model = nrf_edgeai_user_model_wakeword();
+	ww_model = nrf_edgeai_user_model_36711();
 	__ASSERT_NO_MSG(ww_model);
 	__ASSERT_NO_MSG(ww_model->input.window_size == DMIC_SAMPLES_IN_BLOCK);
 

@@ -18,54 +18,34 @@
 #include "../model_utils.h"
 #include "kws.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
+#include "nrf_edgeai_generated/nrf_edgeai_user_model_labels.h"
 
 LOG_MODULE_REGISTER(kws);
 
-/* Equal to 150 ms of audio. */
-#define SKIP_DETECTIONS_COUNT 5
+/* Equal to 300 ms of audio. */
+#define SKIP_DETECTIONS_COUNT 10
 
-/* Classes predicted by keyword spotting model. The need to stay in sync with used model.
- * It will be subject to change how this classes are defined.
- */
-enum keyword_class {
-	KEYWORD_DOWN,
-	KEYWORD_GO,
-	KEYWORD_LEFT,
-	KEYWORD_NO,
-	KEYWORD_OFF,
-	KEYWORD_ON,
-	KEYWORD_RIGHT,
-	KEYWORD_SILENCE,
-	KEYWORD_STOP,
-	KEYWORD_UNKNOWN,
-	KEYWORD_UP,
-	KEYWORD_YES,
-	KEYWORDS_COUNT
-};
+#define KEYWORDS_COUNT ARRAY_SIZE(keyword_detection_ctxs)
 
 struct keyword_detection_ctx {
-	const char *name;
 	const float threshold;
 	const uint8_t num_in_row;
 };
 
 static const struct keyword_detection_ctx keyword_detection_ctxs[] = {
-	[KEYWORD_DOWN] = {.name = "Down", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_GO] = {.name = "Go", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_LEFT] = {.name = "Left", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_NO] = {.name = "No", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_OFF] = {.name = "Off", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_ON] = {.name = "On", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_RIGHT] = {.name = "Right", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_SILENCE] = {.name = "Silence", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_STOP] = {.name = "Stop", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_UNKNOWN] = {.name = "Unknown", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_UP] = {.name = "Up", .threshold = 0.9f, .num_in_row = 22},
-	[KEYWORD_YES] = {.name = "Yes", .threshold = 0.9f, .num_in_row = 22},
+	[MODEL_LABEL_INDEX_OTHER] = {},
+	[MODEL_LABEL_INDEX_SILENCE] = {},
+	[MODEL_LABEL_INDEX_DOWN] = {.threshold = 0.8f, .num_in_row = 10},
+	[MODEL_LABEL_INDEX_GO] = {.threshold = 0.8f, .num_in_row = 10},
+	[MODEL_LABEL_INDEX_LEFT] = {.threshold = 0.8f, .num_in_row = 10},
+	[MODEL_LABEL_INDEX_NO] = {.threshold = 0.8f, .num_in_row = 10},
+	[MODEL_LABEL_INDEX_OFF] = {.threshold = 0.8f, .num_in_row = 10},
+	[MODEL_LABEL_INDEX_ON] = {.threshold = 0.8f, .num_in_row = 10},
+	[MODEL_LABEL_INDEX_RIGHT] = {.threshold = 0.8f, .num_in_row = 10},
+	[MODEL_LABEL_INDEX_STOP] = {.threshold = 0.8f, .num_in_row = 10},
+	[MODEL_LABEL_INDEX_UP] = {.threshold = 0.8f, .num_in_row = 10},
+	[MODEL_LABEL_INDEX_YES] = {.threshold = 0.8f, .num_in_row = 10},
 };
-
-BUILD_ASSERT(KEYWORDS_COUNT == ARRAY_SIZE(keyword_detection_ctxs),
-	     "Mismatch between keyword_class and keyword_detection_ctxs size");
 
 static nrf_edgeai_t *kws_model;
 
@@ -124,7 +104,7 @@ static int kws_obsv_init(nrf_edgeai_t *model)
 
 int kws_init(void)
 {
-	kws_model = nrf_edgeai_user_model_kws();
+	kws_model = nrf_edgeai_user_model_36712();
 	__ASSERT_NO_MSG(kws_model);
 	__ASSERT_NO_MSG(nrf_edgeai_model_outputs_num(kws_model) == KEYWORDS_COUNT);
 	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(kws_model) == DMIC_SAMPLES_IN_BLOCK);
@@ -148,7 +128,7 @@ static void kws_postprocess(struct kws_prediction *const prediction)
 	prediction->valid = false;
 
 	const float alpha = CONFIG_KWS_EMA_ALPHA / 1000.0f;
-	static enum keyword_class last_class;
+	static enum nrf_edgeai_user_label_e last_class;
 	static int count;
 
 	/* Exponential moving average of class probability. */
@@ -161,9 +141,12 @@ static void kws_postprocess(struct kws_prediction *const prediction)
 	const flt32_t class_probability =
 		kws_model->decoded_output.classif.probabilities.p_f32[predicted_class];
 	const struct keyword_detection_ctx *class_ctx = &keyword_detection_ctxs[predicted_class];
+	const char *class_name = NRF_EDGEAI_USER_LABELS_NAME[predicted_class];
 
-	if (predicted_class == KEYWORD_SILENCE || predicted_class == KEYWORD_UNKNOWN) {
-		LOG_DBG("class: %s, prob: %f", class_ctx->name, (double)class_probability);
+	if (predicted_class == MODEL_LABEL_INDEX_OTHER ||
+	    predicted_class == MODEL_LABEL_INDEX_SILENCE) {
+		LOG_DBG("class: %s, prob: %f", class_name, (double)class_probability);
+
 		count = 0;
 		probability_ema = 0.0f;
 		return;
@@ -178,14 +161,14 @@ static void kws_postprocess(struct kws_prediction *const prediction)
 	count++;
 	probability_ema = alpha * class_probability + (1 - alpha) * probability_ema;
 
-	LOG_DBG("class: %s, count %d, prob: %f, ema %f", class_ctx->name, count,
+	LOG_DBG("class: %s, count %d, prob: %f, ema %f", class_name, count,
 		(double)class_probability, (double)probability_ema);
 
 	if (count >= class_ctx->num_in_row && probability_ema >= class_ctx->threshold) {
 		prediction->valid = true;
 		prediction->class = predicted_class;
 		prediction->avg_probability = probability_ema;
-		prediction->name = class_ctx->name;
+		prediction->name = class_name;
 
 		/* Skip detections to reduce double spotting. */
 		count = -SKIP_DETECTIONS_COUNT;
