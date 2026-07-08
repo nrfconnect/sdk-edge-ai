@@ -225,8 +225,8 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 	kws_postprocess(prediction);
 
 #if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
-	err = nrf_edgeai_obsv_update(&kws_ctx,
-				     kws_model->decoded_output.classif.probabilities.p_f32);
+	err = nrf_edgeai_obsv_update_probs(&kws_ctx,
+					   kws_model->decoded_output.classif.probabilities.p_f32);
 	if (err) {
 		LOG_ERR("Failed to update obsv (err %d)", err);
 	}

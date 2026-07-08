@@ -146,7 +146,8 @@ int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *co
 	*ww_detected = ww_postprocess();
 
 #if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
-	err = nrf_edgeai_obsv_update(&ww_ctx, ww_model->decoded_output.classif.probabilities.p_f32);
+	err = nrf_edgeai_obsv_update_probs(&ww_ctx,
+					   ww_model->decoded_output.classif.probabilities.p_f32);
 	if (err) {
 		LOG_ERR("Failed to update obsv (err %d)", err);
 	}
