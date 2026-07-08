@@ -1,3 +1,5 @@
+/* 2026-07-07T13:24:00.439030 */
+
 /*
 * Copyright (c) 2026 Nordic Semiconductor ASA
 * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
@@ -19,7 +21,6 @@ typedef flt32_t    nrf_user_output_t;
 typedef uint8_t   nrf_user_coeff_t;
 typedef int8_t    nrf_user_weight_t;
 typedef nrf_user_coeff_t nrf_user_neuron_t;
-
 
 #ifdef   __cplusplus
 }

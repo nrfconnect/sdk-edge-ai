@@ -71,7 +71,7 @@ You can replace the bundled models using the `Text to Wake Word Detection <Nordi
 
       1. Replace the files inside :file:`src/kws/nrf_edgeai_generated` directory with files downloaded from `Nordic Edge AI Lab`_.
       #. In :c:func:`kws_init`, set the ``kws_model`` pointer using the model getter from the generated files.
-      #. Update the ``keyword_class`` enumeration and ``keyword_detection_ctxs`` array in the :file:`src/kws/kws.c` file to match keywords spotted by selected model.
+      #. Update the ``keyword_detection_ctxs`` array in the :file:`src/kws/kws.c` file with keyword labels from :file:`src/kws/nrf_edgeai_generated/nrf_edgeai_user_model_labels.h` file and thresholds for keyword spotting.
       #. When using the observability feature, set the ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` Kconfig option to number of keywords spotted plus 2 for auxiliary classes.
       #. Adjust the Kconfig options to tune keyword spotting postprocessing to selected model.
 

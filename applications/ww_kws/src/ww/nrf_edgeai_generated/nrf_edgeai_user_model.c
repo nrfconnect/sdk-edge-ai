@@ -1,4 +1,4 @@
-/* 2026-05-05T13:20:38.840257 */
+/* 2026-07-07T12:01:02.530719 */
 /*
 * Copyright (c) 2026 Nordic Semiconductor ASA
 * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
@@ -11,7 +11,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 /* Nordic EdgeAI Lab Solution ID and Runtime Version */
-#define EDGEAI_LAB_SOLUTION_ID_STR      "36455"
+#define EDGEAI_LAB_SOLUTION_ID_STR      "36711"
 #define EDGEAI_RUNTIME_VERSION_COMBINED 0x00000202
 
 //////////////////////////////////////////////////////////////////////////////
@@ -64,7 +64,7 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 
 //////////////////////////////////////////////////////////////////////////////
 #define MODEL_TYPE                 __NRF_EDGEAI_MODEL_AXON
-#define MODEL_TASK                 0
+#define MODEL_TASK                 1
 #define MODEL_OUTPUTS_NUM          1
 
 #define MODEL_USES_AS_INPUT_INPUT_FEATURES 0
@@ -75,7 +75,7 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 #include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
 #include "nrf_edgeai_user_model_axon.h"
-#define P_MODEL_INSTANCE &model_axon_user_instance_wakeword
+#define P_MODEL_INSTANCE &model_axon_user_instance_36711
 #else  // MODEL_TYPE == __NRF_EDGEAI_MODEL_NEUTON
 #define P_MODEL_INSTANCE &model_neuton_user_instance_
 #endif
@@ -248,32 +248,47 @@ static nrf_edgeai_t nrf_edgeai_ = {
 
 //////////////////////////////////////////////////////////////////////////////
 
-nrf_edgeai_t* nrf_edgeai_user_model_wakeword(void)
+nrf_edgeai_t* nrf_edgeai_user_model_36711(void)
 {
     return &nrf_edgeai_;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-uint32_t nrf_edgeai_user_model_neuton_size_wakeword(void)
+uint32_t nrf_edgeai_user_model_size_36711(void)
 {
-    uint32_t model_meta_size = 0;
+    uint32_t model_size = 0;
+
 #if MODEL_TYPE == __NRF_EDGEAI_MODEL_NEUTON
-    model_meta_size +=
+    model_size +=
         (sizeof(MODEL_WEIGHTS) + sizeof(MODEL_NEURONS_LINKS) +
          sizeof(MODEL_NEURON_EXTERNAL_LINKS_NUM) + sizeof(MODEL_NEURON_INTERNAL_LINKS_NUM) +
          sizeof(MODEL_NEURON_ACTIVATION_WEIGHTS) + sizeof(MODEL_NEURON_ACTIVATION_TYPE_MASK) +
          sizeof(MODEL_OUTPUT_NEURONS_INDICES));
-#endif
 
 #if MODEL_TASK == __NRF_EDGEAI_TASK_ANOMALY_DETECTION
-    model_meta_size += sizeof(MODEL_AVERAGE_EMBEDDING) + sizeof(MODEL_OUTPUT_SCALE_MIN) +
-                       sizeof(MODEL_OUTPUT_SCALE_MAX);
+    model_size += sizeof(MODEL_AVERAGE_EMBEDDING) + sizeof(MODEL_OUTPUT_SCALE_MIN) +
+                  sizeof(MODEL_OUTPUT_SCALE_MAX);
 #endif
 
 #if MODEL_TASK == __NRF_EDGEAI_TASK_REGRESSION
-    model_meta_size += sizeof(MODEL_OUTPUT_SCALE_MIN) + sizeof(MODEL_OUTPUT_SCALE_MAX);
+    model_size += sizeof(MODEL_OUTPUT_SCALE_MIN) + sizeof(MODEL_OUTPUT_SCALE_MAX);
 #endif
 
-    return model_meta_size;
+#elif MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON
+    const nrf_axon_nn_compiled_model_s* p_axon_model = P_MODEL_INSTANCE;
+
+    model_size += sizeof(*p_axon_model);
+    model_size += p_axon_model->model_const_size;
+    model_size += p_axon_model->cmd_buffer_len * sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE);
+
+    if (p_axon_model->persistent_vars.buf_ptr != NULL)
+    {
+        model_size +=
+            sizeof(nrf_axon_nn_model_persistent_var_s) * p_axon_model->persistent_vars.count;
+    }
+
+#endif
+
+    return model_size;
 }

@@ -1,49 +1,56 @@
+/* 2026-07-07T13:24:00.438738 */
+/*
+* Copyright (c) 2026 Nordic Semiconductor ASA
+* SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+*/
 #include "nrf_edgeai_user_model.h"
 #include "nrf_edgeai_user_types.h"
 #include <nrf_edgeai/nrf_edgeai_platform.h>
 #include <nrf_edgeai/rt/private/nrf_edgeai_interfaces.h>
+#include <assert.h>
 
 //////////////////////////////////////////////////////////////////////////////
 /* Nordic EdgeAI Lab Solution ID and Runtime Version */
-#define EDGEAI_LAB_SOLUTION_ID_STR      "11323"
-#define EDGEAI_RUNTIME_VERSION_COMBINED 0x00000002
+#define EDGEAI_LAB_SOLUTION_ID_STR      "36712"
+#define EDGEAI_RUNTIME_VERSION_COMBINED 0x00000202
 
 //////////////////////////////////////////////////////////////////////////////
-#define INPUT_TYPE i16
+#define INPUT_TYPE                         i16
 
 /** User input features type */
-#define INPUT_FEATURE_DATA_TYPE NRF_EDGEAI_INPUT_I16
+#define INPUT_FEATURE_DATA_TYPE            NRF_EDGEAI_INPUT_I16
 
 /** Number of unique features in the original input sample */
-#define INPUT_UNIQ_FEATURES_NUM 1
+#define INPUT_UNIQ_FEATURES_NUM           1
 
 /** Number of unique features actually used by NN from the original input sample */
-#define INPUT_UNIQ_FEATURES_USED_NUM 1
+#define INPUT_UNIQ_FEATURES_USED_NUM      1
 
 /** Number of input feature samples that should be collected in the input window
  *  feature_sample = 1 * INPUT_UNIQ_FEATURES_NUM
  */
-#define INPUT_WINDOW_SIZE 160
+#define INPUT_WINDOW_SIZE                  160
 
 /** Number of input feature samples on that the input window is shifted */
-#define INPUT_WINDOW_SHIFT 160
+#define INPUT_WINDOW_SHIFT                 160
 
 /** Number of subwindows in input feature window,
 * the SUBWINDOW_SIZE = INPUT_WINDOW_SIZE / INPUT_SUBWINDOW_NUM
 * if the window size is not divisible by the number of subwindows without a remainder,
 * the remainder is added to the last subwindow size */
-#define INPUT_SUBWINDOW_NUM 0
+#define INPUT_SUBWINDOW_NUM                 0
 
-#define INPUT_UNIQUE_SCALES_NUM \
-    (sizeof(INPUT_FEATURES_SCALE_MIN) / sizeof(INPUT_FEATURES_SCALE_MIN[0]))
+#define INPUT_UNIQUE_SCALES_NUM (sizeof(INPUT_FEATURES_SCALE_MIN) / sizeof(INPUT_FEATURES_SCALE_MIN[0]))
 
 /** Defines input(also used for LAG) features MIN scaling factor
  */
-static const nrf_user_input_t INPUT_FEATURES_SCALE_MIN[] = { -32768 };
+static const nrf_user_input_t INPUT_FEATURES_SCALE_MIN[] = {
+ -32768 };
 
 /** Defines input(also used for LAG) features MAX scaling factor
  */
-static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = { 32767 };
+static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
+ 32767 };
 
 /** Defines which unique features from the input data will be used/collected,
  *  one bit for one unique feature, starting from LSB
@@ -56,37 +63,36 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = { 32767 };
 #define INPUT_FEATURES_USED_FOR_LAGS_MASK NULL
 
 //////////////////////////////////////////////////////////////////////////////
-#define MODEL_TYPE        __NRF_EDGEAI_MODEL_AXON
-#define MODEL_TASK        0
-#define MODEL_OUTPUTS_NUM 12
+#define MODEL_TYPE                 __NRF_EDGEAI_MODEL_AXON
+#define MODEL_TASK                 0
+#define MODEL_OUTPUTS_NUM          12
 
 #define MODEL_USES_AS_INPUT_INPUT_FEATURES 0
-#define MODEL_USES_AS_INPUT_DSP_FEATURES   1
-#define MODEL_USES_AS_INPUT_MASK \
-    ((MODEL_USES_AS_INPUT_INPUT_FEATURES << 0) | (MODEL_USES_AS_INPUT_DSP_FEATURES << 1))
+#define MODEL_USES_AS_INPUT_DSP_FEATURES 1
+#define MODEL_USES_AS_INPUT_MASK ((MODEL_USES_AS_INPUT_INPUT_FEATURES << 0) | (MODEL_USES_AS_INPUT_DSP_FEATURES << 1))
 
 #if MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON
 #include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
 #include "nrf_edgeai_user_model_axon.h"
-#define P_MODEL_INSTANCE &model_axon_user_instance_11323
+#define P_MODEL_INSTANCE &model_axon_user_instance_36712
 #else  // MODEL_TYPE == __NRF_EDGEAI_MODEL_NEUTON
 #define P_MODEL_INSTANCE &model_neuton_user_instance_
 #endif
 
-#define NN_DECODED_OUTPUT_INIT                \
-    .classif = {                              \
-        .predicted_class = 0,                 \
-        .num_classes     = MODEL_OUTPUTS_NUM, \
-    }
+
+#define NN_DECODED_OUTPUT_INIT                 \
+.classif = {                                   \
+   .predicted_class = 0,                       \
+   .num_classes = MODEL_OUTPUTS_NUM,           \
+}
 
 //////////////////////////////////////////////////////////////////////////////
 /** Input feature buffer element size,
  * if quantization of model is bigger than input features size in bits,
  * the size of input buffer should aligned to nrf_user_neuron_t */
-#define INPUT_TYPE_SIZE                                                                  \
-    ((sizeof(nrf_user_input_t) > sizeof(nrf_user_neuron_t)) ? sizeof(nrf_user_input_t) : \
-                                                              sizeof(nrf_user_neuron_t))
+#define INPUT_TYPE_SIZE \
+    ((sizeof(nrf_user_input_t) > sizeof(nrf_user_neuron_t)) ? sizeof(nrf_user_input_t) : sizeof(nrf_user_neuron_t))
 
 /** Input features window size in bytes to allocate statically */
 #define INPUT_WINDOW_BUFFER_SIZE_BYTES \
@@ -94,23 +100,23 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = { 32767 };
 
 static uint8_t input_window_[INPUT_WINDOW_BUFFER_SIZE_BYTES] __NRF_EDGEAI_ALIGNED;
 
-#define INPUT_WINDOW_MEMORY &input_window_[0]
+#define INPUT_WINDOW_MEMORY    &input_window_[0]
 
 static nrf_edgeai_window_ctx_t input_window_ctx_;
-#define P_INPUT_WINDOW_CTX &input_window_ctx_
+#define P_INPUT_WINDOW_CTX     &input_window_ctx_
 
 //////////////////////////////////////////////////////////////////////////////
 /** The maximum number of extracted features that user used for all unique input features */
-#define EXTRACTED_FEATURES_NUM 40
+#define EXTRACTED_FEATURES_NUM  40
 
 #define EXTRACTED_FEATURES_META_TYPE i32
 
 /** DSP feature buffer element size,
  * if quantization of model is bigger than DSP features size in bits,
  * the size of extracted DSP features buffer should aligned to nrf_user_neuron_t */
-#define EXTRACTED_FEATURE_SIZE_BYTES                                                         \
+#define EXTRACTED_FEATURE_SIZE_BYTES                                                  \
     ((sizeof(nrf_user_feature_t) > sizeof(nrf_user_neuron_t)) ? sizeof(nrf_user_feature_t) : \
-                                                                sizeof(nrf_user_neuron_t))
+                                                            sizeof(nrf_user_neuron_t))
 
 /** Size of extracted features buffer in bytes */
 #define EXTRACTED_FEATURES_BUFFER_SIZE_BYTES (EXTRACTED_FEATURES_NUM * EXTRACTED_FEATURE_SIZE_BYTES)
@@ -119,7 +125,8 @@ static nrf_edgeai_window_ctx_t input_window_ctx_;
  *  64 bit for one unique input feature, @ref nrf_edgeai_features_mask_t to see bitmask
  */
 
-static const uint64_t FEATURES_EXTRACTION_MASK[] = { 0x10000 };
+static const uint64_t FEATURES_EXTRACTION_MASK[] = {
+ 0x10000 };
 
 /** Defines arguments used while feature extraction
  */
@@ -130,33 +137,35 @@ static const uint64_t FEATURES_EXTRACTION_MASK[] = { 0x10000 };
 
 /** Defines extracted features MIN scaling factor
  */
-static const nrf_user_feature_t EXTRACTED_FEATURES_SCALE_MIN[] = { 0 };
+static const nrf_user_feature_t EXTRACTED_FEATURES_SCALE_MIN[] = {
+ 0 };
 
 /** Defines extracted features MAX scaling factor
  */
-static const nrf_user_feature_t EXTRACTED_FEATURES_SCALE_MAX[] = { 0 };
+static const nrf_user_feature_t EXTRACTED_FEATURES_SCALE_MAX[] = {
+ 0 };
 
 /** Memory allocation to store extracted features during DSP pipeline */
-static uint8_t
-    extracted_features_buffer_[EXTRACTED_FEATURES_BUFFER_SIZE_BYTES] __NRF_EDGEAI_ALIGNED;
+static uint8_t extracted_features_buffer_[EXTRACTED_FEATURES_BUFFER_SIZE_BYTES] __NRF_EDGEAI_ALIGNED;
 
 #define P_TIMEDOMAIN_PIPELINE NULL
 
 #define P_FREQDOMAIN_PIPELINE NULL
 
+
 /** Custom features processing context  */
-#define P_CUSTOMDOMAIN_FEATURES_CTX NULL
+#define P_CUSTOMDOMAIN_FEATURES_CTX  NULL
 /** Custom features in feature extraction pipeline  */
 static const nrf_edgeai_features_pipeline_func_i16_t customdomain_features_[] = {
-    nrf_edgeai_feature_audio_mels_i16
-};
+nrf_edgeai_feature_audio_mels_i16 };
 
 static const nrf_edgeai_features_pipeline_ctx_t customdomain_pipeline_ = {
-    .functions_num    = sizeof(customdomain_features_) / sizeof(customdomain_features_[0]),
-    .functions.p_void = customdomain_features_,
-    .p_ctx            = P_CUSTOMDOMAIN_FEATURES_CTX,
+    .functions_num     = sizeof(customdomain_features_) / sizeof(customdomain_features_[0]),
+    .functions.p_void  = customdomain_features_,
+    .p_ctx             = P_CUSTOMDOMAIN_FEATURES_CTX,
 };
 #define P_CUSTOMDOMAIN_PIPELINE &customdomain_pipeline_
+
 
 static nrf_edgeai_dsp_pipeline_t dsp_pipeline_ = {
    .features = {
@@ -177,7 +186,8 @@ static nrf_edgeai_dsp_pipeline_t dsp_pipeline_ = {
    },
 };
 
-#define P_DSP_PIPELINE &dsp_pipeline_
+#define P_DSP_PIPELINE         &dsp_pipeline_
+
 
 //////////////////////////////////////////////////////////////////////////////
 #define NN_INPUT_INIT_INTERFACE        nrf_edgeai_input_init_discrete_window
@@ -218,8 +228,8 @@ static nrf_edgeai_t nrf_edgeai_ = {
     ///
     .p_dsp = P_DSP_PIPELINE,
     ///
-    .model.type                 = MODEL_TYPE,
-    .model.task                 = MODEL_TASK,
+    .model.type                 = (nrf_edgeai_model_type_t)MODEL_TYPE,
+    .model.task                 = (nrf_edgeai_model_task_t)MODEL_TASK,
     .model.instance.p_void      = P_MODEL_INSTANCE,
     .model.output.memory.p_void = model_outputs_,
     .model.output.num           = MODEL_OUTPUTS_NUM,
@@ -238,32 +248,47 @@ static nrf_edgeai_t nrf_edgeai_ = {
 
 //////////////////////////////////////////////////////////////////////////////
 
-nrf_edgeai_t* nrf_edgeai_user_model_kws(void)
+nrf_edgeai_t* nrf_edgeai_user_model_36712(void)
 {
     return &nrf_edgeai_;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-uint32_t nrf_edgeai_user_model_neuton_size_kws(void)
+uint32_t nrf_edgeai_user_model_size_36712(void)
 {
-    uint32_t model_meta_size = 0;
+    uint32_t model_size = 0;
+
 #if MODEL_TYPE == __NRF_EDGEAI_MODEL_NEUTON
-    model_meta_size +=
+    model_size +=
         (sizeof(MODEL_WEIGHTS) + sizeof(MODEL_NEURONS_LINKS) +
          sizeof(MODEL_NEURON_EXTERNAL_LINKS_NUM) + sizeof(MODEL_NEURON_INTERNAL_LINKS_NUM) +
          sizeof(MODEL_NEURON_ACTIVATION_WEIGHTS) + sizeof(MODEL_NEURON_ACTIVATION_TYPE_MASK) +
          sizeof(MODEL_OUTPUT_NEURONS_INDICES));
-#endif
 
 #if MODEL_TASK == __NRF_EDGEAI_TASK_ANOMALY_DETECTION
-    model_meta_size += sizeof(MODEL_AVERAGE_EMBEDDING) + sizeof(MODEL_OUTPUT_SCALE_MIN) +
-                       sizeof(MODEL_OUTPUT_SCALE_MAX);
+    model_size += sizeof(MODEL_AVERAGE_EMBEDDING) + sizeof(MODEL_OUTPUT_SCALE_MIN) +
+                  sizeof(MODEL_OUTPUT_SCALE_MAX);
 #endif
 
 #if MODEL_TASK == __NRF_EDGEAI_TASK_REGRESSION
-    model_meta_size += sizeof(MODEL_OUTPUT_SCALE_MIN) + sizeof(MODEL_OUTPUT_SCALE_MAX);
+    model_size += sizeof(MODEL_OUTPUT_SCALE_MIN) + sizeof(MODEL_OUTPUT_SCALE_MAX);
 #endif
 
-    return model_meta_size;
+#elif MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON
+    const nrf_axon_nn_compiled_model_s* p_axon_model = P_MODEL_INSTANCE;
+
+    model_size += sizeof(*p_axon_model);
+    model_size += p_axon_model->model_const_size;
+    model_size += p_axon_model->cmd_buffer_len * sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE);
+
+    if (p_axon_model->persistent_vars.buf_ptr != NULL)
+    {
+        model_size +=
+            sizeof(nrf_axon_nn_model_persistent_var_s) * p_axon_model->persistent_vars.count;
+    }
+
+#endif
+
+    return model_size;
 }
