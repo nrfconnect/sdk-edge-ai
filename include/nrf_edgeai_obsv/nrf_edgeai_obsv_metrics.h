@@ -96,7 +96,7 @@ typedef struct nrf_edgeai_obsv_metric_s {
 	 * @brief Consumes one data vector from the metric's source stream.
 	 *
 	 * The core invokes this only for the stream the metric declared via
-	 * @ref nrf_edgeai_obsv_metric_s::source: the class-probability vector for
+	 * @ref nrf_edgeai_obsv_metric_s::source. The class-probability vector for
 	 * @c NRF_EDGEAI_OBSV_SOURCE_PROBS metrics, or the extracted input-feature
 	 * vector for @c NRF_EDGEAI_OBSV_SOURCE_FEATURES metrics.
 	 *
