@@ -126,7 +126,7 @@ Key characteristics:
 
 * Models are trained and exported from `Edge Impulse studio`_.
 * Inference runs on the CPU or on the Axon NPU, depending on the target device.
-* Includes tools for sensor data collection, such as the :ref:`ei_data_forwarder_sample`, and supports data upload from mobile devices.
+* Includes CLI tools for sensor data collection, connecting to the |EIS| cloud service, and supports data upload from mobile devices.
 * Deployed as a Zephyr library package that integrates directly into the |NCS| build system.
 * Extensive documentation and community-contributed datasets are available through the |EI| platform.
 
