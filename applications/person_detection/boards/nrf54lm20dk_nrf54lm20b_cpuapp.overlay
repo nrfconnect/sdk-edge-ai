@@ -7,6 +7,25 @@
 	status = "okay";
 };
 
+/delete-node/ &slot1_partition;
+/delete-node/ &storage_partition;
+
+&cpuapp_rram {
+	partitions {
+		axon_model_partition: partition@102000 {
+			compatible = "zephyr,mapped-partition";
+			label = "axon-model";
+			reg = <0x102000 DT_SIZE_K(864)>;
+		};
+
+		storage_partition: partition@1ea000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x1ea000 DT_SIZE_K(76)>;
+		};
+	};
+};
+
 &pinctrl {
 	spi22_default: spi22_default {
 		group1 {

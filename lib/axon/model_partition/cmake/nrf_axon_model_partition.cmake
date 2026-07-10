@@ -51,7 +51,7 @@ function(nrf_axon_model_partition_image)
   string(REPLACE "\n" ";" model_sym_names "${model_sym_link_content}")
   foreach(sym ${model_sym_names})
     if(sym)
-      zephyr_ld_options(LINKER:--undefined=${sym})
+      toolchain_ld_force_undefined_symbols(${sym})
     endif()
   endforeach()
 

@@ -20,6 +20,15 @@ config IOU_THRESHOLD
 	  The Intersection-over-Union threshold for Non-Maximum Suppression (NMS).
 	  Used to eliminate overlapping bounding boxes from multiple detections of the same person.
 
+config PERSON_DET_MODEL_IN_PARTITION
+	bool "Store person_det model in a dedicated flash partition"
+	default y
+	select NRF_AXON_MODEL_PARTITION
+	help
+	  Place the person_det Axon model in axon_model_partition instead of
+	  linking it into the application image. A partition image is merged into
+	  the final HEX file at build time.
+
 config ARDUCAM_MEGA
 	bool
 	select EXPERIMENTAL

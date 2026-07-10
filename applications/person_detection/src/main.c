@@ -14,14 +14,26 @@
 #include <zephyr/drivers/video.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/storage/flash_map.h>
 
 #include <axon/nrf_axon_platform.h>
+#include <axon/nrf_axon_model_partition.h>
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
 
+#if !IS_ENABLED(CONFIG_PERSON_DET_MODEL_IN_PARTITION)
 #include "generated/nrf_axon_model_person_det_.h"
+#else
+#define NRF_AXON_MODEL_PERSON_DET_MAX_IL_BUFFER_USED 225280
+#define NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE 17280
+static_assert(NRF_AXON_MODEL_PERSON_DET_MAX_IL_BUFFER_USED < (NRF_AXON_INTERLAYER_BUFFER_SIZE),
+	      "nrf_axon_interlayer_buffer TOO SMALL!!!!");
+#endif
 
 LOG_MODULE_REGISTER(main);
+
+BUILD_ASSERT(!IS_ENABLED(CONFIG_PERSON_DET_MODEL_IN_PARTITION) ||
+	     PARTITION_EXISTS(axon_model_partition));
 
 #define CAM_WIDTH    128
 #define CAM_HEIGHT   128
@@ -232,7 +244,18 @@ int main(void)
 	int err;
 
 	nrf_axon_result_e result;
-	const nrf_axon_nn_compiled_model_s *model = &model_person_det;
+	const nrf_axon_nn_compiled_model_s *model;
+
+#if IS_ENABLED(CONFIG_PERSON_DET_MODEL_IN_PARTITION)
+	model = nrf_axon_model_partition_get(PARTITION_ADDRESS(axon_model_partition));
+	if (model == NULL) {
+		LOG_ERR("Failed to load model from partition");
+		return -1;
+	}
+#else
+	model = &model_person_det;
+#endif
+
 	const nrf_axon_nn_compiled_model_input_s *model_inputs =
 		nrf_axon_nn_model_1st_external_input(model);
 
