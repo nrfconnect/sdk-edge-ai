@@ -13,7 +13,11 @@
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
 
+#if IS_ENABLED(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
+#include "model_partition/model_partition.h"
+#else
 #include "generated/nrf_axon_model_hello_axon_.h"
+#endif
 
 LOG_MODULE_REGISTER(hello_axon);
 
@@ -21,6 +25,12 @@ LOG_MODULE_REGISTER(hello_axon);
 #define INPUT_SIZE  (1)
 /* Output size, matching the output dimensions in @ref model_hello_axon. */
 #define OUTPUT_SIZE (1)
+
+#if IS_ENABLED(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
+static nrf_axon_nn_compiled_model_s model_hello_axon;
+#else
+/* model_hello_axon is provided by generated/nrf_axon_model_hello_axon_.h */
+#endif
 
 /* Random samples from 0 to 2π */
 static const float sample_values[] = {3.07f, 2.14f, 5.76f, 4.62f, 0.00f, 1.60f, 4.55f, 4.13f,
@@ -191,6 +201,14 @@ int main(void)
 
 	LOG_INF("Hello Axon sample");
 	LOG_INF("Initializing Axon NPU");
+
+#if IS_ENABLED(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
+	err = hello_axon_model_partition_load(&model_hello_axon);
+	if (err) {
+		LOG_ERR("Failed to load model from partition, err %d", err);
+		return -1;
+	}
+#endif
 
 	__ASSERT(model_hello_axon.inputs[model_hello_axon.external_input_ndx]
 				 .dimensions.byte_width == 1,

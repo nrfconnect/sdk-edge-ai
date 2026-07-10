@@ -7,3 +7,21 @@
 &axon {
 	status = "okay";
 };
+
+/delete-node/ &storage_partition;
+
+&cpuapp_rram {
+	partitions {
+		axon_model_partition: partition@1f4000 {
+			compatible = "zephyr,mapped-partition";
+			label = "axon-model";
+			reg = <0x1f4000 DT_SIZE_K(4)>;
+		};
+
+		storage_partition: partition@1f5000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x1f5000 DT_SIZE_K(32)>;
+		};
+	};
+};
