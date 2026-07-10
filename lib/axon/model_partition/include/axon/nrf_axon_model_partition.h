@@ -20,6 +20,9 @@ extern "C" {
 /**
  * @brief Validate an Axon model partition image header.
  *
+ * Checks magic, version, image_size bounds, model_offset placement, and that
+ * the image is large enough to hold at least a compiled model struct.
+ *
  * @param base_addr CPU address where the partition is mapped.
  * @retval true Image header is valid.
  * @retval false Image header is invalid.

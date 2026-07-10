@@ -35,18 +35,18 @@ function(nrf_axon_model_partition_image)
   set(hex_merge_stamp ${CMAKE_CURRENT_BINARY_DIR}/.${ARG_TARGET}_model_hex_merged)
   set(model_partition_fixups_gen ${AXON_MODEL_PARTITION_DIR}/scripts/gen_axon_model_partition_fixups.py)
 
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ARG_HEADER})
+
   execute_process(
     COMMAND ${PYTHON_EXECUTABLE}
       ${model_partition_fixups_gen}
       --header ${ARG_HEADER}
-      --symbols ${model_sym_link_list}
-      --symbols-only
+      --print-symbols
+    OUTPUT_VARIABLE model_sym_names_raw
     COMMAND_ERROR_IS_FATAL ANY
   )
-
-  file(READ ${model_sym_link_list} model_sym_link_content)
-  string(STRIP "${model_sym_link_content}" model_sym_link_content)
-  string(REPLACE "\n" ";" model_sym_names "${model_sym_link_content}")
+  string(STRIP "${model_sym_names_raw}" model_sym_names_raw)
+  string(REPLACE "\n" ";" model_sym_names "${model_sym_names_raw}")
   foreach(sym ${model_sym_names})
     if(sym)
       toolchain_ld_force_undefined_symbols(${sym})
@@ -60,12 +60,13 @@ function(nrf_axon_model_partition_image)
   get_filename_component(model_header_dir ${ARG_HEADER} DIRECTORY)
 
   add_custom_command(
-    OUTPUT ${model_fixups_h} ${model_sym_list}
+    OUTPUT ${model_fixups_h} ${model_sym_list} ${model_sym_link_list}
     COMMAND ${PYTHON_EXECUTABLE}
       ${model_partition_fixups_gen}
       --header ${ARG_HEADER}
       --fixups-header ${model_fixups_h}
       --symbols ${model_sym_list}
+      --link-symbols ${model_sym_link_list}
     DEPENDS
       ${model_partition_fixups_gen}
       ${ARG_HEADER}

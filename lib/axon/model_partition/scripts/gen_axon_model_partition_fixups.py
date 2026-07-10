@@ -25,14 +25,13 @@ def strip_preprocessor_blocks(text: str) -> str:
     return text
 
 
-def collect_symbols_from_header(header_text: str) -> list[str]:
+def collect_app_symbols(header_text: str) -> list[str]:
     text = strip_preprocessor_blocks(header_text)
-    symbols = set(APP_SYM_RE.findall(text))
-    symbols.add("nrf_axon_interlayer_buffer")
-    return sorted(symbols)
-
-
-def collect_app_symbols(text: str) -> list[str]:
+    try:
+        model_sym = parse_model_symbol(header_text)
+        text = text + f"const nrf_axon_nn_compiled_model_s {model_sym} = {{}};"
+    except ValueError:
+        pass
     symbols = set(APP_SYM_RE.findall(text))
     symbols.add("nrf_axon_interlayer_buffer")
     return sorted(symbols)
@@ -55,8 +54,7 @@ def parse_model_symbol(header_text: str) -> str:
 
 
 def build_fixups_header(header_text: str, model_sym: str, header_path: Path) -> str:
-    text = strip_preprocessor_blocks(header_text)
-    app_symbols = collect_app_symbols(text)
+    app_symbols = collect_app_symbols(header_text)
 
     lines = [
         "/* Auto-generated Axon model partition fixup macros. */",
@@ -103,34 +101,35 @@ def build_fixups_header(header_text: str, model_sym: str, header_path: Path) -> 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--header", type=Path, required=True)
-    parser.add_argument("--symbols", type=Path, required=True)
+    parser.add_argument("--symbols", type=Path, required=False)
     parser.add_argument("--fixups-header", type=Path, required=False)
-    parser.add_argument("--symbols-only", action="store_true")
+    parser.add_argument("--link-symbols", type=Path, required=False)
+    parser.add_argument("--print-symbols", action="store_true")
     args = parser.parse_args()
 
     header_text = args.header.read_text(encoding="utf-8")
+    app_symbols = collect_app_symbols(header_text)
+    symbol_lines = "\n".join(app_symbols) + "\n"
 
-    if args.symbols_only:
-        args.symbols.write_text(
-            "\n".join(collect_symbols_from_header(header_text)) + "\n",
-            encoding="ascii",
-        )
+    if args.print_symbols:
+        print(symbol_lines, end="")
         return
 
+    if args.symbols is None:
+        raise ValueError("--symbols is required unless --print-symbols is set")
+
     if args.fixups_header is None:
-        raise ValueError("--fixups-header is required unless --symbols-only is set")
+        raise ValueError("--fixups-header is required unless --print-symbols is set")
 
     model_sym = parse_model_symbol(header_text)
-    text = strip_preprocessor_blocks(header_text)
-    app_symbols = collect_app_symbols(
-        text + f"const nrf_axon_nn_compiled_model_s {model_sym} = {{}};"
-    )
 
     args.fixups_header.write_text(
         build_fixups_header(header_text, model_sym, args.header),
         encoding="ascii",
     )
-    args.symbols.write_text("\n".join(app_symbols) + "\n", encoding="ascii")
+    args.symbols.write_text(symbol_lines, encoding="ascii")
+    if args.link_symbols is not None:
+        args.link_symbols.write_text(symbol_lines, encoding="ascii")
 
 
 if __name__ == "__main__":

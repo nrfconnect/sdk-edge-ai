@@ -14,6 +14,9 @@
  * Linker-defined anchors for the model partition image (see linker/model_image.ld).
  * Addresses are absolute flash locations when the image is linked at
  * NRF_AXON_MODEL_PARTITION_ADDR.
+ *
+ * These symbols and helpers are only valid in the standalone model image link
+ * (model_image_stub.c); they are not present in the application ELF.
  */
 extern char __axon_model_image_start[];
 extern char __axon_model_image_end[];

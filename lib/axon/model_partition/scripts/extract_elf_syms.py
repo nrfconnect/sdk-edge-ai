@@ -42,13 +42,6 @@ def main() -> None:
     if "nrf_axon_interlayer_buffer" not in symbols:
         symbols.insert(0, "nrf_axon_interlayer_buffer")
 
-    lines = [
-        "/* Auto-generated Axon model partition symbol addresses. */",
-        "#ifndef NRF_AXON_MODEL_PARTITION_SYMS_H_",
-        "#define NRF_AXON_MODEL_PARTITION_SYMS_H_",
-        "",
-    ]
-
     missing: list[str] = []
     linker_lines: list[str] = []
 
@@ -57,8 +50,6 @@ def main() -> None:
         if addr is None:
             missing.append(symbol)
             continue
-
-        lines.append(f"#define AXON_SYM_{symbol} 0x{addr}")
 
         if args.linker_script is not None:
             link_addr = int(addr, 16)
@@ -70,15 +61,18 @@ def main() -> None:
         print(f"symbols not found in {args.elf}: {', '.join(missing)}", file=sys.stderr)
         sys.exit(1)
 
-    lines.extend([
-        "",
-        "#define AXON_INTERLAYER_BUFFER_ADDR AXON_SYM_nrf_axon_interlayer_buffer",
-        "",
-        "#endif /* NRF_AXON_MODEL_PARTITION_SYMS_H_ */",
-        "",
-    ])
-
-    args.output.write_text("\n".join(lines), encoding="ascii")
+    args.output.write_text(
+        "\n".join([
+            "/* Auto-generated companion header for model image link. */",
+            "/* Symbol addresses are resolved via the companion linker script (PROVIDE). */",
+            "#ifndef NRF_AXON_MODEL_PARTITION_SYMS_H_",
+            "#define NRF_AXON_MODEL_PARTITION_SYMS_H_",
+            "",
+            "#endif /* NRF_AXON_MODEL_PARTITION_SYMS_H_ */",
+            "",
+        ]),
+        encoding="ascii",
+    )
 
     if args.linker_script is not None:
         args.linker_script.write_text("\n".join(linker_lines) + "\n", encoding="ascii")
