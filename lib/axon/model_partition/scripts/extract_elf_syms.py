@@ -30,6 +30,7 @@ def main() -> None:
     parser.add_argument("--symbols", type=Path, required=True,
                         help="Text file with one symbol name per line")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--linker-script", type=Path, required=False)
     args = parser.parse_args()
 
     symbols = [
@@ -49,6 +50,7 @@ def main() -> None:
     ]
 
     missing: list[str] = []
+    linker_lines: list[str] = []
 
     for symbol in symbols:
         addr = lookup_symbol(args.nm, args.elf, symbol)
@@ -57,6 +59,12 @@ def main() -> None:
             continue
 
         lines.append(f"#define AXON_SYM_{symbol} 0x{addr}")
+
+        if args.linker_script is not None:
+            link_addr = int(addr, 16)
+            if symbol.startswith("nrf_axon_nn_op_extension_"):
+                link_addr |= 1
+            linker_lines.append(f"PROVIDE({symbol} = 0x{link_addr:X});")
 
     if missing:
         print(f"symbols not found in {args.elf}: {', '.join(missing)}", file=sys.stderr)
@@ -71,6 +79,9 @@ def main() -> None:
     ])
 
     args.output.write_text("\n".join(lines), encoding="ascii")
+
+    if args.linker_script is not None:
+        args.linker_script.write_text("\n".join(linker_lines) + "\n", encoding="ascii")
 
 
 if __name__ == "__main__":

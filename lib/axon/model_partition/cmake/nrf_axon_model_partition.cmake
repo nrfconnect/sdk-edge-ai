@@ -27,7 +27,8 @@ function(nrf_axon_model_partition_image)
 
   set(AXON_MODEL_PARTITION_DIR ${AXON_MODEL_PARTITION_ROOT})
   set(EDGE_AI_MODULE_DIR ${EDGE_AI_MODULE_ROOT})
-  set(model_image_c ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_image.c)
+  set(model_image_stub_c ${AXON_MODEL_PARTITION_DIR}/src/model_image_stub.c)
+  set(model_fixups_h ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_fixups.h)
   set(model_image_o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_image.o)
   set(model_image_elf ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_image.elf)
   set(model_image_bin ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_image.bin)
@@ -35,6 +36,7 @@ function(nrf_axon_model_partition_image)
   set(model_sym_list ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_syms.list)
   set(model_sym_link_list ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_syms.link)
   set(model_syms_h ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_syms.h)
+  set(model_syms_ld ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_syms.ld)
   set(hex_merge_stamp ${CMAKE_CURRENT_BINARY_DIR}/.${ARG_TARGET}_model_hex_merged)
 
   execute_process(
@@ -59,30 +61,34 @@ function(nrf_axon_model_partition_image)
   dt_reg_addr(partition_addr PATH ${partition_node})
   dt_reg_size(partition_size PATH ${partition_node})
 
+  get_filename_component(model_header_dir ${ARG_HEADER} DIRECTORY)
+
   add_custom_command(
-    OUTPUT ${model_image_c} ${model_sym_list}
+    OUTPUT ${model_fixups_h} ${model_sym_list}
     COMMAND ${PYTHON_EXECUTABLE}
       ${AXON_MODEL_PARTITION_DIR}/scripts/gen_axon_model_partition_c.py
       --header ${ARG_HEADER}
-      --output ${model_image_c}
+      --fixups-header ${model_fixups_h}
       --symbols ${model_sym_list}
-      --image-symbol ${ARG_IMAGE_SYMBOL}
+      --use-stub
     DEPENDS
       ${AXON_MODEL_PARTITION_DIR}/scripts/gen_axon_model_partition_c.py
       ${ARG_HEADER}
       ${AXON_MODEL_PARTITION_DIR}/include/axon/nrf_axon_model_partition_defs.h
-    COMMENT "Generating ${ARG_TARGET} Axon model partition C source"
+    COMMENT "Generating ${ARG_TARGET} Axon model partition fixups header"
   )
 
   add_custom_command(
-    OUTPUT ${model_syms_h}
+    OUTPUT ${model_syms_h} ${model_syms_ld}
     COMMAND ${PYTHON_EXECUTABLE}
       ${AXON_MODEL_PARTITION_DIR}/scripts/extract_elf_syms.py
       --nm ${CMAKE_NM}
       --elf ${CMAKE_CURRENT_BINARY_DIR}/zephyr/zephyr.elf
       --symbols ${model_sym_list}
       --output ${model_syms_h}
+      --linker-script ${model_syms_ld}
     DEPENDS
+      ${AXON_MODEL_PARTITION_DIR}/scripts/extract_elf_syms.py
       ${CMAKE_CURRENT_BINARY_DIR}/zephyr/zephyr.elf
       ${model_sym_list}
     COMMENT "Extracting Axon model partition symbols from zephyr.elf"
@@ -91,12 +97,16 @@ function(nrf_axon_model_partition_image)
   add_custom_command(
     OUTPUT ${model_image_bin}
     COMMAND ${CMAKE_COMMAND}
-      -DMODEL_IMAGE_C=${model_image_c}
+      -DMODEL_IMAGE_STUB_C=${model_image_stub_c}
+      -DMODEL_FIXUPS_HEADER=${model_fixups_h}
+      -DMODEL_HEADER_DIR=${model_header_dir}
       -DMODEL_IMAGE_O=${model_image_o}
       -DMODEL_IMAGE_ELF=${model_image_elf}
       -DMODEL_IMAGE_BIN=${model_image_bin}
       -DSYMS_HEADER=${model_syms_h}
+      -DSYMS_LINKER_SCRIPT=${model_syms_ld}
       -DMODEL_PARTITION_ADDR=${partition_addr}
+      -DNRF_AXON_INTERLAYER_BUFFER_SIZE=${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE}
       -DLINKER_SCRIPT=${AXON_MODEL_PARTITION_DIR}/linker/model_image.ld
       -DINCLUDE_DIR_PARTITION=${AXON_MODEL_PARTITION_DIR}/include
       -DINCLUDE_DIR_EDGE_AI=${EDGE_AI_MODULE_DIR}/include
@@ -109,8 +119,11 @@ function(nrf_axon_model_partition_image)
       --bin ${model_image_bin}
       --region-size ${partition_size}
     DEPENDS
-      ${model_image_c}
+      ${model_image_stub_c}
+      ${model_fixups_h}
+      ${ARG_HEADER}
       ${model_syms_h}
+      ${model_syms_ld}
       ${AXON_MODEL_PARTITION_DIR}/linker/model_image.ld
       ${AXON_MODEL_PARTITION_DIR}/cmake/build_model_image.cmake
       ${AXON_MODEL_PARTITION_DIR}/scripts/report_model_partition_usage.py

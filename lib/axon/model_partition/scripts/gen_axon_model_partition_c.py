@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 MAGIC = 0x4E4F5841
-VERSION = 4
+VERSION = 5
 
 CAST_PREFIX_RE = re.compile(
     r"^\((?:NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE|int8_t\s*\*|const\s+void\s*\*|void\s*\*|uint\d+_t)\)\s*",
@@ -264,6 +264,61 @@ def parse_model_name(model_block: str) -> str:
     return match.group(1)
 
 
+def build_fixups_header(header_text: str, model_sym: str, header_path: Path) -> str:
+    text = strip_preprocessor_blocks(header_text)
+    app_symbols = collect_app_symbols(text)
+
+    lines = [
+        "/* Auto-generated Axon model partition fixup macros. */",
+        "#ifndef NRF_AXON_MODEL_IMAGE_FIXUPS_H_",
+        "#define NRF_AXON_MODEL_IMAGE_FIXUPS_H_",
+        "",
+        "#include <stddef.h>",
+        "#include <stdint.h>",
+        "#include <stdbool.h>",
+        "#include <assert.h>",
+        "",
+        "#include <drivers/axon/nrf_axon_driver.h>",
+        "#include <drivers/axon/nrf_axon_nn_infer.h>",
+        "#include <axon/nrf_axon_platform.h>",
+        "",
+        "#ifndef NRF_AXON_MODEL_PARTITION_ADDR",
+        '#error "NRF_AXON_MODEL_PARTITION_ADDR must be defined when building the model image"',
+        "#endif",
+        "",
+        "#undef NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER",
+        "#define NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER 0",
+        "",
+    ]
+
+    for sym in app_symbols:
+        if sym.startswith("axon_model_") and sym.endswith("_packed_output_buf"):
+            lines.append(f"#define {sym} ((uint8_t *)0)")
+
+    lines.extend([
+        "",
+        f"#ifndef NRF_AXON_MODEL_IMAGE_MODEL_SYM",
+        f"#define NRF_AXON_MODEL_IMAGE_MODEL_SYM {model_sym}",
+        "#endif",
+        "",
+        f'#include "{header_path.name}"',
+        "",
+        "#endif /* NRF_AXON_MODEL_IMAGE_FIXUPS_H_ */",
+        "",
+    ])
+
+    return "\n".join(lines)
+
+
+def parse_model_symbol(header_text: str) -> str:
+    model_match = extract_block(
+        header_text,
+        r"const nrf_axon_nn_compiled_model_s (model_\w+) = \{(.*?)\};",
+        "compiled model struct",
+    )
+    return model_match.group(1)
+
+
 def build_source(header_text: str, image_symbol: str) -> tuple[str, list[str]]:
     model_const_match = extract_block(
         header_text,
@@ -398,6 +453,8 @@ def main() -> None:
     parser.add_argument("--symbols", type=Path, required=False)
     parser.add_argument("--image-symbol", default="axon_model_partition_image")
     parser.add_argument("--symbols-only", action="store_true")
+    parser.add_argument("--fixups-header", type=Path, required=False)
+    parser.add_argument("--use-stub", action="store_true")
     args = parser.parse_args()
 
     header_text = args.header.read_text(encoding="utf-8")
@@ -411,8 +468,23 @@ def main() -> None:
         )
         return
 
+    if args.use_stub:
+        if args.symbols is None or args.fixups_header is None:
+            raise ValueError("--symbols and --fixups-header are required with --use-stub")
+        model_sym = parse_model_symbol(header_text)
+        text = strip_preprocessor_blocks(header_text)
+        app_symbols = collect_app_symbols(
+            text + f"const nrf_axon_nn_compiled_model_s {model_sym} = {{}};"
+        )
+        args.fixups_header.write_text(
+            build_fixups_header(header_text, model_sym, args.header),
+            encoding="ascii",
+        )
+        args.symbols.write_text("\n".join(app_symbols) + "\n", encoding="ascii")
+        return
+
     if args.symbols is None or args.output is None:
-        raise ValueError("--output and --symbols are required unless --symbols-only is set")
+        raise ValueError("--output and --symbols are required unless --symbols-only or --use-stub is set")
 
     source, app_symbols = build_source(header_text, args.image_symbol)
     args.output.write_text(source, encoding="ascii")
