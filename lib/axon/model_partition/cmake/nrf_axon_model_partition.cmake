@@ -57,6 +57,7 @@ function(nrf_axon_model_partition_image)
 
   dt_nodelabel(partition_node NODELABEL ${ARG_PARTITION_NODELABEL} REQUIRED)
   dt_reg_addr(partition_addr PATH ${partition_node})
+  dt_reg_size(partition_size PATH ${partition_node})
 
   add_custom_command(
     OUTPUT ${model_image_c} ${model_sym_list}
@@ -102,11 +103,17 @@ function(nrf_axon_model_partition_image)
       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
       -DCMAKE_OBJCOPY=${CMAKE_OBJCOPY}
       -P ${AXON_MODEL_PARTITION_DIR}/cmake/build_model_image.cmake
+    COMMAND ${PYTHON_EXECUTABLE}
+      ${AXON_MODEL_PARTITION_DIR}/scripts/report_model_partition_usage.py
+      --label ${ARG_PARTITION_NODELABEL}
+      --bin ${model_image_bin}
+      --region-size ${partition_size}
     DEPENDS
       ${model_image_c}
       ${model_syms_h}
       ${AXON_MODEL_PARTITION_DIR}/linker/model_image.ld
       ${AXON_MODEL_PARTITION_DIR}/cmake/build_model_image.cmake
+      ${AXON_MODEL_PARTITION_DIR}/scripts/report_model_partition_usage.py
     COMMENT "Linking ${ARG_TARGET} Axon model partition image"
     VERBATIM
   )
