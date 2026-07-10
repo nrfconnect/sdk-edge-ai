@@ -8,31 +8,30 @@
 #include <math.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/storage/flash_map.h>
 
 #include <axon/nrf_axon_platform.h>
-#include <axon/nrf_axon_model_partition.h>
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
 
-#if !IS_ENABLED(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
+#if IS_ENABLED(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
+#include <zephyr/storage/flash_map.h>
+#include <axon/nrf_axon_model_partition.h>
+#else
 #include "generated/nrf_axon_model_hello_axon_.h"
 #endif
 
 LOG_MODULE_REGISTER(hello_axon);
 
+#if IS_ENABLED(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
 BUILD_ASSERT(PARTITION_EXISTS(axon_model_partition));
+#endif
 
 /* Input size, matching the input layer dimensions in @ref model_hello_axon. */
 #define INPUT_SIZE  (1)
 /* Output size, matching the output dimensions in @ref model_hello_axon. */
 #define OUTPUT_SIZE (1)
 
-#if IS_ENABLED(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
-static const nrf_axon_nn_compiled_model_s *model_hello_axon;
-#else
-/* model_hello_axon is provided by generated/nrf_axon_model_hello_axon_.h */
-#endif
+static const nrf_axon_nn_compiled_model_s *model;
 
 /* Random samples from 0 to 2π */
 static const float sample_values[] = {3.07f, 2.14f, 5.76f, 4.62f, 0.00f, 1.60f, 4.55f, 4.13f,
@@ -93,7 +92,7 @@ static void sync_flow(void)
 {
 	nrf_axon_result_e result;
 
-	result = nrf_axon_nn_model_validate(model_hello_axon);
+	result = nrf_axon_nn_model_validate(model);
 	if (result != NRF_AXON_RESULT_SUCCESS) {
 		LOG_ERR("Model validation failed, err %d", result);
 		return;
@@ -105,7 +104,7 @@ static void sync_flow(void)
 	/* This path requires to know that no other model is running or will be running as we access
 	 * internal buffer. Set input to NULL to indicate that data is already placed in buffer.
 	 */
-	int8_t *input_buffer = model_hello_axon->inputs[0].ptr;
+	int8_t *input_buffer = model->inputs[0].ptr;
 	int8_t *input = NULL;
 #else
 	/* Input buffer of size 1, matching the input layer dimensions in @ref model_hello_axon. */
@@ -122,9 +121,9 @@ static void sync_flow(void)
 		const float sample_value = sample_values[i];
 
 		quantize_and_convert(&sample_value, input_buffer,
-				     &model_hello_axon->inputs[model_hello_axon->external_input_ndx]);
+				     &model->inputs[model->external_input_ndx]);
 
-		result = nrf_axon_nn_model_infer_sync(model_hello_axon, input, output);
+		result = nrf_axon_nn_model_infer_sync(model, input, output);
 		if (result != NRF_AXON_RESULT_SUCCESS) {
 			LOG_ERR("Synchronous inference failed, err %d", result);
 			return;
@@ -133,7 +132,7 @@ static void sync_flow(void)
 		float prediction;
 
 		/* Output in CHW format. */
-		dequantize(output, OUTPUT_SIZE, &prediction, model_hello_axon);
+		dequantize(output, OUTPUT_SIZE, &prediction, model);
 		LOG_INF("prediction: %6.3f, ideal %6.3f", (double)prediction,
 			(double)sinf(sample_value));
 	}
@@ -150,7 +149,7 @@ static void inference_callback(nrf_axon_result_e result, void *callback_context)
 	float prediction;
 
 	/* Output in CHW format. */
-	dequantize(output, OUTPUT_SIZE, &prediction, model_hello_axon);
+	dequantize(output, OUTPUT_SIZE, &prediction, model);
 	LOG_INF("prediction: %6.3f, ideal %6.3f", (double)prediction,
 		(double)sinf(current_async_sample_value));
 
@@ -162,7 +161,7 @@ static void async_flow(void)
 	nrf_axon_nn_model_async_inference_wrapper_s async_wrapper;
 	nrf_axon_result_e result;
 
-	result = nrf_axon_nn_model_async_init(&async_wrapper, model_hello_axon);
+	result = nrf_axon_nn_model_async_init(&async_wrapper, model);
 	if (result != NRF_AXON_RESULT_SUCCESS) {
 		LOG_ERR("Asynchronous model initialization failed, err %d", result);
 		return;
@@ -182,7 +181,7 @@ static void async_flow(void)
 		void *cb_context = output;
 
 		quantize_and_convert(&sample_value, input,
-				     &model_hello_axon->inputs[model_hello_axon->external_input_ndx]);
+				     &model->inputs[model->external_input_ndx]);
 
 		current_async_sample_value = sample_values[i];
 		result = nrf_axon_nn_model_infer_async(&async_wrapper, input, output,
@@ -205,17 +204,18 @@ int main(void)
 	LOG_INF("Initializing Axon NPU");
 
 #if IS_ENABLED(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
-	model_hello_axon = nrf_axon_model_partition_get(PARTITION_ADDRESS(axon_model_partition));
-	if (model_hello_axon == NULL) {
-		LOG_ERR("Failed to load model from partition");
+	model = nrf_axon_model_partition_get(PARTITION_ADDRESS(axon_model_partition));
+#else
+	model = &model_hello_axon;
+#endif
+	if (model == NULL) {
+		LOG_ERR("Failed to load model");
 		return -1;
 	}
-#endif
 
-	__ASSERT(model_hello_axon->inputs[model_hello_axon->external_input_ndx]
-				 .dimensions.byte_width == 1,
+	__ASSERT(model->inputs[model->external_input_ndx].dimensions.byte_width == 1,
 		 "Model input data type different than expected");
-	__ASSERT(model_hello_axon->output_dimensions.byte_width == 1,
+	__ASSERT(model->output_dimensions.byte_width == 1,
 		 "Model output data type different than expected");
 
 	result = nrf_axon_platform_init();
@@ -225,7 +225,7 @@ int main(void)
 	}
 
 	/* hello_axon_model does not use persistent vars, but initialize them anyway. */
-	err = nrf_axon_nn_model_init_vars(model_hello_axon);
+	err = nrf_axon_nn_model_init_vars(model);
 	if (err) {
 		LOG_ERR("Model persistent variables initialization failed, err %d", err);
 		return -1;

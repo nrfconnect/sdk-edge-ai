@@ -14,12 +14,15 @@
 #include <zephyr/drivers/video.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/storage/flash_map.h>
 
 #include <axon/nrf_axon_platform.h>
-#include <axon/nrf_axon_model_partition.h>
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
+
+#if IS_ENABLED(CONFIG_PERSON_DET_MODEL_IN_PARTITION)
+#include <zephyr/storage/flash_map.h>
+#include <axon/nrf_axon_model_partition.h>
+#endif
 
 #if !IS_ENABLED(CONFIG_PERSON_DET_MODEL_IN_PARTITION)
 #include "generated/nrf_axon_model_person_det_.h"
@@ -32,8 +35,9 @@ static_assert(NRF_AXON_MODEL_PERSON_DET_MAX_IL_BUFFER_USED < (NRF_AXON_INTERLAYE
 
 LOG_MODULE_REGISTER(main);
 
-BUILD_ASSERT(!IS_ENABLED(CONFIG_PERSON_DET_MODEL_IN_PARTITION) ||
-	     PARTITION_EXISTS(axon_model_partition));
+#if IS_ENABLED(CONFIG_PERSON_DET_MODEL_IN_PARTITION)
+BUILD_ASSERT(PARTITION_EXISTS(axon_model_partition));
+#endif
 
 #define CAM_WIDTH    128
 #define CAM_HEIGHT   128
