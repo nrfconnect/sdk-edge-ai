@@ -13,7 +13,6 @@ SECTIONS
 	.model_image : {
 		__axon_model_image_start = .;
 		KEEP(*(.model_image.partition_hdr))
-		KEEP(*(.model_image.header))
 		KEEP(*(.rodata))
 		KEEP(*(.rodata.*))
 		KEEP(*(.model_image))

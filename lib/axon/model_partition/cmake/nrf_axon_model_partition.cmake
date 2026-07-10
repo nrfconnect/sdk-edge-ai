@@ -6,7 +6,6 @@
 #   TARGET <unique-target-prefix>
 #   HEADER <compiler-generated-model.h>
 #   PARTITION_NODELABEL <devicetree-nodelabel>
-#   [IMAGE_SYMBOL <c-symbol-name>]
 # )
 
 include_guard(GLOBAL)
@@ -15,14 +14,10 @@ get_filename_component(AXON_MODEL_PARTITION_ROOT ${CMAKE_CURRENT_LIST_DIR}/.. AB
 get_filename_component(EDGE_AI_MODULE_ROOT ${CMAKE_CURRENT_LIST_DIR}/../../../.. ABSOLUTE)
 
 function(nrf_axon_model_partition_image)
-  cmake_parse_arguments(ARG "" "TARGET;HEADER;PARTITION_NODELABEL;IMAGE_SYMBOL" "" ${ARGN})
+  cmake_parse_arguments(ARG "" "TARGET;HEADER;PARTITION_NODELABEL" "" ${ARGN})
 
   if(NOT ARG_TARGET OR NOT ARG_HEADER OR NOT ARG_PARTITION_NODELABEL)
     message(FATAL_ERROR "nrf_axon_model_partition_image requires TARGET, HEADER and PARTITION_NODELABEL")
-  endif()
-
-  if(NOT ARG_IMAGE_SYMBOL)
-    set(ARG_IMAGE_SYMBOL axon_model_partition_image)
   endif()
 
   set(AXON_MODEL_PARTITION_DIR ${AXON_MODEL_PARTITION_ROOT})
@@ -38,10 +33,11 @@ function(nrf_axon_model_partition_image)
   set(model_syms_h ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_syms.h)
   set(model_syms_ld ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_syms.ld)
   set(hex_merge_stamp ${CMAKE_CURRENT_BINARY_DIR}/.${ARG_TARGET}_model_hex_merged)
+  set(model_partition_fixups_gen ${AXON_MODEL_PARTITION_DIR}/scripts/gen_axon_model_partition_fixups.py)
 
   execute_process(
     COMMAND ${PYTHON_EXECUTABLE}
-      ${AXON_MODEL_PARTITION_ROOT}/scripts/gen_axon_model_partition_c.py
+      ${model_partition_fixups_gen}
       --header ${ARG_HEADER}
       --symbols ${model_sym_link_list}
       --symbols-only
@@ -66,13 +62,12 @@ function(nrf_axon_model_partition_image)
   add_custom_command(
     OUTPUT ${model_fixups_h} ${model_sym_list}
     COMMAND ${PYTHON_EXECUTABLE}
-      ${AXON_MODEL_PARTITION_DIR}/scripts/gen_axon_model_partition_c.py
+      ${model_partition_fixups_gen}
       --header ${ARG_HEADER}
       --fixups-header ${model_fixups_h}
       --symbols ${model_sym_list}
-      --use-stub
     DEPENDS
-      ${AXON_MODEL_PARTITION_DIR}/scripts/gen_axon_model_partition_c.py
+      ${model_partition_fixups_gen}
       ${ARG_HEADER}
       ${AXON_MODEL_PARTITION_DIR}/include/axon/nrf_axon_model_partition_defs.h
     COMMENT "Generating ${ARG_TARGET} Axon model partition fixups header"

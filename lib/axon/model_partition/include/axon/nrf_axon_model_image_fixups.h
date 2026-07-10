@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  *
  * Placeholder included by model_image_stub.c. The build replaces this path
- * with a generated fixups header (see gen_axon_model_partition_c.py).
+ * with a generated fixups header (see gen_axon_model_partition_fixups.py).
  */
 
 #ifndef NRF_AXON_MODEL_IMAGE_FIXUPS_H_
