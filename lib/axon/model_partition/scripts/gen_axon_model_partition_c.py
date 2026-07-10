@@ -39,6 +39,15 @@ def strip_casts(expr: str) -> str:
     return value
 
 
+def strip_wrapping_parens(expr: str) -> str:
+    value = expr.strip()
+
+    while value.startswith("(") and value.endswith(")"):
+        value = value[1:-1].strip()
+
+    return value
+
+
 def strip_preprocessor_blocks(text: str) -> str:
     text = re.sub(
         r"#if\s+NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER.*?#else\s*(.*?)#endif",
@@ -75,7 +84,7 @@ def collect_app_symbols(text: str) -> list[str]:
 
 
 def transform_pointer_expr(expr: str, model_const_name: str) -> str:
-    value = strip_casts(expr.strip())
+    value = strip_wrapping_parens(strip_casts(expr.strip()))
 
     if value in {"NULL", "0"}:
         return "0"
@@ -92,9 +101,16 @@ def transform_pointer_expr(expr: str, model_const_name: str) -> str:
     if "nrf_axon_interlayer_buffer" in value:
         return "IL_OFF(0)"
 
-    match = re.search(rf"{re.escape(model_const_name)}\.(\w+)", value)
+    match = re.match(
+        rf"{re.escape(model_const_name)}\.(\w+)((?:\s*\+\s*0x[0-9A-Fa-f]+)*)$",
+        value,
+    )
     if match is not None:
-        return f"MC_PTR({match.group(1)})"
+        field = match.group(1)
+        offset = re.sub(r"\s+", "", match.group(2))
+        if offset:
+            return f"(MC_PTR({field}){offset})"
+        return f"MC_PTR({field})"
 
     match = APP_SYM_RE.search(value)
     if match is not None:
