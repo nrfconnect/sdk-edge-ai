@@ -11,6 +11,10 @@ include(axon_private_cmake.inc OPTIONAL)
 
 add_subdirectory(platform)
 
+if(CONFIG_NRF_AXON_MODEL_PARTITION)
+  add_subdirectory(model_partition)
+endif()
+
 if ((DEFINED ENV{NRF_AXON_DEV_BUILD})  OR (DEFINED NRF_AXON_DEV_BUILD))
   return()
 endif()

@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+config NRF_AXON_MODEL_PARTITION
+	bool "Axon updatable model partition support"
+	depends on NRF_AXON
+	help
+	  Enable access to nrf_axon_nn_compiled_model_s images stored in a
+	  dedicated flash partition. Model images are linked separately from the
+	  application with absolute pointers resolved at build time.

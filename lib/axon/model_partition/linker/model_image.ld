@@ -9,7 +9,7 @@ OUTPUT_ARCH(arm)
 
 SECTIONS
 {
-	. = HELLO_AXON_MODEL_PARTITION_ADDR;
+	. = NRF_AXON_MODEL_PARTITION_ADDR;
 	.model_image : {
 		KEEP(*(.model_image))
 	} = 0

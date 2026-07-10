@@ -21,11 +21,12 @@ config AVOID_INPUT_DOUBLE_COPY
 	  exclusive access to the Axon NPU interlayer buffer to preserve consistency.
 
 config HELLO_AXON_MODEL_IN_PARTITION
-	bool "Store hello_axon model constants in a dedicated flash partition"
+	bool "Store hello_axon model in a dedicated flash partition"
 	default y
+	select NRF_AXON_MODEL_PARTITION
 	help
-	  Place the hello_axon model weights in the axon_model_partition instead of
-	  linking them into the application image. A partition image is merged into
+	  Place the hello_axon model in the axon_model_partition instead of
+	  linking it into the application image. A partition image is merged into
 	  the final HEX file at build time.
 
 endmenu
