@@ -394,6 +394,7 @@ def build_source(header_text: str, image_symbol: str) -> tuple[str, list[str]]:
 
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
+#include <axon/nrf_axon_model_image_layout.h>
 #include <axon/nrf_axon_model_partition_defs.h>
 
 #ifndef NRF_AXON_MODEL_PARTITION_ADDR
@@ -428,7 +429,8 @@ const struct {image_symbol} {image_symbol} = {{
 \t\t.magic = {hex(MAGIC)},
 \t\t.version = {VERSION},
 \t\t.model_offset = offsetof(struct {image_symbol}, model),
-\t\t.image_size = sizeof(struct {image_symbol}),
+\t\t.image_size = (uint32_t)((uintptr_t)&__axon_model_image_end -
+\t\t\t\t\t  (uintptr_t)NRF_AXON_MODEL_PARTITION_ADDR),
 \t}},
 \t.model_const = {{
 \t\t{model_const_init}

@@ -13,6 +13,7 @@
 
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
+#include <axon/nrf_axon_model_image_layout.h>
 #include <axon/nrf_axon_model_partition_defs.h>
 
 #ifndef NRF_AXON_MODEL_PARTITION_ADDR
@@ -26,8 +27,9 @@
 #define MODEL_IMAGE_MODEL_SYM NRF_AXON_MODEL_IMAGE_MODEL_SYM
 
 /*
- * Partition header is linked first (see model_image.ld), before model rodata.
- * model_offset and image_size use the partition base passed at link time.
+ * Partition header is linked first (see model_image.ld). Fields are link-time
+ * constants resolved against NRF_AXON_MODEL_PARTITION_ADDR; post-link validation
+ * checks them against __axon_model_image_* linker anchors.
  */
 __attribute__((section(".model_image.partition_hdr"), used))
 const struct nrf_axon_model_partition_header nrf_axon_model_image_partition_hdr = {
@@ -35,7 +37,6 @@ const struct nrf_axon_model_partition_header nrf_axon_model_image_partition_hdr 
 	.version = NRF_AXON_MODEL_PARTITION_VERSION,
 	.model_offset = (uint32_t)((uintptr_t)&MODEL_IMAGE_MODEL_SYM -
 				  (uintptr_t)NRF_AXON_MODEL_PARTITION_ADDR),
-	.image_size = (uint32_t)((uintptr_t)&MODEL_IMAGE_MODEL_SYM +
-				 sizeof(MODEL_IMAGE_MODEL_SYM) -
+	.image_size = (uint32_t)((uintptr_t)&__axon_model_image_end -
 				 (uintptr_t)NRF_AXON_MODEL_PARTITION_ADDR),
 };

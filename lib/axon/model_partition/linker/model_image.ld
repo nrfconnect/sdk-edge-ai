@@ -11,9 +11,12 @@ SECTIONS
 {
 	. = NRF_AXON_MODEL_PARTITION_ADDR;
 	.model_image : {
+		__axon_model_image_start = .;
 		KEEP(*(.model_image.partition_hdr))
+		KEEP(*(.model_image.header))
 		KEEP(*(.rodata))
 		KEEP(*(.rodata.*))
 		KEEP(*(.model_image))
+		__axon_model_image_end = .;
 	} = 0
 }

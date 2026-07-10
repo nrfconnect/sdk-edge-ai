@@ -112,6 +112,10 @@ function(nrf_axon_model_partition_image)
       -DINCLUDE_DIR_EDGE_AI=${EDGE_AI_MODULE_DIR}/include
       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
       -DCMAKE_OBJCOPY=${CMAKE_OBJCOPY}
+      -DCMAKE_NM=${CMAKE_NM}
+      -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}
+      -DVALIDATE_LAYOUT_SCRIPT=${AXON_MODEL_PARTITION_DIR}/scripts/validate_model_partition_layout.py
+      -DPARTITION_DEFS_HEADER=${AXON_MODEL_PARTITION_DIR}/include/axon/nrf_axon_model_partition_defs.h
       -P ${AXON_MODEL_PARTITION_DIR}/cmake/build_model_image.cmake
     COMMAND ${PYTHON_EXECUTABLE}
       ${AXON_MODEL_PARTITION_DIR}/scripts/report_model_partition_usage.py
@@ -126,6 +130,7 @@ function(nrf_axon_model_partition_image)
       ${model_syms_ld}
       ${AXON_MODEL_PARTITION_DIR}/linker/model_image.ld
       ${AXON_MODEL_PARTITION_DIR}/cmake/build_model_image.cmake
+      ${AXON_MODEL_PARTITION_DIR}/scripts/validate_model_partition_layout.py
       ${AXON_MODEL_PARTITION_DIR}/scripts/report_model_partition_usage.py
     COMMENT "Linking ${ARG_TARGET} Axon model partition image"
     VERBATIM
