@@ -98,7 +98,10 @@ def transform_pointer_expr(expr: str, model_const_name: str) -> str:
 
     match = APP_SYM_RE.search(value)
     if match is not None:
-        return f"APP_SYM({match.group(1)})"
+        sym = match.group(1)
+        if sym.startswith("nrf_axon_nn_op_extension_"):
+            return f"APP_FUNC_SYM({sym})"
+        return f"APP_SYM({sym})"
 
     raise ValueError(f"Unsupported pointer expression: {expr}")
 
@@ -328,6 +331,7 @@ def build_source(header_text: str, image_symbol: str) -> tuple[str, list[str]]:
 
 #define IL_OFF(off) ((uintptr_t)(AXON_INTERLAYER_BUFFER_ADDR + (off)))
 #define APP_SYM(name) ((uintptr_t)AXON_SYM_##name)
+#define APP_FUNC_SYM(name) ((uintptr_t)(AXON_SYM_##name | 1U))
 #define PART_MEMBER_PTR(member) \
 	((void *)(NRF_AXON_MODEL_PARTITION_ADDR + offsetof(struct {image_symbol}, member)))
 #define MC_PTR(field) ((uintptr_t)(NRF_AXON_MODEL_PARTITION_ADDR + \\
