@@ -2,7 +2,19 @@
 # Copyright (c) 2026 Nordic Semiconductor ASA
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 
-"""Generate Axon model partition fixups header and symbol list for the stub image build."""
+"""Generate Axon model partition fixups header and symbol list for the stub image build.
+
+The compiler-generated model header (nrf_axon_model_*.h) is designed for a single
+link where the model and application live in one address space. For partition
+images we instead:
+
+1. Include the header unchanged so weights/cmd buffers compile into rodata.
+2. Override macros that would allocate app-owned buffers inside the model image.
+3. Record which app symbols must be resolved from zephyr.elf after the app links.
+
+This replaces the old gen_axon_model_partition_c.py approach that duplicated all
+model bytes into a generated *_model_image.c file.
+"""
 
 from __future__ import annotations
 
@@ -16,6 +28,7 @@ APP_SYM_RE = re.compile(
 
 
 def strip_preprocessor_blocks(text: str) -> str:
+    """Keep the #else branch of NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER."""
     text = re.sub(
         r"#if\s+NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER.*?#else\s*(.*?)#endif",
         r"\1",
@@ -26,8 +39,11 @@ def strip_preprocessor_blocks(text: str) -> str:
 
 
 def collect_app_symbols(header_text: str) -> list[str]:
+    """Return app-owned symbols whose addresses are patched into the model image."""
     text = strip_preprocessor_blocks(header_text)
     try:
+        # Parsing the model struct declaration exposes pointer fields that reference
+        # extension tables even when those tables are defined later in the header.
         model_sym = parse_model_symbol(header_text)
         text = text + f"const nrf_axon_nn_compiled_model_s {model_sym} = {{}};"
     except ValueError:
@@ -54,6 +70,7 @@ def parse_model_symbol(header_text: str) -> str:
 
 
 def build_fixups_header(header_text: str, model_sym: str, header_path: Path) -> str:
+    """Emit a header that includes the model header with partition-safe macros."""
     app_symbols = collect_app_symbols(header_text)
 
     lines = [
@@ -81,6 +98,8 @@ def build_fixups_header(header_text: str, model_sym: str, header_path: Path) -> 
 
     for sym in app_symbols:
         if sym.startswith("axon_model_") and sym.endswith("_packed_output_buf"):
+            # Packed output lives in application RAM; model image stores NULL and
+            # the real pointer is written at model-image link time via PROVIDE().
             lines.append(f"#define {sym} ((uint8_t *)0)")
 
     lines.extend([

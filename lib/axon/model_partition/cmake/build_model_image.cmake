@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+# Second-stage compile/link script for the Axon model partition image.
+# Invoked from nrf_axon_model_partition.cmake after zephyr.elf exists.
 
 if(NOT DEFINED MODEL_IMAGE_STUB_C OR NOT DEFINED MODEL_FIXUPS_HEADER
    OR NOT DEFINED MODEL_HEADER_DIR OR NOT DEFINED MODEL_IMAGE_O
@@ -17,11 +20,15 @@ set(model_image_compile_flags
   -include ${MODEL_FIXUPS_HEADER}
 )
 
+# Match the application's interlayer buffer size so offsetof checks in the model
+# header compile identically in both link passes.
 if(DEFINED NRF_AXON_INTERLAYER_BUFFER_SIZE)
   list(APPEND model_image_compile_flags
     -DNRF_AXON_INTERLAYER_BUFFER_SIZE=${NRF_AXON_INTERLAYER_BUFFER_SIZE})
 endif()
 
+# Compile stub once: fixups header pulls in model rodata; syms header is empty but
+# the companion linker script supplies PROVIDE() symbols for app-owned pointers.
 execute_process(
   COMMAND ${CMAKE_C_COMPILER}
     -c ${MODEL_IMAGE_STUB_C}
@@ -34,6 +41,8 @@ execute_process(
   COMMAND_ERROR_IS_FATAL ANY
 )
 
+# Link at partition base. model_image.ld lays out header + rodata; syms linker
+# script patches absolute addresses for buffers living in the application.
 execute_process(
   COMMAND ${CMAKE_C_COMPILER}
     -nostdlib
@@ -47,6 +56,7 @@ execute_process(
   COMMAND_ERROR_IS_FATAL ANY
 )
 
+# Emit raw bytes for the .model_image output section only.
 execute_process(
   COMMAND ${CMAKE_OBJCOPY}
     -O binary
@@ -56,6 +66,7 @@ execute_process(
   COMMAND_ERROR_IS_FATAL ANY
 )
 
+# Fail the build if header fields disagree with linker anchors or model symbol.
 execute_process(
   COMMAND ${PYTHON_EXECUTABLE}
     ${VALIDATE_LAYOUT_SCRIPT}

@@ -12,6 +12,7 @@ project(hello_axon)
 target_sources(app PRIVATE src/main.c)
 
 if(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
+  # Link model rodata into a separate flash partition; see lib/axon/model_partition/README.md
   include(${CMAKE_CURRENT_LIST_DIR}/../../../lib/axon/model_partition/cmake/nrf_axon_model_partition.cmake)
 
   nrf_axon_model_partition_image(

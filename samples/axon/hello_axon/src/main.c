@@ -23,6 +23,7 @@
 LOG_MODULE_REGISTER(hello_axon);
 
 #if IS_ENABLED(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
+/* Model lives in axon_model_partition; buffers still reside in the application. */
 BUILD_ASSERT(PARTITION_EXISTS(axon_model_partition));
 #endif
 
@@ -204,6 +205,7 @@ int main(void)
 	LOG_INF("Initializing Axon NPU");
 
 #if IS_ENABLED(CONFIG_HELLO_AXON_MODEL_IN_PARTITION)
+	/* Partition is memory-mapped; header and model struct are validated at runtime. */
 	model = nrf_axon_model_partition_get(PARTITION_ADDRESS(axon_model_partition));
 #else
 	model = &model_hello_axon;

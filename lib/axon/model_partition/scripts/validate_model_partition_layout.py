@@ -2,7 +2,12 @@
 # Copyright (c) 2026 Nordic Semiconductor ASA
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 
-"""Validate Axon model partition image layout after linking."""
+"""Validate Axon model partition image layout after linking.
+
+Checks that the standalone model ELF was linked at the partition base, that the
+on-flash header matches linker-derived extents, and that model_offset points at
+the compiled model symbol from the fixups header.
+"""
 
 from __future__ import annotations
 

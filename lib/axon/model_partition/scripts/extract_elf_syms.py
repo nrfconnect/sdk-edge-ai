@@ -2,7 +2,15 @@
 # Copyright (c) 2026 Nordic Semiconductor ASA
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 
-"""Extract symbol addresses from an ELF file and emit a C header."""
+"""Extract symbol addresses from an ELF file and emit a companion linker script.
+
+The model image link runs after the application ELF exists. Symbols such as
+nrf_axon_interlayer_buffer must resolve to the same absolute addresses the
+application link produced. We emit PROVIDE() entries consumed as a second -T
+fragment when linking model_image_stub.o.
+
+The C header output is intentionally empty; only the linker script carries data.
+"""
 
 from __future__ import annotations
 
@@ -54,6 +62,7 @@ def main() -> None:
         if args.linker_script is not None:
             link_addr = int(addr, 16)
             if symbol.startswith("nrf_axon_nn_op_extension_"):
+                # Thumb code pointers need bit 0 set in the stored address.
                 link_addr |= 1
             linker_lines.append(f"PROVIDE({symbol} = 0x{link_addr:X});")
 

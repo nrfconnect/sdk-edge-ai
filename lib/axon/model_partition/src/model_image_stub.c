@@ -3,9 +3,14 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  *
- * Fixed stub for Axon model partition images. Includes the compiler-generated
- * model header directly; pointer fixups for app-owned symbols come from
- * model_image_fixups.h (small generated header) and syms.h (link-time addresses).
+ * Fixed stub for Axon model partition images.
+ *
+ * Instead of generating a multi-megabyte *_model_image.c that copies model bytes,
+ * this file is compiled once per application. The compiler-generated model header
+ * is pulled in via the generated fixups header (gen_axon_model_partition_fixups.py).
+ *
+ * Pointer fields that reference application RAM/flash are not computed here; they
+ * are supplied by a generated linker script built from zephyr.elf symbol addresses.
  */
 
 #include <stddef.h>
@@ -27,9 +32,11 @@
 #define MODEL_IMAGE_MODEL_SYM NRF_AXON_MODEL_IMAGE_MODEL_SYM
 
 /*
- * Partition header is linked first (see model_image.ld). Fields are link-time
- * constants resolved against NRF_AXON_MODEL_PARTITION_ADDR; post-link validation
- * checks them against __axon_model_image_* linker anchors.
+ * Partition header is linked first (see model_image.ld).
+ *
+ * model_offset and image_size are link-time constants expressed relative to
+ * NRF_AXON_MODEL_PARTITION_ADDR. Post-link validation compares them against
+ * __axon_model_image_* anchors and the compiled model symbol.
  */
 __attribute__((section(".model_image.partition_hdr"), used))
 const struct nrf_axon_model_partition_header nrf_axon_model_image_partition_hdr = {

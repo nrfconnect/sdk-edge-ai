@@ -24,7 +24,11 @@ const nrf_axon_nn_compiled_model_s *nrf_axon_model_partition_get(uintptr_t base_
 	const struct nrf_axon_model_partition_header *header;
 
 #if (NRF_AXON_INTERLAYER_BUFFER_SIZE > 0)
-	/* Keep the interlayer buffer linked for partition models that reference it by address. */
+	/*
+	 * The model image holds an absolute pointer to nrf_axon_interlayer_buffer.
+	 * Reference the buffer here so the application link retains the symbol even
+	 * when the model header is not compiled into the app.
+	 */
 	__asm__ volatile("" : : "r"(&nrf_axon_interlayer_buffer[0]) : "memory");
 #endif
 

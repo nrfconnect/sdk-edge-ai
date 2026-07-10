@@ -14,6 +14,7 @@ target_sources(app PRIVATE
 )
 
 if(CONFIG_PERSON_DET_MODEL_IN_PARTITION)
+  # Second-stage link produces *_model_image.bin merged into zephyr.hex at flash time.
   include(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/axon/model_partition/cmake/nrf_axon_model_partition.cmake)
 
   nrf_axon_model_partition_image(

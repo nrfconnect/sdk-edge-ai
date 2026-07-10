@@ -2,6 +2,11 @@
 #
 # Build and merge an updatable Axon model partition image.
 #
+# The model is linked in a second pass after the application ELF exists. The app
+# owns runtime buffers (interlayer, packed output, op extensions); their addresses
+# are taken from zephyr.elf and injected into the model image via a generated
+# linker script. See README.md in this directory for the full pipeline.
+#
 # nrf_axon_model_partition_image(
 #   TARGET <unique-target-prefix>
 #   HEADER <compiler-generated-model.h>
@@ -37,6 +42,8 @@ function(nrf_axon_model_partition_image)
 
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ARG_HEADER})
 
+  # Discover app-owned symbols referenced by the model header so the application
+  # link keeps them even when the model is not compiled into the app.
   execute_process(
     COMMAND ${PYTHON_EXECUTABLE}
       ${model_partition_fixups_gen}
@@ -53,12 +60,14 @@ function(nrf_axon_model_partition_image)
     endif()
   endforeach()
 
+  # Partition base and size come from the mapped-partition devicetree node.
   dt_nodelabel(partition_node NODELABEL ${ARG_PARTITION_NODELABEL} REQUIRED)
   dt_reg_addr(partition_addr PATH ${partition_node})
   dt_reg_size(partition_size PATH ${partition_node})
 
   get_filename_component(model_header_dir ${ARG_HEADER} DIRECTORY)
 
+  # Small generated header: includes the model header with pointer fixup macros.
   add_custom_command(
     OUTPUT ${model_fixups_h} ${model_sym_list} ${model_sym_link_list}
     COMMAND ${PYTHON_EXECUTABLE}
@@ -74,6 +83,7 @@ function(nrf_axon_model_partition_image)
     COMMENT "Generating ${ARG_TARGET} Axon model partition fixups header"
   )
 
+  # After the app links, pull absolute addresses for buffers the model points to.
   add_custom_command(
     OUTPUT ${model_syms_h} ${model_syms_ld}
     COMMAND ${PYTHON_EXECUTABLE}
@@ -90,6 +100,7 @@ function(nrf_axon_model_partition_image)
     COMMENT "Extracting Axon model partition symbols from zephyr.elf"
   )
 
+  # Standalone link of model_image_stub.c at the partition base address.
   add_custom_command(
     OUTPUT ${model_image_bin}
     COMMAND ${CMAKE_COMMAND}
@@ -149,6 +160,7 @@ function(nrf_axon_model_partition_image)
   add_custom_target(${ARG_TARGET}_model_partition_hex ALL DEPENDS ${model_image_hex})
   add_dependencies(${ARG_TARGET}_model_partition_hex ${ARG_TARGET}_model_image)
 
+  # Re-merge zephyr.hex so flashing programs both app and model partition.
   add_custom_command(
     OUTPUT ${hex_merge_stamp}
     COMMAND ${PYTHON_EXECUTABLE}

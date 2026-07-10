@@ -27,6 +27,7 @@
 #if !IS_ENABLED(CONFIG_PERSON_DET_MODEL_IN_PARTITION)
 #include "generated/nrf_axon_model_person_det_.h"
 #else
+/* Model header omitted from app link; sizes still needed for local output buffers. */
 #define NRF_AXON_MODEL_PERSON_DET_MAX_IL_BUFFER_USED 225280
 #define NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE 17280
 static_assert(NRF_AXON_MODEL_PERSON_DET_MAX_IL_BUFFER_USED < (NRF_AXON_INTERLAYER_BUFFER_SIZE),
@@ -36,6 +37,7 @@ static_assert(NRF_AXON_MODEL_PERSON_DET_MAX_IL_BUFFER_USED < (NRF_AXON_INTERLAYE
 LOG_MODULE_REGISTER(main);
 
 #if IS_ENABLED(CONFIG_PERSON_DET_MODEL_IN_PARTITION)
+/* axon_model_partition must be declared in the board overlay. */
 BUILD_ASSERT(PARTITION_EXISTS(axon_model_partition));
 #endif
 
@@ -251,6 +253,7 @@ int main(void)
 	const nrf_axon_nn_compiled_model_s *model;
 
 #if IS_ENABLED(CONFIG_PERSON_DET_MODEL_IN_PARTITION)
+	/* Model image was linked separately and merged into zephyr.hex at build time. */
 	model = nrf_axon_model_partition_get(PARTITION_ADDRESS(axon_model_partition));
 	if (model == NULL) {
 		LOG_ERR("Failed to load model from partition");

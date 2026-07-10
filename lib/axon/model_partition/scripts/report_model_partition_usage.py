@@ -2,7 +2,11 @@
 # Copyright (c) 2026 Nordic Semiconductor ASA
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 
-"""Print a linker-style memory usage table for an Axon model partition image."""
+"""Print a linker-style memory usage table for an Axon model partition image.
+
+Mirrors Zephyr's "Memory region" build output but for the devicetree partition
+size vs. the linked model image binary.
+"""
 
 from __future__ import annotations
 

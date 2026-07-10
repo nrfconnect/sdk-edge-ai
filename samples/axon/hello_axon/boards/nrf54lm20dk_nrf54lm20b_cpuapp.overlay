@@ -12,6 +12,7 @@
 
 &cpuapp_rram {
 	partitions {
+		/* Dedicated updatable model slot; image merged into zephyr.hex at build. */
 		axon_model_partition: partition@1f4000 {
 			compatible = "zephyr,mapped-partition";
 			label = "axon-model";

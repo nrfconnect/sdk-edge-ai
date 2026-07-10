@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #define NRF_AXON_MODEL_PARTITION_MAGIC   0x4E4F5841U /* 'AXON' little-endian */
+/* Increment when the on-flash header or image layout semantics change. */
 #define NRF_AXON_MODEL_PARTITION_VERSION 5U
 
 struct nrf_axon_model_partition_header {
