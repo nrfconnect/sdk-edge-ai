@@ -15,11 +15,12 @@ target_sources(app PRIVATE
     src/main.c
 )
 
-if(CONFIG_HELLO_AXON_REFERENCE_BUILD)
-  target_sources(app PRIVATE src/model_reference_anchor.c)
-  # model_hello_axon is a plain (non-static) global; cmd_buffer_hello_axon and
-  # axon_model_const_hello_axon are only reachable from it via relocations (see
-  # model_reference_anchor.c), so forcing just this one symbol undefined is enough to stop
-  # --gc-sections from dropping any of the three from this reference-only image.
-  toolchain_ld_force_undefined_symbols(model_hello_axon)
+if(CONFIG_HELLO_AXON_MODEL_OTA)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/nrf_axon_model_stub.cmake)
+  nrf_axon_model_stub(
+    TARGET hello_axon
+    MODEL_NAME hello_axon
+    HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/nrf_axon_model_hello_axon_.h
+    PARTITION_NODELABEL model_partition
+  )
 endif()

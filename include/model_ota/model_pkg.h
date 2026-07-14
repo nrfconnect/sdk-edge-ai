@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** Container format version (independent of the model's own version). */
-#define MODEL_PKG_FORMAT_VERSION 5
+#define MODEL_PKG_FORMAT_VERSION 6
 
 /** Length of the @ref model_pkg_header.name field, not necessarily NUL-terminated. */
 #define MODEL_PKG_NAME_LEN 16
@@ -151,63 +151,28 @@ int model_pkg_load_neuton(nrf_edgeai_model_neuton_t *out_model, float *neurons_b
 			   size_t neurons_buf_cap, struct model_pkg_neuton_info *out_info);
 
 /**
- * Fixed order of the raw data sections concatenated in an Axon package payload. All sections
- * are element sizes of 4 bytes or less with no internal alignment requirement stricter than 4
- * bytes, and every section's byte length here is itself a multiple of 4, so no padding is
- * needed between them.
- *
- * MODEL_STRUCT is new in format version 3: it holds the *entire*, verbatim
- * nrf_axon_nn_compiled_model_s the Axon NN compiler generated for this model (see the comment
- * on @ref model_pkg_axon_header), which is what lets this package format support any model
- * shape without the loader needing shape-specific code.
- *
- * EXTRA_OUTPUTS is present (section_len != 0) only for models with extra_output_cnt > 0; it is
- * a plain array of nrf_axon_compiled_model_output_s (no pointers of its own), so it can be
- * relocated the same way model_const is.
- *
- * LABELS/LABEL_STRINGS are present (section_len != 0) only for classification models with a
- * non-NULL labels pointer: LABELS is an array of pointers (one per classification class, count
- * derived from output_dimensions - see package_model_axon.py's num_output_classes()), each
- * rewritten by the packaging tool to point into LABEL_STRINGS, a single NUL-separated blob
- * holding every label string's bytes back-to-back. persistent_vars is not yet supported by the
- * packaging tool - see the "Known limitations" comment on @ref model_pkg_load_axon.
- */
-enum model_pkg_axon_section {
-	MODEL_PKG_AXON_SEC_MODEL_STRUCT = 0, /**< nrf_axon_nn_compiled_model_s, byte-for-byte */
-	MODEL_PKG_AXON_SEC_CMD_BUFFER,       /**< uint32_t[cmd_buffer_len], NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE assumed 32-bit */
-	MODEL_PKG_AXON_SEC_MODEL_CONST,      /**< uint8_t[model_const_size], opaque raw bytes */
-	MODEL_PKG_AXON_SEC_EXTRA_OUTPUTS,    /**< nrf_axon_compiled_model_output_s[extra_output_cnt], optional */
-	MODEL_PKG_AXON_SEC_LABELS,           /**< const char *[num_output_classes], optional */
-	MODEL_PKG_AXON_SEC_LABEL_STRINGS,    /**< NUL-separated label string bytes, optional */
-	MODEL_PKG_AXON_SECTION_COUNT,
-};
-
-/**
  * On-flash Axon model package header.
  *
- * Distinct from, and independent of, @ref model_pkg_header: Axon packages carry a different set
- * of payload sections (see @ref model_pkg_axon_section) and no Neuton-specific fields. Both
- * share the same leading magic/format_version layout and CRC32 validation strategy for
- * consistency, but are not interchangeable.
+ * Distinct from, and independent of, @ref model_pkg_header: Axon packages carry a payload that
+ * is the model stub's own linked memory image, byte-for-byte, rather than a fixed set of
+ * separately-tracked sections; and no Neuton-specific fields. Both share the same leading
+ * magic/format_version layout and CRC32 validation strategy for consistency, but are not
+ * interchangeable.
  *
- * package_base is the flash address the MODEL_STRUCT section (and therefore the whole payload,
- * since every other section's offset is fixed relative to it) is expected to occupy once
- * flashed into the model_storage partition at the address the host tool
- * (tools/model_ota/package_model_axon.py --address) was told about. Every pointer field
- * inside MODEL_STRUCT that refers to flash-owned data (cmd_buffer_ptr, model_const_ptr,
- * extra_outputs, and cmd_buffer's own internal pointers into model_const) is already rewritten
- * by that same tool to its final flash address, so the on-device loader
- * (@ref model_pkg_load_axon) only needs to check that package_base matches where this package
- * actually landed on this device - no pointer relocation happens at load time. struct_size lets
- * the loader detect, before trusting any field offset, that the packaging tool's copy of
- * nrf_axon_nn_compiled_model_s and this firmware's copy have drifted apart.
- *
- * interlayer_addr is the reference build's address for nrf_axon_interlayer_buffer: cmd_buffer
- * contains literal references to it (for inter-layer data handoff between the NPU's compiled
- * instructions), baked in at compile time by the reference build, and - unlike model_const -
- * this loader does not relocate them (see @ref model_pkg_load_axon). Storing the reference
- * build's address lets the loader at least detect, rather than silently mispredict on, a
- * mismatch against this device's actual nrf_axon_interlayer_buffer address.
+ * The payload (everything following this header, payload_size bytes) is copied verbatim from
+ * the "model stub" ELF's `.model_stub` output section (tools/model_ota/package_model_axon.py's
+ * docstring, and doc/libraries/model_ota.rst, describe how that ELF is produced): that stub was
+ * linked with its `.model_stub` section placed exactly at package_base, which by construction
+ * is where this payload will actually sit once flashed (package_base = the model_storage
+ * partition's own address + sizeof(this header)) - so *every* pointer field baked into it by
+ * the compiler and linker, including ones that refer to app-owned RAM
+ * (nrf_axon_interlayer_buffer, persistent_vars, op-extension function pointers embedded in
+ * cmd_buffer), is already the final, correct absolute address for the specific application this
+ * package was built against. The on-device loader (@ref model_pkg_load_axon) therefore performs
+ * no pointer relocation of any kind - it only checks that package_base matches where the payload
+ * actually landed on this device (otherwise the package was built for a different partition
+ * layout and cannot be trusted), and that struct_size matches this firmware's own
+ * nrf_axon_nn_compiled_model_s, before trusting struct_offset to find the model struct.
  */
 struct model_pkg_axon_header {
 	uint8_t magic[4]; /**< {'N','E','A','I'} */
@@ -216,12 +181,10 @@ struct model_pkg_axon_header {
 	uint8_t reserved0;
 	char name[MODEL_PKG_NAME_LEN];
 	uint32_t model_version; /**< free-form, e.g. major.minor.patch packed by the host tool */
-	uint32_t payload_size;  /**< bytes following this header; must equal sum(section_len) */
-	uint32_t section_len[MODEL_PKG_AXON_SECTION_COUNT];
-
-	uint32_t struct_size;  /**< must equal sizeof(nrf_axon_nn_compiled_model_s) on this device */
-	uint32_t package_base; /**< flash address the MODEL_STRUCT section is expected to land at */
-	uint32_t interlayer_addr; /**< reference build's nrf_axon_interlayer_buffer address */
+	uint32_t payload_size;  /**< bytes following this header - the model stub's memory image */
+	uint32_t struct_offset; /**< offset within the payload where nrf_axon_nn_compiled_model_s starts */
+	uint32_t struct_size;   /**< must equal sizeof(nrf_axon_nn_compiled_model_s) on this device */
+	uint32_t package_base;  /**< flash address the payload (right after this header) is expected to occupy */
 
 	uint32_t crc32; /**< CRC32 (IEEE) over header (crc32 field zeroed) + payload */
 } __packed;
@@ -235,47 +198,42 @@ struct model_pkg_axon_info {
 };
 
 /**
- * @brief Load, validate, and wire up an Axon model package directly from the memory-mapped
- * model_storage flash partition (XIP; no RAM copy of any kind).
+ * @brief Load, validate, and wire up an Axon model package directly from a memory-mapped flash
+ * partition (XIP; no RAM copy of any kind).
  *
  * out_model is populated with a byte-for-byte copy of the compiler-generated
- * nrf_axon_nn_compiled_model_s the packaging tool captured from a reference build's ELF (see
- * package_model_axon.py). Every pointer field that refers to flash-owned model data
- * (cmd_buffer_ptr, model_const_ptr, extra_outputs, and cmd_buffer's own internal pointers into
- * model_const) already targets its final flash address, baked in by the packaging tool - so
- * this loader does not need to know the model's shape (input count, output count, ...) at all.
- * The only pointer relocation actually performed here is patching the handful of fields that
- * refer to *this device's* RAM rather than flash: inputs[i].ptr for external inputs and
- * output_ptr are set to nrf_axon_interlayer_buffer (plus whatever offset into it the model was
- * compiled to expect, computed by the packaging tool - see model_pkg_axon.c for how that offset
- * is smuggled through the pointer field itself while the package sits in flash).
+ * nrf_axon_nn_compiled_model_s the packaging tool captured from a "model stub" ELF (see
+ * package_model_axon.py and doc/libraries/model_ota.rst for how that stub is produced).
+ * *Every* pointer field - including ones that refer to app-owned RAM
+ * (nrf_axon_interlayer_buffer, persistent_vars, and op-extension function pointers embedded in
+ * cmd_buffer) - already targets its final, correct address for *this specific application*,
+ * resolved by that build-time mechanism rather than at load time: this loader performs no
+ * pointer relocation or patching of any kind, and does not need to know the model's shape
+ * (input count, output count, persistent_vars, op extensions used, ...) at all.
  *
- * Two checks are performed against absolute addresses baked in by the reference build, rather
- * than trusting them silently: package_base must match where the payload actually landed on
- * this device (otherwise the package was built for a different model_storage layout, e.g.
- * --address didn't match this board's overlay); and interlayer_addr must match this device's
- * actual nrf_axon_interlayer_buffer address (otherwise cmd_buffer's own embedded references to
- * that buffer - which, unlike model_const, this loader does not relocate - would silently read
- * and write the wrong RAM). Either mismatch is rejected rather than wired up with stale
- * pointers.
- *
- * Known limitations (see the plan this was implemented from for the reasoning): models with
- * persistent_vars are rejected (MODEL_PKG_ERR_UNSUPPORTED_SHAPE) - the packaging tool already
- * refuses to package them, this is a defense-in-depth check. Classification models with labels
- * are supported (labels/label string bytes are relocated by the packaging tool exactly like
- * model_const, no runtime patching needed here). is_layer_model and multi-input (input_cnt > 1)
- * models are expected to work but, absent any such model in this repo, are only exercised by
- * host-side unit tests, not on real hardware.
+ * The only check performed against an absolute address baked in at packaging time is
+ * package_base, which must match where the payload actually landed on this device (otherwise
+ * the package was built for a different partition layout, e.g. --address didn't match this
+ * board's overlay, or for a different partition than fa_id/partition_addr identify) - rejected
+ * rather than wired up with stale pointers.
  *
  * On success, out_model is fully populated and has already passed nrf_axon_nn_model_validate().
  * out_model is left untouched on failure.
  *
- * @param[out] out_model Model struct to populate (not const-qualified, unlike a normal
- *                       compile-time compiled model, since the loader owns it).
- * @param[out] out_info  Optional; filled with package metadata on success.
+ * @param[in]  fa_id          Flash area ID of the partition to load from, e.g.
+ *                             FIXED_PARTITION_ID(model_partition).
+ * @param[in]  partition_addr Memory-mapped base address of that same partition, e.g.
+ *                             PARTITION_ADDRESS(model_partition). Passed separately from fa_id
+ *                             (rather than derived from it at runtime) since it is needed
+ *                             before the flash_area is opened, and only a "zephyr,mapped-
+ *                             partition" node's address is ever CPU-addressable this way.
+ * @param[out] out_model      Model struct to populate (not const-qualified, unlike a normal
+ *                             compile-time compiled model, since the loader owns it).
+ * @param[out] out_info       Optional; filled with package metadata on success.
  * @retval MODEL_PKG_OK (0) on success, a negative @ref model_pkg_result otherwise.
  */
-int model_pkg_load_axon(nrf_axon_nn_compiled_model_s *out_model,
+int model_pkg_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
+			 nrf_axon_nn_compiled_model_s *out_model,
 			 struct model_pkg_axon_info *out_info);
 
 #ifdef __cplusplus

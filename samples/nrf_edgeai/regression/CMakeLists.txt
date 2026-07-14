@@ -19,16 +19,14 @@ if(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON)
   target_include_directories(app PRIVATE src/nrf_edgeai_generated/Axon)
   message(STATUS "Using Axon Edge AI model")
 
-  if(CONFIG_NRF_EDGEAI_REGRESSION_REFERENCE_BUILD)
-    # Never flashed as the app: see model_reference_anchor.c for why this file (and the
-    # force-undefined symbol below) exist.
-    message(STATUS "Also building the Axon reference model for package_model_axon.py")
-    target_sources(app PRIVATE src/model_reference_anchor.c)
-    # model_axon_user_instance_36025 is a plain (non-static) global; cmd_buffer_.../
-    # axon_model_const_... are only reachable from it via relocations (see
-    # model_reference_anchor.c), so forcing just this one symbol undefined is enough to stop
-    # --gc-sections from dropping any of the three from this reference-only image.
-    toolchain_ld_force_undefined_symbols(model_axon_user_instance_36025)
+  if(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/nrf_axon_model_stub.cmake)
+    nrf_axon_model_stub(
+      TARGET regression
+      MODEL_NAME axon_user_instance_36025
+      HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/Axon/nrf_edgeai_user_model_axon.h
+      PARTITION_NODELABEL model_partition
+    )
   endif()
 else()
   target_sources(app PRIVATE src/model_wiring_neuton.c)

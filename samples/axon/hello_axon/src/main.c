@@ -225,13 +225,10 @@ BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_partition),
 
 /*
  * The model itself is *not* compiled in: this is only populated (by model_pkg_load_axon())
- * once a valid package has been read from the model_storage flash partition. Deliberately not
- * named model_hello_axon: CONFIG_HELLO_AXON_REFERENCE_BUILD links src/model_reference_anchor.c
- * into this same image (see CMakeLists.txt), whose generated model header defines a symbol of
- * exactly that name - name collisions between the two would be benign in C (this one is
- * `static`, so the linker keeps them distinct), but tools/model_ota/package_model_axon.py looks
- * up "model_hello_axon" by name in the reference ELF's symbol table with no way to tell the two
- * apart, and could silently pick this zeroed RAM instance instead of the real compiled model.
+ * once a valid package has been read from the model_storage flash partition. Not named
+ * model_hello_axon to avoid any confusion with the generated header's own model_hello_axon
+ * symbol, which this application no longer links in at all (see CMakeLists.txt's
+ * nrf_axon_model_stub() call - it is only ever compiled into the standalone model stub).
  */
 static nrf_axon_nn_compiled_model_s active_model;
 
@@ -240,7 +237,9 @@ static const nrf_axon_nn_compiled_model_s *model_ota_load(void)
 	struct model_pkg_axon_info info;
 	int err;
 
-	err = model_pkg_load_axon(&active_model, &info);
+	err = model_pkg_load_axon(PARTITION_ID(model_partition),
+				   (const uint8_t *)PARTITION_ADDRESS(model_partition),
+				   &active_model, &info);
 	if (err != MODEL_PKG_OK) {
 		LOG_ERR("No usable model in model_storage (err %d)", err);
 		return NULL;

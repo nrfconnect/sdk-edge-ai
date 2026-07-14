@@ -8,6 +8,8 @@
 
 #if defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA)
 #include <model_ota/model_pkg.h>
+
+#include <zephyr/storage/flash_map.h>
 #endif
 
 #include <axon/nrf_axon_platform.h>
@@ -120,7 +122,9 @@ nrf_edgeai_t *model_ota_load(void)
 	struct model_pkg_axon_info info;
 	int err;
 
-	err = model_pkg_load_axon(&model_instance_, &info);
+	err = model_pkg_load_axon(PARTITION_ID(model_partition),
+				   (const uint8_t *)PARTITION_ADDRESS(model_partition),
+				   &model_instance_, &info);
 	if (err != MODEL_PKG_OK) {
 		LOG_ERR("No usable model in model_storage (err %d)", err);
 		return NULL;

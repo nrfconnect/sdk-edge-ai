@@ -37,47 +37,29 @@ Model-only OTA update PoC
 Normally, an Axon model is compiled into the application image as C arrays, so changing the model requires rebuilding and reflashing the whole firmware.
 This sample instead reads a "model package" (see :file:`include/model_ota/model_pkg.h` in the |EAI| tree) from ``model_storage`` and validates it (magic number, container format version, model type, section sizes, CRC32) before every inference pass.
 
-The package's payload is the model's *entire* compiler-generated ``nrf_axon_nn_compiled_model_s`` struct, captured byte-for-byte from a reference build, plus its command buffer and constants blob (``model_const``). Every pointer field that refers to flash-owned model data is resolved once, on the host, at packaging time; pointer fields that instead refer to this device's own RAM are reduced to a byte offset which the on-device loader adds back in. See :ref:`lib_model_ota` for a full explanation of the package format, the host-side relocation strategy, and known limitations (models using ``labels`` or ``persistent_vars`` are rejected by the packaging tool; this sample's own model has exactly one external input and no extra outputs).
+The package's payload is the model's *entire* compiler-generated ``nrf_axon_nn_compiled_model_s`` struct, captured byte-for-byte from a "model stub" - a tiny link of just the generated model header, produced automatically as part of a normal build (see below) - plus its command buffer and constants blob (``model_const``). Every pointer field in that struct, including ones that refer to this application's own RAM (e.g. the Axon interlayer buffer), is already the final, correct address by construction of that link, so the on-device loader performs no relocation of any kind. See :ref:`lib_model_ota` for a full explanation of the package format and the build-time mechanism that produces it.
 
 If ``model_storage`` does not currently hold a valid package, the sample logs that state and skips inference instead of crashing, and keeps retrying periodically.
 This means a new model can be provisioned - or a corrupted one recovered from - without a power cycle, though a reset also works.
 
 The ``model_storage`` partition is a dedicated fixed partition, added by this sample's devicetree overlay (see :file:`boards`) on top of the board's second (unused, since mcuboot is not part of this PoC) application slot. It is sized generously (968 kB on the nRF54LM20 DK).
 
-Producing a reference build
-============================
-
-Packaging a model update needs a real link address for the compiled model struct, its command buffer, and ``model_const``, to know which pointers need relocating - these only exist in a build that actually references the generated model header, which the deployed app (above) does not.
-Building with :kconfig:option:`CONFIG_HELLO_AXON_REFERENCE_BUILD` set produces such a "reference" image instead of the normal app: it links in :file:`src/generated/nrf_axon_model_hello_axon_.h` just enough to fix this build's addresses for its symbols, and does nothing else.
-This image is never flashed.
-
-.. code-block:: console
-
-   west build -b nrf54lm20dk/nrf54lm20b/cpuapp -d build_ref samples/axon/hello_axon \
-       -- -DCONFIG_HELLO_AXON_REFERENCE_BUILD=y
-
 Preparing and flashing a model package
 ========================================
 
-Model packages are built on the host with :file:`tools/model_ota/package_model_axon.py`, purely from a reference build's ``zephyr.elf`` - unlike earlier versions of this tool, no separate generated-header text file needs to be parsed, since every scalar value is already inside the struct captured from the ELF.
-This requires ``pyelftools`` (already bundled with the NCS toolchain's Python; otherwise ``pip install pyelftools``).
+A model package (``hello_axon_model_pkg.bin``/``.hex``) is built automatically as part of a normal application build, once :kconfig:option:`CONFIG_HELLO_AXON_MODEL_OTA` is enabled (the default) - see :ref:`lib_model_ota` ("Build-time model packaging") for how :file:`CMakeLists.txt`'s ``nrf_axon_model_stub()`` call does this. No separate build or manual packaging step is needed:
 
 .. code-block:: console
 
-   cd tools/model_ota
-   python3 package_model_axon.py --elf ../../build_ref/zephyr/zephyr.elf \
-       --model-name hello_axon -o model_v1 --version 1.0.0 --dts ../../build_ref/zephyr/zephyr.dts
+   west build -b nrf54lm20dk/nrf54lm20b/cpuapp -d build samples/axon/hello_axon
 
-This produces ``model_v1.bin`` (the raw package) and ``model_v1.hex`` (the same bytes, addressed at the ``model_storage`` partition offset).
-``--dts`` reads that offset, and the partition's size, straight from the reference build's generated :file:`zephyr.dts` (searching for the ``model_storage`` partition node), instead of trusting a hand-typed ``--address``/``--partition-size`` to still match this board's overlay - the tool refuses to write a package that would not fit before you ever get to flashing it.
-Address correctness is not just cosmetic here: it is baked into every flash-owned pointer field the packaging tool relocates (see `Model-only OTA update PoC`_ above), so it must exactly match the target device's ``model_partition`` overlay, or the on-device loader will reject the package rather than wire up pointers that would otherwise silently point at the wrong flash address.
-If you'd rather not pass ``--dts``, ``--address``/``--partition-size`` still default to the nRF54LM20 DK's ``model_storage`` partition (``0x102000``, 968 kB).
+This produces ``build/hello_axon/hello_axon_model_pkg.bin`` (the raw package) and ``.hex`` (the same bytes, addressed at the ``model_storage`` partition offset).
 
 Flash the package independently of the application image, for example with:
 
 .. code-block:: console
 
-   nrfutil device program --firmware model_v1.hex \
+   nrfutil device program --firmware build/hello_axon/hello_axon_model_pkg.hex \
        --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
 
 Programming over SWD/J-Link halts the CPU while writing; without ``reset=RESET_SYSTEM`` (``nrfutil``'s post-program reset action otherwise defaults to ``RESET_NONE``), the core is left halted afterwards instead of resuming, so it looks like the board "freezes" until you press the reset button.
@@ -125,10 +107,10 @@ Testing
 
 1. |connect_kit|
 #. |connect_terminal_kit|
-#. Build and flash the application, then build a reference build, package :file:`src/generated/nrf_axon_model_hello_axon_.h` as ``model_v1``, and flash it to ``model_storage`` as described above.
+#. Build and flash the application, then flash the model package it produced (see above) to ``model_storage``.
 #. Reset the development kit and observe the logging output; it should show predictions matching a normal (non-OTA) build of this sample.
-#. Hand-tweak a constant in :file:`src/generated/nrf_axon_model_hello_axon_.h` (for example ``axon_model_const_hello_axon.l02_biasp``), rebuild the reference build, package it as ``model_v2``, and flash only that to ``model_storage`` - without rebuilding or reflashing the application.
-#. Observe the logging output change to reflect the "v2" model, either after the next periodic reload or after a reset.
+#. Hand-tweak a constant in :file:`src/generated/nrf_axon_model_hello_axon_.h` (for example ``axon_model_const_hello_axon.l02_biasp``), rebuild, and flash only the newly-produced model package to ``model_storage`` - without reflashing the application.
+#. Observe the logging output change to reflect the updated model, either after the next periodic reload or after a reset.
 
 Sample output
 -------------

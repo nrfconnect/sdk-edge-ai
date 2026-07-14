@@ -36,17 +36,4 @@ config HELLO_AXON_MODEL_OTA
 	  application image and inference runs once at boot, with no flash partition or periodic
 	  reload involved.
 
-config HELLO_AXON_REFERENCE_BUILD
-	bool "Build a reference image for tools/model_ota/package_model_axon.py"
-	depends on HELLO_AXON_MODEL_OTA
-	default n
-	help
-	  The deployed app no longer links in the generated model header (see README.rst): it
-	  loads its model from the model_storage flash partition instead. Packaging a model
-	  update still needs a real link address for the model's constants blob, which only
-	  exists in a build that references that header. Enabling this option builds such a
-	  "reference" image instead of the normal app - it links in the generated model header
-	  just enough to keep its symbols (and this build's addresses for them) alive in the
-	  resulting zephyr.elf, and does nothing else. This image is never flashed.
-
 endmenu

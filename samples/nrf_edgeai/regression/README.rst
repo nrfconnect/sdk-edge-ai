@@ -145,45 +145,32 @@ Package the coefficients already used by this sample's Neuton backend with:
 
 :file:`tools/model_ota/models/regression_v2.json` is a hand-tweaked variant, useful for observing a change in predictions after an update.
 
-``--dts`` reads the ``model_storage`` partition's actual address and size from a build's generated :file:`zephyr.dts` and preflight-checks the package fits, instead of trusting the tool's nRF54LM20 DK defaults to still match your build; point it at any existing build of this sample (Neuton or Axon, reference or not - the partition layout is the same either way).
+``--dts`` reads the ``model_storage`` partition's actual address and size from a build's generated :file:`zephyr.dts` and preflight-checks the package fits, instead of trusting the tool's nRF54LM20 DK defaults to still match your build; point it at any existing build of this sample (Neuton or Axon - the partition layout is the same either way).
 
 Packaging an Axon model
 ------------------------
 
-Axon packages capture the model's entire compiler-generated struct and embed the model's link addresses at packaging time, so they need a *reference build* — a build of this sample that links in the generated Axon model sources (:file:`src/nrf_edgeai_generated/Axon/nrf_edgeai_user_model_axon.h`) purely to keep their real addresses in the resulting :file:`zephyr.elf`.
-This reference image is never flashed as the application.
+Axon packages are built automatically as part of a normal application build (:kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON` + :kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA`, both on by default on ``nrf54lm20b``) - no separate build or manual packaging step is needed. See :ref:`lib_model_ota` ("Build-time model packaging") for how :file:`CMakeLists.txt`'s ``nrf_axon_model_stub()`` call does this, and for how Axon packages are put together.
 
-#. Build the reference image:
+.. code-block:: console
 
-   .. code-block:: console
+   west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build samples/nrf_edgeai/regression
 
-      west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build_ref -- \
-        -DCONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON=y -DCONFIG_NRF_EDGEAI_REGRESSION_REFERENCE_BUILD=y
-
-#. Package the model (no generated-header text file is needed - everything comes from the ELF):
-
-   .. code-block:: console
-
-      python3 tools/model_ota/package_model_axon.py \
-        --elf build_ref/regression/zephyr/zephyr.elf \
-        --model-name axon_user_instance_36025 -o model_v1 --version 1.0.0 \
-        --dts build_ref/regression/zephyr/zephyr.dts
-
-See :ref:`lib_model_ota` for how Axon packages are put together and their known limitations (models using ``labels`` or ``persistent_vars`` are rejected by the packaging tool).
+This produces ``build/regression/regression_model_pkg.bin``/``.hex``.
 
 Flashing a package
 -------------------
 
-Build and flash the normal (non-reference) application as usual, then flash the packaged ``model_v1.hex`` to the ``model_storage`` partition:
+Build and flash the application as usual, then flash the model package it produced to the ``model_storage`` partition:
 
 .. code-block:: console
 
-   nrfutil device program --firmware model_v1.hex --core Application \
+   nrfutil device program --firmware build/regression/regression_model_pkg.hex --core Application \
      --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
 
 ``reset=RESET_SYSTEM`` ensures the board resumes execution automatically; without it, ``nrfutil`` leaves the CPU halted after flashing.
 
-Repeat with a package built from :file:`regression_v2.json` (Neuton), or a hand-tweaked reference build (Axon), to observe predictions change after the update — no application rebuild or reflash required.
+Repeat with a package built from :file:`regression_v2.json` (Neuton), or a hand-tweaked generated Axon model header, rebuilt, to observe predictions change after the update — no application rebuild or reflash required.
 
 .. _runtime_regression_sample_inference:
 
