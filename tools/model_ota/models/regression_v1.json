@@ -1,0 +1,14 @@
+{
+	"_comment": "Same coefficients as samples/nrf_edgeai/regression's Neuton model (air quality regression), used here as the 'v1' package for the model-only OTA update PoC.",
+	"name": "aq_regression",
+	"version": "1.0.0",
+	"weights": [0.5644180, 0.1098376, 0.9692999, -0.4583102],
+	"neuron_links": [2, 9, 0, 9],
+	"neuron_internal_links_num": [0, 3],
+	"neuron_external_links_num": [2, 4],
+	"act_weights": [20.0000000, 10.0783634],
+	"neuron_act_type_mask": [1],
+	"output_neurons_indices": [1],
+	"output_scale_min": [0.2000000],
+	"output_scale_max": [63.7000008]
+}
