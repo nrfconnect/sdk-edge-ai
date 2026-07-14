@@ -33,3 +33,30 @@ dmic_dev: &pdm20 {
 &axon {
 	status = "okay";
 };
+
+/*
+ * This application does not use mcuboot, so the board's second application slot
+ * (slot1_partition, 968 kB) is unused. Repurpose it as two dedicated model_storage
+ * partitions - one per model - instead of the much smaller default "storage" partition. Same
+ * partition-repurposing approach as samples/axon/hello_axon and samples/nrf_edgeai/regression.
+ * Sized comfortably for the currently bundled models (WW: ~35 kB, KWS: ~350 kB) with headroom
+ * for future growth; unused whenever CONFIG_APP_MODEL_OTA=n, but always defined so switching
+ * that option on does not additionally require a devicetree change.
+ */
+/delete-node/ &slot1_partition;
+
+&cpuapp_rram {
+	partitions {
+		model_storage_ww: partition@102000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_storage_ww";
+			reg = <0x102000 DT_SIZE_K(64)>;
+		};
+
+		model_storage_kws: partition@112000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_storage_kws";
+			reg = <0x112000 DT_SIZE_K(904)>;
+		};
+	};
+};

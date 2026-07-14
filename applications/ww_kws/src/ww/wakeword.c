@@ -16,7 +16,7 @@
 
 #include "../dmic.h"
 #include "../model_utils.h"
-#include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
+#include "model_wiring.h"
 #include "wakeword.h"
 
 LOG_MODULE_REGISTER(ww);
@@ -68,8 +68,12 @@ static int ww_obsv_init(nrf_edgeai_t *model)
 
 int ww_init(void)
 {
-	ww_model = nrf_edgeai_user_model_36711();
-	__ASSERT_NO_MSG(ww_model);
+	ww_model = ww_model_ota_load();
+	if (ww_model == NULL) {
+		LOG_ERR("No usable WW model - see model_storage_ww flashing instructions in "
+			"doc/libraries/model_ota.rst");
+		return -ENOENT;
+	}
 	__ASSERT_NO_MSG(ww_model->input.window_size == DMIC_SAMPLES_IN_BLOCK);
 
 	nrf_edgeai_err_t err = nrf_edgeai_init(ww_model);

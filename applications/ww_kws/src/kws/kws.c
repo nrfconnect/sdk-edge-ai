@@ -17,7 +17,7 @@
 #include "../dmic.h"
 #include "../model_utils.h"
 #include "kws.h"
-#include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
+#include "model_wiring.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model_labels.h"
 
 LOG_MODULE_REGISTER(kws);
@@ -104,8 +104,12 @@ static int kws_obsv_init(nrf_edgeai_t *model)
 
 int kws_init(void)
 {
-	kws_model = nrf_edgeai_user_model_36712();
-	__ASSERT_NO_MSG(kws_model);
+	kws_model = kws_model_ota_load();
+	if (kws_model == NULL) {
+		LOG_ERR("No usable KWS model - see model_storage_kws flashing instructions in "
+			"doc/libraries/model_ota.rst");
+		return -ENOENT;
+	}
 	__ASSERT_NO_MSG(nrf_edgeai_model_outputs_num(kws_model) == KEYWORDS_COUNT);
 	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(kws_model) == DMIC_SAMPLES_IN_BLOCK);
 

@@ -64,6 +64,42 @@ config KWS_EMA_ALPHA
 	  Coefficient for new entries in exponential moving average calculation for average class
 	  probability. The value is expressed in units of 1/1000.
 
+config APP_MODEL_OTA
+	bool "Load wakeword/keyword-spotting models from flash (model-only OTA)"
+	default y
+	select FLASH
+	select FLASH_MAP
+	select CRC
+	select MODEL_OTA
+	select MODEL_OTA_AXON
+	help
+	  When enabled (the default), this application does not ship compiled-in wakeword and
+	  keyword-spotting models: at boot, each is loaded and validated from its own dedicated
+	  flash partition instead - model_storage_ww and model_storage_kws respectively (see
+	  boards/*.overlay and doc/libraries/model_ota.rst) - independently of the application
+	  image. Disable this to restore this application's original pre-model-OTA behavior:
+	  both models are compiled directly into the application image.
+
+if APP_MODEL_OTA
+
+config APP_WW_PERSISTENT_VARS_SIZE
+	int "Size (in int32_t elements) of the WW model's persistent_vars RAM array"
+	default 1160
+	help
+	  Must match the axon_model_<name>_persistent_vars[] array size in the WW model's own
+	  generated header (src/ww/nrf_edgeai_generated/nrf_edgeai_user_model_axon.h) - update
+	  this alongside that header whenever the WW model is regenerated.
+
+config APP_KWS_PERSISTENT_VARS_SIZE
+	int "Size (in int32_t elements) of the KWS model's persistent_vars RAM array"
+	default 6648
+	help
+	  Must match the axon_model_<name>_persistent_vars[] array size in the KWS model's own
+	  generated header (src/kws/nrf_edgeai_generated/nrf_edgeai_user_model_axon.h) - update
+	  this alongside that header whenever the KWS model is regenerated.
+
+endif # APP_MODEL_OTA
+
 config MODELS_OBSERVABILITY
 	bool "Edge AI observability metrics"
 	depends on NRF_EDGEAI_OBSV

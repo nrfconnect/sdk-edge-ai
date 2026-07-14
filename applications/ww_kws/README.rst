@@ -54,6 +54,8 @@ Replacing models
 
 You can replace the bundled models using the `Text to Wake Word Detection <Nordic Edge AI Lab Wake Word Detection_>`_ feature of the `Nordic Edge AI Lab`_ or one of `ready-to-use models <Nordic Edge AI Lab ready-to-use models_>`_.
 
+With :kconfig:option:`CONFIG_APP_MODEL_OTA` enabled (the default - see "Model-only OTA update" below), replacing a model at runtime is just a matter of flashing a new model package to the relevant partition; the steps below (replacing the generated header and rebuilding) are only needed to change which model the application *builds packages from* in the first place, or to restore this application's original pre-model-OTA behavior (:kconfig:option:`CONFIG_APP_MODEL_OTA` disabled).
+
 .. tabs::
 
    .. group-tab:: Wakeword detection model
@@ -61,7 +63,7 @@ You can replace the bundled models using the `Text to Wake Word Detection <Nordi
       To replace the model used in wakeword detection stage complete the following steps:
 
       1. Replace the files inside :file:`src/ww/nrf_edgeai_generated` directory with files downloaded from `Nordic Edge AI Lab`_.
-      #. In :c:func:`ww_init`, set the ``ww_model`` pointer using the model getter from the generated files.
+      #. If the new model's ``persistent_vars`` array size differs from the previous one, update :kconfig:option:`CONFIG_APP_WW_PERSISTENT_VARS_SIZE` to match (see :file:`src/ww/nrf_edgeai_generated/nrf_edgeai_user_model_axon.h`'s own ``axon_model_<name>_persistent_vars[]`` array size).
       #. Adjust the Kconfig options to tune wakeword detection postprocessing to your model.
 
 
@@ -70,10 +72,52 @@ You can replace the bundled models using the `Text to Wake Word Detection <Nordi
       To replace the model used in keyword spotting stage complete the following steps:
 
       1. Replace the files inside :file:`src/kws/nrf_edgeai_generated` directory with files downloaded from `Nordic Edge AI Lab`_.
-      #. In :c:func:`kws_init`, set the ``kws_model`` pointer using the model getter from the generated files.
+      #. If the new model's ``persistent_vars`` array size differs from the previous one, update :kconfig:option:`CONFIG_APP_KWS_PERSISTENT_VARS_SIZE` to match (see :file:`src/kws/nrf_edgeai_generated/nrf_edgeai_user_model_axon.h`'s own ``axon_model_<name>_persistent_vars[]`` array size).
       #. Update the ``keyword_detection_ctxs`` array in the :file:`src/kws/kws.c` file with keyword labels from :file:`src/kws/nrf_edgeai_generated/nrf_edgeai_user_model_labels.h` file and thresholds for keyword spotting.
       #. When using the observability feature, set the ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` Kconfig option to number of keywords spotted plus 2 for auxiliary classes.
       #. Adjust the Kconfig options to tune keyword spotting postprocessing to selected model.
+
+.. _app_ww_kws_model_ota:
+
+Model-only OTA update
+======================
+
+This application does not use mcuboot, so its second application slot (``slot1_partition``) is unused on the boards it supports.
+The board overlay in :file:`applications/ww_kws/boards/` repurposes that space as two dedicated partitions instead - ``model_storage_ww`` and ``model_storage_kws``, one per model - sized to comfortably fit larger models too.
+At boot, the application loads and validates each model's own package from its partition and wires it up for inference - see :ref:`lib_model_ota` for how the package format, host-side packaging tools, and on-device loading work, including how CPU op extensions and ``persistent_vars`` (both used by the bundled models) are handled.
+Flashing a new package to either partition is enough to change what that model predicts, without rebuilding or reflashing the application.
+
+Making model OTA optional
+--------------------------
+
+Model-only OTA is enabled by default (:kconfig:option:`CONFIG_APP_MODEL_OTA` defaults to ``y``).
+Build with it disabled to restore this application's original, pre-model-OTA behavior instead: both models are compiled directly into the application image, and no ``model_storage_ww``/``model_storage_kws`` partitions or flash packages are involved.
+
+.. code-block:: console
+
+   west build -b nrf54lm20dk/nrf54lm20b/cpuapp applications/ww_kws -- -DCONFIG_APP_MODEL_OTA=n
+
+Packaging and flashing a model
+--------------------------------
+
+Both models' packages are built automatically as part of a normal application build - no separate build or manual packaging step is needed:
+
+.. code-block:: console
+
+   west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws
+
+This produces ``build/ww_kws/ww_model_pkg.bin``/``.hex`` and ``build/ww_kws/kws_model_pkg.bin``/``.hex``.
+Flash the application as usual, then flash either (or both) model packages to their partitions:
+
+.. code-block:: console
+
+   nrfutil device program --firmware build/ww_kws/ww_model_pkg.hex --core Application \
+     --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_NONE
+   nrfutil device program --firmware build/ww_kws/kws_model_pkg.hex --core Application \
+     --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
+
+``reset=RESET_SYSTEM`` on the last command ensures the board resumes execution automatically; without it, ``nrfutil`` leaves the CPU halted after flashing.
+Repeat after replacing a model (see "Replacing models" above) and rebuilding, to observe the new model's behavior - no need to reflash anything but that one model's package.
 
 Requirements
 ************
