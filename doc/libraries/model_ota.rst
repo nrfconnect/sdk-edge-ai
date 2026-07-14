@@ -14,6 +14,7 @@ For sample-specific details (Kconfig options, board overlays, expected sample ou
 
 * :file:`samples/axon/hello_axon/README.rst` ("Model-only OTA update PoC") - Axon, minimal sample.
 * :file:`samples/nrf_edgeai/regression/README.rst` ("Model-only OTA update") - both backends, folded into a real inference sample.
+* :file:`applications/ww_kws/README.rst` - two independent Axon models on one device, each using CPU op extensions and ``persistent_vars`` - the real-world validation for those two features (see "Axon packages" below).
 
 Overview
 ********
@@ -24,20 +25,21 @@ This library lets an application instead load its model at runtime from a "model
 There is no runtime OTA transport in this PoC: getting a package onto the device is entirely a flash-only operation (for example, over SWD with ``nrfutil``), decoupled from the application.
 The library itself is only concerned with what happens once bytes already sit in ``model_storage``:
 
-* Validating the package (magic, container format version, model type, section sizes, CRC32) before trusting any of it.
+* Validating the package (magic, container format version, model type, sizes, CRC32) before trusting any of it.
 * Wiring the payload into a working model instance the rest of nRF Edge AI can run inference against.
-* Degrading gracefully - skipping inference and retrying periodically - if ``model_storage`` does not currently hold a valid package, rather than falling back to any compiled-in model.
+* Failing loudly and skipping inference - rather than falling back to any compiled-in model - if ``model_storage`` does not currently hold a valid package.
 
-The ``model_storage`` partition itself is not defined by this library: each sample or application provides its own devicetree overlay for it (typically repurposing an mcuboot-less board's unused second application slot).
+The ``model_storage`` partition itself is not defined by this library: each sample or application provides its own devicetree overlay for it (typically repurposing an mcuboot-less board's unused second application slot), and passes its own partition (by devicetree node label) to ``model_pkg_load_neuton()`` / ``model_pkg_load_axon()``.
+An application hosting more than one model (see :file:`applications/ww_kws`) simply defines one partition per model and loads each independently.
 
-Both samples that use this library build model-OTA in by default, but can opt out of it via a per-sample Kconfig option (:kconfig:option:`CONFIG_HELLO_AXON_MODEL_OTA` / :kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA`, both default ``y``) to restore their original, pre-model-OTA behavior instead: the model compiled directly into the application image, with no ``model_storage`` partition and no runtime loading.
+Every sample and application that uses this library builds model-OTA in by default, but can opt out of it via its own Kconfig option (:kconfig:option:`CONFIG_HELLO_AXON_MODEL_OTA` / :kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA` / :kconfig:option:`CONFIG_APP_MODEL_OTA`, all default ``y``) to restore its original, pre-model-OTA behavior instead: the model(s) compiled directly into the application image, with no ``model_storage`` partition(s) and no runtime loading.
 See each sample's README.rst ("Making model OTA optional") for the exact build invocation.
 
-The ``model_storage`` partition
-=================================
+The ``model_storage`` partition(s)
+=====================================
 
 None of the samples that use this library run mcuboot, so a board's second application slot (``slot1_partition``, normally reserved for mcuboot's image-swap update mechanism) sits entirely unused.
-Every sample overlay deletes that node and repurposes the same flash region as a dedicated ``model_storage`` partition instead, sized generously for future (larger) models rather than reusing the much smaller default ``storage`` partition.
+Every sample overlay deletes that node and repurposes the same flash region as one or more dedicated ``model_storage*`` partitions instead, sized generously for future (larger) models rather than reusing the much smaller default ``storage`` partition.
 For example, see :file:`samples/axon/hello_axon/boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay`:
 
 .. code-block:: dts
@@ -58,8 +60,10 @@ For example, see :file:`samples/axon/hello_axon/boards/nrf54lm20dk_nrf54lm20b_cp
        };
    };
 
-Since every loader and packaging tool addresses this partition by its devicetree node label (``model_partition``), a board that is missing this overlay, or that spells the label differently, would otherwise only surface as a much less obvious compile error deep inside a :file:`flash_map.h` macro expansion (or, worse, a working build that silently addresses the wrong flash region).
-Both :file:`samples/axon/hello_axon/src/main.c` and :file:`samples/nrf_edgeai/regression/src/main.c` guard against this with a build-time assertion right where the partition is first used:
+:file:`applications/ww_kws` follows the same pattern but splits the same region into two independent partitions, ``model_storage_ww`` and ``model_storage_kws``, one per model it hosts.
+
+Since every loader and packaging tool addresses a partition by its devicetree node label, a board that is missing this overlay, or that spells the label differently, would otherwise only surface as a much less obvious compile error deep inside a :file:`flash_map.h` macro expansion (or, worse, a working build that silently addresses the wrong flash region).
+Every sample/application that uses this library guards against this with a build-time assertion right where its partition(s) are first used, for example :file:`samples/axon/hello_axon/src/main.c`:
 
 .. code-block:: c
 
@@ -69,7 +73,7 @@ Both :file:`samples/axon/hello_axon/src/main.c` and :file:`samples/nrf_edgeai/re
 Any new sample or application that adopts this library should add the same overlay pattern and ``BUILD_ASSERT`` for its own boards.
 
 .. uml::
-   :caption: Components and data flow. Host-side packaging is offline and backend-specific; on-device, only one backend's loader is actually built into a given image.
+   :caption: Components and data flow. Host-side packaging is offline and backend-specific; on-device, only one backend's loader is actually built into a given image (possibly loading more than one model of that backend, each from its own partition).
 
    skinparam shadowing false
    skinparam roundcorner 0
@@ -96,7 +100,8 @@ Any new sample or application that adopts this library should add the same overl
 
    package "Host (build machine)" {
      component "Neuton model JSON\n(models/*.json)" as NeutonJson
-     component "Reference build\nzephyr.elf" as RefElf
+     component "Application's own\nzephyr.elf (no model linked in)" as AppElf
+     component "Model stub\n(nrf_axon_model_stub())" as Stub
      component "package_model.py" as PkgNeuton
      component "package_model_axon.py" as PkgAxon
      component "model_v*.bin / .hex" as PkgFile
@@ -105,7 +110,7 @@ Any new sample or application that adopts this library should add the same overl
    component "nrfutil device program" as Nrfutil
 
    package "Device" {
-     database "model_storage\n(flash partition)" as ModelStorage
+     database "model_storage*\n(flash partition(s))" as ModelStorage
 
      package "lib/model_ota" {
        component "model_pkg_load_neuton()" as LoadNeuton
@@ -113,11 +118,12 @@ Any new sample or application that adopts this library should add the same overl
      }
 
      component "nrf_edgeai_t\n(model.type = NEUTON | AXON)" as EdgeAi
-     component "Application\n(inference loop, model_ota_load())" as App
+     component "Application\n(inference loop)" as App
    }
 
    NeutonJson --> PkgNeuton
-   RefElf --> PkgAxon
+   AppElf --> Stub : extract_elf_syms.py\n(app-owned symbol addresses)
+   Stub --> PkgAxon
    PkgNeuton --> PkgFile
    PkgAxon --> PkgFile
    PkgFile --> Nrfutil : flash independently\nof the application image
@@ -133,14 +139,16 @@ Any new sample or application that adopts this library should add the same overl
      Only one backend's loader is actually built into a given device
      (CONFIG_MODEL_OTA_NEUTON xor CONFIG_MODEL_OTA_AXON, selected by the
      application); the two never compete for model_storage on the same
-     device, only in this shared diagram.
+     device, only in this shared diagram. An application with several
+     Axon models (e.g. ww_kws) builds one model stub, and calls
+     model_pkg_load_axon() once, per model.
    endlegend
 
 Package format
 ***************
 
-Both backends share the same *kind* of on-flash package - a fixed-size header (magic, format version, model type, name, model version, per-section byte lengths, CRC32) immediately followed by the payload sections it describes - but the two headers and payload layouts are otherwise independent and not interchangeable.
-See :file:`include/model_ota/model_pkg.h` for the exact struct/enum definitions (``model_pkg_header`` / ``model_pkg_axon_header``, ``model_pkg_neuton_section`` / ``model_pkg_axon_section``).
+Both backends share the same *kind* of on-flash package - a fixed-size header (magic, format version, model type, name, model version, size fields, CRC32) immediately followed by the payload it describes - but the two headers and payload layouts are otherwise independent and not interchangeable.
+See :file:`include/model_ota/model_pkg.h` for the exact struct/enum definitions (``model_pkg_header`` / ``model_pkg_axon_header``, ``model_pkg_neuton_section``).
 
 Neuton packages
 ================
@@ -149,7 +157,7 @@ A Neuton package's payload is just the model's own raw arrays (weights, activati
 Because nothing in the payload needs to know its own flash address, the on-device loader (``model_pkg_load_neuton()`` in :file:`model_pkg_neuton.c`) simply wires each section's flash address (found by offsetting from the start of the payload) directly into a ``nrf_edgeai_model_neuton_t``, plus a caller-provided RAM scratch buffer for neuron activations sized by :kconfig:option:`CONFIG_MODEL_OTA_MAX_NEURONS`.
 
 .. uml::
-   :caption: Neuton packaging and loading. No addresses are embedded in the payload, so packaging needs no reference build or ELF introspection.
+   :caption: Neuton packaging and loading. No addresses are embedded in the payload, so packaging needs no ELF introspection at all.
 
    skinparam shadowing false
    skinparam roundcorner 0
@@ -185,11 +193,11 @@ Because nothing in the payload needs to know its own flash address, the on-devic
 
    Host -> Host : read model JSON\n(weights, topology, output scaling)
    Host -> Host : concatenate raw arrays\n(no addresses embedded)
-   Host -> Host : build header\n(magic, format_version=5, section_len[], CRC32)
+   Host -> Host : build header\n(magic, format_version, section_len[], CRC32)
    note right of Host
      Neuton payload never embeds a flash
-     address, so no reference build or
-     ELF introspection is needed.
+     address, so no ELF introspection
+     is needed.
    end note
 
    == Flashing ==
@@ -214,26 +222,35 @@ Because nothing in the payload needs to know its own flash address, the on-devic
 Axon packages
 ==============
 
-An Axon package's payload is the model's *entire* compiler-generated ``nrf_axon_nn_compiled_model_s`` struct, captured byte-for-byte from a reference build, plus its command buffer and constants blob (``model_const``), and optionally an ``extra_outputs`` array and/or a ``labels`` array (plus the individual label strings it points to).
+An Axon package's payload is a "model stub"'s *entire linked memory image*, byte-for-byte - not a hand-picked, individually relocated subset of the compiler-generated ``nrf_axon_nn_compiled_model_s`` struct's fields.
+This is what makes op extensions, ``persistent_vars``, and ``labels`` all "just work" without any special-casing in the packaging tool or the on-device loader: whatever the Axon NN compiler emitted for a given model is preserved and correctly addressed, whole.
 
-Unlike Neuton, Axon's compiled-model struct is full of absolute pointers: the command buffer's own internal pointers into ``model_const``, and pointer fields inside the struct itself (``cmd_buffer_ptr``, ``model_const_ptr``, ``extra_outputs``, ``labels``, ``inputs[i].ptr``, ``output_ptr``).
-Those pointers are only correct for the *reference build* they were captured from - they need to be rewritten (relocated) to wherever the corresponding data actually ends up once packaged.
+The model stub, and why no relocation is needed
+---------------------------------------------------
 
-This library resolves that relocation **once, on the host, at packaging time** (:file:`tools/model_ota/package_model_axon.py`), not on-device at every load:
+A **model stub** is a tiny, standalone link of nothing but a generated Axon model header (:file:`nrf_axon_model_<name>.h`), produced automatically as part of a normal ``west build`` by ``nrf_axon_model_stub()`` (:file:`lib/model_ota/cmake/nrf_axon_model_stub.cmake`) - no separate build step, and no "reference build" of the whole application.
+Crucially, the *deployed application* never links the generated header in at all: it only ever calls ``model_pkg_load_axon()`` against whatever is currently in ``model_storage``.
 
-* Pointers that refer to *flash-owned model data* (``cmd_buffer_ptr``, ``model_const_ptr``, ``extra_outputs``, ``labels`` and its individual label strings, and the command buffer's own internal pointers into ``model_const``) are rewritten to their final ``model_storage`` address directly, since that address is fixed and known ahead of time.
-* Pointers that instead refer to *this device's own RAM* (``nrf_axon_interlayer_buffer``, for ``inputs[i].ptr`` / ``output_ptr``) cannot be resolved on the host, since that buffer's actual address is only known to the deployed firmware.
-  These are reduced to a byte offset from the interlayer buffer's base instead, which the on-device loader adds back in.
+A generated Axon model header references three kinds of symbols it does not itself define, because they are owned by whatever application eventually deploys the model:
 
-Because the packaging tool captures and relocates the *entire* struct rather than a hand-picked subset of scalar fields, the on-device loader (``model_pkg_load_axon()`` in :file:`model_pkg_axon.c`) does not need to know a model's shape (input count, output count, ...) ahead of time - see "Known limitations" below for the shapes it still cannot handle.
+* ``nrf_axon_interlayer_buffer`` - RAM scratch shared by every model on the device.
+* ``nrf_axon_nn_op_extension_*`` - CPU fallback functions for NPU operations the model uses (for example ``softmax``, ``sigmoid_v2`` - see :file:`drivers/axon/nrf_axon_nn_op_extensions.c` for what these are).
+* ``axonpro_*`` driver-owned lookup-table constants some ``cmd_buffer`` entries reference directly (for example ``axonpro_int8_packing_filter``) - fixed tables baked into the Axon driver library, not into the application, but still only resolvable once something has actually linked that driver in.
+* ``axon_model_<name>_persistent_vars`` - the RAM backing store for a model's persistent variables (streaming/recurrent models), if it has any. Unlike the first three, the generated header *defines* this array itself (not ``extern``), since ordinarily the header is compiled straight into the application that owns it.
 
-``cmd_buffer`` itself contains one more kind of absolute reference that the above cannot cover: literal words embedded by the Axon NN compiler that point at ``nrf_axon_interlayer_buffer`` directly (used for inter-layer data handoff between the NPU's compiled instructions), independently of the struct's ``inputs[i].ptr``/``output_ptr`` fields.
-Unlike the command buffer's references into ``model_const``, these cannot be relocated on the host (the deployed device's actual buffer address isn't known yet) or on-device (``cmd_buffer`` stays XIP in flash, never copied to RAM, so there is nothing to patch).
-Every board that uses model OTA for Axon therefore reserves a fixed-address memory region for ``nrf_axon_interlayer_buffer`` (see "Board requirements" below) so that address is identical in the reference build and every deployed build, and those embedded references are always correct by construction.
-As defense in depth, the packaging tool also records the reference build's ``nrf_axon_interlayer_buffer`` address in the package (``interlayer_addr``), and the loader rejects the package outright if it does not match this device's actual address, rather than risk wiring up a model that would silently mispredict.
+``nrf_axon_model_stub()`` builds the model stub in three steps:
+
+#. **Discover** which of the above symbols a given model's header actually references (:file:`tools/model_ota/gen_axon_stub_fixups.py`), and force them to stay resolvable in the *deployed application's* link via ``toolchain_ld_force_undefined_symbols()`` - otherwise nothing in the application references them either, and the linker's ``--gc-sections`` would happily discard them.
+#. Once the application's own ``zephyr.elf`` exists, **extract the real address** each of those symbols ended up at in *this specific build* (:file:`tools/model_ota/extract_elf_syms.py`, via ``nm``), and turn that into a ``PROVIDE()`` linker-script fragment.
+#. **Compile and link** a patched copy of the model header (``persistent_vars`` array definitions rewritten to ``extern``, so the stub references the application's own copy instead of defining a second one) at the target ``model_storage*`` partition's own address, feeding it that ``PROVIDE()`` script.
+
+Once linked this way, *every* pointer field the model header's data carries - flash-owned (``cmd_buffer``, ``model_const``, ``labels``, ``extra_outputs``) or app-owned RAM (``nrf_axon_interlayer_buffer``, ``persistent_vars``, op-extension function pointers embedded in ``cmd_buffer``) - is already the final, correct absolute address for this exact application, because the *compiler and linker* computed it, not host-side Python arithmetic.
+There is nothing left to relocate.
+
+:file:`tools/model_ota/package_model_axon.py` therefore does far less work than a from-scratch relocating packager would: it copies the model stub's ``.model_stub`` output section verbatim as the package payload, and just records where the ``nrf_axon_nn_compiled_model_s`` struct starts within it (``struct_offset``) plus the address the stub was linked at (``package_base``, for the on-device loader to cross-check against).
 
 .. uml::
-   :caption: Axon packaging and loading. Flash-owned pointers are relocated once on the host; only RAM-owned pointers are patched on-device, and only cmd_buffer/model_const stay XIP.
+   :caption: Axon packaging and loading via the second-pass link. Every pointer is already correct by construction of the model stub's own link; nothing is relocated on the host or patched on-device.
 
    skinparam shadowing false
    skinparam roundcorner 0
@@ -260,56 +277,51 @@ As defense in depth, the packaging tool also records the reference build's ``nrf
      Shadowing false
    }
 
-   participant "Host:\nreference build\n(zephyr.elf)" as Ref
+   participant "Host:\napplication build\n(zephyr.elf, no model linked in)" as AppElf
+   participant "Host:\nnrf_axon_model_stub()" as Stub
    participant "Host:\npackage_model_axon.py" as Host
-   participant "model_storage\n(flash)" as Flash
+   participant "model_storage*\n(flash)" as Flash
    participant "model_pkg_load_axon()" as Loader
    participant "Application" as App
 
+   == Build (host, part of a normal west build) ==
+
+   Stub -> Stub : gen_axon_stub_fixups.py:\ndiscover app-owned symbols,\npatch persistent_vars to extern
+   AppElf -> Stub : extract_elf_syms.py:\nnm real addresses of those symbols\nin *this* application's own link
+   Stub -> Stub : compile+link patched header\nat model_storage* partition address,\nPROVIDE()-ing those real addresses
+   note right of Stub
+     Every pointer field - flash-owned or
+     app-owned RAM - is now the final,
+     correct absolute address, computed
+     by the compiler/linker, not Python.
+   end note
+   Stub -> Host : model stub ELF (.model_stub section)
+
    == Packaging (host, offline) ==
 
-   Ref -> Ref : CONFIG_..._REFERENCE_BUILD=y\nkeeps model_<name>, cmd_buffer_<name>,\naxon_model_const_<name> in the ELF
-   Host -> Ref : pyelftools: read symbol bytes\n+ their original link addresses
-   Host -> Host : memcpy the entire\nnrf_axon_nn_compiled_model_s (verbatim)
-   Host -> Host : classify every pointer field:\nflash-owned (cmd_buffer, model_const, inputs[])\nvs RAM-owned (nrf_axon_interlayer_buffer,\noutput_ptr, persistent_vars)
-   Host -> Host : relocate flash-owned pointers\nto their model_storage address\n(host-side, incl. cmd_buffer internal pointers)
-   Host -> Host : rewrite RAM-owned pointers as\noffsets from nrf_axon_interlayer_buffer
-   note right of Host
-     Only offsets - not real addresses - are
-     stored for RAM-owned fields, since the
-     RAM buffer address is fixed at build time
-     but the struct is packaged once and may be
-     flashed onto builds with different addresses.
-   end note
-   Host -> Host : build header (magic, format_version=5,\nstruct_size, package_base,\ninterlayer_addr, CRC32)
-   note right of Host
-     interlayer_addr is this reference
-     build's nrf_axon_interlayer_buffer
-     address, stored purely so the loader
-     can detect a mismatch - see note below.
-   end note
+   Host -> Host : copy .model_stub section verbatim\n(no relocation needed)
+   Host -> Host : record struct_offset, package_base,\nstruct_size, CRC32 in the header
 
    == Flashing ==
 
    Host -> Flash : nrfutil device program model_v1.hex\n(independent of the application image)
 
-   == Loading (device, at boot and periodically) ==
+   == Loading (device, at boot) ==
 
-   App -> Loader : model_ota_load()
+   App -> Loader : model_pkg_load_axon(fa_id, partition_addr, ...)
    Loader -> Flash : flash_area_read(header)
    Loader -> Loader : validate magic, format_version, struct_size,\npackage_base == partition address, CRC32
-   Loader -> Loader : validate interlayer_addr ==\n&nrf_axon_interlayer_buffer on this device
-   alt package invalid, absent, or interlayer_addr mismatch
-     Loader --> App : NULL
-     App -> App : skip inference,\nretry on next iteration
+   alt package invalid or absent
+     Loader --> App : error
+     App -> App : skip inference
    else package valid
-     Loader -> Flash : memcpy(out_model, MODEL_STRUCT, struct_size)\n(cmd_buffer / model_const stay XIP in flash)
-     Loader -> Loader : reject unsupported shapes\n(labels != NULL, persistent_vars.count > 0)
-     Loader -> Loader : patch RAM-owned pointers:\nadd nrf_axon_interlayer_buffer base\nto each stored offset
-     Loader -> Loader : sanity-check cmd_buffer_ptr / model_const_ptr\nagainst computed section addresses
+     Loader -> Flash : memcpy(out_model, struct_offset, struct_size)\n(cmd_buffer / model_const stay XIP in flash)
+     Loader -> Loader : sanity-check cmd_buffer_ptr / model_const_ptr\nfall within this package's payload
      Loader --> App : nrf_axon_nn_compiled_model_s *
      App -> App : nrf_axon_nn_model_validate() +\nnrf_axon_nn_run_inference()
    end
+
+Because the model stub already resolved every pointer, ``model_pkg_load_axon()`` (:file:`model_pkg_axon.c`) does not need to know a model's shape (input count, output count, whether it uses ``persistent_vars`` or ``labels``, ...) ahead of time, and performs no relocation of any kind at load time - only the checks in the diagram above, all of them either integrity checks (CRC32) or defense-in-depth sanity checks against a package built for the wrong partition/firmware.
 
 Host-side packaging tools
 ***************************
@@ -317,15 +329,16 @@ Host-side packaging tools
 Model packages are produced by Python tools under :file:`tools/model_ota/`, run on the host, never on-device:
 
 * :file:`package_model.py` - builds a Neuton package from a plain-JSON model description (see :file:`tools/model_ota/models/*.json` for examples).
-  No ELF or reference build is needed, since a Neuton payload embeds no addresses.
+  No ELF is needed, since a Neuton payload embeds no addresses.
   Useful for hand-edited/synthetic variants that have no corresponding generated source, such as :file:`tools/model_ota/models/regression_v2.json` (a deliberately hand-tweaked "retrained" variant).
-* :file:`package_model_neuton.py` - builds a Neuton package directly from a Neuton codegen's generated model source (e.g. :file:`nrf_edgeai_generated/Neuton/nrf_edgeai_user_model.c` under any Neuton sample), regex-parsing its ``#define`` counts and ``static const`` coefficient arrays straight into a package - no hand-transcription into JSON, and (like :file:`package_model.py`) no ELF or reference build needed.
-  This is the preferred way to package a freshly (re)trained Neuton model.
+* :file:`package_model_neuton.py` - builds a Neuton package directly from a Neuton codegen's generated model source (e.g. :file:`nrf_edgeai_generated/Neuton/nrf_edgeai_user_model.c` under any Neuton sample), regex-parsing its ``#define`` counts and ``static const`` coefficient arrays straight into a package - no hand-transcription into JSON, and (like :file:`package_model.py`) no ELF needed.
+  This is the preferred way to package a freshly (re)trained Neuton model. Called automatically by ``nrf_neuton_model_package()`` (:file:`lib/model_ota/cmake/nrf_neuton_model_package.cmake`) as part of a normal ``west build`` for any sample that opts in - see :file:`samples/nrf_edgeai/regression/CMakeLists.txt` - reading the target partition's address/size straight from devicetree rather than needing a completed build's ``zephyr.dts`` via ``--dts`` (that option remains available for packaging outside of a CMake-integrated build, e.g. a different model than the one a sample currently bundles).
   Only ``MODEL_PARAMS_TYPE == f32`` models are supported (q16/q8 quantized models are rejected), and only regression/anomaly-detection tasks (only those generate the ``MODEL_OUTPUT_SCALE_MIN``/``MAX`` arrays the package format requires; classification-only models are rejected) - both limitations inherited from the package format itself, not specific to this tool.
-* :file:`package_model_axon.py` - builds an Axon package purely by introspecting a *reference build's* ``zephyr.elf`` with ``pyelftools``: it locates the compiled model's symbols, reads the ``nrf_axon_nn_compiled_model_s`` struct's raw bytes with :file:`axon_struct_layout.py` (a ``ctypes`` mirror of the struct's on-device ABI), classifies every pointer field as flash-owned or RAM-owned, and relocates each accordingly (see "Axon packages" above). For classification models, it also walks the ``labels`` array and reads each label string directly out of whatever ``.rodata`` section holds it - even if the compiler merged it into an anonymous, symbol-less string-literal section - and repacks them alongside the array itself.
-  Every symbol lookup and cross-check (missing symbol, size/address mismatch against the struct's own fields, ...) fails loudly with a specific error at packaging time, on the host - so a stale or mismatched reference build is caught here, well before a package is ever written or flashed, with no separate build-time validation step needed.
-  It also records the reference build's ``nrf_axon_interlayer_buffer`` address in the package (``interlayer_addr``) so the on-device loader can detect, rather than silently mispredict on, a mismatch against this device's actual address - see "Board requirements" below for why that mismatch should not normally happen at all.
-* :file:`model_partition_layout.py` - shared helper both tools use to read the target ``model_storage`` partition's address and size from a build's generated ``zephyr.dts`` (via ``--dts``), and to preflight-check that the generated package will actually fit before writing anything - instead of trusting a hand-typed ``--address``/``--partition-size`` to still match the target board's devicetree.
+* :file:`gen_axon_stub_fixups.py` - discovers the app-owned symbols (interlayer buffer, op extensions, ``axonpro_*`` constants, ``persistent_vars``) a given model header references, and produces the patched copy of that header the model stub actually compiles (see "Axon packages" above). Called automatically by ``nrf_axon_model_stub()``, both at CMake configure time (to force-keep the discovered symbols alive) and at build time (to regenerate the patched header if the model header itself changes).
+* :file:`extract_elf_syms.py` - ``nm``'s a built ``zephyr.elf`` for a given symbol list's real addresses, and emits a ``PROVIDE()`` linker-script fragment (setting the Thumb bit for function symbols, i.e. op extensions). Called automatically by ``nrf_axon_model_stub()`` once the application's own ELF exists.
+* :file:`package_model_axon.py` - builds an Axon package from a model stub's ELF (see "Axon packages" above): it locates the ``.model_stub`` output section and the ``nrf_axon_nn_compiled_model_s`` struct's raw bytes and address within it with :file:`axon_struct_layout.py` (a ``ctypes`` mirror of the struct's on-device ABI), validates the model's shape is supported (rejects a non-``NULL`` ``packed_output_buf`` - see "Known limitations" below), and writes the header plus payload verbatim - no relocation.
+  Every check (missing symbol, size/address mismatch, package outside the target partition, ...) fails loudly with a specific error at packaging time, on the host - so a stale or mismatched build is caught here, well before a package is ever written or flashed.
+* :file:`model_partition_layout.py` - shared helper both Axon and Neuton tools use to read the target ``model_storage`` partition's address and size from a build's generated ``zephyr.dts`` (via ``--dts``), and to preflight-check that the generated package will actually fit before writing anything - instead of trusting a hand-typed ``--address``/``--partition-size`` to still match the target board's devicetree.
   It also prints a one-line utilization report (used size, partition size, percentage used) after every successful build, e.g.:
 
   .. code-block:: console
@@ -334,10 +347,11 @@ Model packages are produced by Python tools under :file:`tools/model_ota/`, run 
              model_storage:      48 KB      968 KB     4.96%
 
   so shrinking headroom is visible on every packaging run, well before a model actually stops fitting.
-* :file:`test_package_model_axon.py` - host-side unit tests for the Axon tool's pointer classification/relocation logic, using synthetic model shapes (multi-input, ``extra_outputs``, ``labels``, rejected shapes) that do not exist as real models anywhere in this repo yet.
+* :file:`test_package_model_axon.py` - host-side unit tests for the Axon tool's model-shape validation and on-flash header format, using synthetic ``nrf_axon_nn_compiled_model_s`` instances built directly from raw bytes (no ELF needed for these).
+* :file:`test_gen_axon_stub_fixups.py` / :file:`test_extract_elf_syms.py` - host-side unit tests for the model-stub symbol-discovery/header-patching and ELF-symbol-extraction logic, using synthetic header text and a mocked ``nm`` output respectively.
 * :file:`test_package_model_neuton.py` - host-side unit tests for the Neuton source parser, checking it reproduces :file:`tools/model_ota/models/regression_v1.json` byte-for-byte from :file:`tools/model_ota/models/regression_v1_generated.c` (a restored copy of the generated source that JSON was originally hand-transcribed from), plus its error paths (wrong precision, wrong task, missing arrays).
 
-All three packaging tools produce a ``.bin`` (raw package) and a ``.hex`` (the same bytes, addressed at the ``model_storage`` partition offset) - the latter is what gets flashed, independently of the application image, for example with:
+All packaging tools produce a ``.bin`` (raw package) and a ``.hex`` (the same bytes, addressed at the target partition offset) - the latter is what gets flashed, independently of the application image, for example with:
 
 .. code-block:: console
 
@@ -346,59 +360,44 @@ All three packaging tools produce a ``.bin`` (raw package) and a ``.hex`` (the s
 
 ``reset=RESET_SYSTEM`` matters: SWD/J-Link programming halts the CPU while writing, and ``nrfutil``'s post-program reset action otherwise defaults to ``RESET_NONE``, which leaves the core halted afterwards instead of resuming - this is what makes a freshly flashed board look like it "froze" until you press the reset button.
 
+For samples that opt in, packaging itself is not a manual step for either backend: ``nrf_axon_model_stub()`` and ``nrf_neuton_model_package()`` both run their respective packaging tool automatically as part of a normal ``west build`` (see "Axon packages" above and "Neuton/Axon alignment" below), so the ``.bin``/``.hex`` files land straight in the build directory (e.g. :file:`build/<sample>/<target>_model_pkg.hex`) - only the flashing step above is manual.
+
 On-device loading (XIP)
 *************************
 
-Both loaders always load packages directly from the memory-mapped ``model_storage`` partition (execute-in-place, XIP) - there is no configurable RAM-copy loading mode.
+Both loaders always load packages directly from the memory-mapped partition (execute-in-place, XIP) - there is no configurable RAM-copy loading mode.
 
 * For Neuton, each array's flash address is wired directly into the model instance; the only RAM involved is the caller-provided neuron activation scratch buffer.
-* For Axon, ``cmd_buffer`` and ``model_const`` are referenced straight in flash, regardless of model size - no RAM copy of either, and no runtime pointer-patching loop over the command buffer.
-  Only the fixed-size ``nrf_axon_nn_compiled_model_s`` struct itself is copied, into the caller-owned model instance, since a handful of its fields need patching with this device's own ``nrf_axon_interlayer_buffer`` address (see "Axon packages" above).
+* For Axon, ``cmd_buffer`` and ``model_const`` are referenced straight in flash, regardless of model size - no RAM copy of either.
+  Only the fixed-size ``nrf_axon_nn_compiled_model_s`` struct itself is copied, into the caller-owned model instance, since it is the one part of the payload the application needs as a normal (not memory-mapped) C struct.
 
-Board requirements for Axon
-*****************************
+``model_pkg_load_axon()`` takes the target partition as parameters (a flash-area ID and its memory-mapped base address - see :c:func:`PARTITION_ID` / :c:func:`PARTITION_ADDRESS`), rather than hard-coding a single ``model_storage`` label, precisely so that an application hosting several independent Axon models (see :file:`applications/ww_kws`) can call it once per model, against each one's own partition.
+``model_pkg_load_neuton()`` does not: it still hard-codes the ``model_partition`` devicetree label internally, since no sample or application hosts more than one Neuton model yet - see "Neuton/Axon alignment" below.
 
-Because ``cmd_buffer`` stays XIP in flash and is never patched, its embedded ``nrf_axon_interlayer_buffer`` references are only ever correct if that buffer's address is identical in the reference build that produced a package and the device that loads it.
-Every board used with model OTA's Axon backend therefore reserves a small, fixed-address SRAM region for it, instead of letting the linker place it in plain ``.bss`` wherever happens to fit for a given build - see e.g. :file:`samples/nrf_edgeai/regression/boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay`:
+Neuton/Axon alignment
+************************
 
-.. code-block:: dts
+Both backends share the same header "shape" (magic, format version, model type, name, model version, size fields, CRC32) and the same fail-closed loading behavior, but are otherwise independent, and deliberately not aligned everywhere:
 
-   &cpuapp_sram {
-   	reg = <0x20000000 DT_SIZE_K(510)>;
-   	ranges = <0x0 0x20000000 DT_SIZE_K(510)>;
-   };
-
-   / {
-   	axon_interlayer: sram@2007f800 {
-   		compatible = "zephyr,memory-region", "mmio-sram";
-   		reg = <0x2007f800 DT_SIZE_K(1)>;
-   		zephyr,memory-region = "AXON_INTERLAYER";
-   		status = "okay";
-   	};
-   };
-
-paired with :kconfig:option:`CONFIG_NRF_AXON_INTERLAYER_BUFFER_MEMREGION_NAME` set to the same region name, in the board's ``.conf`` (or ``prj.conf``):
-
-.. code-block:: cfg
-
-   CONFIG_NRF_AXON_INTERLAYER_BUFFER_MEMREGION_NAME="AXON_INTERLAYER"
-
-This makes ``nrf_axon_interlayer_buffer``'s address a fixed property of the board, not an accident of whatever else happens to be linked into a particular build - so it is identical whether that build is a throwaway reference build or the real deployed application, for as many model updates as you like, with no relationship to model size (unlike, say, copying and patching ``cmd_buffer`` at load time, which would cost more RAM and CPU the larger the model - real Axon models can have ``cmd_buffer`` sizes from under a kilobyte up to tens of kilobytes).
-Porting model OTA's Axon backend to a new board requires adding the equivalent overlay/Kconfig pair; the on-device ``interlayer_addr`` check (see above) exists specifically to catch a board where this was forgotten, or done incorrectly, with a clear rejection instead of a silent accuracy regression.
-  This is only possible because every other pointer field was already relocated to its final flash address at packaging time; the loader's only extra checks are that the packaged struct's size matches this firmware's (``struct_size``), and that the package's expected base address actually matches where it landed on this device (``package_base``).
+* **Build-time packaging is now symmetric.** ``nrf_neuton_model_package()`` (:file:`lib/model_ota/cmake/nrf_neuton_model_package.cmake`) mirrors ``nrf_axon_model_stub()``: both run automatically as part of a normal ``west build`` and drop a ready-to-flash ``.bin``/``.hex`` straight in the build directory, with no separate manual packaging step for either backend's samples.
+  Neuton needs far less machinery to get there - no ELF, no model stub, no second-pass link - since a Neuton package never embeds an address in the first place (see "Neuton packages" above); it only needs the target partition's address/size, read from devicetree at configure time exactly like ``nrf_axon_model_stub()`` does.
+* **The loader signature is deliberately not symmetric.** ``model_pkg_load_axon()`` takes its partition as parameters; ``model_pkg_load_neuton()`` still hard-codes the ``model_partition`` devicetree label (see "On-device loading (XIP)" above).
+  Parameterizing it the same way would be a small change, but nothing in this repo needs a second Neuton model yet, unlike Axon where :file:`applications/ww_kws` concretely does; this is tracked here as a known, intentional asymmetry rather than implemented speculatively.
 
 Testing an OTA update end-to-end
 ***********************************
 
 The steps below use the :file:`samples/nrf_edgeai/regression` sample, since it supports both backends on the nRF54LM20 DK (Neuton on ``nrf54lm20dk/nrf54lm20a/cpuapp``, Axon on ``nrf54lm20dk/nrf54lm20b/cpuapp``) and validates predictions against 29 known test cases, making it easy to see a model update actually change what the device predicts.
 :file:`samples/axon/hello_axon` follows the same steps for Axon only, substituting its own sample path, Kconfig option, and model name (see its README for the exact commands).
+:file:`applications/ww_kws` (see its own testing steps below) additionally validates two independent models, each using CPU op extensions and ``persistent_vars``, on one device.
 
-In both cases, the pattern is the same: build and flash the *application* once, then repeatedly build/package/flash *only the model* without ever touching the application image again.
+In all cases, the pattern is the same: build the *application* once (packaging now happens automatically as part of that same build, for both backends - see "Host-side packaging tools" above), flash it, then repeatedly rebuild/reflash *only the model package* without ever touching the application image again.
 
 Testing a Neuton update
 =========================
 
-#. Build and flash the application (Neuton is the default backend on boards other than nRF54LM20, or select it explicitly with ``-DCONFIG_NRF_EDGEAI_REGRESSION_MODEL_NEUTON=y``):
+#. Build and flash the application (Neuton is the default backend on boards other than nRF54LM20, or select it explicitly with ``-DCONFIG_NRF_EDGEAI_REGRESSION_MODEL_NEUTON=y``).
+   This single build already produces the model package too - watch the end of the build log for ``model_ota: packaging regression (aq_regression, Neuton)``:
 
    .. code-block:: console
 
@@ -411,80 +410,111 @@ Testing a Neuton update
 
       No valid model in model_storage - waiting for one to be flashed. Inference is skipped until then.
 
-#. Package the model this sample's Neuton backend already ships coefficients for, reading the partition layout from the build you just produced.
-   If you have a freshly (re)trained model's generated source (``nrf_edgeai_generated/Neuton/nrf_edgeai_user_model.c``), package it directly - no hand-transcription into JSON needed:
+#. Flash the package the build already produced - independently of the application:
 
    .. code-block:: console
 
-      python3 tools/model_ota/package_model_neuton.py \
-        tools/model_ota/models/regression_v1_generated.c \
-        --name aq_regression --version 1.0.0 -o model_v1 \
-        --dts build/regression/zephyr/zephyr.dts
-
-   (:file:`regression_v1_generated.c` is a restored copy of this sample's original generated model source, used here as a stand-in for a real training run's output; a hand-written :file:`tools/model_ota/models/regression_v1.json` with identical coefficients is also still supported, via :file:`package_model.py`, for cases with no generated source to package from.)
-
-#. Flash the package - independently of the application:
-
-   .. code-block:: console
-
-      nrfutil device program --firmware model_v1.hex --core Application \
+      nrfutil device program --firmware build/regression/regression_model_pkg.hex --core Application \
         --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
 
 #. Observe the log switch to running the 29 validation test cases (``Air quality - Predicted: ..., Expected: ..., absolute error ...``) every 5 seconds.
 
-#. Repackage from :file:`tools/model_ota/models/regression_v2.json` (a hand-tweaked variant) as ``model_v2`` and flash it the same way, *without rebuilding or reflashing the application*.
+#. To package a different model instead of this sample's bundled :file:`tools/model_ota/models/regression_v1_generated.c` (for example a freshly (re)trained one), run :file:`package_model_neuton.py` directly against its own generated source - no hand-transcription into JSON needed:
+
+   .. code-block:: console
+
+      python3 tools/model_ota/package_model_neuton.py \
+        path/to/nrf_edgeai_user_model.c \
+        --name aq_regression --version 1.0.0 -o model_v1 \
+        --dts build/regression/zephyr/zephyr.dts
+
+   and flash the resulting ``model_v1.hex`` the same way, again without touching the application image.
+
+#. Repackage from :file:`tools/model_ota/models/regression_v2.json` (a hand-tweaked variant with no corresponding generated source) using :file:`package_model.py` instead:
+
+   .. code-block:: console
+
+      python3 tools/model_ota/package_model.py \
+        tools/model_ota/models/regression_v2.json -o model_v2 \
+        --dts build/regression/zephyr/zephyr.dts
+
+   and flash it the same way, *without rebuilding or reflashing the application*.
    Observe the predicted/error values change on the next periodic reload (within 5 seconds) or after a reset.
 
 Testing an Axon update
 ========================
 
-#. Build and flash the application (Axon is the default backend on ``nrf54lm20b``, or select it explicitly with ``-DCONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON=y``):
+#. Build and flash the application (Axon is the default backend on ``nrf54lm20b``, or select it explicitly with ``-DCONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON=y``).
+   This single build already produces the model package too - watch the end of the build log for ``model_ota: packaging regression (axon_user_instance_36025)``:
 
    .. code-block:: console
 
       west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build samples/nrf_edgeai/regression
       west flash -d build
 
-#. Reset the board and confirm it logs the same "No valid model in model_storage" message as the Neuton case above - the deployed application never links in a compiled-in Axon model either.
+#. Reset the board and confirm it logs the same "No valid model in model_storage" message as the Neuton case above - the application never links in a compiled-in Axon model either.
 
-#. Build a *reference* image (never flashed) purely so the packaging tool has a real link address for the generated Axon model's struct, command buffer, and constants blob:
-
-   .. code-block:: console
-
-      west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build_ref samples/nrf_edgeai/regression -- \
-        -DCONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON=y -DCONFIG_NRF_EDGEAI_REGRESSION_REFERENCE_BUILD=y
-
-#. Package the model directly from the reference build's ELF (no separate header file needed):
+#. Flash the package the build already produced - independently of the application:
 
    .. code-block:: console
 
-      python3 tools/model_ota/package_model_axon.py \
-        --elf build_ref/regression/zephyr/zephyr.elf \
-        --model-name axon_user_instance_36025 -o model_v1 --version 1.0.0 \
-        --dts build_ref/regression/zephyr/zephyr.dts
-
-#. Flash the package - independently of the application:
-
-   .. code-block:: console
-
-      nrfutil device program --firmware model_v1.hex --core Application \
+      nrfutil device program --firmware build/regression/regression_model_pkg.hex --core Application \
         --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
 
 #. Observe the log switch to the same 29-test-case validation output as the Neuton case.
 
-#. To observe an update, hand-tweak a constant in the reference build's generated model header (for example a bias or weight in :file:`src/nrf_edgeai_generated/Axon/nrf_edgeai_user_model_axon.h`), rebuild the reference image, repackage it as ``model_v2``, and flash only that to ``model_storage`` - again without touching the application image.
+#. To observe an update, hand-tweak a constant in the generated model header (for example a bias or weight in :file:`src/nrf_edgeai_generated/Axon/nrf_edgeai_user_model_axon.h`), rebuild (``west build``, no ``-p`` needed), and flash the newly produced package the same way, again without touching the application image.
    The predicted/error values change on the next periodic reload or after a reset.
+
+Testing ww_kws (two models, op extensions, persistent_vars)
+================================================================
+
+:file:`applications/ww_kws` hosts two independent Axon models - wakeword detection and keyword spotting - each in its own ``model_storage_ww`` / ``model_storage_kws`` partition, and each exercising a feature the simpler samples above do not: the wakeword model uses a CPU op extension (``nrf_axon_nn_op_extension_sigmoid_v2``) and the keyword-spotting model uses both a different op extension (``nrf_axon_nn_op_extension_softmax``) and ``persistent_vars`` (both models actually use ``persistent_vars``, for their streaming audio-feature state).
+
+#. Build and flash the application (:kconfig:option:`CONFIG_APP_MODEL_OTA` defaults to ``y``; this single build produces both model packages):
+
+   .. code-block:: console
+
+      west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws
+      west flash -d build
+
+#. Reset the board and observe both models fail to load (nothing is flashed to either partition yet):
+
+   .. code-block:: console
+
+      No usable WW model in model_storage_ww (err -3)
+      No usable KWS model - see model_storage_kws flashing instructions in doc/libraries/model_ota.rst
+
+#. Flash both packages the build already produced - independently of the application:
+
+   .. code-block:: console
+
+      nrfutil device program --firmware build/ww_kws/ww_model_pkg.hex --core Application \
+        --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_NONE
+      nrfutil device program --firmware build/ww_kws/kws_model_pkg.hex --core Application \
+        --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
+
+#. Observe both models load successfully and the application complete initialization:
+
+   .. code-block:: console
+
+      Loaded Axon model 'axon_user_instan' v0x00010000 (2432 cmd words, 24996 B const)
+      Active WW model: 'axon_user_instan' version 0x00010000 (2432 cmd words, 24996 B const)
+      Loaded Axon model 'axon_user_instan' v0x00010000 (15726 cmd words, 295936 B const)
+      Active KWS model: 'axon_user_instan' version 0x00010000 (15726 cmd words, 295936 B const)
+      Initialization completed, check output on VCOM0
+
+#. Continue with the application's own testing steps (see :file:`applications/ww_kws/README.rst`, "Testing") - say the wakeword phrase, then a keyword - to confirm both OTA-loaded models, including their op extensions and ``persistent_vars`` state, actually run inference correctly, not just load without error.
 
 Known limitations
 *******************
 
-* **Axon models using** ``persistent_vars`` **(streaming/** ``VarHandle`` **models) are rejected outright** by the packaging tool: computing per-persistent-variable buffer offsets was judged not worth the added complexity for a PoC with no such model to validate against yet, and - more fundamentally - the buffer's size is model-specific, in tension with this design's premise that the deployed app never bakes in model-shape information.
-  The on-device loader also rejects them defensively (``MODEL_PKG_ERR_UNSUPPORTED_SHAPE``), in case a package somehow bypassed the tool's check.
-* **Axon models using CPU op extensions are also rejected outright** by the packaging tool (``check_no_op_extension_refs()``): ``cmd_buffer`` embeds a literal reference to an op extension function's address exactly like it does for ``nrf_axon_interlayer_buffer``, but with no analogous load-time mismatch check, since there is no struct field to compare against - a mispackaged model would silently jump into whatever code happens to live at the reference build's address on the deployed device. Unlike ``persistent_vars``, this has no on-device fallback check either, since the loader has no way to tell an op extension reference apart from any other flash address in ``cmd_buffer``.
-* **Multi-input Axon models, models with** ``extra_outputs``\ **, and classification models with** ``labels`` **are supported by both the tool and the loader**, but - absent such a model anywhere in this repo - are only exercised by :file:`tools/model_ota/test_package_model_axon.py`'s unit tests, not on real hardware.
-* **New boards need a fixed-address** ``nrf_axon_interlayer_buffer`` **region.** See "Board requirements for Axon" above; a board missing this is caught at load time (``MODEL_PKG_ERR_INTERLAYER_MISMATCH``), not at packaging time, since the mismatch only exists between a specific reference build and a specific deployed build.
+* **Axon models with a non-** ``NULL`` **** ``packed_output_buf`` **are rejected outright** by the packaging tool (``validate_shape()``): this is a compile-time array the generated model header itself declares alongside the struct, but since the deployed application no longer links that header in at all, there is nothing for the model stub to provide an address for.
+* **The model stub is compiled with a standalone compiler invocation** (``nrf_axon_model_stub()``'s own ``add_custom_command()``\ s), not through Zephyr's normal per-target flag propagation - it does not automatically inherit the application's full compile flags (``-mcpu``, ``-mfpu``, ...).
+  This is safe for ``nrf_axon_nn_compiled_model_s``'s own layout today (a plain, non-conditionally-compiled AAPCS struct), and ``package_model_axon.py``'s ``struct_size`` cross-check catches it regardless if that ever changes; the two Kconfig values that *do* affect whether the header even compiles (:kconfig:option:`CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE`, :kconfig:option:`CONFIG_NRF_AXON_PSUM_BUFFER_SIZE`) are passed through explicitly.
 * **No runtime OTA transport.** Getting a package onto the device is a flash-only operation in this PoC; there is no over-the-air download/verify/apply flow.
-* **Single model instance.** Only one model package can live in ``model_storage`` at a time; there is no A/B slot, rollback, or versioned history.
+* **Single model instance per partition.** Only one model package can live in a given ``model_storage*`` partition at a time; there is no A/B slot, rollback, or versioned history.
+* **A model package is only valid for the exact application build it was produced alongside.** Since every app-owned pointer is resolved from that specific build's own ``zephyr.elf``, flashing a package built against a different application build (even a seemingly trivial recompile that happens to relink app-owned symbols at different addresses) is caught by the ``package_base`` check at load time, not silently accepted - but it does mean a model package cannot be prepared once and reused across arbitrary future application builds the way a Neuton package (which embeds no addresses at all) can.
 
 Kconfig options
 *****************
@@ -499,13 +529,16 @@ In summary:
 * :kconfig:option:`CONFIG_MODEL_OTA_MAX_NEURONS` - sizes the caller-side RAM scratch buffer for neuron activations; must be large enough for every Neuton model variant ever provisioned on a given device.
 * :kconfig:option:`CONFIG_MODEL_OTA_LOG_LEVEL` - log level for the ``model_pkg`` module(s).
 
+Each sample/application additionally defines its own top-level toggle (:kconfig:option:`CONFIG_HELLO_AXON_MODEL_OTA`, :kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA`, :kconfig:option:`CONFIG_APP_MODEL_OTA`) that ``select``\ s the ones above, plus (for :file:`applications/ww_kws`, which needs an application-owned ``persistent_vars`` RAM array per model - see "Axon packages" above) :kconfig:option:`CONFIG_APP_WW_PERSISTENT_VARS_SIZE` / :kconfig:option:`CONFIG_APP_KWS_PERSISTENT_VARS_SIZE`, which must match the size the currently bundled model's own generated header declares.
+
 Integration pattern
 **********************
 
 A consuming application typically:
 
 #. Declares a static, uninitialized-until-loaded model instance (``nrf_edgeai_model_neuton_t`` or ``nrf_axon_nn_compiled_model_s``) and a ``nrf_edgeai_t`` wrapping it, instead of pointing at a compiled-in model.
-#. Calls ``model_pkg_load_neuton()`` or ``model_pkg_load_axon()`` at boot, and again periodically (or on some other trigger), to (re)validate and wire up whatever is currently in ``model_storage``.
-#. Skips inference (rather than crashing) when the load fails, and retries on the next iteration.
+#. For Axon, calls ``nrf_axon_model_stub()`` from its own :file:`CMakeLists.txt` (once per model it hosts), pointed at that model's generated header and ``model_storage*`` partition - see :file:`lib/model_ota/cmake/nrf_axon_model_stub.cmake`'s own usage comment for the exact arguments.
+#. Calls ``model_pkg_load_neuton()`` or ``model_pkg_load_axon()`` - against that model's own partition ID/address - at boot, and (for models that can be updated without a reboot) again periodically or on some other trigger, to (re)validate and wire up whatever currently sits in that partition.
+#. Skips inference (rather than crashing) when the load fails, propagating that failure however best fits the application's own structure - for example returning an error from ``main()`` (:file:`applications/ww_kws`'s ``ww_init()``/``kws_init()``, which run once at boot before an audio-streaming loop that has no natural "retry the load" point), or retrying on the next iteration of a polling loop (:file:`samples/nrf_edgeai/regression`'s ``main()``).
 
-See ``model_ota_load()`` in :file:`samples/axon/hello_axon/src/main.c` and :file:`samples/nrf_edgeai/regression/src/model_wiring_neuton.c` / :file:`model_wiring_axon.c` for concrete examples of this pattern for each backend.
+See :file:`samples/axon/hello_axon/src/main.c`, :file:`samples/nrf_edgeai/regression/src/model_wiring_neuton.c` / :file:`model_wiring_axon.c`, and :file:`applications/ww_kws/src/ww/model_wiring_axon.c` / :file:`src/kws/model_wiring_axon.c` for concrete examples of this pattern - the ``ww_kws`` ones are also the reference for wiring up a model that uses op extensions and/or ``persistent_vars``.
