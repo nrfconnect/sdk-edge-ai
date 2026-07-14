@@ -4,10 +4,6 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-&axon {
-	status = "okay";
-};
-
 /*
  * This sample does not use mcuboot, so the board's second application slot
  * (slot1_partition) is unused. Repurpose it as a dedicated "model_storage" partition, sized
