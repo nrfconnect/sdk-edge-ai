@@ -43,7 +43,7 @@ from model_partition_layout import (
 )
 
 MAGIC = b"NEAI"
-FORMAT_VERSION = 4
+FORMAT_VERSION = 6  # must match MODEL_PKG_FORMAT_VERSION in include/model_ota/model_pkg.h
 MODEL_TYPE_NEUTON = 0
 NAME_LEN = 16
 
