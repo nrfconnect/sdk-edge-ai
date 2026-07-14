@@ -185,7 +185,7 @@ Because nothing in the payload needs to know its own flash address, the on-devic
 
    Host -> Host : read model JSON\n(weights, topology, output scaling)
    Host -> Host : concatenate raw arrays\n(no addresses embedded)
-   Host -> Host : build header\n(magic, format_version=4, section_len[], CRC32)
+   Host -> Host : build header\n(magic, format_version=5, section_len[], CRC32)
    note right of Host
      Neuton payload never embeds a flash
      address, so no reference build or
@@ -214,14 +214,14 @@ Because nothing in the payload needs to know its own flash address, the on-devic
 Axon packages
 ==============
 
-An Axon package's payload is the model's *entire* compiler-generated ``nrf_axon_nn_compiled_model_s`` struct, captured byte-for-byte from a reference build, plus its command buffer and constants blob (``model_const``), and optionally an ``extra_outputs`` array.
+An Axon package's payload is the model's *entire* compiler-generated ``nrf_axon_nn_compiled_model_s`` struct, captured byte-for-byte from a reference build, plus its command buffer and constants blob (``model_const``), and optionally an ``extra_outputs`` array and/or a ``labels`` array (plus the individual label strings it points to).
 
-Unlike Neuton, Axon's compiled-model struct is full of absolute pointers: the command buffer's own internal pointers into ``model_const``, and pointer fields inside the struct itself (``cmd_buffer_ptr``, ``model_const_ptr``, ``extra_outputs``, ``inputs[i].ptr``, ``output_ptr``).
+Unlike Neuton, Axon's compiled-model struct is full of absolute pointers: the command buffer's own internal pointers into ``model_const``, and pointer fields inside the struct itself (``cmd_buffer_ptr``, ``model_const_ptr``, ``extra_outputs``, ``labels``, ``inputs[i].ptr``, ``output_ptr``).
 Those pointers are only correct for the *reference build* they were captured from - they need to be rewritten (relocated) to wherever the corresponding data actually ends up once packaged.
 
 This library resolves that relocation **once, on the host, at packaging time** (:file:`tools/model_ota/package_model_axon.py`), not on-device at every load:
 
-* Pointers that refer to *flash-owned model data* (``cmd_buffer_ptr``, ``model_const_ptr``, ``extra_outputs``, and the command buffer's own internal pointers into ``model_const``) are rewritten to their final ``model_storage`` address directly, since that address is fixed and known ahead of time.
+* Pointers that refer to *flash-owned model data* (``cmd_buffer_ptr``, ``model_const_ptr``, ``extra_outputs``, ``labels`` and its individual label strings, and the command buffer's own internal pointers into ``model_const``) are rewritten to their final ``model_storage`` address directly, since that address is fixed and known ahead of time.
 * Pointers that instead refer to *this device's own RAM* (``nrf_axon_interlayer_buffer``, for ``inputs[i].ptr`` / ``output_ptr``) cannot be resolved on the host, since that buffer's actual address is only known to the deployed firmware.
   These are reduced to a byte offset from the interlayer buffer's base instead, which the on-device loader adds back in.
 
@@ -281,7 +281,7 @@ As defense in depth, the packaging tool also records the reference build's ``nrf
      but the struct is packaged once and may be
      flashed onto builds with different addresses.
    end note
-   Host -> Host : build header (magic, format_version=4,\nstruct_size, package_base,\ninterlayer_addr, CRC32)
+   Host -> Host : build header (magic, format_version=5,\nstruct_size, package_base,\ninterlayer_addr, CRC32)
    note right of Host
      interlayer_addr is this reference
      build's nrf_axon_interlayer_buffer
@@ -322,7 +322,7 @@ Model packages are produced by Python tools under :file:`tools/model_ota/`, run 
 * :file:`package_model_neuton.py` - builds a Neuton package directly from a Neuton codegen's generated model source (e.g. :file:`nrf_edgeai_generated/Neuton/nrf_edgeai_user_model.c` under any Neuton sample), regex-parsing its ``#define`` counts and ``static const`` coefficient arrays straight into a package - no hand-transcription into JSON, and (like :file:`package_model.py`) no ELF or reference build needed.
   This is the preferred way to package a freshly (re)trained Neuton model.
   Only ``MODEL_PARAMS_TYPE == f32`` models are supported (q16/q8 quantized models are rejected), and only regression/anomaly-detection tasks (only those generate the ``MODEL_OUTPUT_SCALE_MIN``/``MAX`` arrays the package format requires; classification-only models are rejected) - both limitations inherited from the package format itself, not specific to this tool.
-* :file:`package_model_axon.py` - builds an Axon package purely by introspecting a *reference build's* ``zephyr.elf`` with ``pyelftools``: it locates the compiled model's symbols, reads the ``nrf_axon_nn_compiled_model_s`` struct's raw bytes with :file:`axon_struct_layout.py` (a ``ctypes`` mirror of the struct's on-device ABI), classifies every pointer field as flash-owned or RAM-owned, and relocates each accordingly (see "Axon packages" above).
+* :file:`package_model_axon.py` - builds an Axon package purely by introspecting a *reference build's* ``zephyr.elf`` with ``pyelftools``: it locates the compiled model's symbols, reads the ``nrf_axon_nn_compiled_model_s`` struct's raw bytes with :file:`axon_struct_layout.py` (a ``ctypes`` mirror of the struct's on-device ABI), classifies every pointer field as flash-owned or RAM-owned, and relocates each accordingly (see "Axon packages" above). For classification models, it also walks the ``labels`` array and reads each label string directly out of whatever ``.rodata`` section holds it - even if the compiler merged it into an anonymous, symbol-less string-literal section - and repacks them alongside the array itself.
   Every symbol lookup and cross-check (missing symbol, size/address mismatch against the struct's own fields, ...) fails loudly with a specific error at packaging time, on the host - so a stale or mismatched reference build is caught here, well before a package is ever written or flashed, with no separate build-time validation step needed.
   It also records the reference build's ``nrf_axon_interlayer_buffer`` address in the package (``interlayer_addr``) so the on-device loader can detect, rather than silently mispredict on, a mismatch against this device's actual address - see "Board requirements" below for why that mismatch should not normally happen at all.
 * :file:`model_partition_layout.py` - shared helper both tools use to read the target ``model_storage`` partition's address and size from a build's generated ``zephyr.dts`` (via ``--dts``), and to preflight-check that the generated package will actually fit before writing anything - instead of trusting a hand-typed ``--address``/``--partition-size`` to still match the target board's devicetree.
@@ -334,7 +334,7 @@ Model packages are produced by Python tools under :file:`tools/model_ota/`, run 
              model_storage:      48 KB      968 KB     4.96%
 
   so shrinking headroom is visible on every packaging run, well before a model actually stops fitting.
-* :file:`test_package_model_axon.py` - host-side unit tests for the Axon tool's pointer classification/relocation logic, using synthetic model shapes (multi-input, ``extra_outputs``, rejected shapes) that do not exist as real models anywhere in this repo yet.
+* :file:`test_package_model_axon.py` - host-side unit tests for the Axon tool's pointer classification/relocation logic, using synthetic model shapes (multi-input, ``extra_outputs``, ``labels``, rejected shapes) that do not exist as real models anywhere in this repo yet.
 * :file:`test_package_model_neuton.py` - host-side unit tests for the Neuton source parser, checking it reproduces :file:`tools/model_ota/models/regression_v1.json` byte-for-byte from :file:`tools/model_ota/models/regression_v1_generated.c` (a restored copy of the generated source that JSON was originally hand-transcribed from), plus its error paths (wrong precision, wrong task, missing arrays).
 
 All three packaging tools produce a ``.bin`` (raw package) and a ``.hex`` (the same bytes, addressed at the ``model_storage`` partition offset) - the latter is what gets flashed, independently of the application image, for example with:
@@ -478,9 +478,10 @@ Testing an Axon update
 Known limitations
 *******************
 
-* **Axon models using** ``labels`` **(per-class text labels) or** ``persistent_vars`` **(streaming/** ``VarHandle`` **models) are rejected outright** by the packaging tool: resolving an arbitrary string literal's address reliably from an ELF, and computing per-persistent-variable buffer offsets, were judged not worth the added complexity for a PoC with no such model to validate against yet.
+* **Axon models using** ``persistent_vars`` **(streaming/** ``VarHandle`` **models) are rejected outright** by the packaging tool: computing per-persistent-variable buffer offsets was judged not worth the added complexity for a PoC with no such model to validate against yet, and - more fundamentally - the buffer's size is model-specific, in tension with this design's premise that the deployed app never bakes in model-shape information.
   The on-device loader also rejects them defensively (``MODEL_PKG_ERR_UNSUPPORTED_SHAPE``), in case a package somehow bypassed the tool's check.
-* **Multi-input Axon models and models with** ``extra_outputs`` **are supported by both the tool and the loader**, but - absent such a model anywhere in this repo - are only exercised by :file:`tools/model_ota/test_package_model_axon.py`'s unit tests, not on real hardware.
+* **Axon models using CPU op extensions are also rejected outright** by the packaging tool (``check_no_op_extension_refs()``): ``cmd_buffer`` embeds a literal reference to an op extension function's address exactly like it does for ``nrf_axon_interlayer_buffer``, but with no analogous load-time mismatch check, since there is no struct field to compare against - a mispackaged model would silently jump into whatever code happens to live at the reference build's address on the deployed device. Unlike ``persistent_vars``, this has no on-device fallback check either, since the loader has no way to tell an op extension reference apart from any other flash address in ``cmd_buffer``.
+* **Multi-input Axon models, models with** ``extra_outputs``\ **, and classification models with** ``labels`` **are supported by both the tool and the loader**, but - absent such a model anywhere in this repo - are only exercised by :file:`tools/model_ota/test_package_model_axon.py`'s unit tests, not on real hardware.
 * **New boards need a fixed-address** ``nrf_axon_interlayer_buffer`` **region.** See "Board requirements for Axon" above; a board missing this is caught at load time (``MODEL_PKG_ERR_INTERLAYER_MISMATCH``), not at packaging time, since the mismatch only exists between a specific reference build and a specific deployed build.
 * **No runtime OTA transport.** Getting a package onto the device is a flash-only operation in this PoC; there is no over-the-air download/verify/apply flow.
 * **Single model instance.** Only one model package can live in ``model_storage`` at a time; there is no A/B slot, rollback, or versioned history.

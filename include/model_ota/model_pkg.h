@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** Container format version (independent of the model's own version). */
-#define MODEL_PKG_FORMAT_VERSION 4
+#define MODEL_PKG_FORMAT_VERSION 5
 
 /** Length of the @ref model_pkg_header.name field, not necessarily NUL-terminated. */
 #define MODEL_PKG_NAME_LEN 16
@@ -163,14 +163,22 @@ int model_pkg_load_neuton(nrf_edgeai_model_neuton_t *out_model, float *neurons_b
  *
  * EXTRA_OUTPUTS is present (section_len != 0) only for models with extra_output_cnt > 0; it is
  * a plain array of nrf_axon_compiled_model_output_s (no pointers of its own), so it can be
- * relocated the same way model_const is. labels and persistent_vars are not yet supported by
- * the packaging tool - see the "Known limitations" comment on @ref model_pkg_load_axon.
+ * relocated the same way model_const is.
+ *
+ * LABELS/LABEL_STRINGS are present (section_len != 0) only for classification models with a
+ * non-NULL labels pointer: LABELS is an array of pointers (one per classification class, count
+ * derived from output_dimensions - see package_model_axon.py's num_output_classes()), each
+ * rewritten by the packaging tool to point into LABEL_STRINGS, a single NUL-separated blob
+ * holding every label string's bytes back-to-back. persistent_vars is not yet supported by the
+ * packaging tool - see the "Known limitations" comment on @ref model_pkg_load_axon.
  */
 enum model_pkg_axon_section {
 	MODEL_PKG_AXON_SEC_MODEL_STRUCT = 0, /**< nrf_axon_nn_compiled_model_s, byte-for-byte */
 	MODEL_PKG_AXON_SEC_CMD_BUFFER,       /**< uint32_t[cmd_buffer_len], NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE assumed 32-bit */
 	MODEL_PKG_AXON_SEC_MODEL_CONST,      /**< uint8_t[model_const_size], opaque raw bytes */
 	MODEL_PKG_AXON_SEC_EXTRA_OUTPUTS,    /**< nrf_axon_compiled_model_output_s[extra_output_cnt], optional */
+	MODEL_PKG_AXON_SEC_LABELS,           /**< const char *[num_output_classes], optional */
+	MODEL_PKG_AXON_SEC_LABEL_STRINGS,    /**< NUL-separated label string bytes, optional */
 	MODEL_PKG_AXON_SECTION_COUNT,
 };
 
@@ -252,10 +260,12 @@ struct model_pkg_axon_info {
  * pointers.
  *
  * Known limitations (see the plan this was implemented from for the reasoning): models with
- * labels or persistent_vars are rejected (MODEL_PKG_ERR_UNSUPPORTED_SHAPE) - the packaging tool
- * already refuses to package them, this is a defense-in-depth check. is_layer_model and
- * multi-input (input_cnt > 1) models are expected to work but, absent any such model in this
- * repo, are only exercised by host-side unit tests, not on real hardware.
+ * persistent_vars are rejected (MODEL_PKG_ERR_UNSUPPORTED_SHAPE) - the packaging tool already
+ * refuses to package them, this is a defense-in-depth check. Classification models with labels
+ * are supported (labels/label string bytes are relocated by the packaging tool exactly like
+ * model_const, no runtime patching needed here). is_layer_model and multi-input (input_cnt > 1)
+ * models are expected to work but, absent any such model in this repo, are only exercised by
+ * host-side unit tests, not on real hardware.
  *
  * On success, out_model is fully populated and has already passed nrf_axon_nn_model_validate().
  * out_model is left untouched on failure.

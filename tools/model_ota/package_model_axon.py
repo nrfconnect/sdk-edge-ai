@@ -61,13 +61,22 @@ directly into the model_storage partition, independently of the application imag
 Requires pyelftools (already bundled with the NCS toolchain's Python; otherwise
 `pip install pyelftools`).
 
+Classification models using `labels` (per-class text labels) are supported: the labels array
+and every individual label string it points to are extracted straight from the reference
+build's ELF (see ElfSymbols.read_cstring()), repacked into their own package sections, and
+relocated exactly like model_const - no runtime patching needed, no separate class count field
+either (it is derived from output_dimensions, see num_output_classes()).
+
 Known limitations (see the plan this tool was implemented from for the reasoning): models using
-`labels` (per-class text labels) or `persistent_vars` (streaming/VarHandle models) are rejected
-outright - resolving an arbitrary string literal's address reliably from an ELF, and computing
-per-persistent-variable buffer offsets, were judged not worth the added complexity for a PoC
-with no such model to validate against yet. Multi-input models (input_cnt > 1, both external)
-and models with extra_outputs are supported by this tool and the loader, but - absent such a
-model in this repo - are only exercised by this tool's own unit tests, not on real hardware.
+`persistent_vars` (streaming/VarHandle models), or CPU op extensions (whose addresses cmd_buffer
+embeds literally, exactly like nrf_axon_interlayer_buffer, but with no runtime mismatch check
+backing them up - see check_no_op_extension_refs()) are rejected outright. Computing
+per-persistent-variable buffer offsets, and relocating op extension references at load time the
+way nrf_axon_interlayer_buffer's offset-based scheme does, were judged not worth the added
+complexity for a PoC with no such model to validate against yet. Multi-input models (input_cnt >
+1, both external) and models with extra_outputs are supported by this tool and the loader, but -
+absent such a model in this repo - are only exercised by this tool's own unit tests, not on real
+hardware.
 """
 import argparse
 import ctypes
@@ -88,14 +97,15 @@ from model_partition_layout import (
 )
 
 MAGIC = b"NEAI"
-FORMAT_VERSION = 4
+FORMAT_VERSION = 5
 MODEL_TYPE_AXON = 1
 NAME_LEN = 16
 
 # <magic(4s) format_version(H) model_type(B) reserved0(B) name(16s) model_version(I)
-#  payload_size(I) section_len[4](4I) struct_size(I) package_base(I) interlayer_addr(I)
-#  crc32(I) -- packed, little-endian, no padding.
-HEADER_FMT = "<4sHBB16sII4III" "II"
+#  payload_size(I) section_len[6](6I) struct_size(I) package_base(I) interlayer_addr(I)
+#  crc32(I) -- packed, little-endian, no padding. section_len is
+#  [struct, cmd_buffer, model_const, extra_outputs, labels, label_strings].
+HEADER_FMT = "<4sHBB16sII6III" "II"
 HEADER_LEN = struct.calcsize(HEADER_FMT)
 
 
@@ -111,9 +121,10 @@ def parse_version(v):
 
 
 class ElfSymbols:
-	"""Thin wrapper around an ELF's .symtab for the two lookups this tool needs: by name (for
-	symbols whose generated name we know, e.g. model_<name>) and by address (for pointer
-	fields whose target's name isn't predictable, e.g. extra_outputs)."""
+	"""Thin wrapper around an ELF's .symtab for the lookups this tool needs: by name (for
+	symbols whose generated name we know, e.g. model_<name>), by address (for pointer fields
+	whose target's name isn't predictable, e.g. extra_outputs), and raw address-range reads
+	(for label strings, which typically have no symbol of their own - see read_cstring())."""
 
 	def __init__(self, elf_path):
 		self.elf_path = elf_path
@@ -137,6 +148,14 @@ class ElfSymbols:
 				if section is not None:
 					self._section_cache[shndx] = (section["sh_addr"], section.data(),
 								       section.name)
+			# Every loaded section's address range, regardless of whether any symbol
+			# covers it - string literals are commonly merged into anonymous,
+			# mergeable .rodata.str sections with no symbol table entry at all.
+			self._all_sections = []
+			for section in elffile.iter_sections():
+				if section["sh_addr"] != 0 and section["sh_type"] != "SHT_NOBITS":
+					self._all_sections.append(
+						(section["sh_addr"], section.data(), section.name))
 
 	def by_name(self, name):
 		"""Returns (address, raw_bytes) for a named symbol's initialized data."""
@@ -159,6 +178,25 @@ class ElfSymbols:
 			"No symbol in %s covers address 0x%08x - cannot resolve what this pointer "
 			"field targets" % (self.elf_path, address))
 
+	def read_cstring(self, address, max_len=4096):
+		"""Returns the NUL-terminated byte string (excluding the NUL) stored at `address` -
+		e.g. one of labels[]'s per-class strings. Looks it up by raw section address
+		range rather than by symbol (unlike by_name()/by_address()), since compilers
+		commonly merge string literals into anonymous, mergeable .rodata.str1.1-style
+		sections with no symbol table entry of their own."""
+		for sh_addr, data, section_name in self._all_sections:
+			if sh_addr <= address < sh_addr + len(data):
+				offset = address - sh_addr
+				nul = data.find(b"\x00", offset, offset + max_len)
+				if nul == -1:
+					raise ValueError(
+						"No NUL terminator found within %u bytes of address "
+						"0x%08x in section '%s' of %s" %
+						(max_len, address, section_name, self.elf_path))
+				return data[offset:nul]
+		raise ValueError("No section in %s covers address 0x%08x" %
+				  (self.elf_path, address))
+
 	def _read(self, sym):
 		address = sym["st_value"]
 		size = sym["st_size"]
@@ -179,10 +217,6 @@ def validate_shape(model, model_name):
 	"""Raises ValueError for known-unsupported model shapes (see module docstring). Pure
 	function - no ELF access - so it can be unit-tested directly against synthetic
 	CompiledModel instances built from raw bytes."""
-	if model.labels != 0:
-		raise ValueError(
-			"model_%s has a non-NULL 'labels' pointer - packaging models with text "
-			"labels is not supported yet" % model_name)
 	if model.persistent_vars.count != 0:
 		raise ValueError(
 			"model_%s has %u persistent variable(s) - packaging streaming/VarHandle "
@@ -212,6 +246,29 @@ def validate_shape(model, model_name):
 			model_name)
 
 
+def check_no_op_extension_refs(cmd_buffer_bytes, model_name, op_extension_addrs):
+	"""Raises ValueError if cmd_buffer's words reference any of op_extension_addrs (a CPU op
+	extension function's address, e.g. nrf_axon_nn_op_extension_relu). Those addresses are
+	baked in by the reference build's own link and - unlike cmd_buffer's references into
+	model_const - are never relocated, by this tool or the on-device loader, so they are only
+	ever correct if the reference build's .text layout happens to match the deployed app's
+	exactly. Pure function - no ELF access - so it can be unit-tested directly."""
+	if not op_extension_addrs:
+		return
+	words = struct.unpack("<%uI" % (len(cmd_buffer_bytes) // 4), cmd_buffer_bytes)
+	word_set = set(words)
+	for addr in op_extension_addrs:
+		# Thumb code pointers have bit 0 set in the stored address.
+		if addr in word_set or (addr | 1) in word_set:
+			raise ValueError(
+				"model_%s's cmd_buffer references a CPU op extension at 0x%08x - "
+				"packaging models that use op extensions is not supported yet: "
+				"their addresses are baked in by this reference build's own link "
+				"and are never relocated, so they would only be correct on a "
+				"deployed device whose .text layout happens to match this "
+				"reference build's exactly" % (model_name, addr))
+
+
 def relocate_ram_pointers(model, model_name, interlayer_addr):
 	"""Rewrites model's RAM-owned pointer fields (inputs[i].ptr for external inputs,
 	output_ptr) from absolute reference-build addresses into nrf_axon_interlayer_buffer to
@@ -236,7 +293,8 @@ def relocate_ram_pointers(model, model_name, interlayer_addr):
 	model.model_name = 0
 
 
-def relocate_flash_pointers(model, cmd_buffer_base, model_const_base, extra_outputs_base):
+def relocate_flash_pointers(model, cmd_buffer_base, model_const_base, extra_outputs_base,
+			     labels_base=0):
 	"""Rewrites model's flash-owned pointer fields to their final address once flashed into
 	model_storage. Pure function - no ELF access - so it can be unit-tested directly against
 	synthetic CompiledModel instances built from raw bytes."""
@@ -244,6 +302,38 @@ def relocate_flash_pointers(model, cmd_buffer_base, model_const_base, extra_outp
 	model.model_const_ptr = model_const_base
 	if model.extra_output_cnt > 0:
 		model.extra_outputs = extra_outputs_base
+	if model.labels != 0:
+		model.labels = labels_base
+
+
+def num_output_classes(model):
+	"""Returns the number of classification classes/labels a model's output_dimensions
+	implies - the same element count findmax{8,16,32}() (see nrf_axon_nn_infer.c) scans over
+	to pick the highest-scoring index, which labels[] is then indexed by. Pure function - no
+	ELF access - so it can be unit-tested directly."""
+	dim = model.output_dimensions
+	return dim.height * dim.width * dim.channel_cnt
+
+
+def build_labels_section(label_strings, strings_base):
+	"""Packs `label_strings` (a list of raw bytes, one per classification label, in index
+	order - i.e. label_strings[i] is what labels[i] should point to) into a single
+	NUL-separated blob plus a matching array of pointers into it, assuming that blob will be
+	placed at `strings_base` once flashed. Returns (labels_bytes, label_strings_bytes). Pure
+	function - no ELF access - so it can be unit-tested directly."""
+	offsets = []
+	blob_parts = []
+	running_offset = 0
+	for s in label_strings:
+		if b"\x00" in s:
+			raise ValueError("label %r contains an embedded NUL byte" % s)
+		offsets.append(running_offset)
+		blob_parts.append(s + b"\x00")
+		running_offset += len(s) + 1
+	label_strings_bytes = b"".join(blob_parts)
+	labels_bytes = struct.pack("<%uI" % len(label_strings),
+				    *(strings_base + o for o in offsets))
+	return labels_bytes, label_strings_bytes
 
 
 def relocate_cmd_buffer(cmd_buffer_bytes, old_base, new_base, span):
@@ -293,6 +383,10 @@ def build_package(elf_path, model_name, version, address):
 		raise ValueError("cmd_buffer_%s size (%u B) is not a multiple of 4" %
 				  (model_name, len(cmd_buffer_bytes)))
 
+	op_extension_addrs = [sym["st_value"] & ~1 for sym in syms.symbols
+			       if sym.name.startswith("nrf_axon_nn_op_extension_")]
+	check_no_op_extension_refs(cmd_buffer_bytes, model_name, op_extension_addrs)
+
 	extra_outputs_bytes = b""
 	if model.extra_output_cnt > 0:
 		extra_sym_name, extra_outputs_bytes = syms.by_address(model.extra_outputs)
@@ -304,6 +398,23 @@ def build_package(elf_path, model_name, version, address):
 				"= %u B" % (model_name, extra_sym_name, len(extra_outputs_bytes),
 					    model.extra_output_cnt, expected_len))
 
+	labels_bytes = b""
+	label_strings_bytes = b""
+	if model.labels != 0:
+		num_labels = num_output_classes(model)
+		if num_labels == 0:
+			raise ValueError(
+				"model_%s has a non-NULL 'labels' pointer but an empty "
+				"output_dimensions (0 classes)" % model_name)
+		_, labels_array_bytes = syms.by_address(model.labels)
+		if len(labels_array_bytes) != num_labels * 4:
+			raise ValueError(
+				"model_%s.labels array (%u B) does not match output_dimensions' "
+				"implied class count=%u (%u B expected)" %
+				(model_name, len(labels_array_bytes), num_labels, num_labels * 4))
+		label_ptrs = struct.unpack("<%uI" % num_labels, labels_array_bytes)
+		label_strings = [syms.read_cstring(ptr) for ptr in label_ptrs]
+
 	# nrf_axon_interlayer_buffer is app-owned RAM: its address is only known to whatever
 	# firmware actually links this package's loader, not to this reference build, so
 	# pointer fields that target it are stored as an *offset* rather than an address.
@@ -311,22 +422,31 @@ def build_package(elf_path, model_name, version, address):
 	relocate_ram_pointers(model, model_name, interlayer_addr)
 
 	# Everything below is flash-owned model data: the struct itself, cmd_buffer, model_const,
-	# and (optionally) extra_outputs are laid out back-to-back starting right after the
-	# header, at addresses fully determined by --address, exactly as cmd_buffer/model_const
-	# already were in prior format versions - so their pointers can be relocated here on the
-	# host, once, instead of by the on-device loader at every boot.
+	# and (optionally) extra_outputs/labels are laid out back-to-back starting right after
+	# the header, at addresses fully determined by --address, exactly as cmd_buffer/
+	# model_const already were in prior format versions - so their pointers can be
+	# relocated here on the host, once, instead of by the on-device loader at every boot.
 	struct_len = len(buf)
 	struct_base = address + HEADER_LEN
 	cmd_buffer_base = struct_base + struct_len
 	model_const_base = cmd_buffer_base + len(cmd_buffer_bytes)
 	extra_outputs_base = model_const_base + len(const_bytes)
+	labels_base = extra_outputs_base + len(extra_outputs_bytes)
+
+	if model.labels != 0:
+		label_strings_base = labels_base + num_labels * 4
+		labels_bytes, label_strings_bytes = build_labels_section(label_strings,
+									   label_strings_base)
 
 	cmd_buffer_bytes = relocate_cmd_buffer(cmd_buffer_bytes, ref_const_base, model_const_base,
 						len(const_bytes))
-	relocate_flash_pointers(model, cmd_buffer_base, model_const_base, extra_outputs_base)
+	relocate_flash_pointers(model, cmd_buffer_base, model_const_base, extra_outputs_base,
+				 labels_base)
 
-	section_len = [struct_len, len(cmd_buffer_bytes), len(const_bytes), len(extra_outputs_bytes)]
-	payload = bytes(buf) + cmd_buffer_bytes + const_bytes + extra_outputs_bytes
+	section_len = [struct_len, len(cmd_buffer_bytes), len(const_bytes), len(extra_outputs_bytes),
+		       len(labels_bytes), len(label_strings_bytes)]
+	payload = (bytes(buf) + cmd_buffer_bytes + const_bytes + extra_outputs_bytes +
+		   labels_bytes + label_strings_bytes)
 	payload_size = len(payload)
 
 	name = model_name.encode("utf-8")[:NAME_LEN]
@@ -346,8 +466,10 @@ def build_package(elf_path, model_name, version, address):
 		"HEADER_FMT (%u B) must match struct model_pkg_axon_header (see model_pkg.h)" % HEADER_LEN
 	crc = zlib.crc32(header_no_crc + payload) & 0xFFFFFFFF
 
-	print("package_base=0x%08x struct=%u B cmd_buffer=%u B model_const=%u B extra_outputs=%u B" %
-	      (struct_base, section_len[0], section_len[1], section_len[2], section_len[3]))
+	print("package_base=0x%08x struct=%u B cmd_buffer=%u B model_const=%u B extra_outputs=%u B "
+	      "labels=%u B (%u B strings)" %
+	      (struct_base, section_len[0], section_len[1], section_len[2], section_len[3],
+	       section_len[4], section_len[5]))
 
 	return pack(crc) + payload
 

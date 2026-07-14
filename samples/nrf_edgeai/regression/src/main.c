@@ -62,45 +62,6 @@
 
 LOG_MODULE_REGISTER(regression, LOG_LEVEL_INF);
 
-#if defined(CONFIG_NRF_EDGEAI_REGRESSION_REFERENCE_BUILD)
-
-#include <assert.h>
-
-#include <axon/nrf_axon_platform.h>
-#include <drivers/axon/nrf_axon_nn_infer.h>
-
-#include "nrf_edgeai_user_model_axon.h"
-
-/*
- * Model-only OTA update PoC: the deployed app (see the #else branch below) no longer links in
- * the generated Axon model sources - it loads its model from the model_storage flash partition
- * at runtime instead. Packaging a model update still needs a real link address for the model's
- * constants blob (see package_base in model_pkg_axon_header), which only exists in a build
- * that actually references those sources.
- *
- * This reference-model_anchor array exists purely to keep model_axon_user_instance_36025 /
- * cmd_buffer_axon_user_instance_36025 / axon_model_const_axon_user_instance_36025 alive in this
- * image's ELF for tools/model_ota/package_model_axon.py to introspect. This build does
- * nothing else and is never flashed as the application - see README.rst.
- */
-const void *volatile regression_reference_model_anchor[] = {
-	&model_axon_user_instance_36025,
-	(const void *)cmd_buffer_axon_user_instance_36025,
-	&axon_model_const_axon_user_instance_36025,
-};
-
-int main(void)
-{
-	/* Actually (volatile-)read the anchor, rather than just declaring it __used, so the
-	 * compiler cannot constant-fold the read away and the linker's --gc-sections cannot
-	 * drop it - and, transitively via its relocations, the model symbols it points to -
-	 * since nothing else in this reference-only image references it.
-	 */
-	return regression_reference_model_anchor[0] != NULL ? 0 : 1;
-}
-
-#else /* !CONFIG_NRF_EDGEAI_REGRESSION_REFERENCE_BUILD */
-
 #include <nrf_edgeai/nrf_edgeai.h>
 
 #include "model_wiring.h"
@@ -385,5 +346,3 @@ int main(void)
 }
 
 #endif /* CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA */
-
-#endif /* CONFIG_NRF_EDGEAI_REGRESSION_REFERENCE_BUILD */

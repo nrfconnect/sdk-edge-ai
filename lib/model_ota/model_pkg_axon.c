@@ -129,6 +129,8 @@ int model_pkg_load_axon(nrf_axon_nn_compiled_model_s *out_model,
 	uint32_t cmd_buffer_bytes = hdr.section_len[MODEL_PKG_AXON_SEC_CMD_BUFFER];
 	uint32_t model_const_size = hdr.section_len[MODEL_PKG_AXON_SEC_MODEL_CONST];
 	uint32_t extra_outputs_bytes = hdr.section_len[MODEL_PKG_AXON_SEC_EXTRA_OUTPUTS];
+	uint32_t labels_bytes = hdr.section_len[MODEL_PKG_AXON_SEC_LABELS];
+	uint32_t label_strings_bytes = hdr.section_len[MODEL_PKG_AXON_SEC_LABEL_STRINGS];
 
 	if (cmd_buffer_bytes % sizeof(uint32_t) != 0) {
 		flash_area_close(fa);
@@ -152,12 +154,16 @@ int model_pkg_load_axon(nrf_axon_nn_compiled_model_s *out_model,
 	uint32_t cmd_buffer_offset = struct_offset + hdr.section_len[MODEL_PKG_AXON_SEC_MODEL_STRUCT];
 	uint32_t model_const_offset = cmd_buffer_offset + cmd_buffer_bytes;
 	uint32_t extra_outputs_offset = model_const_offset + model_const_size;
+	uint32_t labels_offset = extra_outputs_offset + extra_outputs_bytes;
+	uint32_t label_strings_offset = labels_offset + labels_bytes;
 
 	const uint8_t *struct_ptr = MODEL_PARTITION_ADDR + struct_offset;
 	const uint32_t *cmd_buffer_ptr =
 		(const uint32_t *)(MODEL_PARTITION_ADDR + cmd_buffer_offset);
 	const void *model_const_ptr = MODEL_PARTITION_ADDR + model_const_offset;
 	const void *extra_outputs_ptr = MODEL_PARTITION_ADDR + extra_outputs_offset;
+	const void *labels_ptr = MODEL_PARTITION_ADDR + labels_offset;
+	const void *label_strings_ptr = MODEL_PARTITION_ADDR + label_strings_offset;
 
 	/*
 	 * package_base is where the packaging tool assumed the MODEL_STRUCT section would land,
@@ -200,7 +206,8 @@ int model_pkg_load_axon(nrf_axon_nn_compiled_model_s *out_model,
 
 	/*
 	 * Validate CRC32 by streaming straight from the memory-mapped partition: header (with
-	 * crc32 zeroed) + struct + cmd_buffer + model_const + extra_outputs (if present).
+	 * crc32 zeroed) + struct + cmd_buffer + model_const + extra_outputs + labels +
+	 * label_strings (each of the last three only if present).
 	 */
 	uint32_t stored_crc = hdr.crc32;
 	struct model_pkg_axon_header hdr_for_crc = hdr;
@@ -215,6 +222,13 @@ int model_pkg_load_axon(nrf_axon_nn_compiled_model_s *out_model,
 	if (extra_outputs_bytes != 0) {
 		computed_crc = crc32_ieee_update(computed_crc, extra_outputs_ptr,
 						  extra_outputs_bytes);
+	}
+	if (labels_bytes != 0) {
+		computed_crc = crc32_ieee_update(computed_crc, labels_ptr, labels_bytes);
+	}
+	if (label_strings_bytes != 0) {
+		computed_crc = crc32_ieee_update(computed_crc, label_strings_ptr,
+						  label_strings_bytes);
 	}
 
 	if (computed_crc != stored_crc) {
@@ -231,10 +245,9 @@ int model_pkg_load_axon(nrf_axon_nn_compiled_model_s *out_model,
 	 * this (see its module docstring), but a hand-crafted or corrupted package could still
 	 * claim struct_size matches while carrying a shape this loader never patches correctly.
 	 */
-	if (built.labels != NULL || built.persistent_vars.count != 0) {
-		LOG_ERR("Package uses labels or persistent_vars, which this loader does not "
-			"support (input_cnt=%u, persistent_vars.count=%u)", built.input_cnt,
-			built.persistent_vars.count);
+	if (built.persistent_vars.count != 0) {
+		LOG_ERR("Package uses persistent_vars, which this loader does not support "
+			"(persistent_vars.count=%u)", built.persistent_vars.count);
 		return MODEL_PKG_ERR_UNSUPPORTED_SHAPE;
 	}
 
@@ -245,6 +258,11 @@ int model_pkg_load_axon(nrf_axon_nn_compiled_model_s *out_model,
 	if (built.cmd_buffer_ptr != cmd_buffer_ptr || built.model_const_ptr != model_const_ptr) {
 		LOG_ERR("Packaged struct's cmd_buffer_ptr/model_const_ptr do not match this "
 			"package's own section layout - package is corrupted");
+		return MODEL_PKG_ERR_BAD_PACKAGE_BASE;
+	}
+	if (built.labels != NULL && (labels_bytes == 0 || (const void *)built.labels != labels_ptr)) {
+		LOG_ERR("Packaged struct's labels pointer does not match this package's own "
+			"LABELS section - package is corrupted");
 		return MODEL_PKG_ERR_BAD_PACKAGE_BASE;
 	}
 

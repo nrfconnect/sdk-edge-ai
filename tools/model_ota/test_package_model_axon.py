@@ -22,6 +22,9 @@ from unittest.mock import patch
 from axon_struct_layout import CompiledModel
 from model_partition_layout import check_package_fits, format_size, report_package_usage
 from package_model_axon import (
+	build_labels_section,
+	check_no_op_extension_refs,
+	num_output_classes,
 	relocate_cmd_buffer,
 	relocate_flash_pointers,
 	relocate_ram_pointers,
@@ -67,10 +70,9 @@ class ValidateShapeTests(unittest.TestCase):
 		model, _ = make_model(input_cnt=2, external=(True, True))
 		validate_shape(model, "multi_input")
 
-	def test_labels_rejected(self):
+	def test_labels_accepted(self):
 		model, _ = make_model(labels=0x0800_1234)
-		with self.assertRaisesRegex(ValueError, "labels"):
-			validate_shape(model, "labeled")
+		validate_shape(model, "labeled")  # must not raise
 
 	def test_persistent_vars_rejected(self):
 		model, _ = make_model(persistent_vars_count=3)
@@ -151,6 +153,54 @@ class RelocateFlashPointersTests(unittest.TestCase):
 					 model_const_base=0x10_2300, extra_outputs_base=0x10_2400)
 		self.assertEqual(model.extra_outputs, 0x10_2400)
 
+	def test_labels_relocated_when_present(self):
+		model, _ = make_model(labels=0x0800_6000)
+		relocate_flash_pointers(model, cmd_buffer_base=0x10_2100, model_const_base=0x10_2300,
+					 extra_outputs_base=0x10_2400, labels_base=0x10_2500)
+		self.assertEqual(model.labels, 0x10_2500)
+
+	def test_labels_left_null_when_absent(self):
+		model, _ = make_model(labels=0)
+		relocate_flash_pointers(model, cmd_buffer_base=0x10_2100, model_const_base=0x10_2300,
+					 extra_outputs_base=0x10_2400, labels_base=0x10_2500)
+		self.assertEqual(model.labels, 0)
+
+
+class NumOutputClassesTests(unittest.TestCase):
+	def test_single_dimension_classification(self):
+		model, _ = make_model()
+		model.output_dimensions.height = 1
+		model.output_dimensions.width = 4
+		model.output_dimensions.channel_cnt = 1
+		self.assertEqual(num_output_classes(model), 4)
+
+	def test_multi_channel(self):
+		model, _ = make_model()
+		model.output_dimensions.height = 2
+		model.output_dimensions.width = 3
+		model.output_dimensions.channel_cnt = 2
+		self.assertEqual(num_output_classes(model), 12)
+
+
+class BuildLabelsSectionTests(unittest.TestCase):
+	def test_pointers_reference_correct_offsets(self):
+		strings_base = 0x0010_2500
+		labels_bytes, blob = build_labels_section([b"NON_PERSON", b"PERSON"], strings_base)
+
+		ptrs = struct.unpack("<2I", labels_bytes)
+		self.assertEqual(ptrs[0], strings_base)
+		self.assertEqual(ptrs[1], strings_base + len(b"NON_PERSON\x00"))
+		self.assertEqual(blob, b"NON_PERSON\x00PERSON\x00")
+
+	def test_empty_label_list(self):
+		labels_bytes, blob = build_labels_section([], 0x0010_2500)
+		self.assertEqual(labels_bytes, b"")
+		self.assertEqual(blob, b"")
+
+	def test_embedded_nul_rejected(self):
+		with self.assertRaisesRegex(ValueError, "NUL"):
+			build_labels_section([b"bad\x00label"], 0x0010_2500)
+
 
 class RelocateCmdBufferTests(unittest.TestCase):
 	def test_matching_words_are_patched(self):
@@ -167,6 +217,29 @@ class RelocateCmdBufferTests(unittest.TestCase):
 		self.assertEqual(out[1], 0xDEAD_BEEF)    # untouched
 		self.assertEqual(out[2], new_base + 15)  # last byte inside the span: patched
 		self.assertEqual(out[3], old_base + 16)  # exactly at the span boundary: untouched
+
+
+class CheckNoOpExtensionRefsTests(unittest.TestCase):
+	def test_no_op_extensions_in_elf_accepted(self):
+		cmd_buffer = struct.pack("<2I", 0x0010_2100, 0xDEAD_BEEF)
+		check_no_op_extension_refs(cmd_buffer, "hello_axon", [])  # must not raise
+
+	def test_unreferenced_op_extension_accepted(self):
+		cmd_buffer = struct.pack("<2I", 0x0010_2100, 0xDEAD_BEEF)
+		check_no_op_extension_refs(cmd_buffer, "hello_axon", [0x0800_1234])
+
+	def test_referenced_op_extension_rejected(self):
+		op_extension_addr = 0x0800_1234
+		cmd_buffer = struct.pack("<2I", 0x0010_2100, op_extension_addr)
+		with self.assertRaisesRegex(ValueError, "op extension"):
+			check_no_op_extension_refs(cmd_buffer, "relu_model", [op_extension_addr])
+
+	def test_thumb_tagged_reference_rejected(self):
+		"""cmd_buffer may store the Thumb-tagged (LSB-set) function pointer."""
+		op_extension_addr = 0x0800_1234
+		cmd_buffer = struct.pack("<1I", op_extension_addr | 1)
+		with self.assertRaisesRegex(ValueError, "op extension"):
+			check_no_op_extension_refs(cmd_buffer, "relu_model", [op_extension_addr])
 
 
 class FormatSizeTests(unittest.TestCase):

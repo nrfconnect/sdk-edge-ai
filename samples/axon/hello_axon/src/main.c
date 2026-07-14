@@ -16,40 +16,6 @@
 
 LOG_MODULE_REGISTER(hello_axon);
 
-#if defined(CONFIG_HELLO_AXON_REFERENCE_BUILD)
-
-#include "generated/nrf_axon_model_hello_axon_.h"
-
-/*
- * Model-only OTA update PoC: the deployed app (see the #else branch below) no longer links in
- * the generated model header - it loads its model from the model_storage flash partition at
- * runtime instead. Packaging a model update still needs a real link address for the model's
- * constants blob (see package_base in model_pkg_axon_header), which only exists in a build
- * that actually references that header.
- *
- * This reference-model_anchor array exists purely to keep model_hello_axon/cmd_buffer_hello_axon
- * /axon_model_const_hello_axon alive in this image's ELF for tools/model_ota/
- * package_model_axon.py to introspect. This build does nothing else and is never flashed as the
- * application - see README.rst.
- */
-const void *volatile hello_axon_reference_model_anchor[] = {
-	&model_hello_axon,
-	(const void *)cmd_buffer_hello_axon,
-	&axon_model_const_hello_axon,
-};
-
-int main(void)
-{
-	/* Actually (volatile-)read the anchor, rather than just declaring it __used, so the
-	 * compiler cannot constant-fold the read away and the linker's --gc-sections cannot
-	 * drop it - and, transitively via its relocations, the model symbols it points to -
-	 * since nothing else in this reference-only image references it.
-	 */
-	return hello_axon_reference_model_anchor[0] != NULL ? 0 : 1;
-}
-
-#else /* !CONFIG_HELLO_AXON_REFERENCE_BUILD */
-
 /* Input size, matching the input layer dimensions of the currently loaded model. */
 #define INPUT_SIZE  (1)
 /* Output size, matching the output dimensions of the currently loaded model. */
@@ -259,16 +225,22 @@ BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_partition),
 
 /*
  * The model itself is *not* compiled in: this is only populated (by model_pkg_load_axon())
- * once a valid package has been read from the model_storage flash partition.
+ * once a valid package has been read from the model_storage flash partition. Deliberately not
+ * named model_hello_axon: CONFIG_HELLO_AXON_REFERENCE_BUILD links src/model_reference_anchor.c
+ * into this same image (see CMakeLists.txt), whose generated model header defines a symbol of
+ * exactly that name - name collisions between the two would be benign in C (this one is
+ * `static`, so the linker keeps them distinct), but tools/model_ota/package_model_axon.py looks
+ * up "model_hello_axon" by name in the reference ELF's symbol table with no way to tell the two
+ * apart, and could silently pick this zeroed RAM instance instead of the real compiled model.
  */
-static nrf_axon_nn_compiled_model_s model_hello_axon;
+static nrf_axon_nn_compiled_model_s active_model;
 
 static const nrf_axon_nn_compiled_model_s *model_ota_load(void)
 {
 	struct model_pkg_axon_info info;
 	int err;
 
-	err = model_pkg_load_axon(&model_hello_axon, &info);
+	err = model_pkg_load_axon(&active_model, &info);
 	if (err != MODEL_PKG_OK) {
 		LOG_ERR("No usable model in model_storage (err %d)", err);
 		return NULL;
@@ -277,7 +249,7 @@ static const nrf_axon_nn_compiled_model_s *model_ota_load(void)
 	LOG_INF("Active model: '%s' version 0x%08x (%u cmd words, %u B const)", info.name,
 		info.version, info.cmd_buffer_len, info.model_const_size);
 
-	return &model_hello_axon;
+	return &active_model;
 }
 
 int main(void)
@@ -339,5 +311,3 @@ int main(void)
 }
 
 #endif /* CONFIG_HELLO_AXON_MODEL_OTA */
-
-#endif /* CONFIG_HELLO_AXON_REFERENCE_BUILD */
