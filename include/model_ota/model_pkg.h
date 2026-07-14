@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** Container format version (independent of the model's own version). */
-#define MODEL_PKG_FORMAT_VERSION 3
+#define MODEL_PKG_FORMAT_VERSION 4
 
 /** Length of the @ref model_pkg_header.name field, not necessarily NUL-terminated. */
 #define MODEL_PKG_NAME_LEN 16
@@ -129,6 +129,7 @@ enum model_pkg_result {
 	MODEL_PKG_ERR_BAD_PACKAGE_BASE = -11,
 	MODEL_PKG_ERR_BAD_STRUCT_SIZE = -12,
 	MODEL_PKG_ERR_UNSUPPORTED_SHAPE = -13,
+	MODEL_PKG_ERR_INTERLAYER_MISMATCH = -14,
 };
 
 /**
@@ -192,6 +193,13 @@ enum model_pkg_axon_section {
  * actually landed on this device - no pointer relocation happens at load time. struct_size lets
  * the loader detect, before trusting any field offset, that the packaging tool's copy of
  * nrf_axon_nn_compiled_model_s and this firmware's copy have drifted apart.
+ *
+ * interlayer_addr is the reference build's address for nrf_axon_interlayer_buffer: cmd_buffer
+ * contains literal references to it (for inter-layer data handoff between the NPU's compiled
+ * instructions), baked in at compile time by the reference build, and - unlike model_const -
+ * this loader does not relocate them (see @ref model_pkg_load_axon). Storing the reference
+ * build's address lets the loader at least detect, rather than silently mispredict on, a
+ * mismatch against this device's actual nrf_axon_interlayer_buffer address.
  */
 struct model_pkg_axon_header {
 	uint8_t magic[4]; /**< {'N','E','A','I'} */
@@ -205,6 +213,7 @@ struct model_pkg_axon_header {
 
 	uint32_t struct_size;  /**< must equal sizeof(nrf_axon_nn_compiled_model_s) on this device */
 	uint32_t package_base; /**< flash address the MODEL_STRUCT section is expected to land at */
+	uint32_t interlayer_addr; /**< reference build's nrf_axon_interlayer_buffer address */
 
 	uint32_t crc32; /**< CRC32 (IEEE) over header (crc32 field zeroed) + payload */
 } __packed;
@@ -233,10 +242,14 @@ struct model_pkg_axon_info {
  * compiled to expect, computed by the packaging tool - see model_pkg_axon.c for how that offset
  * is smuggled through the pointer field itself while the package sits in flash).
  *
- * The only check performed against absolute addresses is that package_base (what the package
- * was built for) matches where the payload actually landed on this device - if it doesn't, the
- * package was built for a different model_storage layout (e.g. --address didn't match this
- * board's overlay) and is rejected rather than wired up with stale pointers.
+ * Two checks are performed against absolute addresses baked in by the reference build, rather
+ * than trusting them silently: package_base must match where the payload actually landed on
+ * this device (otherwise the package was built for a different model_storage layout, e.g.
+ * --address didn't match this board's overlay); and interlayer_addr must match this device's
+ * actual nrf_axon_interlayer_buffer address (otherwise cmd_buffer's own embedded references to
+ * that buffer - which, unlike model_const, this loader does not relocate - would silently read
+ * and write the wrong RAM). Either mismatch is rejected rather than wired up with stale
+ * pointers.
  *
  * Known limitations (see the plan this was implemented from for the reasoning): models with
  * labels or persistent_vars are rejected (MODEL_PKG_ERR_UNSUPPORTED_SHAPE) - the packaging tool

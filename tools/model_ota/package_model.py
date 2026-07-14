@@ -43,7 +43,7 @@ from model_partition_layout import (
 )
 
 MAGIC = b"NEAI"
-FORMAT_VERSION = 3
+FORMAT_VERSION = 4
 MODEL_TYPE_NEUTON = 0
 NAME_LEN = 16
 

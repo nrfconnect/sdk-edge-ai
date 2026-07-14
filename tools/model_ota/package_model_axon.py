@@ -17,7 +17,17 @@ buffer's actual address is only known to the deployed firmware, not to this tool
 on-device loader (model_pkg_load_axon()) never has to patch anything shape-specific at runtime -
 it copies the struct straight out of the memory-mapped partition (true XIP, zero RAM cost for
 everything except that one fixed-size struct copy) and only fixes up the handful of RAM-owned
-fields. Packaging therefore needs two inputs:
+fields.
+
+One RAM-owned reference is not covered by that struct-field relocation: cmd_buffer's own
+embedded literal references to nrf_axon_interlayer_buffer (used for inter-layer data handoff
+between the NPU's compiled instructions), which - unlike its references into model_const - are
+never relocated, by this tool or the on-device loader. They are only ever correct if this
+reference build's nrf_axon_interlayer_buffer address happens to match the deployed device's.
+This tool cannot fix that at packaging time (the deployed address isn't known yet), so it
+instead records the reference build's address in the package (interlayer_addr) purely so the
+loader can detect a mismatch and refuse to load rather than silently mispredict - see
+model_pkg_load_axon() for the actual check. Packaging therefore needs two inputs:
 
 1. A "reference build" of a sample (e.g. samples/axon/hello_axon) with its
    *_REFERENCE_BUILD=y Kconfig option set - never flashed, its only purpose is to link in the
@@ -78,14 +88,14 @@ from model_partition_layout import (
 )
 
 MAGIC = b"NEAI"
-FORMAT_VERSION = 3
+FORMAT_VERSION = 4
 MODEL_TYPE_AXON = 1
 NAME_LEN = 16
 
 # <magic(4s) format_version(H) model_type(B) reserved0(B) name(16s) model_version(I)
-#  payload_size(I) section_len[4](4I) struct_size(I) package_base(I) crc32(I) -- packed,
-#  little-endian, no padding.
-HEADER_FMT = "<4sHBB16sII4III" "I"
+#  payload_size(I) section_len[4](4I) struct_size(I) package_base(I) interlayer_addr(I)
+#  crc32(I) -- packed, little-endian, no padding.
+HEADER_FMT = "<4sHBB16sII4III" "II"
 HEADER_LEN = struct.calcsize(HEADER_FMT)
 
 
@@ -327,7 +337,7 @@ def build_package(elf_path, model_name, version, address):
 			HEADER_FMT,
 			MAGIC, FORMAT_VERSION, MODEL_TYPE_AXON, 0, name, version, payload_size,
 			*section_len,
-			struct_len, struct_base,
+			struct_len, struct_base, interlayer_addr,
 			crc,
 		)
 

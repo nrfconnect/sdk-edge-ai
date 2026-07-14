@@ -178,6 +178,27 @@ int model_pkg_load_axon(nrf_axon_nn_compiled_model_s *out_model,
 	}
 
 	/*
+	 * cmd_buffer embeds literal references to nrf_axon_interlayer_buffer (for inter-layer
+	 * data handoff) baked in by the reference build that produced this package - unlike
+	 * model_const, this loader does not relocate them (see the module comment above). If
+	 * this device's actual buffer isn't at the address the packaging tool saw, those
+	 * embedded references are silently wrong: the NPU would still run, but would read and
+	 * write whatever happens to live at the reference build's address instead of the real
+	 * buffer, producing plausible-looking but incorrect predictions rather than an obvious
+	 * failure. Refuse to wire up the model rather than risk that.
+	 */
+	uint32_t actual_interlayer_addr = (uint32_t)(uintptr_t)nrf_axon_interlayer_buffer;
+
+	if (hdr.interlayer_addr != actual_interlayer_addr) {
+		LOG_ERR("Package built for nrf_axon_interlayer_buffer at 0x%08x, but this "
+			"device's is at 0x%08x - cmd_buffer's embedded references to it would "
+			"be wrong; rebuild and repackage from a reference build that matches "
+			"this firmware's memory layout",
+			hdr.interlayer_addr, actual_interlayer_addr);
+		return MODEL_PKG_ERR_INTERLAYER_MISMATCH;
+	}
+
+	/*
 	 * Validate CRC32 by streaming straight from the memory-mapped partition: header (with
 	 * crc32 zeroed) + struct + cmd_buffer + model_const + extra_outputs (if present).
 	 */

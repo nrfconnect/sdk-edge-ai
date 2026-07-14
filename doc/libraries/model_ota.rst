@@ -185,7 +185,7 @@ Because nothing in the payload needs to know its own flash address, the on-devic
 
    Host -> Host : read model JSON\n(weights, topology, output scaling)
    Host -> Host : concatenate raw arrays\n(no addresses embedded)
-   Host -> Host : build header\n(magic, format_version=3, section_len[], CRC32)
+   Host -> Host : build header\n(magic, format_version=4, section_len[], CRC32)
    note right of Host
      Neuton payload never embeds a flash
      address, so no reference build or
@@ -226,6 +226,11 @@ This library resolves that relocation **once, on the host, at packaging time** (
   These are reduced to a byte offset from the interlayer buffer's base instead, which the on-device loader adds back in.
 
 Because the packaging tool captures and relocates the *entire* struct rather than a hand-picked subset of scalar fields, the on-device loader (``model_pkg_load_axon()`` in :file:`model_pkg_axon.c`) does not need to know a model's shape (input count, output count, ...) ahead of time - see "Known limitations" below for the shapes it still cannot handle.
+
+``cmd_buffer`` itself contains one more kind of absolute reference that the above cannot cover: literal words embedded by the Axon NN compiler that point at ``nrf_axon_interlayer_buffer`` directly (used for inter-layer data handoff between the NPU's compiled instructions), independently of the struct's ``inputs[i].ptr``/``output_ptr`` fields.
+Unlike the command buffer's references into ``model_const``, these cannot be relocated on the host (the deployed device's actual buffer address isn't known yet) or on-device (``cmd_buffer`` stays XIP in flash, never copied to RAM, so there is nothing to patch).
+Every board that uses model OTA for Axon therefore reserves a fixed-address memory region for ``nrf_axon_interlayer_buffer`` (see "Board requirements" below) so that address is identical in the reference build and every deployed build, and those embedded references are always correct by construction.
+As defense in depth, the packaging tool also records the reference build's ``nrf_axon_interlayer_buffer`` address in the package (``interlayer_addr``), and the loader rejects the package outright if it does not match this device's actual address, rather than risk wiring up a model that would silently mispredict.
 
 .. uml::
    :caption: Axon packaging and loading. Flash-owned pointers are relocated once on the host; only RAM-owned pointers are patched on-device, and only cmd_buffer/model_const stay XIP.
@@ -276,7 +281,13 @@ Because the packaging tool captures and relocates the *entire* struct rather tha
      but the struct is packaged once and may be
      flashed onto builds with different addresses.
    end note
-   Host -> Host : build header (magic, format_version=3,\nstruct_size, package_base, CRC32)
+   Host -> Host : build header (magic, format_version=4,\nstruct_size, package_base,\ninterlayer_addr, CRC32)
+   note right of Host
+     interlayer_addr is this reference
+     build's nrf_axon_interlayer_buffer
+     address, stored purely so the loader
+     can detect a mismatch - see note below.
+   end note
 
    == Flashing ==
 
@@ -287,7 +298,8 @@ Because the packaging tool captures and relocates the *entire* struct rather tha
    App -> Loader : model_ota_load()
    Loader -> Flash : flash_area_read(header)
    Loader -> Loader : validate magic, format_version, struct_size,\npackage_base == partition address, CRC32
-   alt package invalid or absent
+   Loader -> Loader : validate interlayer_addr ==\n&nrf_axon_interlayer_buffer on this device
+   alt package invalid, absent, or interlayer_addr mismatch
      Loader --> App : NULL
      App -> App : skip inference,\nretry on next iteration
    else package valid
@@ -312,6 +324,7 @@ Model packages are produced by Python tools under :file:`tools/model_ota/`, run 
   Only ``MODEL_PARAMS_TYPE == f32`` models are supported (q16/q8 quantized models are rejected), and only regression/anomaly-detection tasks (only those generate the ``MODEL_OUTPUT_SCALE_MIN``/``MAX`` arrays the package format requires; classification-only models are rejected) - both limitations inherited from the package format itself, not specific to this tool.
 * :file:`package_model_axon.py` - builds an Axon package purely by introspecting a *reference build's* ``zephyr.elf`` with ``pyelftools``: it locates the compiled model's symbols, reads the ``nrf_axon_nn_compiled_model_s`` struct's raw bytes with :file:`axon_struct_layout.py` (a ``ctypes`` mirror of the struct's on-device ABI), classifies every pointer field as flash-owned or RAM-owned, and relocates each accordingly (see "Axon packages" above).
   Every symbol lookup and cross-check (missing symbol, size/address mismatch against the struct's own fields, ...) fails loudly with a specific error at packaging time, on the host - so a stale or mismatched reference build is caught here, well before a package is ever written or flashed, with no separate build-time validation step needed.
+  It also records the reference build's ``nrf_axon_interlayer_buffer`` address in the package (``interlayer_addr``) so the on-device loader can detect, rather than silently mispredict on, a mismatch against this device's actual address - see "Board requirements" below for why that mismatch should not normally happen at all.
 * :file:`model_partition_layout.py` - shared helper both tools use to read the target ``model_storage`` partition's address and size from a build's generated ``zephyr.dts`` (via ``--dts``), and to preflight-check that the generated package will actually fit before writing anything - instead of trusting a hand-typed ``--address``/``--partition-size`` to still match the target board's devicetree.
   It also prints a one-line utilization report (used size, partition size, percentage used) after every successful build, e.g.:
 
@@ -341,6 +354,37 @@ Both loaders always load packages directly from the memory-mapped ``model_storag
 * For Neuton, each array's flash address is wired directly into the model instance; the only RAM involved is the caller-provided neuron activation scratch buffer.
 * For Axon, ``cmd_buffer`` and ``model_const`` are referenced straight in flash, regardless of model size - no RAM copy of either, and no runtime pointer-patching loop over the command buffer.
   Only the fixed-size ``nrf_axon_nn_compiled_model_s`` struct itself is copied, into the caller-owned model instance, since a handful of its fields need patching with this device's own ``nrf_axon_interlayer_buffer`` address (see "Axon packages" above).
+
+Board requirements for Axon
+*****************************
+
+Because ``cmd_buffer`` stays XIP in flash and is never patched, its embedded ``nrf_axon_interlayer_buffer`` references are only ever correct if that buffer's address is identical in the reference build that produced a package and the device that loads it.
+Every board used with model OTA's Axon backend therefore reserves a small, fixed-address SRAM region for it, instead of letting the linker place it in plain ``.bss`` wherever happens to fit for a given build - see e.g. :file:`samples/nrf_edgeai/regression/boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay`:
+
+.. code-block:: dts
+
+   &cpuapp_sram {
+   	reg = <0x20000000 DT_SIZE_K(510)>;
+   	ranges = <0x0 0x20000000 DT_SIZE_K(510)>;
+   };
+
+   / {
+   	axon_interlayer: sram@2007f800 {
+   		compatible = "zephyr,memory-region", "mmio-sram";
+   		reg = <0x2007f800 DT_SIZE_K(1)>;
+   		zephyr,memory-region = "AXON_INTERLAYER";
+   		status = "okay";
+   	};
+   };
+
+paired with :kconfig:option:`CONFIG_NRF_AXON_INTERLAYER_BUFFER_MEMREGION_NAME` set to the same region name, in the board's ``.conf`` (or ``prj.conf``):
+
+.. code-block:: cfg
+
+   CONFIG_NRF_AXON_INTERLAYER_BUFFER_MEMREGION_NAME="AXON_INTERLAYER"
+
+This makes ``nrf_axon_interlayer_buffer``'s address a fixed property of the board, not an accident of whatever else happens to be linked into a particular build - so it is identical whether that build is a throwaway reference build or the real deployed application, for as many model updates as you like, with no relationship to model size (unlike, say, copying and patching ``cmd_buffer`` at load time, which would cost more RAM and CPU the larger the model - real Axon models can have ``cmd_buffer`` sizes from under a kilobyte up to tens of kilobytes).
+Porting model OTA's Axon backend to a new board requires adding the equivalent overlay/Kconfig pair; the on-device ``interlayer_addr`` check (see above) exists specifically to catch a board where this was forgotten, or done incorrectly, with a clear rejection instead of a silent accuracy regression.
   This is only possible because every other pointer field was already relocated to its final flash address at packaging time; the loader's only extra checks are that the packaged struct's size matches this firmware's (``struct_size``), and that the package's expected base address actually matches where it landed on this device (``package_base``).
 
 Testing an OTA update end-to-end
@@ -437,6 +481,7 @@ Known limitations
 * **Axon models using** ``labels`` **(per-class text labels) or** ``persistent_vars`` **(streaming/** ``VarHandle`` **models) are rejected outright** by the packaging tool: resolving an arbitrary string literal's address reliably from an ELF, and computing per-persistent-variable buffer offsets, were judged not worth the added complexity for a PoC with no such model to validate against yet.
   The on-device loader also rejects them defensively (``MODEL_PKG_ERR_UNSUPPORTED_SHAPE``), in case a package somehow bypassed the tool's check.
 * **Multi-input Axon models and models with** ``extra_outputs`` **are supported by both the tool and the loader**, but - absent such a model anywhere in this repo - are only exercised by :file:`tools/model_ota/test_package_model_axon.py`'s unit tests, not on real hardware.
+* **New boards need a fixed-address** ``nrf_axon_interlayer_buffer`` **region.** See "Board requirements for Axon" above; a board missing this is caught at load time (``MODEL_PKG_ERR_INTERLAYER_MISMATCH``), not at packaging time, since the mismatch only exists between a specific reference build and a specific deployed build.
 * **No runtime OTA transport.** Getting a package onto the device is a flash-only operation in this PoC; there is no over-the-air download/verify/apply flow.
 * **Single model instance.** Only one model package can live in ``model_storage`` at a time; there is no A/B slot, rollback, or versioned history.
 

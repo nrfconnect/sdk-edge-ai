@@ -25,3 +25,27 @@
 		};
 	};
 };
+
+/*
+ * nrf_axon_interlayer_buffer normally lands in plain .bss, wherever the linker happens to put
+ * it for a given build - which model_ota's Axon loader cannot tolerate: cmd_buffer embeds
+ * literal references to that buffer (baked in by whatever "reference build" produced the
+ * package, see lib/model_ota/model_pkg_axon.c and tools/model_ota/package_model_axon.py), and
+ * those references are never relocated at packaging or load time. Reserving a dedicated,
+ * fixed-address memory region for it - and pointing CONFIG_NRF_AXON_INTERLAYER_BUFFER_MEMREGION_NAME
+ * at that region's name (see prj.conf) - makes its address identical in every build (reference
+ * or deployed), for good, so cmd_buffer's embedded references are always correct.
+ */
+&cpuapp_sram {
+	reg = <0x20000000 DT_SIZE_K(510)>;
+	ranges = <0x0 0x20000000 DT_SIZE_K(510)>;
+};
+
+/ {
+	axon_interlayer: sram@2007f800 {
+		compatible = "zephyr,memory-region", "mmio-sram";
+		reg = <0x2007f800 DT_SIZE_K(1)>;
+		zephyr,memory-region = "AXON_INTERLAYER";
+		status = "okay";
+	};
+};
