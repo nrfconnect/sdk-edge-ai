@@ -31,6 +31,22 @@ if(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON)
 else()
   target_sources(app PRIVATE src/model_wiring_neuton.c)
   message(STATUS "Using Neuton Edge AI model")
+
+  if(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA)
+    # tools/model_ota/models/regression_v1_generated.c is the Neuton equivalent of Axon's
+    # src/nrf_edgeai_generated/Axon/nrf_edgeai_user_model_axon.h above: the generated model
+    # source this sample's OTA-enabled build currently packages. It lives under tools/ rather
+    # than under src/ because - unlike Axon - this sample's Neuton backend has no compiled-in
+    # fallback generated from it (see model_wiring_neuton.c's CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=n
+    # branch, which hardcodes an unrelated, much smaller solution instead).
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/nrf_neuton_model_package.cmake)
+    nrf_neuton_model_package(
+      TARGET regression
+      MODEL_NAME aq_regression
+      MODEL_C ${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/model_ota/models/regression_v1_generated.c
+      PARTITION_NODELABEL model_partition
+    )
+  endif()
 endif()
 
 target_sources(app PRIVATE src/main.c)

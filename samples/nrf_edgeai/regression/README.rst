@@ -135,15 +135,23 @@ Packaging a Neuton model
 -------------------------
 
 Neuton packages only need the model's raw arrays (weights, topology, output scaling), with no embedded addresses.
-Package the coefficients already used by this sample's Neuton backend with:
+Like Axon (see below), this sample's ``model_v1``-equivalent package is now built automatically as part of a normal build (:kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_NEUTON` + :kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA`, both on by default on boards other than ``nrf54lm20b``) - :file:`CMakeLists.txt`'s ``nrf_neuton_model_package()`` call runs :file:`package_model_neuton.py` against :file:`tools/model_ota/models/regression_v1_generated.c` (a restored copy of this model's original generated source, standing in for a real training run's output) with no separate build or manual packaging step needed:
 
 .. code-block:: console
 
-   python3 tools/model_ota/package_model.py \
-     tools/model_ota/models/regression_v1.json -o model_v1 \
+   west build -p -b nrf54lm20dk/nrf54lm20a/cpuapp -d build samples/nrf_edgeai/regression
+
+This produces ``build/regression/regression_model_pkg.bin``/``.hex``.
+
+To package a different (for example freshly retrained) model instead, point :file:`package_model_neuton.py` at its own generated source directly:
+
+.. code-block:: console
+
+   python3 tools/model_ota/package_model_neuton.py \
+     path/to/nrf_edgeai_user_model.c --name aq_regression --version 1.0.0 -o model_v1 \
      --dts build/regression/zephyr/zephyr.dts
 
-:file:`tools/model_ota/models/regression_v2.json` is a hand-tweaked variant, useful for observing a change in predictions after an update.
+:file:`tools/model_ota/models/regression_v2.json` is a hand-tweaked variant with no corresponding generated source, useful for observing a change in predictions after an update; package it with :file:`package_model.py` instead (see :ref:`lib_model_ota`, "Host-side packaging tools").
 
 ``--dts`` reads the ``model_storage`` partition's actual address and size from a build's generated :file:`zephyr.dts` and preflight-checks the package fits, instead of trusting the tool's nRF54LM20 DK defaults to still match your build; point it at any existing build of this sample (Neuton or Axon - the partition layout is the same either way).
 
