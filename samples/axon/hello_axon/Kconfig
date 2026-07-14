@@ -20,4 +20,33 @@ config AVOID_INPUT_DOUBLE_COPY
 	  This option removes unnecessary copying of input data between buffers, but it requires
 	  exclusive access to the Axon NPU interlayer buffer to preserve consistency.
 
+config HELLO_AXON_MODEL_OTA
+	bool "Load the model from the model_storage flash partition (model-only OTA)"
+	default y
+	select FLASH
+	select FLASH_MAP
+	select CRC
+	select MODEL_OTA
+	select MODEL_OTA_AXON
+	help
+	  When enabled (the default), this sample does not ship a compiled-in model: it loads,
+	  validates, and periodically reloads an Axon model package from the model_storage flash
+	  partition at runtime instead (see doc/libraries/model_ota.rst). Disable this to restore
+	  this sample's original pre-model-OTA behavior: the model is compiled directly into the
+	  application image and inference runs once at boot, with no flash partition or periodic
+	  reload involved.
+
+config HELLO_AXON_REFERENCE_BUILD
+	bool "Build a reference image for tools/model_ota/package_model_axon.py"
+	depends on HELLO_AXON_MODEL_OTA
+	default n
+	help
+	  The deployed app no longer links in the generated model header (see README.rst): it
+	  loads its model from the model_storage flash partition instead. Packaging a model
+	  update still needs a real link address for the model's constants blob, which only
+	  exists in a build that references that header. Enabling this option builds such a
+	  "reference" image instead of the normal app - it links in the generated model header
+	  just enough to keep its symbols (and this build's addresses for them) alive in the
+	  resulting zephyr.elf, and does nothing else. This image is never flashed.
+
 endmenu

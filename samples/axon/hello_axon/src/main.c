@@ -7,26 +7,60 @@
 #include <assert.h>
 #include <math.h>
 
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 #include <axon/nrf_axon_platform.h>
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
 
-#include "generated/nrf_axon_model_hello_axon_.h"
-
 LOG_MODULE_REGISTER(hello_axon);
 
-/* Input size, matching the input layer dimensions in @ref model_hello_axon. */
+#if defined(CONFIG_HELLO_AXON_REFERENCE_BUILD)
+
+#include "generated/nrf_axon_model_hello_axon_.h"
+
+/*
+ * Model-only OTA update PoC: the deployed app (see the #else branch below) no longer links in
+ * the generated model header - it loads its model from the model_storage flash partition at
+ * runtime instead. Packaging a model update still needs a real link address for the model's
+ * constants blob (see package_base in model_pkg_axon_header), which only exists in a build
+ * that actually references that header.
+ *
+ * This reference-model_anchor array exists purely to keep model_hello_axon/cmd_buffer_hello_axon
+ * /axon_model_const_hello_axon alive in this image's ELF for tools/model_ota/
+ * package_model_axon.py to introspect. This build does nothing else and is never flashed as the
+ * application - see README.rst.
+ */
+const void *volatile hello_axon_reference_model_anchor[] = {
+	&model_hello_axon,
+	(const void *)cmd_buffer_hello_axon,
+	&axon_model_const_hello_axon,
+};
+
+int main(void)
+{
+	/* Actually (volatile-)read the anchor, rather than just declaring it __used, so the
+	 * compiler cannot constant-fold the read away and the linker's --gc-sections cannot
+	 * drop it - and, transitively via its relocations, the model symbols it points to -
+	 * since nothing else in this reference-only image references it.
+	 */
+	return hello_axon_reference_model_anchor[0] != NULL ? 0 : 1;
+}
+
+#else /* !CONFIG_HELLO_AXON_REFERENCE_BUILD */
+
+/* Input size, matching the input layer dimensions of the currently loaded model. */
 #define INPUT_SIZE  (1)
-/* Output size, matching the output dimensions in @ref model_hello_axon. */
+/* Output size, matching the output dimensions of the currently loaded model. */
 #define OUTPUT_SIZE (1)
 
 /* Random samples from 0 to 2π */
 static const float sample_values[] = {3.07f, 2.14f, 5.76f, 4.62f, 0.00f, 1.60f, 4.55f, 4.13f,
 				      0.35f, 3.53f, 6.17f, 5.29f, 0.21f, 6.13f, 3.10f, 1.75f};
 
-/* Used to pass current sample value to inference_callback to compare prediction with ideal. */
+/* Passes the currently running model, and the current sample value, to inference_callback. */
+static const nrf_axon_nn_compiled_model_s *current_async_model;
 static float current_async_sample_value;
 
 /**
@@ -77,11 +111,11 @@ static void dequantize(const int8_t *values, const size_t length, float *target,
 	}
 }
 
-static void sync_flow(void)
+static void sync_flow(const nrf_axon_nn_compiled_model_s *model)
 {
 	nrf_axon_result_e result;
 
-	result = nrf_axon_nn_model_validate(&model_hello_axon);
+	result = nrf_axon_nn_model_validate(model);
 	if (result != NRF_AXON_RESULT_SUCCESS) {
 		LOG_ERR("Model validation failed, err %d", result);
 		return;
@@ -93,15 +127,15 @@ static void sync_flow(void)
 	/* This path requires to know that no other model is running or will be running as we access
 	 * internal buffer. Set input to NULL to indicate that data is already placed in buffer.
 	 */
-	int8_t *input_buffer = model_hello_axon.inputs[0].ptr;
+	int8_t *input_buffer = model->inputs[0].ptr;
 	int8_t *input = NULL;
 #else
-	/* Input buffer of size 1, matching the input layer dimensions in @ref model_hello_axon. */
+	/* Input buffer of size 1, matching the input layer dimensions of the loaded model. */
 	int8_t input_buffer[INPUT_SIZE];
 	int8_t *input = input_buffer;
 #endif /* IS_ENABLED(CONFIG_AVOID_INPUT_DOUBLE_COPY) */
 
-	/* Output buffer of size 1, matching the output dimensions in @ref model_hello_axon. */
+	/* Output buffer of size 1, matching the output dimensions of the loaded model. */
 	int8_t output[OUTPUT_SIZE];
 
 	for (size_t i = 0; i < ARRAY_SIZE(sample_values); i++) {
@@ -110,9 +144,9 @@ static void sync_flow(void)
 		const float sample_value = sample_values[i];
 
 		quantize_and_convert(&sample_value, input_buffer,
-				     &model_hello_axon.inputs[model_hello_axon.external_input_ndx]);
+				     &model->inputs[model->external_input_ndx]);
 
-		result = nrf_axon_nn_model_infer_sync(&model_hello_axon, input, output);
+		result = nrf_axon_nn_model_infer_sync(model, input, output);
 		if (result != NRF_AXON_RESULT_SUCCESS) {
 			LOG_ERR("Synchronous inference failed, err %d", result);
 			return;
@@ -121,7 +155,7 @@ static void sync_flow(void)
 		float prediction;
 
 		/* Output in CHW format. */
-		dequantize(output, OUTPUT_SIZE, &prediction, &model_hello_axon);
+		dequantize(output, OUTPUT_SIZE, &prediction, model);
 		LOG_INF("prediction: %6.3f, ideal %6.3f", (double)prediction,
 			(double)sinf(sample_value));
 	}
@@ -138,19 +172,21 @@ static void inference_callback(nrf_axon_result_e result, void *callback_context)
 	float prediction;
 
 	/* Output in CHW format. */
-	dequantize(output, OUTPUT_SIZE, &prediction, &model_hello_axon);
+	dequantize(output, OUTPUT_SIZE, &prediction, current_async_model);
 	LOG_INF("prediction: %6.3f, ideal %6.3f", (double)prediction,
 		(double)sinf(current_async_sample_value));
 
 	nrf_axon_platform_generate_user_event();
 }
 
-static void async_flow(void)
+static void async_flow(const nrf_axon_nn_compiled_model_s *model)
 {
 	nrf_axon_nn_model_async_inference_wrapper_s async_wrapper;
 	nrf_axon_result_e result;
 
-	result = nrf_axon_nn_model_async_init(&async_wrapper, &model_hello_axon);
+	current_async_model = model;
+
+	result = nrf_axon_nn_model_async_init(&async_wrapper, model);
 	if (result != NRF_AXON_RESULT_SUCCESS) {
 		LOG_ERR("Asynchronous model initialization failed, err %d", result);
 		return;
@@ -158,9 +194,9 @@ static void async_flow(void)
 
 	LOG_INF("Running asynchronous inference");
 
-	/* Input buffer of size 1, matching the input layer dimensions in @ref model_hello_axon. */
+	/* Input buffer of size 1, matching the input layer dimensions of the loaded model. */
 	int8_t input[INPUT_SIZE];
-	/* Output buffer of size 1, matching the output dimensions in @ref model_hello_axon. */
+	/* Output buffer of size 1, matching the output dimensions of the loaded model. */
 	int8_t output[OUTPUT_SIZE];
 
 	for (size_t i = 0; i < ARRAY_SIZE(sample_values); i++) {
@@ -170,7 +206,7 @@ static void async_flow(void)
 		void *cb_context = output;
 
 		quantize_and_convert(&sample_value, input,
-				     &model_hello_axon.inputs[model_hello_axon.external_input_ndx]);
+				     &model->inputs[model->external_input_ndx]);
 
 		current_async_sample_value = sample_values[i];
 		result = nrf_axon_nn_model_infer_async(&async_wrapper, input, output,
@@ -184,19 +220,72 @@ static void async_flow(void)
 	}
 }
 
+static void run_inference(const nrf_axon_nn_compiled_model_s *model)
+{
+	int err;
+
+	__ASSERT(model->inputs[model->external_input_ndx].dimensions.byte_width == 1,
+		 "Model input data type different than expected");
+	__ASSERT(model->output_dimensions.byte_width == 1,
+		 "Model output data type different than expected");
+
+	/* hello_axon_model does not use persistent vars, but initialize them anyway. */
+	err = nrf_axon_nn_model_init_vars(model);
+	if (err) {
+		LOG_ERR("Model persistent variables initialization failed, err %d", err);
+		return;
+	}
+
+	if (IS_ENABLED(CONFIG_ASYNC_INFERENCE)) {
+		async_flow(model);
+	} else {
+		sync_flow(model);
+	}
+}
+
+#if defined(CONFIG_HELLO_AXON_MODEL_OTA)
+
+#include <model_ota/model_pkg.h>
+
+#include <zephyr/storage/flash_map.h>
+
+/*
+ * Fail the build with a clear message if this board's devicetree overlay doesn't define the
+ * model_partition node model_ota loads from (see the overlays under boards/), instead of a
+ * much less obvious error deep inside a flash_map.h macro expansion.
+ */
+BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_partition),
+	     "board devicetree is missing the model_partition node - see boards/*.overlay");
+
+/*
+ * The model itself is *not* compiled in: this is only populated (by model_pkg_load_axon())
+ * once a valid package has been read from the model_storage flash partition.
+ */
+static nrf_axon_nn_compiled_model_s model_hello_axon;
+
+static const nrf_axon_nn_compiled_model_s *model_ota_load(void)
+{
+	struct model_pkg_axon_info info;
+	int err;
+
+	err = model_pkg_load_axon(&model_hello_axon, &info);
+	if (err != MODEL_PKG_OK) {
+		LOG_ERR("No usable model in model_storage (err %d)", err);
+		return NULL;
+	}
+
+	LOG_INF("Active model: '%s' version 0x%08x (%u cmd words, %u B const)", info.name,
+		info.version, info.cmd_buffer_len, info.model_const_size);
+
+	return &model_hello_axon;
+}
+
 int main(void)
 {
 	nrf_axon_result_e result;
-	int err;
 
 	LOG_INF("Hello Axon sample");
 	LOG_INF("Initializing Axon NPU");
-
-	__ASSERT(model_hello_axon.inputs[model_hello_axon.external_input_ndx]
-				 .dimensions.byte_width == 1,
-		 "Model input data type different than expected");
-	__ASSERT(model_hello_axon.output_dimensions.byte_width == 1,
-		 "Model output data type different than expected");
 
 	result = nrf_axon_platform_init();
 	if (result != NRF_AXON_RESULT_SUCCESS) {
@@ -204,18 +293,51 @@ int main(void)
 		return -1;
 	}
 
-	/* hello_axon_model does not use persistent vars, but initialize them anyway. */
-	err = nrf_axon_nn_model_init_vars(&model_hello_axon);
-	if (err) {
-		LOG_ERR("Model persistent variables initialization failed, err %d", err);
-		return -1;
-	}
+	/*
+	 * The app image never contains a model (see model_ota_load() above): at boot, and
+	 * after every inference pass, it (re)loads and validates a "model package" from the
+	 * model_storage flash partition, independently of the application image. Flashing a new model
+	 * package - without rebuilding or reflashing the application - is enough to change what
+	 * the device predicts, and is picked up here without needing a physical reset.
+	 */
+	while (1) {
+		const nrf_axon_nn_compiled_model_s *model = model_ota_load();
 
-	if (IS_ENABLED(CONFIG_ASYNC_INFERENCE)) {
-		async_flow();
-	} else {
-		sync_flow();
+		if (model == NULL) {
+			LOG_WRN("No valid model in model_storage - waiting for one to be "
+				"flashed. Inference is skipped until then.");
+		} else {
+			run_inference(model);
+		}
+
+		k_sleep(K_MSEC(5000));
 	}
 
 	return 0;
 }
+
+#else /* !CONFIG_HELLO_AXON_MODEL_OTA: compiled-in model, no flash partition or reload loop */
+
+#include "generated/nrf_axon_model_hello_axon_.h"
+
+int main(void)
+{
+	nrf_axon_result_e result;
+
+	LOG_INF("Hello Axon sample");
+	LOG_INF("Initializing Axon NPU");
+
+	result = nrf_axon_platform_init();
+	if (result != NRF_AXON_RESULT_SUCCESS) {
+		LOG_ERR("Axon NPU platform initialization failed, err %d", result);
+		return -1;
+	}
+
+	run_inference(&model_hello_axon);
+
+	return 0;
+}
+
+#endif /* CONFIG_HELLO_AXON_MODEL_OTA */
+
+#endif /* CONFIG_HELLO_AXON_REFERENCE_BUILD */
