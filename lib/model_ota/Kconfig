@@ -1,0 +1,53 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig MODEL_OTA
+	bool "Model-only OTA update PoC"
+	depends on FLASH && FLASH_MAP && CRC
+	help
+	  Proof-of-concept library that loads and validates an NN model package from a
+	  dedicated flash partition (model_storage) at runtime, independently of the
+	  application image, and without relying on mcuboot for integrity checking or
+	  transport. Supports Neuton models (32-bit floating point precision) and Axon models.
+	  Model pointers are always wired directly into the memory-mapped model_storage
+	  partition (XIP) - there is no RAM-copy loading mode. Enable CONFIG_FLASH,
+	  CONFIG_FLASH_MAP and CONFIG_CRC in the application's prj.conf.
+
+if MODEL_OTA
+
+config MODEL_OTA_NEUTON
+	bool "Enable the Neuton model loader"
+	depends on NRF_EDGEAI
+	help
+	  Builds model_pkg_neuton.c and model_pkg_load_neuton(). Off by default: applications
+	  select this explicitly (directly, or transitively through a backend choice) so that
+	  ones which only ever load Axon packages do not build in this loader too.
+
+config MODEL_OTA_AXON
+	bool "Enable the Axon model loader"
+	default n
+	depends on NRF_AXON
+	help
+	  Builds model_pkg_axon.c and model_pkg_load_axon(). Disable in applications that only
+	  ever load Neuton packages.
+
+config MODEL_OTA_MAX_NEURONS
+	int "Maximum number of neurons a loaded Neuton model may have"
+	default 64
+	depends on MODEL_OTA_NEUTON
+	help
+	  Sizes the caller-side RAM scratch buffer for neuron activations. Must be large enough
+	  for every model variant that will ever be provisioned on this device, since a model
+	  needing more neurons than this will fail to load (MODEL_PKG_ERR_NEURONS_BUF_TOO_SMALL).
+
+config MODEL_OTA_LOG_LEVEL
+	int "Log level for the model_pkg module"
+	default 3
+	range 0 4
+	help
+	  0 = off, 1 = err, 2 = wrn, 3 = inf, 4 = dbg.
+
+endif # MODEL_OTA
