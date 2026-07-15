@@ -8,9 +8,10 @@
 packaging tools (package_model.py, package_model_axon.py).
 
 Both tools need to know the model_storage partition's flash address and size: the address to
-addresses the .hex file (and, for Axon, to bake into cmd_buffer's relocated pointers), and both
-to preflight-check that the package they are about to write will actually fit, instead of only
-finding that out after flashing a truncated/overlapping image.
+address the .hex file at (and, for Axon, to link the model stub at - see
+lib/model_ota/cmake/nrf_axon_model_stub.cmake), and both to preflight-check that the package
+they are about to write will actually fit, instead of only finding that out after flashing a
+truncated/overlapping image.
 
 Rather than trusting a hand-typed --address/--partition-size to still match a board's overlay,
 --dts lets both tools read them straight out of a build's generated zephyr.dts, which is the

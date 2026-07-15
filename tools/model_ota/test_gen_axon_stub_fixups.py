@@ -5,7 +5,8 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 """Unit tests for gen_axon_stub_fixups.py's pure text-processing functions: op-extension/
-persistent_vars symbol discovery and the persistent_vars-to-extern header patch.
+axonpro-constant/persistent_vars symbol discovery and the persistent_vars-to-extern header
+patch.
 
 Run with: python3 -m unittest test_gen_axon_stub_fixups.py -v
 """

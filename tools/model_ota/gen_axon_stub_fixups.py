@@ -69,8 +69,9 @@ def find_persistent_vars_symbols(header_text):
 
 def collect_app_symbols(header_text):
 	"""Returns the sorted, de-duplicated list of every app-owned symbol name this header
-	references, in the order gen_axon_model_stub needs to force-undefined and extract real
-	addresses for. Pure function - no filesystem access - so it can be unit-tested directly."""
+	references, for nrf_axon_model_stub() (see nrf_axon_model_stub.cmake) to force-undefined
+	and extract real addresses for. Pure function - no filesystem access - so it can be
+	unit-tested directly."""
 	symbols = set(find_op_extension_symbols(header_text))
 	symbols.add(INTERLAYER_BUFFER_SYMBOL)
 	symbols.update(find_axonpro_const_symbols(header_text))

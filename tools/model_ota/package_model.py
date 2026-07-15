@@ -9,8 +9,9 @@
 Reads a plain-JSON model description (see models/*.json for examples) and produces a
 "model package": a small header (magic/version/CRC32/section lengths, matching
 include/model_ota/model_pkg.h) followed by the model's raw arrays concatenated in a fixed
-order. No addresses are embedded anywhere in a Neuton package, so - unlike the planned Axon
-follow-up - this tool does not need to know anything about how the firmware was linked.
+order. No addresses are embedded anywhere in a Neuton package, so - unlike Axon (see
+package_model_axon.py) - this tool does not need to know anything about how the firmware was
+linked.
 
 Usage:
     python3 package_model.py models/regression_v1.json -o model_v1 --address 0x102000

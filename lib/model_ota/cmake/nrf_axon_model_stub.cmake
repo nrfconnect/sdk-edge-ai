@@ -193,8 +193,8 @@ function(nrf_axon_model_stub)
 		COMMENT "model_ota: linking ${ARG_TARGET} model stub at ${partition_addr}"
 	)
 
-	# --- Step 3: package the model stub's ELF exactly like a reference build's, since its
-	# bytes are already correctly addressed for every pointer field.
+	# --- Step 3: package the model stub's ELF. Its bytes are already correctly addressed
+	# for every pointer field, so this is a straight copy, not a relocation.
 	set(pkg_base ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_pkg)
 
 	add_custom_command(
