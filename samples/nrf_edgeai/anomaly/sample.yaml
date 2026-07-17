@@ -55,3 +55,24 @@ tests:
     timeout: 30
     tags:
       - nrf_edgeai_sample_anomaly_detection
+  sample.edgeai_anomaly_detection.nrf54lm20dk.ota:
+    sysbuild: true
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "nRF Edge AI runtime version: 2.2.0"
+        # Unprovisioned model_storage - see README.rst for the real-prediction path.
+        - "No valid model in model_storage"
+    extra_args:
+      - CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA=y
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    timeout: 30
+    tags:
+      - nrf_edgeai_sample_anomaly_detection

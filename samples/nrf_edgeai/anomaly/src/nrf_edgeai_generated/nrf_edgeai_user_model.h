@@ -12,10 +12,29 @@
 extern "C" {
 #endif
 
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+/**
+ * @brief Load the model from a package in flash and get its instance (@ref nrf_edgeai_t).
+ *
+ * @param fa_id           Flash area ID of the partition to load from.
+ * @param partition_addr  Base address of that same partition.
+ * @return Pointer to a ready-to-use nrf_edgeai_t, or NULL if the load failed.
+ */
+nrf_edgeai_t *nrf_edgeai_load_user_model_90360(uint8_t fa_id, const uint8_t *partition_addr);
+
+/**
+ * @brief Get the current model instance (@ref nrf_edgeai_t) as-is, without loading anything.
+ *
+ * Only valid to call after a successful nrf_edgeai_load_user_model_90360() - use that instead
+ * unless a load already happened and only the pointer is needed again.
+ */
+nrf_edgeai_t *nrf_edgeai_user_model_90360(void);
+#else
 /**
  * @brief Get pointer to the Nordic Edge AI Lab model instance (@ref nrf_edgeai_t).
  */
 nrf_edgeai_t *nrf_edgeai_user_model_90360(void);
+#endif
 /**
  * @brief Get size FLASH/ROM size of the Nordic Edge AI Neuton model.
  *
@@ -27,10 +46,15 @@ nrf_edgeai_t *nrf_edgeai_user_model_90360(void);
 uint32_t nrf_edgeai_user_model_neuton_size_90360(void);
 
 /**
- * @brief Alias for the Nordic Edge AI Lab user model API name.
+ * @brief Alias for the Nordic Edge AI Lab user model API name: the load function when OTA is
+ * enabled (main.c needs a load on every iteration), the plain accessor otherwise.
  */
 #ifndef nrf_edgeai_user_model
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+#define nrf_edgeai_user_model nrf_edgeai_load_user_model_90360
+#else
 #define nrf_edgeai_user_model nrf_edgeai_user_model_90360
+#endif
 #endif
 
 /**

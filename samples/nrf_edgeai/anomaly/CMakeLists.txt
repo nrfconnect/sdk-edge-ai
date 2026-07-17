@@ -16,3 +16,14 @@ target_sources(app PRIVATE
     src/main.c
     src/nrf_edgeai_generated/nrf_edgeai_user_model.c
 )
+
+# See doc/libraries/model_ota.rst for the CONFIG_MODEL_OTA_NEUTON path.
+if(CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/nrf_neuton_model_package.cmake)
+  nrf_neuton_model_package(
+    TARGET anomaly
+    MODEL_NAME gear_anomaly
+    MODEL_C ${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/nrf_edgeai_user_model.c
+    PARTITION_NODELABEL model_partition
+  )
+endif()

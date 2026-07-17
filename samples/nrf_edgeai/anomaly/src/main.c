@@ -47,6 +47,11 @@
  *   The model is validated on two representative vibration datasets: one from a healthy
  *   gear (normal operation) and one from a faulty gear (degraded condition). The model
  *   must correctly distinguish between states to confirm proper anomaly detection.
+ *
+ * **Model-only OTA update:**
+ *   When CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA=y (opt-in, nRF54LM20 DK boards only), the model
+ *   is loaded from the model_storage flash partition at runtime instead of being compiled in.
+ *   See doc/libraries/model_ota.rst.
  */
 
 #include <nrf_edgeai/nrf_edgeai.h>
@@ -57,6 +62,16 @@
 #include <stdio.h>
 
 LOG_MODULE_REGISTER(anomaly, LOG_LEVEL_INF);
+
+#if defined(CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA)
+
+#include <zephyr/storage/flash_map.h>
+
+/* Clearer build error than a flash_map.h macro expansion if the overlay lacks model_partition. */
+BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_partition),
+	     "board devicetree is missing the model_partition node - see boards/*.overlay");
+
+#endif /* CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA */
 
 /**
  * @brief Model Configuration Constants
@@ -308,14 +323,12 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_
  * detecting early signs of gear wear, cracks, misalignment, or bearing failure,
  * triggering maintenance alerts before catastrophic failures occur.
  *
+ * With a compiled-in model (CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA=n) the verdicts below are
+ * also asserted on; with an OTA-loaded model they are only ever logged, since a freshly
+ * flashed model package is expected to change what the device predicts.
  */
-int main(void)
+static void run_test_cases(nrf_edgeai_t *p_user_model)
 {
-	/*  Get user generated model pointer */
-	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
-
-	__ASSERT_NO_MSG(p_user_model != NULL);
-
 	/* Validate that the loaded model matches our expected configuration */
 	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
 	__ASSERT_NO_MSG(nrf_edgeai_uniq_inputs_num(p_user_model) == USER_UNIQ_INPUTS_NUM);
@@ -324,10 +337,6 @@ int main(void)
 	nrf_edgeai_err_t res = nrf_edgeai_init(p_user_model);
 
 	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
-
-	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
-	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
-		v.field.patch);
 
 	flt32_t anomaly_score;
 	const size_t DATA_LEN = USER_WINDOW_SIZE * USER_UNIQ_INPUTS_NUM;
@@ -341,7 +350,9 @@ int main(void)
 	LOG_INF("Verdict: %s (score %s threshold)",
 		anomaly_score < USER_ANOMALY_THRESHOLD ? "NORMAL" : "ANOMALY DETECTED",
 		anomaly_score < USER_ANOMALY_THRESHOLD ? "<" : ">=");
+#if !defined(CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA)
 	__ASSERT_NO_MSG(anomaly_score < USER_ANOMALY_THRESHOLD);
+#endif
 
 	/* ---- TEST 2: Faulty Gear ---- */
 	LOG_INF("--- Testing ANOMALOUS gear vibration data ---");
@@ -353,14 +364,62 @@ int main(void)
 	LOG_INF("Verdict: %s (score %s threshold)",
 		anomaly_score < USER_ANOMALY_THRESHOLD ? "NORMAL" : "ANOMALY DETECTED",
 		anomaly_score >= USER_ANOMALY_THRESHOLD ? ">=" : "<");
+#if !defined(CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA)
 	__ASSERT_NO_MSG(anomaly_score >= USER_ANOMALY_THRESHOLD);
+#endif
 
 	LOG_INF("The model correctly distinguishes between healthy and faulty gears.");
+	LOG_INF("========== All test cases completed ==========");
+}
+
+#if defined(CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA)
+
+int main(void)
+{
+	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
+
+	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
+		v.field.patch);
 
 	while (1) {
-		LOG_INF("========== All test cases completed ==========");
+		/* Reload from flash every iteration to pick up updates without a reboot. */
+		nrf_edgeai_t *p_user_model = nrf_edgeai_user_model(
+			PARTITION_ID(model_partition),
+			(const uint8_t *)PARTITION_ADDRESS(model_partition));
+
+		if (p_user_model == NULL) {
+			LOG_WRN("No valid model in model_storage - waiting for one to be "
+				"flashed. Inference is skipped until then.");
+		} else {
+			run_test_cases(p_user_model);
+		}
+
 		k_sleep(K_MSEC(5000));
 	}
 
 	return 0;
 }
+
+#else /* !CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA: compiled-in model, validated once at boot */
+
+int main(void)
+{
+	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
+
+	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
+		v.field.patch);
+
+	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
+
+	__ASSERT_NO_MSG(p_user_model != NULL);
+
+	run_test_cases(p_user_model);
+
+	while (1) {
+		k_sleep(K_MSEC(5000));
+	}
+
+	return 0;
+}
+
+#endif /* CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA */

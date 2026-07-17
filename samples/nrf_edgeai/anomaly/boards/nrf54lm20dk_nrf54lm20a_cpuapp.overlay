@@ -1,0 +1,20 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+/* Only used with CONFIG_NRF_EDGEAI_ANOMALY_MODEL_OTA=y: repurpose the unused mcuboot
+ * slot1_partition as a "model_storage" partition.
+ */
+/delete-node/ &slot1_partition;
+
+&cpuapp_rram {
+	partitions {
+		model_partition: partition@102000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_storage";
+			reg = <0x102000 DT_SIZE_K(968)>;
+		};
+	};
+};
