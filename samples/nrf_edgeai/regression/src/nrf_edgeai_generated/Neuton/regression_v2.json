@@ -1,0 +1,15 @@
+{
+	"_comment": "A deliberately different 'retrained' variant of the bundled nrf_edgeai_user_model.c model (same topology, different weights/act_weights/output scale), so flashing it to model_storage produces a visibly different prediction without touching the application image.",
+	"name": "aq_regression",
+	"version": "2.0.0",
+	"weights": [0.6500000, 0.2000000, 0.8500000, -0.5500000],
+	"neuron_links": [2, 9, 0, 9],
+	"neuron_internal_links_num": [0, 3],
+	"neuron_external_links_num": [2, 4],
+	"act_weights": [22.0000000, 9.5000000],
+	"neuron_act_type_mask": [1],
+	"output_neurons_indices": [1],
+	"output_scale_min": [0.2000000],
+	"output_scale_max": [70.0000000],
+	"average_embedding": []
+}
