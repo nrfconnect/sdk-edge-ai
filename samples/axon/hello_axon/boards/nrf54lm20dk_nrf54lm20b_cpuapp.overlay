@@ -7,3 +7,21 @@
 &axon {
 	status = "okay";
 };
+
+/*
+ * This sample does not use mcuboot, so the board's second application slot
+ * (slot1_partition) is unused. Repurpose it as a dedicated "model_storage" partition, sized
+ * to comfortably fit future (larger) models too, instead of the much smaller default
+ * "storage" partition. Same partition layout as samples/model_ota/neuton.
+ */
+/delete-node/ &slot1_partition;
+
+&cpuapp_rram {
+	partitions {
+		model_partition: partition@102000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_storage";
+			reg = <0x102000 DT_SIZE_K(968)>;
+		};
+	};
+};

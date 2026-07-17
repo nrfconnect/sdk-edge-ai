@@ -10,8 +10,10 @@ tests:
       regex:
         - "Hello Axon sample"
         - "Initializing Axon NPU"
-        - "Running asynchronous inference"
-        - "prediction: [- ]\\d*\\.\\d+, ideal [- ]\\d*\\.\\d+"
+        # Twister builds and boots a fresh device with an unprovisioned model_storage
+        # partition, so it only ever exercises the "no valid model" degraded path here.
+        # See README.rst for how to provision model_storage and see real predictions.
+        - "No valid model in model_storage"
     sysbuild: true
     platform_allow:
       - nrf54lm20dk/nrf54lm20b/cpuapp

@@ -20,4 +20,20 @@ config AVOID_INPUT_DOUBLE_COPY
 	  This option removes unnecessary copying of input data between buffers, but it requires
 	  exclusive access to the Axon NPU interlayer buffer to preserve consistency.
 
+config HELLO_AXON_MODEL_OTA
+	bool "Load the model from the model_storage flash partition (model-only OTA)"
+	default y
+	select FLASH
+	select FLASH_MAP
+	select CRC
+	select MODEL_OTA
+	select MODEL_OTA_AXON
+	help
+	  When enabled (the default), this sample does not ship a compiled-in model: it loads,
+	  validates, and periodically reloads an Axon model package from the model_storage flash
+	  partition at runtime instead (see doc/libraries/model_ota.rst). Disable this to restore
+	  this sample's original pre-model-OTA behavior: the model is compiled directly into the
+	  application image and inference runs once at boot, with no flash partition or periodic
+	  reload involved.
+
 endmenu
