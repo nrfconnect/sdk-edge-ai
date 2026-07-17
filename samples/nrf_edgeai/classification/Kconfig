@@ -28,6 +28,28 @@ config NRF_EDGEAI_CLASSIFICATION_MODEL_AXON
 
 endchoice
 
+config NRF_EDGEAI_CLASSIFICATION_MODEL_OTA
+	bool "Load the model from the model_storage flash partition (model-only OTA)"
+	default y if SOC_NRF54LM20A || SOC_NRF54LM20B
+	select FLASH
+	select FLASH_MAP
+	select CRC
+	select MODEL_OTA
+	select MODEL_OTA_NEUTON if NRF_EDGEAI_CLASSIFICATION_MODEL_NEUTON
+	select MODEL_OTA_AXON if NRF_EDGEAI_CLASSIFICATION_MODEL_AXON
+	help
+	  Load the model from the model_storage flash partition at runtime instead of compiling
+	  it in (see doc/libraries/model_ota.rst). On by default on the nRF54LM20 DK boards, the
+	  only ones with a model_storage partition (see boards/); off (and unavailable) on every
+	  other board.
+
+if NRF_EDGEAI_CLASSIFICATION_MODEL_OTA && NRF_EDGEAI_CLASSIFICATION_MODEL_NEUTON
+
+config MODEL_OTA_MAX_NEURONS
+	default 96
+
+endif
+
 endmenu
 
 source "Kconfig.zephyr"

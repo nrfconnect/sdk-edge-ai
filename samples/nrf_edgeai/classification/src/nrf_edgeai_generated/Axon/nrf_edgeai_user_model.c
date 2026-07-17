@@ -9,6 +9,10 @@
 #include <nrf_edgeai/rt/private/nrf_edgeai_interfaces.h>
 #include <assert.h>
 
+#if defined(CONFIG_MODEL_OTA_AXON)
+#include <model_ota/model_pkg.h>
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 /* Nordic EdgeAI Lab Solution ID and Runtime Version */
 #define EDGEAI_LAB_SOLUTION_ID_STR      "36237"
@@ -71,15 +75,14 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 #define MODEL_USES_AS_INPUT_DSP_FEATURES 1
 #define MODEL_USES_AS_INPUT_MASK ((MODEL_USES_AS_INPUT_INPUT_FEATURES << 0) | (MODEL_USES_AS_INPUT_DSP_FEATURES << 1))
 
-#if MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON
 #include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
+#if !defined(CONFIG_MODEL_OTA_AXON)
 #include "nrf_edgeai_user_model_axon.h"
-#define P_MODEL_INSTANCE &model_axon_user_instance_36237
-#else  // MODEL_TYPE == __NRF_EDGEAI_MODEL_NEUTON
-#define P_MODEL_INSTANCE &model_neuton_user_instance_
 #endif
 
+nrf_axon_nn_compiled_model_s model_axon_user_instance_36237_runtime_;
+#define P_MODEL_INSTANCE &model_axon_user_instance_36237_runtime_
 
 #define NN_DECODED_OUTPUT_INIT                 \
 .classif = {                                   \
@@ -274,10 +277,28 @@ static nrf_edgeai_t nrf_edgeai_ = {
 
 //////////////////////////////////////////////////////////////////////////////
 
+#if defined(CONFIG_MODEL_OTA_AXON)
+nrf_edgeai_t *nrf_edgeai_load_user_model_36237(uint8_t fa_id, const uint8_t *partition_addr)
+{
+	if (model_pkg_load_axon(fa_id, partition_addr, &model_axon_user_instance_36237_runtime_,
+				 NULL) != MODEL_PKG_OK) {
+		return NULL;
+	}
+
+	return &nrf_edgeai_;
+}
+
+nrf_edgeai_t *nrf_edgeai_user_model_36237(void)
+{
+	return &nrf_edgeai_;
+}
+#else
 nrf_edgeai_t* nrf_edgeai_user_model_36237(void)
 {
+    model_axon_user_instance_36237_runtime_ = model_axon_user_instance_36237;
     return &nrf_edgeai_;
 }
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 

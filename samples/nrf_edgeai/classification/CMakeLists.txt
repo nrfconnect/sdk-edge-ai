@@ -13,16 +13,37 @@ project(nrf_edgeai_classification_sample)
 # Source files
 target_include_directories(app PRIVATE include)
 
+# See doc/libraries/model_ota.rst for the CONFIG_MODEL_OTA_AXON / CONFIG_MODEL_OTA_NEUTON path.
 if(CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_AXON)
   target_sources(app PRIVATE
     src/nrf_edgeai_generated/Axon/nrf_edgeai_user_model.c)
   message(STATUS "Using Axon Edge AI model")
   target_include_directories(app PRIVATE src/nrf_edgeai_generated/Axon)
+
+  if(CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_OTA)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/nrf_axon_model_stub.cmake)
+    nrf_axon_model_stub(
+      TARGET classification
+      MODEL_NAME axon_user_instance_36237
+      HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/Axon/nrf_edgeai_user_model_axon.h
+      PARTITION_NODELABEL model_partition
+    )
+  endif()
 else()
   target_sources(app PRIVATE
     src/nrf_edgeai_generated/Neuton/nrf_edgeai_user_model.c)
   message(STATUS "Using Neuton Edge AI model")
   target_include_directories(app PRIVATE src/nrf_edgeai_generated/Neuton)
+
+  if(CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_OTA)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/nrf_neuton_model_package.cmake)
+    nrf_neuton_model_package(
+      TARGET classification
+      MODEL_NAME parcel_classification
+      MODEL_C ${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/Neuton/nrf_edgeai_user_model.c
+      PARTITION_NODELABEL model_partition
+    )
+  endif()
 endif()
 
 target_sources(app PRIVATE src/main.c)

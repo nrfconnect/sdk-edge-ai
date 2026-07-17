@@ -39,6 +39,11 @@
  *   The model is validated on 7 representative acceleration sequences (one per class),
  *   each containing real-world sensor data captured during that specific parcel state.
  *   Classification accuracy and confidence scores are reported for each test case.
+ *
+ * **Model-only OTA update:**
+ *   When CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_OTA=y (opt-in, nRF54LM20 DK boards only), the
+ *   model is loaded from the model_storage flash partition at runtime instead of being
+ *   compiled in. See doc/libraries/model_ota.rst.
  */
 
 #include <nrf_edgeai/nrf_edgeai.h>
@@ -49,6 +54,16 @@
 #include <stdio.h>
 
 LOG_MODULE_REGISTER(classification, LOG_LEVEL_INF);
+
+#if defined(CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_OTA)
+
+#include <zephyr/storage/flash_map.h>
+
+/* Clearer build error than a flash_map.h macro expansion if the overlay lacks model_partition. */
+BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_partition),
+	     "board devicetree is missing the model_partition node - see boards/*.overlay");
+
+#endif /* CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_OTA */
 
 /**
  * @brief Model Configuration Constants
@@ -356,48 +371,34 @@ static int32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_
 }
 
 /**
- * @brief Parcel State Detection Model Validation Entry Point
- *
- * This function orchestrates the complete validation workflow for the parcel state
- * classification model. It initializes the neural network, runs inference on 7 representative
- * test cases covering all parcel states, and validates classification accuracy.
- *
- * **Workflow:**
- * 1. Retrieve the pre-trained parcel state classification model
- * 2. Validate model configuration matches expected parameters:
- *    - Input window size: 50 acceleration samples
- *    - Input features: 1 (acceleration magnitude)
- *    - Output classes: 7 (IDLE, SHAKING, IMPACT, FREE_FALL, CARRYING, IN_CAR, PLACED)
- * 3. Initialize the Edge AI runtime for neural network execution
- * 4. For each of the 7 test cases:
- *    a. Feed acceleration data one sample at a time
- *    b. Model accumulates 50 samples into window
- *    c. Run model inference to classify parcel state
- *    d. Extract predicted class and confidence probability
- *    e. Verify prediction matches expected class
- *
- * **Validation Metrics:**
- * The predicted class and confidence score indicate model accuracy:
- * - Correct classification for all 7 parcel states validates model performance
- * - High confidence (probability) indicates strong prediction certainty
- * - Misclassification or low confidence indicates potential model issues
- *
- * **Test Coverage:**
- * The 7 test cases comprehensively cover all parcel delivery scenarios:
- * - Static conditions: IDLE (parcel at rest)
- * - Motion conditions: SHAKING, CARRYING, IN_CAR (various transport modes)
- * - Event conditions: IMPACT (collision), FREE_FALL (drop), PLACED (lowering)
- * - Acceleration ranges: from ~15 mG (free fall) to ~6900 mG (impact)
- * - Ensures model validation across complete delivery lifecycle
- *
+ * @brief Log predicted vs. expected class; asserts on mismatch only when OTA is disabled.
  */
-int main(void)
+static void report_prediction(int32_t predicted_class, user_model_class_t expected_class,
+			      const char *expected_label)
 {
-	/* Get user generated model pointer */
-	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
+	if (predicted_class < 0 || predicted_class >= (int32_t)USER_MODELS_CLASS_NUM) {
+		LOG_WRN("Expected class %s - inference failed (no prediction)", expected_label);
+		return;
+	}
 
-	__ASSERT_NO_MSG(p_user_model != NULL);
+#if !defined(CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_OTA)
+	__ASSERT_NO_MSG(predicted_class == (int32_t)expected_class);
+#endif
 
+	if (predicted_class == (int32_t)expected_class) {
+		LOG_INF("Expected class %s - predicted %s", expected_label,
+			USER_MODEL_LABELS_STR[predicted_class]);
+	} else {
+		LOG_WRN("Expected class %s - predicted %s instead", expected_label,
+			USER_MODEL_LABELS_STR[predicted_class]);
+	}
+}
+
+/**
+ * @brief Initialize the model and run all 7 parcel-state test cases against it.
+ */
+static void run_test_cases(nrf_edgeai_t *p_user_model)
+{
 	/** Validate model parameters against expected configuration */
 	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
 	__ASSERT_NO_MSG(nrf_edgeai_uniq_inputs_num(p_user_model) == USER_UNIQ_INPUTS_NUM);
@@ -407,10 +408,6 @@ int main(void)
 	nrf_edgeai_err_t res = nrf_edgeai_init(p_user_model);
 
 	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
-
-	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
-	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
-		v.field.patch);
 
 	if (p_user_model->model.type == NRF_EDGEAI_MODEL_AXON) {
 		LOG_INF("Using Axon model");
@@ -424,57 +421,91 @@ int main(void)
 	/** TEST 1: Predict class 0 - Parcel in the IDLE state */
 	LOG_INF("--- Testing IDLE state (parcel at rest) ---");
 	predicted_class = model_predict(p_user_model, CLASS_0_PARCEL_IDLE_ACCEL_DATA, DATA_LEN);
-
-	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_IDLE);
-	LOG_INF("Expected class IDLE - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
+	report_prediction(predicted_class, MODEL_CLASS_IDLE, "IDLE");
 
 	/** TEST 2: Predict class 1 - Parcel is SHAKING */
 	LOG_INF("--- Testing SHAKING state (parcel vibrating) ---");
 	predicted_class = model_predict(p_user_model, CLASS_1_PARCEL_SHAKING_ACCEL_DATA, DATA_LEN);
-
-	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_SHAKING);
-	LOG_INF("Expected class SHAKING - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
+	report_prediction(predicted_class, MODEL_CLASS_SHAKING, "SHAKING");
 
 	/** TEST 3: Predict class 2 - Parcel IMPACT event */
 	LOG_INF("--- Testing IMPACT event (collision detected) ---");
 	predicted_class = model_predict(p_user_model, CLASS_2_PARCEL_IMPACT_ACCEL_DATA, DATA_LEN);
-
-	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_IMPACT);
-	LOG_INF("Expected class IMPACT - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
+	report_prediction(predicted_class, MODEL_CLASS_IMPACT, "IMPACT");
 
 	/** TEST 4: Predict class 3 - Parcel FREE FALL event */
 	LOG_INF("--- Testing FREE FALL event (parcel in air/unsupported) ---");
 	predicted_class =
 		model_predict(p_user_model, CLASS_3_PARCEL_FREE_FALL_ACCEL_DATA, DATA_LEN);
-
-	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_FREE_FALL);
-	LOG_INF("Expected class FREE FALL - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
+	report_prediction(predicted_class, MODEL_CLASS_FREE_FALL, "FREE FALL");
 
 	/** TEST 5: Predict class 4 - Parcel TRANSPORTED BY COURIER */
 	LOG_INF("--- Testing CARRYING (person carrying) ---");
 	predicted_class = model_predict(p_user_model, CLASS_4_PARCEL_CARRYING_ACCEL_DATA, DATA_LEN);
-
-	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_CARRYING);
-	LOG_INF("Expected class CARRYING - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
+	report_prediction(predicted_class, MODEL_CLASS_CARRYING, "CARRYING");
 
 	/** TEST 6: Predict class 5 - Parcel IN CAR */
 	LOG_INF("--- Testing IN CAR state (vehicle transport) ---");
 	predicted_class = model_predict(p_user_model, CLASS_5_PARCEL_IN_CAR_ACCEL_DATA, DATA_LEN);
-
-	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_IN_CAR);
-	LOG_INF("Expected class IN CAR - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
+	report_prediction(predicted_class, MODEL_CLASS_IN_CAR, "IN CAR");
 
 	/** TEST 7: Predict class 6 - Parcel PLACED */
 	LOG_INF("--- Testing PLACED state (active placement event) ---");
 	predicted_class = model_predict(p_user_model, CLASS_6_PARCEL_PLACED_ACCEL_DATA, DATA_LEN);
+	report_prediction(predicted_class, MODEL_CLASS_PLACED, "PLACED");
 
-	__ASSERT_NO_MSG(predicted_class == MODEL_CLASS_PLACED);
-	LOG_INF("Expected class PLACED - predicted %s", USER_MODEL_LABELS_STR[predicted_class]);
+	LOG_INF("========== All test cases completed ==========");
+}
+
+#if defined(CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_OTA)
+
+int main(void)
+{
+	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
+
+	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
+		v.field.patch);
 
 	while (1) {
-		LOG_INF("========== All test cases completed ==========");
+		/* Reload from flash every iteration to pick up updates without a reboot. */
+		nrf_edgeai_t *p_user_model = nrf_edgeai_user_model(
+			PARTITION_ID(model_partition),
+			(const uint8_t *)PARTITION_ADDRESS(model_partition));
+
+		if (p_user_model == NULL) {
+			LOG_WRN("No valid model in model_storage - waiting for one to be "
+				"flashed. Inference is skipped until then.");
+		} else {
+			run_test_cases(p_user_model);
+		}
+
 		k_sleep(K_MSEC(5000));
 	}
 
 	return 0;
 }
+
+#else /* compiled-in model, validated once at boot */
+
+int main(void)
+{
+	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
+
+	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
+		v.field.patch);
+
+	/* Get user generated model pointer */
+	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
+
+	__ASSERT_NO_MSG(p_user_model != NULL);
+
+	run_test_cases(p_user_model);
+
+	while (1) {
+		k_sleep(K_MSEC(5000));
+	}
+
+	return 0;
+}
+
+#endif /* CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_OTA */
