@@ -17,6 +17,18 @@ Changelog
 
 See the list of changes for a specific release of the Axon NPU software.
 
+Release 1.4.0  17 Jul 2026
+==========================
+
+* Added:
+
+  * Compiler release 1.4.0
+  * Partial and experimental support for unidirectional sequential LSTM.
+
+* Updated:
+
+  * Multiply to no longer be limited to widths less than or equal to 512.
+
 Release 1.3.0  02 Jul 2026
 ==========================
 
