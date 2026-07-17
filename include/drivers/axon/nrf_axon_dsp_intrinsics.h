@@ -234,6 +234,36 @@ nrf_axon_result_e nrf_axon_xspys_24_24_24(
 
 /**
  * @brief
+ * "Abs"=>"Absolute" adds the square of vector Y to the square of vector X, then
+ * takes the square-root.
+ *
+ * @param x_ptr x vector input. 24bit integers unpacked.
+ * @param y_ptr y vector input. 24bit integers unpacked.
+ * @param out_ptr output vector. 24bit integers unpacked, no extra stride, output can overlap either
+ *        or both inputs.
+ * @param length  Number of elements in the vectors (data samples). Must be a multiple of 2, at
+ *        least 4, and no greater than 512. Does not include the stride.
+ * @param rounding_bits  Number of bits to round after summing the squares. 0 => no rounding,
+ *        maximum of 31.
+ * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param keep_reservation set to true if there are subsequent axon operations to execute
+ *        immediately on completion. true prevents axon from be taken by another user and/or
+ *        being powered off.
+ *        Set to false if axon will not be used immediately after to free axon for other users
+ *        and/or power down if idle.
+ * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
+ */
+nrf_axon_result_e nrf_axon_abs_24_24_24(
+	const int32_t *x_ptr,
+	const int32_t *y_ptr,
+	int32_t *out_ptr,
+	uint16_t length,
+	uint8_t rounding_bits,
+	nrf_axon_syncmode_blocking_e block_mode,
+	bool keep_reservation);
+
+/**
+ * @brief
  * "Xspys"=>"X Squared Plus Y Squared" adds the square of vector Y to the square of vector X.
  * input_stride2 indicates that the input vectors will skip every other entry. This is useful for
  * calculating fft power, as the x vector can be the real components, and the y vector can by the
@@ -363,6 +393,12 @@ nrf_axon_result_e nrf_axon_xmy_24_24_24(
  * @param length  Number of elements in the vectors (data samples). Must be a multiple of 2, at
  *        least 4, and no greater than 512. Does not include the stride.
  * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 31.
+  * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param keep_reservation set to true if there are subsequent axon operations to execute
+ *        immediately on completion. true prevents axon from be taken by another user and/or
+ *        being powered off.
+ *        Set to false if axon will not be used immediately after to free axon for other users
+ *        and/or power down if idle.
  *
  * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
  */
@@ -372,6 +408,87 @@ nrf_axon_result_e nrf_axon_axpb_24_24(
 	const int32_t *b_scalar,
 	int32_t *output,
 	uint16_t length,
+	uint8_t rounding_bits,
+	nrf_axon_syncmode_blocking_e block_mode,
+	bool keep_reservation);
+
+/**
+ * @brief
+ * "axpb"=>"a times x + b" Multiplies each vector value by "a" and adds "b"
+ * Input vector can be 2 dimensional for improved performance. Note that if
+ * width is an odd number, each row of output will have a padding short at the
+ * end.
+ *
+ * @param x_ptr x vector input. 8bit integers.
+ * @param a_scalar "a" scalar value to multiply with input , 32bit integer.
+ * @param b_scalar "b" scalar value to add to input, 32bit integer.
+ * @param out_ptr output vector. 16bit integers unpacked, no extra stride, and rounded by
+ *        rounding_bits. output can overlap either or both inputs.
+ * @param height  Height of the input/output in rows. Should be less than width for optimal
+ *        performance.
+ * @param width  Width of the input/output in elements. Should be greater than height for
+ *        optimal performance. If not a muultiple of 2, output width will be 0 padded rounded
+ *        to the next multiple of 2. Maximum 1024.
+ * @param bool input_is_packed if true, input has no padding between rows. if false,
+ *        input rows start on 32bit boundaries (n/a when width is a multiple of 4)
+ * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 31.
+ * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param keep_reservation set to true if there are subsequent axon operations to execute
+ *        immediately on completion. true prevents axon from be taken by another user and/or
+ *        being powered off.
+ *        Set to false if axon will not be used immediately after to free axon for other users
+ *        and/or power down if idle.
+ *
+ * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
+ */
+nrf_axon_result_e nrf_axon_axpb_2d_8_16(
+	const int8_t *x_ptr,
+	int32_t a_scalar,
+	int32_t b_scalar,
+	int16_t *output,
+	uint16_t height,
+	uint16_t width,
+	bool input_is_packed,
+	uint8_t rounding_bits,
+	nrf_axon_syncmode_blocking_e block_mode,
+	bool keep_reservation);
+/**
+ * @brief
+ * "axpb"=>"a times x + b" Multiplies each vector value by "a" and adds "b"
+ * Input vector can be 2 dimensional for improved performance. Note that if
+ * width is an odd number, each row of output will have a padding short at the
+ * end.
+ *
+ * @param x_ptr x vector input. 16bit integers.
+ * @param a_scalar "a" scalar value to multiply with input , 32bit integer.
+ * @param b_scalar "b" scalar value to add to input, 32bit integer.
+ * @param out_ptr output vector. 16bit integers unpacked, no extra stride, and rounded by
+ *        rounding_bits. output can overlap either or both inputs.
+ * @param height  Height of the input/output in rows. Should be less than width for optimal
+ *        performance.
+ * @param width  Width of the input/output in elements. Should be greater than height for
+ *        optimal performance. If not a muultiple of 2, output width will be 0 padded rounded
+ *        to the next multiple of 2. Maximum 512.
+ * @param bool input_is_packed if true, input has no padding between rows. if false,
+ *        input rows start on 32bit boundaries (n/a when width is a multiple of 2)
+ * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 31.
+ * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param keep_reservation set to true if there are subsequent axon operations to execute
+ *        immediately on completion. true prevents axon from be taken by another user and/or
+ *        being powered off.
+ *        Set to false if axon will not be used immediately after to free axon for other users
+ *        and/or power down if idle.
+ *
+ * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
+ */
+nrf_axon_result_e nrf_axon_axpb_2d_16_16(
+	const int16_t *x_ptr,
+	int32_t a_scalar,
+	int32_t b_scalar,
+	int16_t *output,
+	uint16_t height,
+	uint16_t width,
+	bool input_is_packed,
 	uint8_t rounding_bits,
 	nrf_axon_syncmode_blocking_e block_mode,
 	bool keep_reservation);
@@ -1116,6 +1233,134 @@ nrf_axon_result_e nrf_axon_fir_16_16_32_1024_256_decimate_4(
 	const int16_t *filter_ptr,
 	int32_t *out_ptr,
 	uint8_t rounding_bits,
+	nrf_axon_syncmode_blocking_e block_mode,
+	bool keep_reservation);
+
+/**
+ * @brief "FIR" => "Finite Impulse Response" filter with decimation multiple
+ * and 2 sets of filter coeficients (1 for real, the other for imaginary).
+ * Filter coefficients are MAC'd with the input.
+ * Input elements are multiplied with filter elements in the same order.
+ * in the  order. ie, for filter length F, output
+ * x[n] = input[n]*filter[0] + input[n+1]*filter[F+1]+...input[n+F-1]*filter[F-1].
+ * After each output is generated, the input skips ahead by decimate_width.
+ * The filter output starts at out_ptr[0].
+ *
+ * This implementation uses a 2D strategy for optimized performance. Therefore, the input and filter
+ * dimensions are described in length = height * width, where width is also the decimation factor.
+ * Use axon_fir_2d_16_16_32_decimate() if the input and filter dimensions cannot be described with
+ * height * width and/or decimation factor = 1.
+ *
+ * Input is int16, filter is int16, and output is int24, sign extended to int32.
+ *
+ * @param input_ptr pointer to the input, 16bit integer.
+ * @param filter_ptr pointer to the 2 filter's coefficients, 16bit integer. Each filter is
+ *        filter_height x decimation width.
+ * @param out_ptr pointer to the output, saturated to int24, sign-extended to int32. 1st valid
+ *        output starts at offset 0. Output can overlap/overwrite input. 2nd filter output is placed
+ *        immediately after the 1st.
+ * @param input_height height of the input shape (in elements). Minimum 4, maximum 256,
+ *        input_height * decimation_width <= 512
+ *        input_height >= filter_height.
+ * @param filter_height height of the filter shape (in elements). Minimum 2, maximum 16,
+ *        input_height * decimation_width <= 512
+ *        input_height >= filter_height.
+ * @param decimation_width combined decimation factor and input/filter width.
+ *        minimum 2, maximum 16.
+ * @param rounding_bits number of bits to round the output by.
+ * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param keep_reservation set to true if there are subsequent axon operations to execute
+ *        immediately on completion. true prevents axon from be taken by another user and/or
+ *        being powered off.
+ *        Set to false if axon will not be used immediately after to free axon for other users
+ *        and/or power down if idle.
+ * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
+ */
+nrf_axon_result_e nrf_axon_fir_cplx_2d_16_16_24_decimate(
+	const int16_t *input_ptr,
+	const int16_t *filter_ptr,
+	int32_t *out_ptr,
+	uint16_t input_height,
+	uint16_t filter_height,
+	uint16_t decimate_width,
+	uint8_t rounding_bits,
+	nrf_axon_syncmode_blocking_e block_mode,
+	bool keep_reservation);
+
+/**
+ * @brief "FIR" => "Finite Impulse Response" filter with decimation multiple
+ * and 2 sets of filter coeficients (1 for real, the other for imaginary).
+ * Filter coefficients are MAC'd with the input.
+ * Input elements are multiplied with filter elements in the same order.
+ * in the order. ie, for filter length F, output
+ * x[n] = input[n]*filter[0] + input[n+1]*filter[F+1]+...input[n+F-1]*filter[F-1].
+ * After each output is generated, the input skips ahead by decimate_width.
+ * The filter output starts at out_ptr[0].
+ *
+ * This implementation uses a 2D strategy for optimized performance. Therefore, the input and filter
+ * dimensions are described in length = height * width, where width is also the decimation factor.
+ * Use axon_fir_2d_16_16_32_decimate() if the input and filter dimensions cannot be described with
+ * height * width and/or decimation factor = 1.
+ *
+ * Input is int16, filter is int16, and output is int32.
+ *
+ * @param input_ptr pointer to the input, 16bit integer.
+ * @param filter_ptr pointer to the 2 filter's coefficients, 16bit integer. Each filter is
+ *        filter_height x decimation width.
+ * @param out_ptr pointer to the output, saturated to int32. 1st valid
+ *        output starts at offset 0. Output can overlap/overwrite input. 2nd filter output is placed
+ *        immediately after the 1st.
+ * @param input_height height of the input shape (in elements). Minimum 4, maximum 256,
+ *        input_height * decimation_width <= 512
+ *        input_height >= filter_height.
+ * @param filter_height height of the filter shape (in elements). Minimum 2, maximum 16,
+ *        input_height * decimation_width <= 512
+ *        input_height >= filter_height.
+ * @param decimation_width combined decimation factor and input/filter width.
+ *        minimum 2, maximum 16.
+ * @param rounding_bits number of bits to round the output by.
+ * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param keep_reservation set to true if there are subsequent axon operations to execute
+ *        immediately on completion. true prevents axon from be taken by another user and/or
+ *        being powered off.
+ *        Set to false if axon will not be used immediately after to free axon for other users
+ *        and/or power down if idle.
+ * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
+ */
+nrf_axon_result_e nrf_axon_fir_cplx_2d_16_16_32_decimate(
+	const int16_t *input_ptr,
+	const int16_t *filter_ptr,
+	int32_t *out_ptr,
+	uint16_t input_height,
+	uint16_t filter_height,
+	uint16_t decimate_width,
+	uint8_t rounding_bits,
+	nrf_axon_syncmode_blocking_e block_mode,
+	bool keep_reservation);
+
+/**
+ * @brief "DMA" => "Direct Memory Access"
+ * Transfers data from one address to another. The regions must not overlap.
+ * For the best performance, use "2d" mode by setting height > 1. height height should
+ * also be <= width, but this is not required.
+ * When in 2d mode (ie, height > 1), width must be a multiple of 4.
+ *
+ * @param input_ptr pointer to the input to move data from.
+ * @param out_ptr pointer to the output, where data will be moved to.
+ *        Must be 32bit aligned.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param keep_reservation set to true if there are subsequent axon operations to execute
+ *        immediately on completion. true prevents axon from be taken by another user and/or
+ *        being powered off.
+ *        Set to false if axon will not be used immediately after to free axon for other users
+ *        and/or power down if idle.
+ * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
+ */
+nrf_axon_result_e nrf_axon_dma_2d(
+	const int8_t *input_ptr,
+	int8_t *out_ptr,
+	uint16_t height,
+	uint16_t width,
 	nrf_axon_syncmode_blocking_e block_mode,
 	bool keep_reservation);
 

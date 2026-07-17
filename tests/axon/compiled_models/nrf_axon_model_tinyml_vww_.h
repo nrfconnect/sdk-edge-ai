@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_vww
- * Axon Neural Network Compiler Version: 1.3.0
+ * Axon Neural Network Compiler Version: 1.4.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -4402,16 +4402,14 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww[12836] = {
 0x000000f0,0x00000100,
 0x00000080,0x00010400,
 0x06000088,0x00630400,0x00000000,0x00010004,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axonpro_int8_packing_filter,0x00330001,0x00000004,0x00000000,
-0x010000a8,0x00150000,0x00010100,
-0x010000b4,0x00030100,0x00000100,
+0x040000a8,0x00150000,0x00010100,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x400),0x00030100,0x00000100,
 0x000000c0,0x00000000,
 0x030000c8,0x00000000,0x01040000,0x00000000,0x00000003,
 0x000000d8,0x00000001,
 0x000000f0,0x00000100,
-0x00000080,0x00010100,
-0x00000088,0x00330100,
+0x02000080,0x00010100,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x400),0x00330100,
 0x01000090,0x00020100,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_vww.l28_weights,
-0x050000a0,0x00010002,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_vww.l28_biasp,0x00050008,0x00010002,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x400),0x00050008,
+0x050000a0,0x00010002,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_vww.l28_biasp,0x00050008,0x00010002,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x500),0x00050008,
 0x030000cc,0x00000000,0x03010000,0x00010f05,0x00000205,
 0x02000180,0x00000007,0xfffe8d59,0x000172a7,
 0x010001a8,0x00005868,0x00000000,
@@ -4420,7 +4418,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww[12836] = {
 // segment 1,length 9,CPU(software)
 0x2fff0009,
 0x00000001,
-(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_softmax,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x400),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x40000000,0x00010001,0x00020002,0x00000004,
+(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_softmax,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x500),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x40000000,0x00010001,0x00020002,0x00000004,
 };
 #define NRF_AXON_MODEL_TINYML_VWW_PACKED_OUTPUT_SIZE 8
 
@@ -4428,7 +4426,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww[12836] = {
   uint32_t axon_model_tinyml_vww_packed_output_buf[NRF_AXON_MODEL_TINYML_VWW_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_tinyml_vww = {
-    .compiler_version = 0x00010300,
+    .compiler_version = 0x00010400,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {

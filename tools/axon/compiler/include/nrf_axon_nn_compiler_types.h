@@ -20,7 +20,8 @@
 #pragma once
 
 typedef enum {
-  NRF_AXON_COMPILER_RESULT_INVALID_BATCH_CNT          = -242, /**< Compiler failed due to invalid batch count parameters. */
+  NRF_AXON_COMPILER_RESULT_PERSISTENT_BUFFER_TOO_SMALL= -243,/**< Compiler failed due to oversized interlayer buffer being too small for the model. */
+  NRF_AXON_COMPILER_RESULT_INVALID_BATCH_CNT          = -242, /**< Compiler failed due to invalid dilation parameters. */
   NRF_AXON_COMPILER_RESULT_INVALID_DILATION           = -242, /**< Compiler failed due to invalid dilation parameters. */
   NRF_AXON_COMPILER_RESULT_INVALID_ROUNDING           = -241, /**< Compiler failed due to invalid rounding parameters. */
   NRF_AXON_COMPILER_RESULT_INVALID_INPUT_SIZE         = -240, /**< Compiler failed due to input height/width/depth violation.*/
@@ -88,6 +89,7 @@ typedef enum {
   NRF_AXON_NN_OP_CONCATENATE,
   NRF_AXON_NN_OP_STRIDED_SLICE,
   NRF_AXON_NN_OP_MULTIPLY,
+  NRF_AXON_NN_OP_UNIDIRECTIONAL_SEQUENCE_LSTM,
   NRF_AXON_NN_OP_MEAN,
   NRF_AXON_NN_OP_FIRST_EXTENSION=100,                     /**< Operations not supported entirely by hardware are implemented as extensions */
   NRF_AXON_NN_OP_SOFTMAX=NRF_AXON_NN_OP_FIRST_EXTENSION,  /**< Softmax implemented as an op extension */
@@ -148,6 +150,20 @@ typedef struct {
 } nrf_axon_nn_compiler_model_layer_dimensions_s;
 
 /**
+ * @brief describes input address offset as a result of split.
+ * If a split operation is on the most significant axis with value > 1, the
+ * split input can be used for the output. This structure informs
+ * the consumer of the split output the offset from the input for
+ * the start of its data.
+ */
+typedef struct {
+  /** one of nrf_axon_nn_axis_e */
+  uint8_t axis;
+  /** offset in elements on the split axis to the start of this layer's input. */
+  uint16_t offset;
+} nrf_axon_nn_compiler_model_input_split_offset_s;
+
+/**
  * @brief Block shape parameters for space_to_batch and batch_to_space.
  */
 typedef struct {
@@ -175,6 +191,8 @@ typedef struct {
   int16_t input_ids[NRF_AXON_NN_MAX_LAYER_INPUTS];                  /**< layer ids of the inputs (input_id is the index into the array of nrf_axon_nn_model_layer_desc_s). 1st inputid_cnt entries are valid, negative ID indicates external input. */
   nrf_axon_nn_op_e nn_operation;                                    /**< operation this layer performs */
   nrf_axon_nn_compiler_model_layer_dimensions_s input_dimensions[NRF_AXON_NN_MAX_LAYER_INPUTS]; /**< dimensions of the inputs */
+  /** offsets from the input node's output for this nodes input. */
+  nrf_axon_nn_compiler_model_input_split_offset_s input_split_offsets[NRF_AXON_NN_MAX_LAYER_INPUTS];
   union {
     nrf_axon_nn_compiler_model_layer_dimensions_s filter_dimensions;  /**< dimensions of the filter */
     nrf_axon_nn_compiler_model_block_shape block_shape;      /**<  */

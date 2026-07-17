@@ -23,7 +23,7 @@ class TensorShape:
     shape_size = 0
     shape = None
 
-    def __init__(self, shape, shape_rank=None):
+    def __init__(self, shape, shape_rank=4):
         if isinstance(shape, list) or isinstance(shape, tuple):
             shape = np.array(shape)
         if np.any(shape):
@@ -71,10 +71,17 @@ class TensorShape:
                 #         self.width = shape[2]
                 #         self.depth = 1
             elif (shape.size == 1):
-                self.batch = int(shape[0])
-                self.height = 1
-                self.width = 1
-                self.depth = 1
+                if shape_rank > 2:
+                    # changed during the implementation of LSTMs, unsure what should this be considered
+                    self.batch = int(shape[0])
+                    self.height = 1
+                    self.width = 1  # changed during the implementation of LSTMs, unsure what should this be considered
+                    self.depth = 1
+                else:
+                    self.batch = 1
+                    self.height = 1
+                    self.width = int(shape[0])  # 1
+                    self.depth = 1
             else:
                 self.batch = 0
                 self.height = 0
@@ -119,6 +126,39 @@ class PadDetails:
     pad_back = 0
 
 
+# The 24 Functional Slots for UnidirectionalSequenceLSTM
+LSTM_INPUT_SLOTS_LIST = {
+    0:  "INPUT_DATA",
+    1:  "INPUT_TO_INPUT_WEIGHTS",
+    2:  "INPUT_TO_FORGET_WEIGHTS",
+    3:  "INPUT_TO_CELL_WEIGHTS",
+    4:  "INPUT_TO_OUTPUT_WEIGHTS",
+    5:  "RECURRENT_TO_INPUT_WEIGHTS",
+    6:  "RECURRENT_TO_FORGET_WEIGHTS",
+    7:  "RECURRENT_TO_CELL_WEIGHTS",
+    8:  "RECURRENT_TO_OUTPUT_WEIGHTS",
+    9:  "CELL_TO_INPUT_PEEPHOLE",
+    10: "CELL_TO_FORGET_PEEPHOLE",
+    11: "CELL_TO_OUTPUT_PEEPHOLE",
+    12: "INPUT_GATE_BIAS",
+    13: "FORGET_GATE_BIAS",
+    14: "CELL_GATE_BIAS",
+    15: "OUTPUT_GATE_BIAS",
+    16: "PROJECTION_WEIGHTS",
+    17: "PROJECTION_BIAS",
+    18: "OUTPUT_STATE_IN",  # Hidden State
+    19: "CELL_STATE_IN",   # Cell State
+    20: "INPUT_LAYER_NORM_COEFFS",
+    21: "FORGET_LAYER_NORM_COEFFS",
+    22: "CELL_LAYER_NORM_COEFFS",
+    23: "OUTPUT_LAYER_NORM_COEFFS"
+}
+
+LSTM_OUTPUT_SLOTS_LIST = {
+    0:  "OUTPUT_DATA",
+}
+
+
 class OperatorOptions:
     operator_name = ""
     bytes = 0
@@ -128,6 +168,7 @@ class OperatorOptions:
     activation = "None"
     custom_activation = False
     operation_detail = {}
+    tensor_details = {}
     pad_info = None
     operator = None
     tflite_interpreter = None
@@ -195,6 +236,11 @@ class OperatorOptions:
     }
     axons_operation_enum = ""
 
+    def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
+        self.initialize_all_class_variables()
+        # now throw errors here directly as operation calling this init are passthrough operators, mostly
+        raise KeyError(-917)
+
     def initialize_all_class_variables(self):
         self.operator_name = ""
         self.bytes = 0
@@ -204,6 +250,7 @@ class OperatorOptions:
         self.activation = "None"
         self.custom_activation = False
         self.operation_detail = {}
+        self.tensor_details = {}
         self.pad_info = None
         self.operator = None
         self.tflite_interpreter = None
@@ -223,13 +270,13 @@ class OperatorOptions:
         self.op_bitwidth = np.int8
         self.kernel_bitwidth = np.int8
         self.kernel_bytewidth_enum = ""
-        self.ip_q = self.init_q
+        self.ip_q = self.init_q.copy()
         self.ip_q_zeropoint = None
         self.op_q_zeropoint = None
-        self.w_q = self.init_q  # {}
-        self.bias_q = self.init_q  # {}
-        self.op_q = self.init_q  # {}
-        self.stride_q = self.init_q
+        self.w_q = self.init_q.copy()  # {}
+        self.bias_q = self.init_q.copy()  # {}
+        self.op_q = self.init_q.copy()  # {}
+        self.stride_q = self.init_q.copy()
         self.api_defn = ""
         self.scale_multipliers = np.array([])
         self.scale_shifts = np.array([])
@@ -258,6 +305,86 @@ class OperatorOptions:
         self.max_single_error_layer_name = ""
         self.layer_output_radix = 0
         self.scaleshift_max_range = 31
+
+    def dilate_tensor_if_needed(self, tensor):
+        dilate_y = self.dilation_y
+        dilate_x = self.dilation_x
+        if ((self.dilation_y <= 1) or (self.op_shape.height <= 1) or (self.dilation_y == self.option.StrideH())):
+            dilate_y = 1
+        if ((self.dilation_x <= 1) or (self.op_shape.width <= 1) or (self.dilation_x == self.option.StrideW())):
+            dilate_x = 1
+        # no need to dilate the tensor here, compiler can handle it
+        if (dilate_y <= 1) and (dilate_x <= 1):
+            return tensor
+        else:
+            tensor_shape = TensorShape(np.array(tensor.shape))
+            if tensor_shape.shape_size < 3:
+                print(
+                    f"dilate_tensor_if_needed: error: unsupported tensor shape size {tensor_shape.shape_size}")
+
+            count = tensor_shape.shape[0]
+            height_original = tensor_shape.shape[-3]
+            width_original = tensor_shape.shape[-2]
+            channels = tensor_shape.shape[-1]
+            height_dilated = height_original
+            width_dilated = width_original
+            if (dilate_y > 1):
+                height_dilated = (height_original-1)*self.dilation_y + 1
+            if (dilate_x > 1):
+                width_dilated = (width_original-1)*self.dilation_x + 1
+
+            if tensor_shape.shape_size == 4:
+                tensor_dilated = np.zeros(
+                    (count, height_dilated, width_dilated, channels), dtype=tensor.dtype)
+                tensor_dilated[:, ::dilate_y, ::dilate_x, :] = tensor
+            elif tensor_shape.shape_size == 3:
+                tensor_dilated = np.zeros(
+                    (height_dilated, width_dilated, channels), dtype=tensor.dtype)
+                tensor_dilated[::dilate_y, ::dilate_x, :] = tensor
+
+            if (dilate_y > 1):
+                self.dilation_y = 1
+            if (dilate_x > 1):
+                self.dilation_x = 1
+            return tensor_dilated
+
+    def get_next_ops_info(self):
+        """
+        returns
+        next_op_graph_index - list of indices of the next ops
+        next_op_is_cpu - bool indicating if the next operator have a cpu op        
+        next_op_is_not_last_op - bool indicating if the next operator is not the last operator
+        next_
+        """
+        next_op_graph_index = SupportedOperators.get_next_op_graph_index_for_axon_layer_num(
+            self.operator_info_graph, self.operation_detail)
+        next_op_is_not_last_op = (False or sum(
+            [n < len(self.operator_info_graph) for n in next_op_graph_index]))
+        # check here if any of the next op is in the cpu operations list and is a supported op and call the respective handler for updating the attributes here
+        next_op_is_cpu_op = [(self.operator_info_graph[i]['op_code']
+                              in cpu_operator_options.cpu_operators_list) and (self.operator_info_graph[i]['operator_support'] == OperatorSupportEnum.SUPPORTED) for i in next_op_graph_index]
+        next_op_is_variable_op = [(self.operator_info_graph[i]['operator_support']
+                                   == OperatorSupportEnum.VARIABLE) for i in next_op_graph_index]
+
+        return next_op_graph_index, next_op_is_cpu_op, next_op_is_not_last_op, next_op_is_variable_op
+
+    def handle_scaling_attributes_before_cpu_op(self, next_op_graph_index, next_cpu_op):
+        # get the op index of the cpu op
+        # next_cpu_op_index = next_op_graph_index[next(
+        #     (i for i, val in enumerate(next_op_graph_index) if val), None)]
+        next_cpu_op_index = next(
+            (graph_idx for cpu, graph_idx in zip(
+                next_cpu_op, next_op_graph_index) if cpu),
+            None,)
+        cpu_op_code = self.operator_info_graph[next_cpu_op_index]['op_code']
+        ret = cpu_operator_options.HandleOperatorScalingAttributesBeforeCpuOp(
+            self, cpu_op_code)
+        # and then calculate the scale shifts and the multipliers
+        if ret < 0:
+            if ret == -2:
+                raise KeyError(-921)
+            raise KeyError(-920)
+        return True
 
     @classmethod
     def check_tensor_constraints(cls, tensor_type, tensor, constraints=default_tensor_constraints, transpose_check=False):
@@ -346,53 +473,6 @@ class OperatorOptions:
                 return tensor.transpose(1, 0)
         return tensor
 
-    def dilate_tensor_if_needed(self, tensor):
-        dilate_y = self.dilation_y
-        dilate_x = self.dilation_x
-        if ((self.dilation_y <= 1) or (self.op_shape.height <= 1) or (self.dilation_y == self.option.StrideH())):
-            dilate_y = 1
-        if ((self.dilation_x <= 1) or (self.op_shape.width <= 1) or (self.dilation_x == self.option.StrideW())):
-            dilate_x = 1
-        # no need to dilate the tensor here, compiler can handle it
-        if (dilate_y <= 1) and (dilate_x <= 1):
-            return tensor
-        else:
-            tensor_shape = TensorShape(np.array(tensor.shape))
-            if tensor_shape.shape_size < 3:
-                print(
-                    f"dilate_tensor_if_needed: error: unsupported tensor shape size {tensor_shape.shape_size}")
-
-            count = tensor_shape.shape[0]
-            height_original = tensor_shape.shape[-3]
-            width_original = tensor_shape.shape[-2]
-            channels = tensor_shape.shape[-1]
-            height_dilated = height_original
-            width_dilated = width_original
-            if (dilate_y > 1):
-                height_dilated = (height_original-1)*self.dilation_y + 1
-            if (dilate_x > 1):
-                width_dilated = (width_original-1)*self.dilation_x + 1
-
-            if tensor_shape.shape_size == 4:
-                tensor_dilated = np.zeros(
-                    (count, height_dilated, width_dilated, channels), dtype=tensor.dtype)
-                tensor_dilated[:, ::dilate_y, ::dilate_x, :] = tensor
-            elif tensor_shape.shape_size == 3:
-                tensor_dilated = np.zeros(
-                    (height_dilated, width_dilated, channels), dtype=tensor.dtype)
-                tensor_dilated[::dilate_y, ::dilate_x, :] = tensor
-
-            if (dilate_y > 1):
-                self.dilation_y = 1
-            if (dilate_x > 1):
-                self.dilation_x = 1
-            return tensor_dilated
-
-    def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
-        self.initialize_all_class_variables()
-        # now throw errors here directly as operation calling this init are passthrough operators, mostly
-        raise KeyError(-917)
-
     @classmethod
     def CreateOptionsObject(cls, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph=None, tflite_axon_enum_wrapper=None):
         return cls(operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper)
@@ -411,6 +491,7 @@ class OperatorOptions:
         self.interpreter = tflite_interpreter
         self.operation_detail = operation_detail
         self.operator = operator
+        self.tensor_details = tensor_details
         self.ip_shape = TensorShape(
             tensor_details[operator.InputsAsNumpy()[0]]['shape'])
         self.input_count = self.operator.InputsAsNumpy().size
@@ -419,74 +500,80 @@ class OperatorOptions:
         if operator_graph is not None:
             self.operator_info_graph = operator_graph
         # FIXME NEED TO MOVE THIS INSIDE EACH OPERATOR
-        if (self.input_count == 1):
-            self.ip_shape = TensorShape(
-                tensor_details[operator.InputsAsNumpy()[0]]['shape'])
-            self.ip_q = copy.deepcopy(
-                tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
-        elif (self.input_count == 2):
-            self.ip_shape = TensorShape(
-                tensor_details[operator.InputsAsNumpy()[0]]['shape'])
-            self.ip_q = copy.deepcopy(
-                tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
-            self.kernel_shape = TensorShape(
-                # may not be kernel
-                tensor_details[operator.InputsAsNumpy()[1]]['shape'])
-            self.w_q = tensor_details[self.ip_ndxs[1]
-                                      ]['quantization_parameters']
-        elif (self.input_count == 3):
-            self.ip_shape = TensorShape(
-                tensor_details[operator.InputsAsNumpy()[0]]['shape'])
-            self.ip_q = copy.deepcopy(
-                tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
-            self.kernel_shape = TensorShape(
-                # may not be kernel
-                tensor_details[operator.InputsAsNumpy()[1]]['shape'])
-            self.bias_shape = TensorShape(
-                # may not be bias
-                tensor_details[operator.InputsAsNumpy()[2]]['shape'])
-            self.w_q = tensor_details[self.ip_ndxs[1]
-                                      ]['quantization_parameters']
-            self.bias_q = tensor_details[self.ip_ndxs[2]
-                                         ]['quantization_parameters']
-        elif (self.input_count == 4):  # for strided slcie there are four inputs
-            self.ip_shape = TensorShape(
-                tensor_details[operator.InputsAsNumpy()[0]]['shape'])  # input
-            self.ip_q = copy.deepcopy(
-                tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
-            self.kernel_shape = TensorShape(
-                # is begin
-                tensor_details[operator.InputsAsNumpy()[1]]['shape'])
-            self.bias_shape = TensorShape(
-                tensor_details[operator.InputsAsNumpy()[2]]['shape'])  # is end
-            self.w_q = tensor_details[self.ip_ndxs[1]
-                                      ]['quantization_parameters']
-            self.bias_q = tensor_details[self.ip_ndxs[2]
-                                         ]['quantization_parameters']
-            self.stride_shape = TensorShape(
-                # is strides
-                tensor_details[operator.InputsAsNumpy()[3]]['shape'])
-            self.stride_q = tensor_details[operator.InputsAsNumpy(
-            )[3]]['quantization_parameters']  # is strides
+        if (operator_code == tflite.BuiltinOperator.UNIDIRECTIONAL_SEQUENCE_LSTM):
+            pass  # will be handled inside the operator
         else:
-            # FIXME : not handling more than four input vectors yet
-            self.error = True
-            self.error_text += f"|{self.operator_name} has more than 4 inputs, Only 4 inputs are currently supported|"
-            self.error_action = "ERROR"
-        self.op_shape = TensorShape(
-            tensor_details[operator.OutputsAsNumpy()[0]]['shape'])
-        self.ip_bitwidth = tensor_details[operator.InputsAsNumpy()[0]]['dtype']
-        self.op_bitwidth = tensor_details[operator.OutputsAsNumpy()[
-            0]]['dtype']
-        self.kernel_bytewidth_enum = tflite_axon_enum_wrapper.GetAxonByteWidthEnum(
-            self.kernel_bitwidth)
-        self.ip_q_zeropoint = copy.deepcopy(self.ip_q['zero_points'])
-        self.op_q = copy.deepcopy(
-            tensor_details[self.op_ndxs[0]]['quantization_parameters'])
-        self.op_q_zeropoint = copy.deepcopy(self.op_q['zero_points'])
-        self.operator_name = self.operation_detail["op_name"]
-        self.pad_info = PadDetails()
-        self.tflite_axon_enum_wrapper = tflite_axon_enum_wrapper
+            if (self.input_count == 1):
+                self.ip_shape = TensorShape(
+                    tensor_details[operator.InputsAsNumpy()[0]]['shape'])
+                self.ip_q = copy.deepcopy(
+                    tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
+            elif (self.input_count == 2):
+                self.ip_shape = TensorShape(
+                    tensor_details[operator.InputsAsNumpy()[0]]['shape'])
+                self.ip_q = copy.deepcopy(
+                    tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
+                self.kernel_shape = TensorShape(
+                    # may not be kernel
+                    tensor_details[operator.InputsAsNumpy()[1]]['shape'])
+                self.w_q = tensor_details[self.ip_ndxs[1]
+                                          ]['quantization_parameters']
+            elif (self.input_count == 3):
+                self.ip_shape = TensorShape(
+                    tensor_details[operator.InputsAsNumpy()[0]]['shape'])
+                self.ip_q = copy.deepcopy(
+                    tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
+                self.kernel_shape = TensorShape(
+                    # may not be kernel
+                    tensor_details[operator.InputsAsNumpy()[1]]['shape'])
+                self.bias_shape = TensorShape(
+                    # may not be bias
+                    tensor_details[operator.InputsAsNumpy()[2]]['shape'])
+                self.w_q = tensor_details[self.ip_ndxs[1]
+                                          ]['quantization_parameters']
+                self.bias_q = tensor_details[self.ip_ndxs[2]
+                                             ]['quantization_parameters']
+            elif (self.input_count == 4):  # for strided slcie there are four inputs
+                self.ip_shape = TensorShape(
+                    # input
+                    tensor_details[operator.InputsAsNumpy()[0]]['shape'])
+                self.ip_q = copy.deepcopy(
+                    tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
+                self.kernel_shape = TensorShape(
+                    # is begin
+                    tensor_details[operator.InputsAsNumpy()[1]]['shape'])
+                self.bias_shape = TensorShape(
+                    # is end
+                    tensor_details[operator.InputsAsNumpy()[2]]['shape'])
+                self.w_q = tensor_details[self.ip_ndxs[1]
+                                          ]['quantization_parameters']
+                self.bias_q = tensor_details[self.ip_ndxs[2]
+                                             ]['quantization_parameters']
+                self.stride_shape = TensorShape(
+                    # is strides
+                    tensor_details[operator.InputsAsNumpy()[3]]['shape'])
+                self.stride_q = tensor_details[operator.InputsAsNumpy(
+                )[3]]['quantization_parameters']  # is strides
+            else:
+                # FIXME : not handling more than four input vectors yet
+                self.error = True
+                self.error_text += f"|{self.operator_name} has more than 4 inputs, Only 4 inputs are currently supported|"
+                self.error_action = "ERROR"
+            self.op_shape = TensorShape(
+                tensor_details[operator.OutputsAsNumpy()[0]]['shape'])
+            self.ip_bitwidth = tensor_details[operator.InputsAsNumpy()[
+                0]]['dtype']
+            self.op_bitwidth = tensor_details[operator.OutputsAsNumpy()[
+                0]]['dtype']
+            self.kernel_bytewidth_enum = tflite_axon_enum_wrapper.GetAxonByteWidthEnum(
+                self.kernel_bitwidth)
+            self.ip_q_zeropoint = copy.deepcopy(self.ip_q['zero_points'])
+            self.op_q = copy.deepcopy(
+                tensor_details[self.op_ndxs[0]]['quantization_parameters'])
+            self.op_q_zeropoint = copy.deepcopy(self.op_q['zero_points'])
+            self.operator_name = self.operation_detail["op_name"]
+            self.pad_info = PadDetails()
+            self.tflite_axon_enum_wrapper = tflite_axon_enum_wrapper
 
     def HandleOutputRadix(self):
         if self.layer_output_radix < min(self.scale_shifts):
@@ -516,100 +603,78 @@ class OperatorOptions:
         min_error_ndx = np.argmax(errors_)
         self.scale_shifts = np.array([single_scaleshift], dtype=np.int8)
 
-    def CalculateMultiplierandScaleshift(self):  # default one
+    # default one
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
         op_index = self.operation_detail['index']
         if self.operator_info_graph is not None:
-            next_op_graph_index = SupportedOperators.get_next_op_graph_index_for_axon_layer_num(
-                self.operator_info_graph, self.operation_detail)
             next_op_names = "|".join(
                 [self.operator_info_graph[i]['op_name'] for i in next_op_graph_index])
-            next_op_is_not_last_op = (False or sum(
-                [n < len(self.operator_info_graph) for n in next_op_graph_index]))
+            if next_op_is_not_last_op and ("LEAKY_RELU" in next_op_names):
+                self.LEAKY_RELU_FLAG = True
+                if (not self.SetLeakyReluAsActivationFunction()):
+                    raise KeyError(-909)
+                leaky_relu_tflite_operator = self.operator_info_graph[op_index +
+                                                                      1]['tflite_operator']
+                leaky_relu_builtin_option = leaky_relu_tflite_operator.BuiltinOptions()
+                leaky_relu_bytes = leaky_relu_builtin_option.Bytes
+                leaky_relu_pos = leaky_relu_builtin_option.Pos
+                leaky_relu_options = tflite.LeakyReluOptions()
+                leaky_relu_options.Init(leaky_relu_bytes, leaky_relu_pos)
+                self.leaky_relu_alpha = leaky_relu_options.Alpha()
+                leaky_relu_op_q = self.interpreter.get_tensor_details(
+                )[leaky_relu_tflite_operator.OutputsAsNumpy()[0]]['quantization_parameters']
+                leaky_relu_op_scale = leaky_relu_op_q['scales']
+                leaky_relu_op_zeropoint = leaky_relu_op_q['zero_points']
+                scale_shift, scale_q, error = util.optimize_scaling_shift_per_channel(
+                    self.ip_q['scales'], leaky_relu_op_scale, self.w_q['scales'], leaky_relu_op_zeropoint)
+                # combine both the scale shifts value into one single array
+                scale_q_negative = np.int32(self.leaky_relu_alpha*scale_q)
+                self.scale_multipliers = np.array(
+                    list(map(list, zip(scale_q_negative, scale_q)))).reshape(-1)
+                # self.scale_shifts = np.array(
+                #     list(map(list, zip(scale_shift)))).reshape(-1)
+                self.scale_shifts = scale_shift
+                self.op_q['scales'] = leaky_relu_op_scale
+                self.op_q_zeropoint = leaky_relu_op_zeropoint
+            # elif next_op_is_not_last_op and ("SOFTMAX" in next_op_names) and not self.skip_softmax_op:
+            #     # set the activation function to be custom function
+            #     if (not self.SetCustomActivationFunctionType("CustomPrepareSoftmax")):
+            #         raise KeyError(-902)
+            #     # we have to calulate the maximum possible bitlimit we can shift to, so that we avoid overflow
+            #     # the maximum output value we expect is
+            #     op_max = np.ceil(self.op_q['scales']
+            #                     [0] * (127 - self.op_q_zeropoint[0]))
+            #     op_min = np.ceil(
+            #         self.op_q['scales'][0] * ((-128) - self.op_q_zeropoint[0]))
+            #     # print(f"op_max {op_max}, op_min {op_min}")
+            #     self.op_q['scales'] = np.array([1])
+            #     self.op_q_zeropoint[0] = np.array([0])
+            #     beta = 1  # FIXME get the beta value from the softmax operation somehow, which is the next operation and yet to be encountered
+            #     self.ip_q['scales'] *= beta
+            #     self.scaleshift_max_range = 31 - \
+            #         (len(bin(int(max(abs(op_max), abs(op_min))))) - 2)
+            #     self.scale_shifts, self.scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+            #         self.ip_q['scales'], self.op_q['scales'], self.w_q['scales'], self.op_q_zeropoint[0], max_scale=self.scaleshift_max_range)
+            #     self.op_bitwidth = np.int32
+            # elif next_op_is_not_last_op and (("LOGISTIC" in next_op_names) or ("TANH" in next_op_names)):
+            #     """
+            #     need to use the following paradigm for cpu operators and get rid of this handling in further development
+            #     # cpu_operator_options.HandleOperatorScalingAttributesBeforeCpuOp(self,self.operator_info_graph[op_index+1]["op_code"])
+            #     """
 
-            # check here if any of the next op is in the cpu operations list and is a supported op and call the respective handler for updating the attributes here
-            next_op_is_cpu_op = [(self.operator_info_graph[i]['op_code']
-                                 in cpu_operator_options.cpu_operators_list) and (self.operator_info_graph[i]['operator_support'] == OperatorSupportEnum.SUPPORTED) for i in next_op_graph_index]
-            if any(next_op_is_cpu_op):
-                # get the op index of the cpu op
-                next_op_index = next_op_graph_index[next(
-                    (i for i, val in enumerate(next_op_graph_index) if val), None)]
-                cpu_op_code = self.operator_info_graph[next_op_index]['op_code']
-                ret = cpu_operator_options.HandleOperatorAttributesBeforeCpuOp(
-                    self, cpu_op_code)
-                # and then calculate the scale shifts and the multipliers
-                if ret < 0:
-                    if ret == -2:
-                        raise KeyError(-921)
-                    raise KeyError(-920)
+            #     # set the activation function to be custom function
+            #     if (not self.SetCustomActivationFunctionType("None")):
+            #         raise KeyError(-912)
+            #     self.op_q['scales'] = np.array([1])
+            #     self.op_q_zeropoint[0] = np.array([0])
+            #     self.scaleshift_max_range = 28
+            #     self.scale_shifts, self.scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+            #         self.ip_q['scales'], self.op_q['scales'], self.w_q['scales'], self.op_q_zeropoint[0], max_scale=self.scaleshift_max_range, bit_limit=16)
+            #     self.op_bitwidth = np.int16
+            #     self.layer_output_radix = 12
+            else:
                 self.scale_shifts, self.scale_multipliers, error = util.optimize_scaling_shift_per_channel(
                     self.ip_q['scales'], self.op_q['scales'], self.w_q['scales'], self.op_q_zeropoint, max_scale=self.scaleshift_max_range)
-            else:
-                if next_op_is_not_last_op and ("LEAKY_RELU" in next_op_names):
-                    self.LEAKY_RELU_FLAG = True
-                    if (not self.SetLeakyReluAsActivationFunction()):
-                        raise KeyError(-909)
-                    leaky_relu_tflite_operator = self.operator_info_graph[op_index +
-                                                                          1]['tflite_operator']
-                    leaky_relu_builtin_option = leaky_relu_tflite_operator.BuiltinOptions()
-                    leaky_relu_bytes = leaky_relu_builtin_option.Bytes
-                    leaky_relu_pos = leaky_relu_builtin_option.Pos
-                    leaky_relu_options = tflite.LeakyReluOptions()
-                    leaky_relu_options.Init(leaky_relu_bytes, leaky_relu_pos)
-                    self.leaky_relu_alpha = leaky_relu_options.Alpha()
-                    leaky_relu_op_q = self.interpreter.get_tensor_details(
-                    )[leaky_relu_tflite_operator.OutputsAsNumpy()[0]]['quantization_parameters']
-                    leaky_relu_op_scale = leaky_relu_op_q['scales']
-                    leaky_relu_op_zeropoint = leaky_relu_op_q['zero_points']
-                    scale_shift, scale_q, error = util.optimize_scaling_shift_per_channel(
-                        self.ip_q['scales'], leaky_relu_op_scale, self.w_q['scales'], leaky_relu_op_zeropoint)
-                    # combine both the scale shifts value into one single array
-                    scale_q_negative = np.int32(self.leaky_relu_alpha*scale_q)
-                    self.scale_multipliers = np.array(
-                        list(map(list, zip(scale_q_negative, scale_q)))).reshape(-1)
-                    # self.scale_shifts = np.array(
-                    #     list(map(list, zip(scale_shift)))).reshape(-1)
-                    self.scale_shifts = scale_shift
-                    self.op_q['scales'] = leaky_relu_op_scale
-                    self.op_q_zeropoint = leaky_relu_op_zeropoint
-                # elif next_op_is_not_last_op and ("SOFTMAX" in next_op_names) and not self.skip_softmax_op:
-                #     # set the activation function to be custom function
-                #     if (not self.SetCustomActivationFunctionType("CustomPrepareSoftmax")):
-                #         raise KeyError(-902)
-                #     # we have to calulate the maximum possible bitlimit we can shift to, so that we avoid overflow
-                #     # the maximum output value we expect is
-                #     op_max = np.ceil(self.op_q['scales']
-                #                     [0] * (127 - self.op_q_zeropoint[0]))
-                #     op_min = np.ceil(
-                #         self.op_q['scales'][0] * ((-128) - self.op_q_zeropoint[0]))
-                #     # print(f"op_max {op_max}, op_min {op_min}")
-                #     self.op_q['scales'] = np.array([1])
-                #     self.op_q_zeropoint[0] = np.array([0])
-                #     beta = 1  # FIXME get the beta value from the softmax operation somehow, which is the next operation and yet to be encountered
-                #     self.ip_q['scales'] *= beta
-                #     self.scaleshift_max_range = 31 - \
-                #         (len(bin(int(max(abs(op_max), abs(op_min))))) - 2)
-                #     self.scale_shifts, self.scale_multipliers, error = util.optimize_scaling_shift_per_channel(
-                #         self.ip_q['scales'], self.op_q['scales'], self.w_q['scales'], self.op_q_zeropoint[0], max_scale=self.scaleshift_max_range)
-                #     self.op_bitwidth = np.int32
-                # elif next_op_is_not_last_op and (("LOGISTIC" in next_op_names) or ("TANH" in next_op_names)):
-                #     """
-                #     need to use the following paradigm for cpu operators and get rid of this handling in further development
-                #     # cpu_operator_options.HandleOperatorAttributesBeforeCpuOp(self,self.operator_info_graph[op_index+1]["op_code"])
-                #     """
-
-                #     # set the activation function to be custom function
-                #     if (not self.SetCustomActivationFunctionType("None")):
-                #         raise KeyError(-912)
-                #     self.op_q['scales'] = np.array([1])
-                #     self.op_q_zeropoint[0] = np.array([0])
-                #     self.scaleshift_max_range = 28
-                #     self.scale_shifts, self.scale_multipliers, error = util.optimize_scaling_shift_per_channel(
-                #         self.ip_q['scales'], self.op_q['scales'], self.w_q['scales'], self.op_q_zeropoint[0], max_scale=self.scaleshift_max_range, bit_limit=16)
-                #     self.op_bitwidth = np.int16
-                #     self.layer_output_radix = 12
-                else:
-                    self.scale_shifts, self.scale_multipliers, error = util.optimize_scaling_shift_per_channel(
-                        self.ip_q['scales'], self.op_q['scales'], self.w_q['scales'], self.op_q_zeropoint)
 
             # if(self.normalize_scaleshifts):#checking for the scaling error when we provide only one scaling value for all the channels
             #   scale_old = self.ip_q['scales']*self.w_q['scales'] / self.op_q['scales']
@@ -896,43 +961,55 @@ class OperatorOptions:
         return self.command_buf_len
 
     def WriteOperatorAttributesToFile(self, file_string, info_string, last_op_name):
+        if (self.axons_operation_enum == "NRF_AXON_NN_OP_UNIDIRECTIONAL_SEQUENCE_LSTM"):
+            file_string += info_string + \
+                "_INPUT_TIME_STEPS "+str(self.ip_shape.width)
+            file_string += info_string + \
+                "_INPUT_FEATURES "+str(self.ip_shape.depth)
+            file_string += info_string + \
+                "_OUTPUT_TIME_STEPS "+str(self.op_shape.width)
+            file_string += info_string + \
+                "_OUTPUT_UNITS "+str(self.op_shape.depth)
+        else:
+            # file_string += info_string +"_INPUT_BATCH "+str(self.ip_shape.batch)
+            file_string += info_string + \
+                "_INPUT_CHANNEL_CNT "+str(self.ip_shape.depth)
+            file_string += info_string + \
+                "_INPUT_HEIGHT "+str(self.ip_shape.height)
+            file_string += info_string + \
+                "_INPUT_WIDTH "+str(self.ip_shape.width)
 
-        # file_string += info_string +"_INPUT_BATCH "+str(self.ip_shape.batch)
-        file_string += info_string + \
-            "_INPUT_CHANNEL_CNT "+str(self.ip_shape.depth)
-        file_string += info_string + "_INPUT_HEIGHT "+str(self.ip_shape.height)
-        file_string += info_string + "_INPUT_WIDTH "+str(self.ip_shape.width)
+            file_string += info_string + "_FILTER_OUTPUT_CHANNEL_CNT " + \
+                str(self.kernel_shape.depth)+" //NOT_REQUIRED"
+            file_string += info_string + "_FILTER_HEIGHT " + \
+                str(self.kernel_shape.height)+" //NOT_REQUIRED"
+            file_string += info_string + "_FILTER_WIDTH " + \
+                str(self.kernel_shape.height)+" //NOT_REQUIRED"
+            file_string += info_string + "_FILTER_BYTEWIDTH " + \
+                str(self.kernel_bytewidth_enum.name)+" //NOT_REQUIRED"
 
-        file_string += info_string + "_FILTER_OUTPUT_CHANNEL_CNT " + \
-            str(self.kernel_shape.depth)+" //NOT_REQUIRED"
-        file_string += info_string + "_FILTER_HEIGHT " + \
-            str(self.kernel_shape.height)+" //NOT_REQUIRED"
-        file_string += info_string + "_FILTER_WIDTH " + \
-            str(self.kernel_shape.height)+" //NOT_REQUIRED"
-        file_string += info_string + "_FILTER_BYTEWIDTH " + \
-            str(self.kernel_bytewidth_enum.name)+" //NOT_REQUIRED"
+            file_string += info_string + "_STRIDE_W " + \
+                str(self.stride_x)+" //NOT_REQUIRED"
+            file_string += info_string + "_STRIDE_H " + \
+                str(self.stride_y)+" //NOT_REQUIRED"
 
-        file_string += info_string + "_STRIDE_W " + \
-            str(self.stride_x)+" //NOT_REQUIRED"
-        file_string += info_string + "_STRIDE_H " + \
-            str(self.stride_y)+" //NOT_REQUIRED"
+            file_string += info_string + "_PADDING_TOP " + \
+                str(self.pad_info.pad_top)+" //NOT_REQUIRED"
+            file_string += info_string + "_PADDING_BOTTOM " + \
+                str(self.pad_info.pad_bottom)+" //NOT_REQUIRED"
+            file_string += info_string + "_PADDING_LEFT " + \
+                str(self.pad_info.pad_left)+" //NOT_REQUIRED"
+            file_string += info_string + "_PADDING_RIGHT " + \
+                str(self.pad_info.pad_right)+" //NOT_REQUIRED"
 
-        file_string += info_string + "_PADDING_TOP " + \
-            str(self.pad_info.pad_top)+" //NOT_REQUIRED"
-        file_string += info_string + "_PADDING_BOTTOM " + \
-            str(self.pad_info.pad_bottom)+" //NOT_REQUIRED"
-        file_string += info_string + "_PADDING_LEFT " + \
-            str(self.pad_info.pad_left)+" //NOT_REQUIRED"
-        file_string += info_string + "_PADDING_RIGHT " + \
-            str(self.pad_info.pad_right)+" //NOT_REQUIRED"
-
-        # file_string += info_string +"_OUTPUT_BATCH "+str(self.op_shape.batch)
-        file_string += info_string + \
-            "_OUTPUT_CHANNEL_CNT "+str(self.op_shape.depth)
-        file_string += info_string + \
-            "_OUTPUT_HEIGHT "+str(self.op_shape.height)
-        file_string += info_string + "_OUTPUT_WIDTH "+str(self.op_shape.width)
-        # file_string += info_string +"_OUTPUT_AXON_STRIDE "+str(util.GetAxonproStrideWidth(self.op_shape.height))
+            # file_string += info_string +"_OUTPUT_BATCH "+str(self.op_shape.batch)
+            file_string += info_string + \
+                "_OUTPUT_CHANNEL_CNT "+str(self.op_shape.depth)
+            file_string += info_string + \
+                "_OUTPUT_HEIGHT "+str(self.op_shape.height)
+            file_string += info_string + \
+                "_OUTPUT_WIDTH "+str(self.op_shape.width)
+            # file_string += info_string +"_OUTPUT_AXON_STRIDE "+str(util.GetAxonproStrideWidth(self.op_shape.height))
 
         return file_string
 
@@ -949,7 +1026,14 @@ class OperatorOptions:
 
     def GetMultiplierandScaleshift(self):
         if not self.custom_cpu_op:
-            self.CalculateMultiplierandScaleshift()
+            next_op_graph_index, next_op_is_cpu_op, next_op_is_not_last_op, next_op_is_variable = self.get_next_ops_info()
+            if any(next_op_is_cpu_op) and not any(next_op_is_variable):
+                # check if any of the next ops are persistent variables and if that is the case,
+                # do not call for any handling of the scaling attributes for the CPU Op
+                self.handle_scaling_attributes_before_cpu_op(
+                    next_op_graph_index, next_op_is_cpu_op)
+            self.CalculateMultiplierandScaleshift(
+                next_op_graph_index, next_op_is_not_last_op)
         # checking for the scaling error when we provide only one scaling value for all the channels
         if (self.normalize_scaleshifts):
             self.NormalizeScaleshifts()
@@ -1008,6 +1092,7 @@ class OperatorOptions:
 
     def SetOpQZeropoint(self, op_zeropoint):
         self.op_q_zeropoint[0] = op_zeropoint
+        self.op_q['zero_points'][0] = op_zeropoint
 
     def GetIpOpZeropoints(self):
         return self.ip_q_zeropoint, self.op_q_zeropoint
@@ -1067,6 +1152,11 @@ class OperatorOptions:
     def SetLayerOutputRadix(self, layer_output_radix):
         self.layer_output_radix = layer_output_radix
 
+    def GetLayerOutputRadix(self):
+        return self.layer_output_radix
+
+    def GetScaleShiftMaxRange(self):
+        return self.scaleshift_max_range
 
 class ConvolutionOptions(OperatorOptions):
 
@@ -1544,6 +1634,14 @@ class FullyConnectedOperatorOptions(OperatorOptions):
         self.operand_str = "filters"
         self.option = tflite.FullyConnectedOptions()
         self.option.Init(self.bytes, self.pos)
+        #check here if the input to the FC is shape size 3 and adjust the width and channel for it.
+        if self.ip_shape.shape_size > 2:
+            #we need to make sure that the outermost dimension is 1 so that the width and channel can be swapped to height and width
+            if self.ip_shape.height == 1:
+                self.ip_shape.height, self.ip_shape.width, self.ip_shape.depth  = self.ip_shape.width, self.ip_shape.depth, self.ip_shape.height
+            else:
+                raise KeyError(-925)
+
         # get the filter and bias tensor
         self.filter_tensor = tflite_interpreter.get_tensor(
             self.ip_ndxs[1])  # weight tensor
@@ -1810,7 +1908,8 @@ class Pool2DOptions(OperatorOptions):
             self.b_prime_tensor = np.array(
                 [np.round(self.b_prime_mean[0]).astype(np.int32)])
 
-    def CalculateMultiplierandScaleshift(self):  # for pool operation
+    # for pool operation
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
         """
         We also have to get a multiplier and a shift for the AVERAGE POOLING so that it works with Axon    
         calculates the scale_q (multiplier/slope value for the operation and the scaleshift before the zeropoint or the scaleshift limiting value saturates)
@@ -1832,7 +1931,8 @@ class Pool2DOptions(OperatorOptions):
         self.scale = b_prime_scale / (self.area)
         saturation_limit = self.op_q_zeropoint
         error1, scale_shift_op_1 = util.optimized_ip_scaling_shift(
-            self.scale, 8, 31, bit_limit, saturation_limit)
+            # self.scale, 8, 31, bit_limit, saturation_limit)
+            self.scale, 8, self.scaleshift_max_range, bit_limit, saturation_limit)
         self.scale_multipliers = np.array(
             [abs(np.round(self.scale[0]*2**scale_shift_op_1)).astype(np.int32)])
         self.scale_shifts = np.array([scale_shift_op_1], dtype=np.int8)
@@ -2034,7 +2134,8 @@ class AddOptions(OperatorOptions):
                 # get the filter here as well
                 self.filter_tensor = tflite_interpreter.get_tensor(
                     operator_graph_info['ip_tensors'][1])
-                self.kernel_shape = TensorShape(self.filter_tensor.shape)
+                self.kernel_shape = TensorShape(
+                    self.filter_tensor.shape, shape_rank=self.ip_shape.shape_size)
                 self.add_with_constant = True
                 # get the input zero point of the constant tensor here.
                 self.ip_q = copy.deepcopy(
@@ -2042,8 +2143,11 @@ class AddOptions(OperatorOptions):
                 self.ip_q_zeropoint = copy.deepcopy(self.ip_q['zero_points'])
 
     def CalculateBPrime(self):
+        bias_prime_scale_shift = self.scale_shifts[0]
+        if self.layer_output_radix > 0:
+            bias_prime_scale_shift += self.layer_output_radix
         bias_add_scale_shftd = (-(self.ip1_q['scales']*self.ip1_q['zero_points']+self.ip2_q['scales']
-                                * self.ip2_q['zero_points'])/self.op_scales)*(2**self.scale_shifts[0].astype(np.float32))
+                                * self.ip2_q['zero_points'])/self.op_scales)*(2**bias_prime_scale_shift.astype(np.float32))
         bias_add_array = np.array(bias_add_scale_shftd.astype(np.int32))
         self.b_prime_tensor = bias_add_array
 
@@ -2086,7 +2190,8 @@ class AddOptions(OperatorOptions):
 
         return file_string
 
-    def CalculateMultiplierandScaleshift(self):  # for add operation
+    # for add operation
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
         if self.multipliers_calculated:
             return
         self.op_scales = self.op_q['scales']
@@ -2094,9 +2199,11 @@ class AddOptions(OperatorOptions):
         self.scale_ip1 = self.ip1_q['scales']/self.op_scales
         self.scale_ip2 = self.ip2_q['scales']/self.op_scales
         self.error1, self.scale_shift_op_1 = util.optimized_ip_scaling_shift(
-            self.scale_ip1, 8, 31, 15, self.op_zeropoint, zp_bit_limit=31)
+            # self.scale_ip1, 8, 31, 15, self.op_zeropoint, zp_bit_limit=31)
+            self.scale_ip1, 8, self.scaleshift_max_range, 15, self.op_zeropoint, zp_bit_limit=31)
         self.error2, self.scale_shift_op_2 = util.optimized_ip_scaling_shift(
-            self.scale_ip2, 8, 31, 15, self.op_zeropoint, zp_bit_limit=31)
+            # self.scale_ip2, 8, 31, 15, self.op_zeropoint, zp_bit_limit=31)
+            self.scale_ip2, 8, self.scaleshift_max_range, 15, self.op_zeropoint, zp_bit_limit=31)
         self.scale_shifts = np.array(
             [min(self.scale_shift_op_1, self.scale_shift_op_2)], dtype=np.int8)
         self.scale_a = abs(
@@ -2106,6 +2213,7 @@ class AddOptions(OperatorOptions):
         self.scale_multipliers = np.array([self.scale_a[0], self.scale_b[0]])
         self.ip_zeropoint = 0
         self.ip_q_zeropoint[0] = self.ip_zeropoint
+        self.op_q_zeropoint = self.op_zeropoint
         self.multipliers_calculated = True
 
     # def GetFilterTensor(self):
@@ -2264,9 +2372,11 @@ class PadOptions(OperatorOptions):
             self.error = True
         return self.error, self.error_text, self.error_action
 
-    def CalculateMultiplierandScaleshift(self):
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
         scale_q = self.ip_q['scales']/self.op_q['scales']
-        result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        # result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        result = util.optimized_ip_scaling_shift(
+            (scale_q), 8, self.scaleshift_max_range, 25)
         # error = result[0]
         scaleshift = result[1]
         self.scale_multipliers = np.array(
@@ -2293,7 +2403,8 @@ class SoftmaxOperatorOptions(OperatorOptions):
 
         scale = 1/self.op_q['scales']
         error1, scale_shift_op_1 = util.optimized_ip_scaling_shift(
-            scale, 8, 31, 31, self.op_q_zeropoint)
+            # scale, 8, 31, 31, self.op_q_zeropoint)
+            scale, 8, self.scaleshift_max_range, 31, self.op_q_zeropoint)
         self.scale_multipliers = np.array(
             [abs(np.round(scale[0]*2**scale_shift_op_1)).astype(np.int32)])
         self.scale_shift = np.array([scale_shift_op_1], dtype=np.int8)
@@ -2421,6 +2532,15 @@ class StridedSliceOptions(OperatorOptions):
     stride_axon = None
     stride_slice_filter_tensor = None
 
+    def mask_for_transpose(self, mask):
+        perm = (1,2,0)
+        width = len(perm)
+        new_mask = 0
+        for new_axis, old_axis in enumerate(perm):
+            if mask & (1 << old_axis):
+                new_mask |= (1 << new_axis)
+        return new_mask
+
     def get_bin_mask(self, mask):
         bin_mask = bin(mask)[2:].zfill(self.MAX_NUM_AXIS)
         bin_mask = bin_mask[::-1]
@@ -2433,7 +2553,7 @@ class StridedSliceOptions(OperatorOptions):
             if not bit:
                 if slice_array[i] < 0:
                     # adjust for the slice array value using the shape
-                    slice_array[i] = self.ip_shape.get_shape()[i] + \
+                    slice_array[i] = self.ip_shape.shape[i] + \
                         slice_array[i]
             else:
                 # ignore the bits based on the types
@@ -2442,7 +2562,7 @@ class StridedSliceOptions(OperatorOptions):
                 if type == "begin":
                     slice_array[i] = 0
                 elif type == "end":
-                    slice_array[i] = self.ip_shape.get_shape()[i]
+                    slice_array[i] = self.ip_shape.shape[i]
 
     def convert_ellipsis_mask_to_shape_info(self):
         bin_mask = self.get_bin_mask(self.ellipsis_mask)
@@ -2451,14 +2571,13 @@ class StridedSliceOptions(OperatorOptions):
             if bit:
                 # taking the end values for which the ellipsis is present
                 self.begin[i] = 0
-                self.end[i] = self.ip_shape.get_shape()[i]
+                self.end[i] = self.ip_shape.shape[i]
 
-    def convert_shrink_axis_mask_to_shape_info(self):
+    def convert_shrink_axis_mask_to_shrink_tensor(self):
         bin_mask = self.get_bin_mask(self.shrink_axis_mask)
         for i, bit in enumerate(bin_mask):
             bit = bool(int(bit))
             if bit:
-                # taking the end values for which the ellipsis is present
                 self.ip_shape.get_shape()[i] = 0
 
     @classmethod
@@ -2494,12 +2613,27 @@ class StridedSliceOptions(OperatorOptions):
         self.begin = tflite_interpreter.get_tensor(self.ip_ndxs[1])
         self.end = tflite_interpreter.get_tensor(self.ip_ndxs[2])
         self.stride = tflite_interpreter.get_tensor(self.ip_ndxs[3])
+        self.MAX_NUM_AXIS = len(self.begin)
+        if self.MAX_NUM_AXIS == 3 and operator_graph[operation_detail['index']-1]['op_name'] == 'UNIDIRECTIONAL_SEQUENCE_LSTM':#FIXME Need a better way to look at the previous operator
+            #determine here if the previous op is an LSTM and adjust the input shapes accordingly
+            new_ip_shape = [self.ip_shape.shape[1], self.ip_shape.shape[2], self.ip_shape.shape[0]]
+            self.ip_shape = TensorShape(new_ip_shape)
+            self.begin = np.array([self.begin[1], self.begin[2], self.begin[0]])
+            self.end = np.array([self.end[1], self.end[2], self.end[0]])
+            self.stride = np.array([self.stride[1], self.stride[2], self.stride[0]])
+
+            self.begin_mask = self.mask_for_transpose(self.begin_mask)            
+            self.end_mask = self.mask_for_transpose(self.end_mask)
+            self.ellipsis_mask = self.mask_for_transpose(self.ellipsis_mask)
+            self.new_axis_mask = self.mask_for_transpose(self.new_axis_mask)
+            self.shrink_axis_mask = self.mask_for_transpose(self.shrink_axis_mask)
+
         self.convert_mask_to_shape_info(self.begin_mask, self.begin, "begin")
         self.convert_mask_to_shape_info(self.end_mask, self.end, "end")
         if self.ellipsis_mask:
             self.convert_ellipsis_mask_to_shape_info()
         if self.shrink_axis_mask:
-            self.convert_shrink_axis_mask_to_shape_info()
+            self.convert_shrink_axis_mask_to_shrink_tensor()
         # create the nrf_axon_nn_compiler_strided_slice_parameters_s needed by axon
         # FIXME need to add handling for the ellipsis, new_axis and shrink accordingly
         if self.tflite_axon_enum_wrapper is not None:
@@ -2586,9 +2720,11 @@ class StridedSliceOptions(OperatorOptions):
             self.stride).get_axon_axis_shape(axon_axis_dict)
         self.SetStridedSliceFilterTensors()
 
-    def CalculateMultiplierandScaleshift(self):
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
         scale_q = self.ip_q['scales']/self.op_q['scales']
-        result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        # result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        result = util.optimized_ip_scaling_shift(
+            (scale_q), 8, self.scaleshift_max_range, 25)
         # error = result[0]
         scaleshift = result[1]
         self.scale_multipliers = np.array(
@@ -2711,14 +2847,15 @@ class MultiplyOptions(OperatorOptions):
                 self.constant_ip_q = copy.deepcopy(
                     tensor_details[operator_graph_info['ip_tensors'][1]]['quantization_parameters'])
 
-    def CalculateMultiplierandScaleshift(self):
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
         scale_q = (self.ip_q['scales'] *
                    self.w_q['scales']) / self.op_q['scales']
         # zero_point_max = max(
         #     abs(self.ip_q['zero_points']), abs(self.w_q['zero_points']), abs(self.op_q['zero_points']))
         zero_point_max = abs(self.op_q['zero_points'])
         result = util.optimized_ip_scaling_shift(
-            (scale_q), 8, 31, 30, zero_point_max)
+            # (scale_q), 8, 31, 30, zero_point_max)
+            (scale_q), 8, self.scaleshift_max_range, 30, zero_point_max)
         scaleshift = result[1]
         self.scale_multipliers = np.array(
             [abs(int(np.round((scale_q)*2**scaleshift)))])
@@ -2753,10 +2890,12 @@ class PersistentVariableOpOptions(OperatorOptions):
             self.kernel_bitwidth)
         self.pad_info = PadDetails()
 
-    def CalculateMultiplierandScaleshift(self):
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
         scale_q = self.ip_q['scales'] / \
             self.op_q['scales']  # , self.w_q['scales']
-        result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        # result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        result = util.optimized_ip_scaling_shift(
+            (scale_q), 8, self.scaleshift_max_range, 25)
         # error = result[0]
         scaleshift = result[1]
         self.scale_multipliers = np.array(
@@ -2773,6 +2912,29 @@ class PersistentVariableOpOptions(OperatorOptions):
 class VarHandleOptions(PersistentVariableOpOptions):
     container_name = ""
     shared_name = ""
+    assign_variable_op_ndx = None
+    read_variable_op_ndx = None
+
+    def record_read_assign_variable_op_ndx(self, operator_graph, var_handle_op):
+        for op_index in var_handle_op['combined_ops']:
+            if operator_graph[op_index]['op_name'] == "ASSIGN_VARIABLE":
+                self.assign_variable_op_ndx = op_index
+            elif operator_graph[op_index]['op_name'] == "READ_VARIABLE":
+                self.read_variable_op_ndx = op_index
+
+    def check_if_var_handle_is_quantized(self, operator_graph):
+        # checks if the var handle is quantized and if quantized updates the ip and op index
+        # if not quantized, throw an error as the var handle is not supported in floating point
+        dq_op_ndx = operator_graph[self.assign_variable_op_ndx]['axon_ip_ops'][0]
+        dq_op = operator_graph[dq_op_ndx]
+        q_op_ndx = operator_graph[self.read_variable_op_ndx]['axon_op_ops'][0]
+        q_op = operator_graph[q_op_ndx]
+        if dq_op['op_name'] == "DEQUANTIZE" and q_op['op_name'] == "QUANTIZE":
+            # update the ip and op index with the ip_tensors and op_tensors
+            self.ip_ndxs = copy.deepcopy(dq_op['ip_tensors'])
+            self.op_ndxs = copy.deepcopy(q_op['op_tensors'])
+        else:
+            raise KeyError(-924)
 
     def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
         self.InitOperatorOption(operator_code, operator, operation_detail,
@@ -2784,12 +2946,17 @@ class VarHandleOptions(PersistentVariableOpOptions):
         self.shared_name = self.option.SharedName()
         if operator_graph is not None:
             operator_graph_info = operator_graph[operation_detail['index']]
+            self.record_read_assign_variable_op_ndx(
+                operator_graph, operator_graph_info)
             self.ip_ndxs = copy.deepcopy(operator_graph_info['ip_tensors'])
             self.op_ndxs = copy.deepcopy(operator_graph_info['op_tensors'])
+            if tensor_details[self.ip_ndxs[0]]['dtype'] == np.float32 or tensor_details[self.op_ndxs[0]]['dtype'] == np.float32:
+                # verify if the inputs to the variable op are connected to a quantize or dequantize
+                self.check_if_var_handle_is_quantized(operator_graph)
             self.ip_shape = TensorShape(
-                tensor_details[operator_graph_info['ip_tensors'][0]]['shape'])
+                tensor_details[self.ip_ndxs[0]]['shape'])
             self.op_shape = TensorShape(
-                tensor_details[operator_graph_info['op_tensors'][0]]['shape'])
+                tensor_details[self.op_ndxs[0]]['shape'])
             self.ip_q = copy.deepcopy(
                 tensor_details[self.ip_ndxs[0]]['quantization_parameters'])
             self.op_q = copy.deepcopy(
@@ -2835,6 +3002,293 @@ class AssignVariableOptions(PersistentVariableOpOptions):
         self.option.Init(self.bytes, self.pos)
 
 
+class UnidirectionalSequenceLSTMOptions(OperatorOptions):
+    attributes = {
+        'asymmetric_quantize_inputs': bool,
+        'cell_clip': np.float32,
+        'cell_clip_quantized': np.int32,
+        'diagonal_recurrent_tensors': bool,
+        'fused_activation_function': np.int8,
+        'proj_clip': np.float32,
+        'proj_clip_quantized': np.int32,
+        'time_major': bool,
+    }
+    inputs_and_outputs = {}
+
+    def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
+        self.InitOperatorOption(operator_code, operator, operation_detail,
+                                tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper)
+        self.axons_operation_enum = "NRF_AXON_NN_OP_UNIDIRECTIONAL_SEQUENCE_LSTM"
+        self.operand_str = "filters"
+        self.option = tflite.UnidirectionalSequenceLSTMOptions()
+        self.option.Init(self.bytes, self.pos)
+
+        self.attributes['asymmetric_quantize_inputs'] = self.option.AsymmetricQuantizeInputs()
+        self.attributes['cell_clip'] = self.option.CellClip()
+        self.attributes['diagonal_recurrent_tensors'] = self.option.DiagonalRecurrentTensors()
+        self.attributes['fused_activation_function'] = self.option.FusedActivationFunction()
+        self.attributes['proj_clip'] = self.option.ProjClip()
+        self.attributes['time_major'] = self.option.TimeMajor()
+
+        self.GetInputsAndOutputsInfo(self.ip_ndxs, LSTM_INPUT_SLOTS_LIST)
+        self.GetInputsAndOutputsInfo(self.op_ndxs, LSTM_OUTPUT_SLOTS_LIST)
+
+        # get the filter and bias tensor
+        # Order: Input, Forget, Cell, Output (IFCO)
+        input_kernel = np.vstack([
+            self.inputs_and_outputs['INPUT_TO_INPUT_WEIGHTS']['data'],
+            self.inputs_and_outputs['INPUT_TO_FORGET_WEIGHTS']['data'],
+            self.inputs_and_outputs['INPUT_TO_CELL_WEIGHTS']['data'],
+            self.inputs_and_outputs['INPUT_TO_OUTPUT_WEIGHTS']['data'],
+        ])
+        recurrent_kernel = np.vstack([
+            self.inputs_and_outputs['RECURRENT_TO_INPUT_WEIGHTS']['data'],
+            self.inputs_and_outputs['RECURRENT_TO_FORGET_WEIGHTS']['data'],
+            self.inputs_and_outputs['RECURRENT_TO_CELL_WEIGHTS']['data'],
+            self.inputs_and_outputs['RECURRENT_TO_OUTPUT_WEIGHTS']['data'],
+        ])
+        # Order: Input, Recurrent
+        self.filter_tensor = np.hstack([input_kernel, recurrent_kernel])
+
+        # Order: Input, Forget, Cell, Output (IFCO)
+        self.bias_tensor = np.concatenate([
+            self.inputs_and_outputs['INPUT_GATE_BIAS']['data'],
+            self.inputs_and_outputs['FORGET_GATE_BIAS']['data'],
+            self.inputs_and_outputs['CELL_GATE_BIAS']['data'],
+            self.inputs_and_outputs['OUTPUT_GATE_BIAS']['data'],
+        ])  # (units x 2,)
+
+        self.w_q['scales'] = np.array([
+            self.inputs_and_outputs['INPUT_TO_INPUT_WEIGHTS']['scale'],
+            self.inputs_and_outputs['INPUT_TO_FORGET_WEIGHTS']['scale'],
+            self.inputs_and_outputs['INPUT_TO_CELL_WEIGHTS']['scale'],
+            self.inputs_and_outputs['INPUT_TO_OUTPUT_WEIGHTS']['scale'],
+            self.inputs_and_outputs['RECURRENT_TO_INPUT_WEIGHTS']['scale'],
+            self.inputs_and_outputs['RECURRENT_TO_FORGET_WEIGHTS']['scale'],
+            self.inputs_and_outputs['RECURRENT_TO_CELL_WEIGHTS']['scale'],
+            self.inputs_and_outputs['RECURRENT_TO_OUTPUT_WEIGHTS']['scale'],
+        ])
+        self.w_q['zero_points'] = np.array([
+            self.inputs_and_outputs['INPUT_TO_INPUT_WEIGHTS']['zp'],
+            self.inputs_and_outputs['INPUT_TO_FORGET_WEIGHTS']['zp'],
+            self.inputs_and_outputs['INPUT_TO_CELL_WEIGHTS']['zp'],
+            self.inputs_and_outputs['INPUT_TO_OUTPUT_WEIGHTS']['zp'],
+            self.inputs_and_outputs['RECURRENT_TO_INPUT_WEIGHTS']['zp'],
+            self.inputs_and_outputs['RECURRENT_TO_FORGET_WEIGHTS']['zp'],
+            self.inputs_and_outputs['RECURRENT_TO_CELL_WEIGHTS']['zp'],
+            self.inputs_and_outputs['RECURRENT_TO_OUTPUT_WEIGHTS']['zp'],
+        ])
+        self.bias_q['scales'] = np.array([
+            self.inputs_and_outputs['INPUT_GATE_BIAS']['scale'],
+            self.inputs_and_outputs['FORGET_GATE_BIAS']['scale'],
+            self.inputs_and_outputs['CELL_GATE_BIAS']['scale'],
+            self.inputs_and_outputs['OUTPUT_GATE_BIAS']['scale'],
+        ])
+        self.bias_q['zero_points'] = np.array([
+            self.inputs_and_outputs['INPUT_GATE_BIAS']['zp'],
+            self.inputs_and_outputs['FORGET_GATE_BIAS']['zp'],
+            self.inputs_and_outputs['CELL_GATE_BIAS']['zp'],
+            self.inputs_and_outputs['OUTPUT_GATE_BIAS']['zp'],
+        ])
+
+        # Save LSTM attributes to cpu_op_additional_attrib_list
+        cell_state_scale = self.inputs_and_outputs['CELL_STATE_IN']['scale']
+        # Usually 0
+        cell_state_zero_point = self.inputs_and_outputs['CELL_STATE_IN']['zp']
+        cell_clip_float = self.attributes['cell_clip']
+        cell_clip_quantized = np.round(
+            cell_clip_float / cell_state_scale) + cell_state_zero_point
+        cell_clip_int32 = np.int32(cell_clip_quantized)
+        self.attributes['cell_clip_quantized'] = cell_clip_int32
+
+        output_state_scale = self.inputs_and_outputs['OUTPUT_STATE_IN']['scale']
+        output_state_zero_point = self.inputs_and_outputs['OUTPUT_STATE_IN']['zp']
+        proj_clip_float = self.attributes['proj_clip']
+        # (If proj_clip_float is 0, it means projection clipping is disabled)
+        if proj_clip_float == 0:
+            proj_clip_int32 = np.int32(0)
+        else:
+            proj_clip_quantized = np.round(
+                proj_clip_float / output_state_scale) + output_state_zero_point
+            proj_clip_int32 = np.int32(proj_clip_quantized)
+        self.attributes['proj_clip_quantized'] = proj_clip_int32
+
+        self.FillAdditionalCpuAttributes([
+            self.attributes['asymmetric_quantize_inputs'],
+            self.attributes['cell_clip_quantized'],
+            self.attributes['diagonal_recurrent_tensors'],
+            self.attributes['fused_activation_function'],
+            self.attributes['proj_clip_quantized'],
+            self.attributes['time_major'],
+        ])
+
+        self.input_count = 1
+        self.ip_shape = TensorShape(
+            self.inputs_and_outputs['INPUT_DATA']['shape'])
+        self.ip_q = copy.deepcopy(
+            self.inputs_and_outputs['INPUT_DATA']['q_params'])
+        self.kernel_shape = TensorShape(self.filter_tensor.shape)
+        self.bias_shape = TensorShape(self.bias_tensor.shape)
+        self.op_shape = TensorShape(
+            self.inputs_and_outputs['OUTPUT_DATA']['shape'])
+        self.ip_bitwidth = self.inputs_and_outputs['INPUT_DATA']['dtype'].type
+        self.op_bitwidth = self.inputs_and_outputs['OUTPUT_DATA']['dtype'].type
+        self.kernel_bitwidth = self.inputs_and_outputs['INPUT_TO_INPUT_WEIGHTS']['dtype'].type
+        self.kernel_bytewidth_enum = tflite_axon_enum_wrapper.GetAxonByteWidthEnum(
+            self.kernel_bitwidth)
+        self.ip_q_zeropoint = copy.deepcopy(self.ip_q['zero_points'])
+        self.op_q = copy.deepcopy(
+            self.inputs_and_outputs['OUTPUT_DATA']['q_params'])
+        self.op_q_zeropoint = copy.deepcopy(self.op_q['zero_points'])
+        self.operator_name = self.operation_detail['op_name']
+        self.pad_info = PadDetails()
+        self.tflite_axon_enum_wrapper = tflite_axon_enum_wrapper
+
+    def GetInputsAndOutputsInfo(self, idx_array, slot_map):
+        all_tensor_details = self.interpreter.get_tensor_details()
+        for slot_idx, tensor_idx in enumerate(idx_array):
+            # Get the slot name from the map
+            slot_name = slot_map[slot_idx]
+            if tensor_idx != -1:
+                # 1. Get the raw numbers
+                tensor_data = self.interpreter.get_tensor(tensor_idx)
+                # 2. Get the metadata (including Quantization)
+                # Note: get_tensor_details() returns a list; we index it with tensor_idx
+                specific_detail = all_tensor_details[tensor_idx]
+                # 3. Extract the Quantization Params
+                q_params = specific_detail['quantization_parameters']
+                scales = q_params['scales']
+                zero_points = q_params['zero_points']
+                # Store in dictionary
+                self.inputs_and_outputs[slot_name] = {
+                    'index': tensor_idx,
+                    'data': tensor_data,
+                    'shape': tensor_data.shape,
+                    'dtype': tensor_data.dtype,
+                    'q_params': q_params,
+                    'scale': scales[0] if len(scales) > 0 else 1.0,
+                    'zp': zero_points[0] if len(zero_points) > 0 else 0
+                }
+
+    def CalculateBPrime(self):
+        if self.bias_tensor.size != 0:
+            kernel_tensor = self.filter_tensor
+            kernel_shape = TensorShape(kernel_tensor.shape)
+            features = self.inputs_and_outputs['INPUT_DATA']['shape'][-1]
+            units = self.inputs_and_outputs['OUTPUT_DATA']['shape'][-1]
+            # input
+            i1 = [-np.sum(kernel_tensor[j][0:features].astype(int)*self.inputs_and_outputs['INPUT_DATA']['zp']) + self.inputs_and_outputs['INPUT_GATE_BIAS']['data'][j]
+                  for j in range(0, units)]
+            i2 = [-np.sum(kernel_tensor[j][0:features].astype(int)*self.inputs_and_outputs['INPUT_DATA']['zp']) + self.inputs_and_outputs['FORGET_GATE_BIAS']['data'][j-units]
+                  for j in range(units, units*2)]
+            i3 = [-np.sum(kernel_tensor[j][0:features].astype(int)*self.inputs_and_outputs['INPUT_DATA']['zp']) + self.inputs_and_outputs['CELL_GATE_BIAS']['data'][j-units*2]
+                  for j in range(units*2, units*3)]
+            i4 = [-np.sum(kernel_tensor[j][0:features].astype(int)*self.inputs_and_outputs['INPUT_DATA']['zp']) + self.inputs_and_outputs['OUTPUT_GATE_BIAS']['data'][j-units*3]
+                  for j in range(units*3, kernel_shape.height)]
+            i = i1 + i2 + i3 + i4
+            # recurrent input
+            r1 = [-np.sum(kernel_tensor[j][features: kernel_shape.width].astype(int)*self.inputs_and_outputs['OUTPUT_STATE_IN']['zp'])
+                  for j in range(0, units)]
+            r2 = [-np.sum(kernel_tensor[j][features: kernel_shape.width].astype(int)*self.inputs_and_outputs['OUTPUT_STATE_IN']['zp'])
+                  for j in range(units, units*2)]
+            r3 = [-np.sum(kernel_tensor[j][features: kernel_shape.width].astype(int)*self.inputs_and_outputs['OUTPUT_STATE_IN']['zp'])
+                  for j in range(units*2, units*3)]
+            r4 = [-np.sum(kernel_tensor[j][features: kernel_shape.width].astype(int)*self.inputs_and_outputs['OUTPUT_STATE_IN']['zp'])
+                  for j in range(units*3, kernel_shape.height)]
+            r = r1 + r2 + r3 + r4
+
+            # concatenate
+            x = i + r
+            b_prime = np.array(x)
+            self.b_prime_tensor = b_prime.astype(np.int32)
+        else:
+            self.b_prime_tensor = np.array([])
+
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
+        max_scale = 23  # 31-8
+        op_q_scales = np.array([2**-12], dtype=np.float32)
+        op_q_zeropoint = np.array([0], dtype=np.int32)
+        # input
+        scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+            self.ip_q['scales'], op_q_scales, self.w_q['scales'][0:4], op_q_zeropoint, max_scale)
+        self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
+        self.scale_multipliers = np.append(
+            self.scale_multipliers, scale_multipliers)
+        # recurrent input
+        op_q_zeropoint = np.array([0], dtype=np.int32)
+        scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+            self.op_q['scales'], op_q_scales, self.w_q['scales'][4:8], op_q_zeropoint, max_scale)
+        self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
+        self.scale_multipliers = np.append(
+            self.scale_multipliers, scale_multipliers)
+        # output_state_in: inv_multipiler for quantization
+        ip_q_scales = np.array([1], dtype=np.float32)
+        op_q_scales = np.array([2**12], dtype=np.float32)
+        output_state_in_scale = np.array(
+            [self.inputs_and_outputs['OUTPUT_STATE_IN']['scale']], dtype=np.float32)
+        scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+            ip_q_scales, op_q_scales, 1/output_state_in_scale, op_q_zeropoint, max_scale)
+        self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
+        self.scale_multipliers = np.append(
+            self.scale_multipliers, scale_multipliers)
+        # cell_state_in: inv_multipiler for quantization
+        cell_state_in_scale = np.array(
+            [self.inputs_and_outputs['CELL_STATE_IN']['scale']], dtype=np.float32)
+        scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+            ip_q_scales, op_q_scales, 1/cell_state_in_scale, op_q_zeropoint, max_scale)
+        self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
+        self.scale_multipliers = np.append(
+            self.scale_multipliers, scale_multipliers)
+
+    def PrintAttributes(self):
+        self.meta_data = (
+            f"Unidirectional_Sequence_LSTM with attributes\n"
+            f"  asymmetric_quantize_inputs : {self.attributes['asymmetric_quantize_inputs']}\n"
+            f"  cell_clip : {self.attributes['cell_clip']}\n"
+            f"  diagonal_recurrent_tensors : {self.attributes['diagonal_recurrent_tensors']}\n"
+            f"  fused_activation_function : {self.attributes['fused_activation_function']}\n"
+            f"  proj_clip : {self.attributes['proj_clip']}\n"
+            f"  time_major : {self.attributes['time_major']}\n"
+        )
+        # print(self.meta_data)
+        return self.meta_data
+
+    def GetFilterTensor(self):
+        # when create the filter tensor, the input and recurrent filters are horizontally concatenated
+        # now to write to bin file, they need to be splited, flatten, and then concatenated for compiler to easy handle.
+        features = self.inputs_and_outputs['INPUT_DATA']['shape'][-1]
+        input_filter = self.filter_tensor[:, :features]
+        recurrent_filter = self.filter_tensor[:, features:]
+        input_filter_flat = input_filter.flatten()
+        recurrent_filter_flat = recurrent_filter.flatten()
+        filter_tensor_flat = np.concatenate(
+            [input_filter_flat, recurrent_filter_flat])
+        return filter_tensor_flat
+
+    def WriteWeightTensorToFile(self, file_string, info_string, tensor, get_full_content=False):
+        kernel_tensor = tensor
+        file_string += "\nconst int8_t "+info_string.lower()+"_"+self.GetOperandNameString().lower() + \
+            "["+info_string+"_OUTPUT_UNITS x 4]["+info_string + \
+            "_INPUT_FEATURES + "+info_string+"_OUTPUT_UNITS]={\n"
+        if get_full_content:
+            for output_channel in range(kernel_tensor.shape[0]):
+                file_string += "{"
+                for input_channel in range(kernel_tensor.shape[1]):
+                    file_string += np.array2string(kernel_tensor[output_channel][input_channel], separator=',',
+                                                   max_line_width=1000, threshold=np.inf).replace('[', '{').replace(']', '}').replace("\n", "")
+                    file_string += ","
+                file_string = file_string[:-1] + "},"
+        else:
+            file_string += np.array2string(kernel_tensor, separator=',', max_line_width=1000,
+                                           threshold=np.inf).replace('[', '{').replace(']', '}').replace("\n", "")
+        file_string = file_string[:-1] + "};"
+        return file_string
+
+    def GetActivationFunctionType(self):
+        # this is to get the "fused" activation function, it is "None" for UnidirectionalSequanceLSTM
+        return "None"
+
+
 class CpuOperatorOptions(OperatorOptions):
     cpu_extension_object = None
 
@@ -2871,9 +3325,11 @@ class OperatorSupportEnum(Enum):
 class BatchAndSpaceOptions(OperatorOptions):
     block_size = None
 
-    def CalculateMultiplierandScaleshift(self):
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
         scale_q = self.ip_q['scales']/self.op_q['scales']
-        result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        # result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        result = util.optimized_ip_scaling_shift(
+            (scale_q), 8, self.scaleshift_max_range, 25)
         # error = result[0]
         scaleshift = result[1]
         self.scale_multipliers = np.array(
@@ -2928,6 +3384,59 @@ class SpaceToBatchNDOptions(BatchAndSpaceOptions):
         return self.meta_data
 
 
+class SplitOptions(OperatorOptions):
+    axis = None
+    axon_axis = None
+    axon_offset = None
+
+    @classmethod
+    def get_split_and_axon_axis(cls, tflite_interpreter, op_graph_info):
+
+        no_of_splits = no_of_splits = len(op_graph_info['op_tensors'])
+        axis = tflite_interpreter.get_tensor(op_graph_info['ip_tensors'][0])
+        ip_shape = TensorShape(
+            tflite_interpreter.get_tensor_details()[op_graph_info['ip_tensors'][1]]['shape'])
+        if axis < 0:
+            axis += ip_shape.shape_size
+        if ip_shape.shape_size == 4:
+            axis_channel_name = mw.TFLITE_RANK4_AXON_AXIS_ENUM_MAP[axis]
+        else:
+            axis_channel_name = mw.TFLITE_RANK3_AXON_AXIS_ENUM_MAP[axis]
+        # create a map here to go from NHWC to NCHW
+        tf_to_axon_axis_map = {'NRF_AXON_NN_AXIS_CHANNEL': 0,
+                               'NRF_AXON_NN_AXIS_HEIGHT': 1,
+                               'NRF_AXON_NN_AXIS_WIDTH': 2,
+                               'NRF_AXON_NN_AXIS_COUNT': 3}
+        axon_axis = tf_to_axon_axis_map.get(axis_channel_name)
+        axon_offset_by = ip_shape.shape[axis] // no_of_splits
+        return axon_axis, axon_offset_by
+
+    # def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
+    #     self.InitOperatorOption(operator_code, operator, operation_detail,
+    #                             tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper)
+    #     self.option = tflite.SplitOptions()
+    #     self.option.Init(self.bytes, self.pos)
+    #     self.num_splits = self.option.NumSplits()
+    #     self.axis = tflite_interpreter.get_tensor(self.ip_ndxs[0])
+    #     self.ip_shape = TensorShape(
+    #         tensor_details[self.ip_ndxs[1]]['shape'])
+    #     if self.axis < 0:
+    #         self.axis += self.ip_shape.shape_size
+    #     # get the CHANNEL NAME from the AXIS
+    #     if self.ip_shape.shape_size == 4:
+    #         axis_channel_name = mw.TFLITE_RANK4_AXON_AXIS_ENUM_MAP[self.axis]
+    #     else:
+    #         axis_channel_name = mw.TFLITE_RANK3_AXON_AXIS_ENUM_MAP[self.axis]
+    #     if self.tflite_axon_enum_wrapper is not None:
+    #         axons_axis_dict = self.tflite_axon_enum_wrapper.GetAxonAxisEnumDict()
+    #         self.axon_axis = axons_axis_dict[axis_channel_name]
+    #     self.axon_offset = self.ip_shape.shape[self.axis] / self.num_splits
+    #     if operator_graph is not None:
+    #         # operator_graph[operation_detail['index']]
+    #         operator_graph_info = operator_graph[operation_detail['index']]
+    #         operator_graph_info['operator_support'] = OperatorSupportEnum.CONVERTED_PASSTHROUGH
+
+
 class SupportedOperators():
     supported_operators = {}
     variable_operators = {}
@@ -2943,6 +3452,7 @@ class SupportedOperators():
     model_output_info = None
     tflite_interpreter = None
     transposed_model = None
+    equal_split_passthrough_ops_present = None
 
     @classmethod
     def get_index_from_tf_index(cls, op_graph, tf_index):
@@ -2988,15 +3498,19 @@ class SupportedOperators():
                                     tflite.BuiltinOperator.CONCATENATION: ConcatenationOptions,
                                     tflite.BuiltinOperator.STRIDED_SLICE: StridedSliceOptions,
                                     tflite.BuiltinOperator.SPLIT_V: SplitVOptions,
+                                    tflite.BuiltinOperator.SPLIT: SplitOptions,
                                     tflite.BuiltinOperator.MUL: MultiplyOptions,
                                     tflite.BuiltinOperator.BATCH_TO_SPACE_ND: BatchToSpaceNDOptions,
                                     tflite.BuiltinOperator.SPACE_TO_BATCH_ND: SpaceToBatchNDOptions,
+                                    tflite.BuiltinOperator.UNIDIRECTIONAL_SEQUENCE_LSTM: UnidirectionalSequenceLSTMOptions,
                                     }
         self.pass_through_operators = [
             tflite.BuiltinOperator.QUANTIZE,
             tflite.BuiltinOperator.DEQUANTIZE,
             tflite.BuiltinOperator.CALL_ONCE,
             tflite.BuiltinOperator.TRANSPOSE,
+            tflite.BuiltinOperator.UNPACK,
+            tflite.BuiltinOperator.PACK,
             #  tflite.BuiltinOperator.PAD,
             # add more operators as needed
         ]
@@ -3010,6 +3524,7 @@ class SupportedOperators():
         self.nodes_info = {}
         self.variable_ops_present = False
         self.split_ops_present = False
+        self.equal_split_passthrough_ops_present = False
         self.model_input_tensor_indices = []
         self.model_output_tensor_indices = []
         self.model_input_info = None
@@ -3106,8 +3621,9 @@ class SupportedOperators():
                         self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
                         self.pass_through_ops_present = True
                     # check here if the operation could be a passthrough operation?
-                # "SPLIT"
+                # TODO or self.operators_detail_graph[i]['op_name'] == "SPLIT":
                 elif self.operators_detail_graph[i]['op_name'] == "SPLIT_V":
+                    # TODO determine if this is an equal split or not, if it is not an equal split we need to handle it using strided slice or else they can be a passthrough op
                     self.split_ops_present = True
                 # elif self.operators_detail_graph[i]['op_name'] == "RESHAPE":
                 #     ip_to_reshape = TensorShape(self.tflite_interpreter.get_tensor(self.operators_detail_graph[i]['inputs'][0]).shape)
@@ -3116,7 +3632,10 @@ class SupportedOperators():
                 #     if ReshapeOptions.determine_reshape_is_passthrough(ip_to_reshape, op_of_reshape, shape,operation_list, i):
                 #         self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
                 #         self.pass_through_ops_present = True
-
+                elif self.operators_detail_graph[i]['op_name'] == "SPLIT":
+                    self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
+                    self.pass_through_ops_present = True
+                    self.equal_split_passthrough_ops_present = True
                 if self.operators_detail_graph[i]["operator_options"] == CpuOperatorOptions:
                     # by default all the CPU operations are supported
                     # but certain operations might be determined to be passthroughs
@@ -3283,6 +3802,7 @@ class SupportedOperators():
                 new_graph[ndx]['inputs'])
             new_graph[ndx]['axon_op_ops'] = copy.deepcopy(
                 new_graph[ndx]['outputs'])
+            new_graph[ndx]['axon_ip_axis_offset'] = None
             """end of for loop for creating new graph"""
 
         # Add code here to figure out and combine the variable operators together and make them a persistent variable instead
@@ -3393,6 +3913,46 @@ class SupportedOperators():
 
             new_graph = self.update_graph_connections_after_node_insert(
                 new_graph)
+        if self.equal_split_passthrough_ops_present:
+            for ndx, ops in enumerate(new_graph):
+                if ops['op_name'] == "SPLIT":
+                    # need to update the input of the splits with offsets
+                    # get the ops connected to this SPLIT operation
+                    # sort the ops based on tensor indices
+                    # calculate the offset
+                    # update the offset value for each of the ops of the split outputs
+                    ops['op_name'] = ops['op_name'] + "_PASSTHROUGH"
+                    # ip_shape = self.tflite_interpreter.get_tensor_details()[ops['ip_tensors'][1]]['shape']
+                    # no_of_splits = len(ops['op_tensors'])
+                    # axis = self.tflite_interpreter.get_tensor(ops['ip_tensors'][0])
+                    # if axis < 0:
+                    #     axis += len(ip_shape)
+                    # #get_axon_axis and not tflite axis
+                    # # get the CHANNEL NAME from the AXIS
+                    # if len(ip_shape) == 4:
+                    #     axis_channel_name = mw.TFLITE_RANK4_AXON_AXIS_ENUM_MAP[axis]
+                    # else:
+                    #     axis_channel_name = mw.TFLITE_RANK3_AXON_AXIS_ENUM_MAP[axis]
+                    # if self.tflite_axon_enum_wrapper is not None:
+                    #     axons_axis_dict = self.tflite_axon_enum_wrapper.GetAxonAxisEnumDict()
+                    #     self.axon_axis = axons_axis_dict[axis_channel_name]
+                    # split_by = ip_shape[axis] // no_of_splits
+                    axon_axis, split_by = SplitOptions.get_split_and_axon_axis(
+                        self.tflite_interpreter, ops)
+                    offsets = 0
+                    seen_ops = set()
+                    for tensor_ndx in ops['op_tensors']:
+                        # find in which of the output op is the current index connected to
+                        for op_ndx in ops['outputs']:
+                            if op_ndx in seen_ops:
+                                continue
+                            if tensor_ndx in new_graph[op_ndx]['ip_tensors']:
+                                # found the op
+                                new_graph[op_ndx]['axon_ip_axis_offset'] = [
+                                    axon_axis, offsets]
+                                offsets += split_by
+                                seen_ops.add(op_ndx)
+                                break
 
         # get the axon layer nums at this point, and update the graph with ops that are not being supported on axon currently
         axon_layer_num = -1
