@@ -208,7 +208,8 @@ Elementwise operators
      - Axon NPU
      - 1.0.0
    * - Multiply
-     - Vector operation with broadcast on height and/or width
+     - | Vector operation with broadcast on height and/or width
+       | Maximum width extended to 2048 with version 1.4.0
      - Axon NPU
      - 1.0.0
 
