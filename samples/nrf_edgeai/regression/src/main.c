@@ -39,10 +39,23 @@
  *   The model is validated against 29 test samples with known ground truth values.
  *   For each sample, the predicted value is compared with the expected value,
  *   and the absolute error is reported.
+ *
+ * **Model-only OTA update:**
+ *   By default (CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=y) the application image does not
+ *   contain a model: at boot (and periodically thereafter) it loads and validates a "model
+ *   package" from the model_storage flash partition (see lib/model_ota/model_pkg_neuton.c /
+ *   model_pkg_axon.c), and only then runs inference against it. Flashing a new model package
+ *   to model_storage - independently of the application binary - is enough to change what the
+ *   device predicts, without rebuilding or reflashing the application. If model_storage does
+ *   not currently hold a valid package (missing, corrupted, incompatible, wrong backend), the
+ *   application stays alive and simply skips inference instead of crashing. See README.rst for
+ *   the packaging/flashing workflow. Build with CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=n to
+ *   restore this sample's original behavior instead: the model is compiled directly into the
+ *   image and validated once at boot. Either way, the actual model wiring - including, for
+ *   CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=y, the model_storage loading itself - lives in
+ *   nrf_edgeai_generated/<Axon|Neuton>/nrf_edgeai_user_model.c (this file only calls
+ *   nrf_edgeai_user_model(), declared in that backend's nrf_edgeai_user_model.h).
  */
-
-#include <nrf_edgeai/nrf_edgeai.h>
-#include "nrf_edgeai_user_model.h"
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -52,22 +65,43 @@
 
 LOG_MODULE_REGISTER(regression, LOG_LEVEL_INF);
 
+#include <nrf_edgeai/nrf_edgeai.h>
+
+#include "nrf_edgeai_user_model.h"
+
+#if defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA)
+
+#include <zephyr/storage/flash_map.h>
+
+/*
+ * Fail the build with a clear message if this board's devicetree overlay doesn't define the
+ * model_partition node model_ota loads from (see the overlays under boards/), instead of a
+ * much less obvious error deep inside a flash_map.h macro expansion.
+ */
+BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_partition),
+	     "board devicetree is missing the model_partition node - see boards/*.overlay");
+
+#endif /* CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA */
+
 /**
  * @brief Model Configuration Constants
  *
  * These constants define the shape and size of the neural network model:
- * - USER_WINDOW_SIZE: Number of samples accumulated before running inference.
- *   A window size of 1 means inference occurs immediately after each sample.
  * - USER_UNIQ_INPUTS_NUM: Total number of input features to the model.
  *   Corresponds to: COGT (1) + PT08S sensors (5) + T, RH, AH (3) = 9 features
  * - USER_MODELS_OUTPUTS_NUM: Number of output values from the regression model.
  *   Set to 1 for single air quality prediction output.
  */
-static const size_t USER_WINDOW_SIZE = 1;	 /* Samples per inference window */
 static const size_t USER_UNIQ_INPUTS_NUM = 9;	 /* Gas sensor and environmental input features */
 static const size_t USER_MODELS_OUTPUTS_NUM = 1; /* Single air quality prediction output */
 static const flt32_t INVALID_PREDICTION_VALUE = -9999.0f; /* Invalid prediction indicator */
+#if !defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA)
+/* Only meaningful for the compiled-in model: an OTA-loaded model is expected to change what the
+ * device predicts, so its accuracy is only ever logged, never asserted on (see
+ * run_inference_loop() below).
+ */
 static const flt32_t EXPECTED_MODEL_MAE = 2.0f; /* Expected Mean Absolute Error for validation */
+#endif
 
 /**
  * @brief Test Dataset Structure and Values
@@ -144,20 +178,6 @@ struct {
  * @param[in]  sample_index      Index of the test sample to extract from USER_INPUT_DATA array.
  *
  * @return Ground truth air quality value for this sample, used for validation/comparison.
- *
- * @details
- * Feature arrangement in the buffer:
- *   [0] COGT   - CO sensor reading
- *   [1] PT08S1 - CO MOS sensor
- *   [2] PT08S2 - NMHC MOS sensor
- *   [3] PT08S3 - NOx MOS sensor
- *   [4] PT08S4 - NO2 MOS sensor
- *   [5] PT08S5 - O3 MOS sensor
- *   [6] T      - Temperature (Celsius)
- *   [7] RH     - Relative Humidity (%)
- *   [8] AH     - Absolute Humidity (kg/m³)
- *
- * The assertion ensures buffer_size validation to prevent buffer overflows.
  */
 static flt32_t fill_features_buffer(flt32_t *p_buffer, const size_t buffer_size,
 				    const size_t sample_index)
@@ -184,32 +204,14 @@ static flt32_t fill_features_buffer(flt32_t *p_buffer, const size_t buffer_size,
  * @brief Run Air Quality Regression Model Inference
  *
  * This function executes the neural network model to predict air quality based on
- * provided sensor inputs. The process follows the Edge AI inference pipeline:
- * 1. Feed sensor data into the model's input window
- * 2. Execute the neural network computation when the window is full
- * 3. Extract the continuous air quality prediction from the regression output
+ * provided sensor inputs.
  *
  * @param[in] p_user_model      Pointer to the initialized Edge AI model instance.
  * @param[in] p_input_features  Array containing 9 sensor/environmental input values.
  * @param[in] features_num      Number of features in the input array (must be 9).
  *
  * @return Predicted air quality value as a floating-point number.
- *         Returns -1000.0 (invalid sentinel value) if inference fails or encounters errors.
- *
- * @details
- * **Inference Pipeline:**
- * - The model uses a 1-sample window (USER_WINDOW_SIZE=1), so inference occurs immediately
- *   after feeding a single sensor reading.
- * - Input features are processed through the neural network layers trained on historical
- *   air quality data.
- * - The output is a continuous value representing the predicted air quality level,
- *   suitable for direct comparison with ground truth measurements.
- *
- * **Error Handling:**
- * - Returns an invalid sentinel value (INVALID_PREDICTION_VALUE) if any step fails, allowing the
- * caller to detect and handle prediction failures gracefully.
- * - Assertions validate that the model outputs exactly 1 value as expected for this
- *   regression task.
+ *         Returns -9999.0 (invalid sentinel value) if inference fails or encounters errors.
  */
 static flt32_t model_predict(nrf_edgeai_t *p_user_model, flt32_t *p_input_features,
 			     size_t features_num)
@@ -223,7 +225,6 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, flt32_t *p_input_featur
 
 	if (res == NRF_EDGEAI_ERR_SUCCESS) {
 		/* Step 2: Execute neural network inference on the accumulated window */
-		/* With window size = 1, this occurs after every sample is fed */
 		res = nrf_edgeai_run_inference(p_user_model);
 
 		/* Step 3: Extract the regression output if inference was successful */
@@ -243,58 +244,19 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, flt32_t *p_input_featur
 }
 
 /**
- * @brief Air Quality Regression Model Validation Entry Point
+ * @brief Run one full validation pass of the model against all 29 test samples.
  *
- * This function orchestrates the complete validation workflow for the air quality
- * prediction model. It initializes the neural network, runs inference on all 29 test
- * samples, and measures prediction accuracy against ground truth values.
- *
- * **Workflow:**
- * 1. Retrieve the pre-trained air quality regression model
- * 2. Validate model configuration matches expected parameters:
- *    - Input window size: 1 sample
- *    - Input features: 9 (sensors + environmental parameters)
- *    - Output values: 1 (air quality prediction)
- * 3. Initialize the Edge AI runtime for neural network execution
- * 4. For each of the 29 test samples:
- *    a. Extract sensor readings and environmental parameters
- *    b. Run model inference to get air quality prediction
- *    c. Compare prediction against ground truth value
- *    d. Calculate and display absolute error
- *
- * **Validation Metrics:**
- * The absolute error between predicted and expected values indicates model accuracy:
- * - Lower error = better predictions
- * - Can be averaged across all 29 samples to assess overall model performance
- *
- * **Sample Coverage:**
- * The 29 test samples span various environmental conditions:
- * - Temperature range: ~0°C to ~43°C
- * - Humidity range: ~15% to ~85% RH
- * - Various sensor readings covering clean to polluted air conditions
- * - Ensures model validation across realistic use cases
- *
+ * For each sample, feeds the sensor readings into the model, runs inference, and logs the
+ * predicted value alongside the ground truth and absolute error. With a compiled-in model
+ * (CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=n) accuracy is also asserted on; with an OTA-loaded
+ * model it is only ever logged, since a freshly flashed model package is expected to change
+ * what the device predicts.
  */
-int main(void)
+static void run_inference_loop(nrf_edgeai_t *p_user_model)
 {
-	/* Retrieve the generated neural network model for air quality prediction */
-	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
-
-	__ASSERT_NO_MSG(p_user_model != NULL);
-
-	/* Validate model configuration: ensure the generated model matches expected parameters */
-	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
-	__ASSERT_NO_MSG(nrf_edgeai_uniq_inputs_num(p_user_model) == USER_UNIQ_INPUTS_NUM);
-	__ASSERT_NO_MSG(nrf_edgeai_model_outputs_num(p_user_model) == USER_MODELS_OUTPUTS_NUM);
-
-	/* Initialize the Edge AI runtime to prepare the model for inference execution */
 	nrf_edgeai_err_t res = nrf_edgeai_init(p_user_model);
 
 	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
-
-	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
-	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
-		v.field.patch);
 
 	/* Allocate buffer for holding the 9 input features before each inference */
 	flt32_t input_features[USER_UNIQ_INPUTS_NUM];
@@ -305,6 +267,7 @@ int main(void)
 	} else {
 		LOG_INF("Using Neuton model");
 	}
+
 	/* Validation loop: test the model against all 29 sample data points */
 	const size_t NUM_INPUT_SAMPLES = ARRAY_SIZE(USER_INPUT_DATA);
 
@@ -320,12 +283,65 @@ int main(void)
 		/* Calculate absolute error: magnitude of difference between prediction and truth */
 		flt32_t abs_err = fabsf(predicted_value - ground_truth);
 
+#if !defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA)
 		__ASSERT_NO_MSG(abs_err <= EXPECTED_MODEL_MAE);
+#endif
 
 		/* Display results for this test sample */
 		LOG_INF("Air quality - Predicted: %f, Expected: %f, absolute error %f",
 			(double)predicted_value, (double)ground_truth, (double)abs_err);
 	}
+
+	LOG_INF("========== All test cases completed ==========");
+}
+
+#if defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA)
+
+int main(void)
+{
+	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
+
+	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
+		v.field.patch);
+
+	while (1) {
+		/* The model is not compiled in: load (and validate) it from the model_storage
+		 * flash partition every iteration, so a model update flashed while the device
+		 * is running is picked up without needing a reboot.
+		 */
+		nrf_edgeai_t *p_user_model = nrf_edgeai_user_model(
+			PARTITION_ID(model_partition),
+			(const uint8_t *)PARTITION_ADDRESS(model_partition));
+
+		if (p_user_model == NULL) {
+			LOG_WRN("No valid model in model_storage - waiting for one to be "
+				"flashed. Inference is skipped until then.");
+		} else {
+			run_inference_loop(p_user_model);
+		}
+
+		k_sleep(K_MSEC(5000));
+	}
+
+	return 0;
+}
+
+#else /* !CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA: compiled-in model, validated once at boot -
+       * this sample's original pre-model-OTA behavior.
+       */
+
+int main(void)
+{
+	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
+
+	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
+		v.field.patch);
+
+	/* The model is compiled directly into the image (see nrf_edgeai_generated/<Backend>/
+	 * nrf_edgeai_user_model.c): validate it once against all 29 test cases, asserting on
+	 * the expected accuracy, then idle.
+	 */
+	run_inference_loop(nrf_edgeai_user_model());
 
 	while (1) {
 		LOG_INF("========== All test cases completed ==========");
@@ -334,3 +350,5 @@ int main(void)
 
 	return 0;
 }
+
+#endif /* CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA */

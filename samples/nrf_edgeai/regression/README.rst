@@ -9,6 +9,10 @@ Regression sample
 
 The following sample demonstrates running a generated regression model to predict a continuous air quality value based on gas sensor and environmental data.
 
+By default, the model itself is not compiled into the application image: at boot (and periodically thereafter) the sample loads and validates a "model package" from a dedicated ``model_storage`` flash partition, and only then runs inference against it.
+Flashing a new model package to ``model_storage`` — independently of the application binary, and without mcuboot — is enough to change what the device predicts.
+See `Model-only OTA update`_ below, including how to opt out of it and restore the compiled-in-model behavior instead.
+
 Requirements
 ************
 
@@ -55,6 +59,8 @@ See board-specific configuration and overlays in the :file:`samples/nrf_edgeai/r
 When using the Axon backend, the generated model saves its buffer requirements in the :file:`prj_example.conf` file as the ``CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE`` and ``CONFIG_NRF_AXON_PSUM_BUFFER_SIZE`` Kconfig options.
 You must manually include these values in your :file:`prj.conf` file before building.
 
+Selecting a backend only determines which model package type the sample expects to find in the ``model_storage`` flash partition at runtime — it does not compile in a model of either type. See `Model-only OTA update`_.
+
 Configuration options
 =====================
 
@@ -69,6 +75,8 @@ In your :file:`prj.conf` file, the following settings are applied to ensure the 
    CONFIG_RTT_CONSOLE=n
    CONFIG_PICOLIBC_IO_FLOAT=y
 
+:kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA` (see `Model-only OTA update`_) selects ``FLASH``/``FLASH_MAP``/``CRC`` and the matching ``MODEL_OTA``/``MODEL_OTA_NEUTON``/``MODEL_OTA_AXON`` options automatically, so they do not need to be listed here.
+
 .. include:: /includes/include_kconfig_edgeai.txt
 
 Building and running
@@ -79,8 +87,14 @@ Building and running
 Testing
 =======
 
-The application runs 29 validation test cases automatically upon startup.
-For each case, the sample prints a line similar to the following:
+On a device with an unprovisioned (or invalid) ``model_storage`` partition, the sample logs the following and skips inference every 5 seconds until a valid package is flashed:
+
+.. code-block:: console
+
+  No valid model in model_storage - waiting for one to be flashed. Inference is skipped until then.
+
+Once ``model_storage`` holds a valid package matching the selected backend (see `Model-only OTA update`_), the sample runs 29 validation test cases every 5 seconds.
+For each case, it prints a line similar to the following:
 
 .. code-block:: console
 
@@ -96,6 +110,76 @@ For each case, the sample prints a line similar to the following:
 #. Inspect the absolute error value for each line to verify that the model's predictions are close to the expected values.
    Acceptable error margins depend on your use case or specified requirements in your project.
 
+.. _runtime_regression_model_ota:
+
+Model-only OTA update
+======================
+
+This sample does not use mcuboot, so its second application slot (``slot1_partition``) is unused on the boards it supports.
+The board overlays in :file:`samples/nrf_edgeai/regression/boards/` repurpose that space as a dedicated ``model_storage`` partition instead, sized to comfortably fit larger models too.
+At boot (and every 5 seconds thereafter), the sample reads and validates a small header-plus-payload "model package" from ``model_storage`` and wires it up for inference — see :ref:`lib_model_ota` for how the package format, host-side packaging tools, and on-device loading work.
+Flashing a new package to ``model_storage`` is enough to change what the device predicts, without rebuilding or reflashing the application.
+
+Making model OTA optional
+--------------------------
+
+Model-only OTA is enabled by default (:kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA` defaults to ``y``).
+Build with it disabled to restore this sample's original, pre-model-OTA behavior instead: the selected backend's model (Neuton or Axon) is compiled directly into the application image, no ``model_storage`` partition or flash package is involved, and the 29 test cases are validated once at boot — asserting on the expected accuracy — rather than being reloaded and re-validated every 5 seconds.
+
+.. code-block:: console
+
+   west build -b nrf54lm20dk/nrf54lm20b/cpuapp samples/nrf_edgeai/regression \
+       -- -DCONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON=y -DCONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=n
+
+Packaging a Neuton model
+-------------------------
+
+Neuton packages only need the model's raw arrays (weights, topology, output scaling), with no embedded addresses.
+Like Axon (see below), this sample's ``model_v1``-equivalent package is now built automatically as part of a normal build (:kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_NEUTON` + :kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA`, both on by default on boards other than ``nrf54lm20b``) - :file:`CMakeLists.txt`'s ``nrf_neuton_model_package()`` call runs :file:`package_model_neuton.py` against :file:`src/nrf_edgeai_generated/Neuton/nrf_edgeai_user_model.c` (this model's own generated source, standing in for a real training run's output) with no separate build or manual packaging step needed:
+
+.. code-block:: console
+
+   west build -p -b nrf54lm20dk/nrf54lm20a/cpuapp -d build samples/nrf_edgeai/regression
+
+This produces ``build/regression/regression_model_pkg.bin``/``.hex``.
+
+To package a different (for example freshly retrained) model instead, point :file:`package_model_neuton.py` at its own generated source directly:
+
+.. code-block:: console
+
+   python3 tools/model_ota/package_model_neuton.py \
+     path/to/nrf_edgeai_user_model.c --name aq_regression --version 1.0.0 -o model_v1 \
+     --dts build/regression/zephyr/zephyr.dts
+
+:file:`src/nrf_edgeai_generated/Neuton/regression_v2.json` is a hand-tweaked variant with no corresponding generated source, useful for observing a change in predictions after an update; package it with :file:`package_model.py` instead (see :ref:`lib_model_ota`, "Host-side packaging tools").
+
+``--dts`` reads the ``model_storage`` partition's actual address and size from a build's generated :file:`zephyr.dts` and preflight-checks the package fits, instead of trusting the tool's nRF54LM20 DK defaults to still match your build; point it at any existing build of this sample (Neuton or Axon - the partition layout is the same either way).
+
+Packaging an Axon model
+------------------------
+
+Axon packages are built automatically as part of a normal application build (:kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON` + :kconfig:option:`CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA`, both on by default on ``nrf54lm20b``) - no separate build or manual packaging step is needed. See :ref:`lib_model_ota` ("Build-time model packaging") for how :file:`CMakeLists.txt`'s ``nrf_axon_model_stub()`` call does this, and for how Axon packages are put together.
+
+.. code-block:: console
+
+   west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build samples/nrf_edgeai/regression
+
+This produces ``build/regression/regression_model_pkg.bin``/``.hex``.
+
+Flashing a package
+-------------------
+
+Build and flash the application as usual, then flash the model package it produced to the ``model_storage`` partition:
+
+.. code-block:: console
+
+   nrfutil device program --firmware build/regression/regression_model_pkg.hex --core Application \
+     --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
+
+``reset=RESET_SYSTEM`` ensures the board resumes execution automatically; without it, ``nrfutil`` leaves the CPU halted after flashing.
+
+Repeat with a package built from :file:`regression_v2.json` (Neuton), or a hand-tweaked generated Axon model header, rebuilt, to observe predictions change after the update — no application rebuild or reflash required.
+
 .. _runtime_regression_sample_inference:
 
 Manual inference using the API
@@ -103,7 +187,8 @@ Manual inference using the API
 
 You can also run inference manually in your own application code.
 
-The following example demonstrates how to initialize the model, feed your own test data, and print out predicted values:
+The following example demonstrates how to initialize the model, feed your own test data, and print out predicted values, using the compiled-in model retrieval pattern (``nrf_edgeai_user_model()``) typical of nRF Edge AI samples.
+This sample itself instead loads its model from flash at runtime — see `Model-only OTA update`_ — but the rest of the inference API (``nrf_edgeai_feed_inputs()``, ``nrf_edgeai_run_inference()``, ``decoded_output.regression``) is identical either way.
 
 .. code-block:: c
 
@@ -178,4 +263,5 @@ If you wish to validate predictions (as done in the automated validation), you a
 Dependencies
 ************
 
+* Model-only OTA update PoC library (:file:`lib/model_ota`, see :ref:`lib_model_ota`)
 * Header file: :file:`include/zephyr/kernel.h`

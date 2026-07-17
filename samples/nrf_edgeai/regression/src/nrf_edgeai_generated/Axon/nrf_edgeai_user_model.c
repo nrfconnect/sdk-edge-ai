@@ -9,6 +9,10 @@
 #include <nrf_edgeai/rt/private/nrf_edgeai_interfaces.h>
 #include <assert.h>
 
+#if defined(CONFIG_MODEL_OTA_AXON)
+#include <model_ota/model_pkg.h>
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 /* Nordic EdgeAI Lab Solution ID and Runtime Version */
 #define EDGEAI_LAB_SOLUTION_ID_STR      "36025"
@@ -40,7 +44,7 @@
 * the remainder is added to the last subwindow size */
 #define INPUT_SUBWINDOW_NUM                 0
 
-#define INPUT_UNIQUE_SCALES_NUM (sizeof(INPUT_FEATURES_SCALE_MIN) / sizeof(INPUT_FEATURES_SCALE_MIN[0])) 
+#define INPUT_UNIQUE_SCALES_NUM (sizeof(INPUT_FEATURES_SCALE_MIN) / sizeof(INPUT_FEATURES_SCALE_MIN[0]))
 
 /** Defines input(also used for LAG) features MIN scaling factor
  */
@@ -71,17 +75,17 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 
 #define MODEL_USES_AS_INPUT_INPUT_FEATURES 1
 #define MODEL_USES_AS_INPUT_DSP_FEATURES 0
-#define MODEL_USES_AS_INPUT_MASK ((MODEL_USES_AS_INPUT_INPUT_FEATURES << 0) | (MODEL_USES_AS_INPUT_DSP_FEATURES << 1)) 
+#define MODEL_USES_AS_INPUT_MASK ((MODEL_USES_AS_INPUT_INPUT_FEATURES << 0) | (MODEL_USES_AS_INPUT_DSP_FEATURES << 1))
 
-#if MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON 
-#include <drivers/axon/nrf_axon_nn_infer.h>  
-#include <axon/nrf_axon_platform.h> 
-#include "nrf_edgeai_user_model_axon.h" 
+#include <drivers/axon/nrf_axon_nn_infer.h>
+#include <axon/nrf_axon_platform.h>
+#if !defined(CONFIG_MODEL_OTA_AXON)
+#include "nrf_edgeai_user_model_axon.h"
 #define P_MODEL_INSTANCE &model_axon_user_instance_36025
-#else  // MODEL_TYPE == __NRF_EDGEAI_MODEL_NEUTON
-#define P_MODEL_INSTANCE &model_neuton_user_instance_ 
+#else
+nrf_axon_nn_compiled_model_s model_axon_user_instance_36025_;
+#define P_MODEL_INSTANCE &model_axon_user_instance_36025_
 #endif
-
 
 static const nrf_user_output_t MODEL_OUTPUT_SCALE_MIN[] = {
  0.0000000 };
@@ -96,22 +100,22 @@ static const nrf_user_output_t MODEL_OUTPUT_SCALE_MAX[] = {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-#define INPUT_WINDOW_MEMORY    NULL 
-#define P_INPUT_WINDOW_CTX    NULL  
+#define INPUT_WINDOW_MEMORY    NULL
+#define P_INPUT_WINDOW_CTX    NULL
 
 //////////////////////////////////////////////////////////////////////////////
 /** The maximum number of extracted features that user used for all unique input features */
-#define EXTRACTED_FEATURES_NUM 0 
-#define P_DSP_PIPELINE         NULL 
+#define EXTRACTED_FEATURES_NUM 0
+#define P_DSP_PIPELINE         NULL
 
 //////////////////////////////////////////////////////////////////////////////
-#define NN_INPUT_INIT_INTERFACE        nrf_edgeai_input_init_no_window 
-#define NN_INPUT_FEED_INTERFACE        nrf_edgeai_input_feed_no_window 
-#define NN_PROCESS_FEATURES_INTERFACE  nrf_edgeai_process_features_scale_vector_f32_f32 
-#define NN_INIT_INFERENCE_INTERFACE    nrf_edgeai_init_inference_axon 
-#define NN_RUN_INFERENCE_INTERFACE     nrf_edgeai_run_inference_axon 
-#define NN_PROPAGATE_OUTPUTS_INTERFACE nrf_edgeai_output_dequantize_axon_q8_f32 
-#define NN_DECODE_OUTPUTS_INTERFACE    nrf_edgeai_output_decode_regression_f32 
+#define NN_INPUT_INIT_INTERFACE        nrf_edgeai_input_init_no_window
+#define NN_INPUT_FEED_INTERFACE        nrf_edgeai_input_feed_no_window
+#define NN_PROCESS_FEATURES_INTERFACE  nrf_edgeai_process_features_scale_vector_f32_f32
+#define NN_INIT_INFERENCE_INTERFACE    nrf_edgeai_init_inference_axon
+#define NN_RUN_INFERENCE_INTERFACE     nrf_edgeai_run_inference_axon
+#define NN_PROPAGATE_OUTPUTS_INTERFACE nrf_edgeai_output_dequantize_axon_q8_f32
+#define NN_DECODE_OUTPUTS_INTERFACE    nrf_edgeai_output_decode_regression_f32
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -123,7 +127,7 @@ static nrf_edgeai_t nrf_edgeai_ = {
     ///
     .metadata.p_solution_id     = EDGEAI_LAB_SOLUTION_ID_STR,
     .metadata.version.combined  = EDGEAI_RUNTIME_VERSION_COMBINED,
-    ///   
+    ///
     .input.p_used_for_lags_mask = INPUT_FEATURES_USED_FOR_LAGS_MASK,
     .input.p_usage_mask         = INPUT_FEATURES_USAGE_MASK,
     .input.type                 = INPUT_FEATURE_DATA_TYPE,
@@ -139,7 +143,7 @@ static nrf_edgeai_t nrf_edgeai_ = {
     .input.scale.INPUT_TYPE = {
         .p_min = INPUT_FEATURES_SCALE_MIN,
         .p_max = INPUT_FEATURES_SCALE_MAX,
-    }, 
+    },
     ///
     .p_dsp = P_DSP_PIPELINE,
     ///
@@ -163,6 +167,24 @@ static nrf_edgeai_t nrf_edgeai_ = {
 
 //////////////////////////////////////////////////////////////////////////////
 
+#if defined(CONFIG_MODEL_OTA_AXON)
+/* model_pkg_load_axon() (lib/model_ota) already logs the specific failure reason on error and
+ * a summary line on success, so there is nothing left to add here. */
+nrf_edgeai_t *nrf_edgeai_load_user_model_36025(uint8_t fa_id, const uint8_t *partition_addr)
+{
+	if (model_pkg_load_axon(fa_id, partition_addr, &model_axon_user_instance_36025_,
+				 NULL) != MODEL_PKG_OK) {
+		return NULL;
+	}
+
+	return &nrf_edgeai_;
+}
+#endif
+
+/* nrf_edgeai_ itself needs no runtime population either way - it's a compile-time static
+ * initializer; only model_axon_user_instance_36025_ (pointed to via .model.instance) differs
+ * between a compiled-in header and nrf_edgeai_load_user_model_36025() above.
+ */
 nrf_edgeai_t* nrf_edgeai_user_model_36025(void)
 {
     return &nrf_edgeai_;

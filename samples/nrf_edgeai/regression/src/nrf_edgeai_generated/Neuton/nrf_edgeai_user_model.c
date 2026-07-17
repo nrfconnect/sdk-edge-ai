@@ -3,6 +3,12 @@
 
 #include <nrf_edgeai/rt/private/nrf_edgeai_interfaces.h>
 #include <nrf_edgeai/nrf_edgeai_platform.h>
+#include <zephyr/sys/util.h>
+#include <string.h>
+
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+#include <model_ota/model_pkg.h>
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -88,12 +94,8 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 #define MODEL_TASK	  2
 #define MODEL_OUTPUTS_NUM 1
 
-#if MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON
-#include <drivers/axon/nrf_axon_nn_infer.h>
-#include <axon/nrf_axon_platform.h>
-#include "nrf_edgeai_user_model_axon.h"
-#define P_MODEL_INSTANCE &model_instance_
-#else // MODEL_TYPE == __NRF_EDGEAI_MODEL_NEUTON
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+nrf_edgeai_model_neuton_t model_instance_;
 #define P_MODEL_INSTANCE &model_instance_
 #endif
 
@@ -109,6 +111,7 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 #define MODEL_USES_AS_INPUT_MASK                                                                   \
 	((MODEL_USES_AS_INPUT_INPUT_FEATURES << 0) | (MODEL_USES_AS_INPUT_DSP_FEATURES << 1))
 
+#if !defined(CONFIG_MODEL_OTA_NEUTON)
 static const nrf_user_weight_t MODEL_WEIGHTS[] = {0.5644180, 0.1098376, 0.9692999, -0.4583102};
 
 static const uint16_t MODEL_NEURONS_LINKS[] = {2, 9, 0, 9};
@@ -135,11 +138,27 @@ static const nrf_user_output_t MODEL_OUTPUT_SCALE_MAX[] = {63.7000008};
 				.p_scale_max = MODEL_OUTPUT_SCALE_MAX,                             \
 			},                                                                         \
 	}
+#else
+/* No compiled-in scale to point at yet - nrf_edgeai_load_user_model_90508() overwrites both
+ * pointers before any inference can run, on a successful load. */
+#define NN_DECODED_OUTPUT_INIT                                                                     \
+	.regression = {                                                                            \
+		.meta =                                                                            \
+			{                                                                          \
+				.p_scale_min = NULL,                                              \
+				.p_scale_max = NULL,                                              \
+			},                                                                         \
+	}
+#endif
 
-/** Model neurons activations buffer */
-static nrf_user_neuron_t model_neurons_[MODEL_NEURONS_NUM];
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+#define MODEL_NEURONS_BUF_NUM MAX(MODEL_NEURONS_NUM, CONFIG_MODEL_OTA_MAX_NEURONS)
+#else
+#define MODEL_NEURONS_BUF_NUM MODEL_NEURONS_NUM
+#endif
+nrf_user_neuron_t model_neurons_[MODEL_NEURONS_BUF_NUM];
 
-/** Neuton model instance */
+#if !defined(CONFIG_MODEL_OTA_NEUTON)
 static const nrf_edgeai_model_neuton_t model_instance_ = {
 	///
 	.meta.p_neuron_internal_links_num = MODEL_NEURON_INTERNAL_LINKS_NUM,
@@ -158,6 +177,8 @@ static const nrf_edgeai_model_neuton_t model_instance_ = {
 			.p_neurons = model_neurons_,
 		},
 };
+#define P_MODEL_INSTANCE &model_instance_
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 #define NN_INPUT_INIT_INTERFACE	       nrf_edgeai_input_init_no_window
@@ -219,6 +240,31 @@ static nrf_edgeai_t nrf_edgeai_ = {
 
 //////////////////////////////////////////////////////////////////////////////
 
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+
+static void nrf_edgeai_user_model_90508_set_output_scale_(const float *scale_min,
+							    const float *scale_max)
+{
+	nrf_edgeai_.decoded_output.regression.meta.p_scale_min = scale_min;
+	nrf_edgeai_.decoded_output.regression.meta.p_scale_max = scale_max;
+}
+
+nrf_edgeai_t *nrf_edgeai_load_user_model_90508(uint8_t fa_id, const uint8_t *partition_addr)
+{
+	struct model_pkg_neuton_info info;
+
+	if (model_pkg_load_neuton(fa_id, partition_addr, &model_instance_, model_neurons_,
+				   CONFIG_MODEL_OTA_MAX_NEURONS, &info) != MODEL_PKG_OK) {
+		return NULL;
+	}
+
+	nrf_edgeai_user_model_90508_set_output_scale_(info.output_scale_min,
+						       info.output_scale_max);
+
+	return &nrf_edgeai_;
+}
+#endif
+
 nrf_edgeai_t *nrf_edgeai_user_model_90508(void)
 {
 	return &nrf_edgeai_;
@@ -228,6 +274,7 @@ nrf_edgeai_t *nrf_edgeai_user_model_90508(void)
 
 uint32_t nrf_edgeai_user_model_neuton_size_90508(void)
 {
+#if !defined(CONFIG_MODEL_OTA_NEUTON)
 	uint32_t model_meta_size =
 		(sizeof(MODEL_WEIGHTS) + sizeof(MODEL_NEURONS_LINKS) +
 		 sizeof(MODEL_NEURON_EXTERNAL_LINKS_NUM) + sizeof(MODEL_NEURON_INTERNAL_LINKS_NUM) +
@@ -244,4 +291,8 @@ uint32_t nrf_edgeai_user_model_neuton_size_90508(void)
 #endif
 
 	return model_meta_size;
+#else
+	/* Compiled-in constants aren't linked in for OTA builds (see above) - nothing to size. */
+	return 0;
+#endif
 }
