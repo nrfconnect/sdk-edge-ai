@@ -20,10 +20,16 @@ extern "C" {
 /**
  * NRF_AXON_VERSION applies to the entire axon software tool chain.
  * version history
- * 1.3.0
+ * 1.4.0 07/16/2026
+ * - fixes bug in fully-connected operator compilation; incorrectly
+ *   calculated dimensions if channel count > 1.
+ * - Multiply operation width no longer limited to 512.
+ * - Experimental support for Unidirectional Sequential LSTM operator.
+ *
+ * 1.3.0 07/02/2026
  * - batch support added for SpaceToBatch, BatchToSpace, and convolutions.
  *   This enables dilation on convolutions.
- * 
+ *
  * 1.2.1 05/04/2026
  * - Remove RRAM work-around.
  *
@@ -65,8 +71,8 @@ extern "C" {
  * 0.1.0  12/11/2025 :
  * - 1st versioned release
  */
-#define NRF_AXON_GENERATE_VERSION(major,minor,patch) ( ((major)<<16) | ((minor) << 8) | (patch))
-#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(1, 3, 0)
+#define NRF_AXON_GENERATE_VERSION(major,minor,patch) ( ((major) << 16) | ((minor) << 8) | (patch))
+#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(1, 4, 0)
 
 
 #if !defined(AXON_FORCE_32BIT_ADDR) && ((defined(__SIZEOF_POINTER__) && (__SIZEOF_POINTER__==8)) || defined(_WIN64))
@@ -76,6 +82,16 @@ typedef int64_t NRF_AXON_PLATFORM_BITWIDTH_SIGNED_TYPE;
 typedef uint32_t NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE;
 typedef int32_t NRF_AXON_PLATFORM_BITWIDTH_SIGNED_TYPE;
 #endif
+
+/**
+ * @brief
+ * #defines for calculating the stride width in bytes for
+ * axon NPU generated output. Axon NPU writes each row to a 32bit
+ * boundary, so the distance between row starts is the width of
+ * the output times its bitwidth, rounded to the next 32bit boundary.
+ */
+#define NRF_AXON_CEIL_BITS(x,y) ((((((x)+(1<<(y))-1)))>>(y))<<(y))
+#define NRF_AXON_NPU_OUTPUT_STRIDE(width, byte_width) NRF_AXON_CEIL_BITS((width)*(byte_width), 2)
 
 /**
  * @brief Axon driver return codes

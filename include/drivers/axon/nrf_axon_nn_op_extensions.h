@@ -43,56 +43,57 @@ typedef nrf_axon_result_e
  * - input bytewidth is 4 (32bit), implicitly q11.12
  * - output bytewidth depends on quantization_enabled.
  */
-typedef struct  {
-	struct {
-		/**< to compile properly, all pointers must be declared 1st, consecutively */
-		int8_t *input;
-		/**< to compile properly, all pointers must be declared 1st, consecutively */
-		int8_t *output;
-	} ptr_args;
-	struct {
-		union {
-			NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE spacer0;
-			/**< quantization => (output * output_multiplier) >>
-			 * output_rounding + output_zeropoint
+typedef struct {
+	int8_t *input;
+	int8_t *output;
+} nrf_axon_nn_op_extension_base1_ptr_args_s;
+typedef struct {
+	union {
+		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE spacer0;
+		/**< quantization => (output * output_multiplier) >>
+		 * output_rounding + output_zeropoint
+		 */
+		/**< quantization output multiplier */
+		uint32_t output_multiplier;
+	};
+	union {
+		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE spacer1;
+		struct {
+			/**< height in elements of the input and output */
+			uint16_t height;
+			/**< width in elements of the input and output */
+			uint16_t width;
+		};
+	};
+	union {
+		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE spacer2;
+		struct {
+			/**< number of channels in elements of the input and output */
+			uint16_t channel_cnt;
+			/**< quantization output rounding  in bits */
+			uint8_t output_rounding;
+			/**< quantization output zero point */
+			int8_t output_zeropoint;
+		};
+	};
+	union {
+		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE spacer3;
+		struct {
+			/**< can be 1 or 4*/
+			uint8_t output_bytewidth;
+			/**< 8bt quantized if true, q11.12 if false*/
+			bool quantization_enabled;
+			/**< If true, input rows begin on the following byte from the
+			 * previous row. If false, rows are aligned to 4byte boundaries.
 			 */
-			/**< quantization output multiplier */
-			uint32_t output_multiplier;
+			bool input_is_packed;
 		};
-		union {
-			NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE spacer1;
-			struct {
-				/**< height in elements of the input and output */
-				uint16_t height;
-				/**< width in elements of the input and output */
-				uint16_t width;
-			};
-		};
-		union {
-			NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE spacer2;
-			struct {
-				/**< number of channels in elements of the input and output */
-				uint16_t channel_cnt;
-				/**< quantization output rounding  in bits */
-				uint8_t output_rounding;
-				/**< quantization output zero point */
-				int8_t output_zeropoint;
-			};
-		};
-		union {
-			NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE spacer3;
-			struct {
-				/**< can be 1 or 4*/
-				uint8_t output_bytewidth;
-				/**< 8bt quantized if true, q11.12 if false*/
-				bool quantization_enabled;
-				/**< If true, input rows begin on the following byte from the
-				 * previous row. If false, rows are aligned to 4byte boundaries.
-				 */
-				bool input_is_packed;
-			};
-		};
-	} remaining_args;
+	};
+} nrf_axon_nn_op_extension_base1_remaining_args_s;
+
+typedef struct  {
+	nrf_axon_nn_op_extension_base1_ptr_args_s ptr_args;
+	nrf_axon_nn_op_extension_base1_remaining_args_s remaining_args;
 } nrf_axon_nn_op_extension_base1_args_s;
 
 
@@ -185,6 +186,51 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
 /**
+ * @brief Structure compiled into the command buffer then passed to some CPU op extension functions
+ *
+ * @note To maintain compatibility with simulator builds, the parameters are in elements of
+ * NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE.
+ * This is 64bits on the simulator, 32bits on Nordic MCUs.
+ * By organizing this as a series of unions, the upper 32bits of the parameters remain 0s unless
+ * the argument is a pointer.
+ *
+ * Op Extension Base 1 profile arguments. The following conditions must be met for an op extension
+ * to use this structure to pass its parameters. (If the conditions aren't met, a new structure
+ * needs to be defined.)
+ * - A single input vector.
+ * - input and output dimensions are the same.
+ * - output is packed (rows are padded to 4byte boundaries)
+ * - input/output data storage is data[channel_cnt][height][ceil(width,4)]
+ * - input bytewidth is 4 (32bit), implicitly q11.12
+ * - output bytewidth depends on quantization_enabled.
+ */
+typedef struct  {
+	struct {
+		nrf_axon_nn_op_extension_base1_ptr_args_s base1;
+		int8_t *scratch;
+	} ptr_args;
+	struct {
+		nrf_axon_nn_op_extension_base1_remaining_args_s base1;
+		union {
+			NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE spacer4;
+			/** de-quantization input multiplier to q3.12 */
+			uint32_t input_dequant_multiplier;
+		};
+		union {
+			NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE spacer5;
+			struct {
+				/**< input dequantization zero point */
+				int8_t input_dequant_zero_pt;
+				/** input dequant rounding after multiply  */
+				uint8_t input_dequant_rounding_bits;
+
+				uint8_t input_byte_width;
+			};
+		};
+	} remaining_args;
+} nrf_axon_nn_op_extension_sig_tanh_args_s;
+
+/**
  * @brief Implements sigmoid operator.
  *
  * Note: Updated version that produces packed output for compiler versions 1.1.0 and later.
@@ -196,6 +242,20 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_v2(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
+
+/**
+ * @brief Implements sigmoid operator.
+ *
+ * Note: Updated from sigmoid_v2 version that supports 8 and 16bit quantized input that
+ * isn't q3.12 compiler versions 1.3.1 and later.
+ *
+ * @param[in] argc number of elements in args. Must equal
+ *            sizeof(nrf_axon_nn_op_extension_sig_tanh_args_s)/
+ *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
+ */
+nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_dequantize_input(uint16_t argc,
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
 /**
  * @brief Implements tanh operator.
@@ -224,6 +284,20 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh_v2(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
 /**
+ * @brief Implements tanh operator.
+ *
+ * Note: Updated from tanh_v2 version that supports 8 and 16bit quantized input that
+ * isn't q3.12 compiler versions 1.3.1 and later.
+ *
+ * @param[in] argc number of elements in args. Must equal
+ *            sizeof(nrf_axon_nn_op_extension_sig_tanh_args_s)/
+ *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
+ */
+nrf_axon_result_e nrf_axon_nn_op_extension_tanh_dequantize_input(uint16_t argc,
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
+
+/**
  * @brief Implements reshape operator.
  *
  * @param[in] argc number of elements in args. Must equal
@@ -234,7 +308,8 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh_v2(
 nrf_axon_result_e nrf_axon_nn_op_extension_reshape(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
-
+nrf_axon_result_e nrf_axon_nn_op_extension_reshape_from_axon(
+	uint16_t argc,	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
 /**
  * @brief

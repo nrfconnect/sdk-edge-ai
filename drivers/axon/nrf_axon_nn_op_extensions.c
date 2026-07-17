@@ -198,6 +198,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 	int16_t *input_ptr = (int16_t *)base1_args->ptr_args.input;
 	union {
 		int8_t *i8;
+		int16_t *i16;
 		int32_t *i32;
 		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE value;
 	} output_ptr;
@@ -224,6 +225,10 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 					scratch = (float)round(scratch * 256.0f) - 128;
 					axon_saturate_i8(scratch, output_ptr.i8, 0);
 					output_ptr.i8++;
+					break;
+				case 2: /* q3.12 output */
+					*output_ptr.i16 = (int16_t)(scratch * (1<<12));
+					output_ptr.i16++;
 					break;
 				case 4: /* q1.30 output */
 					*output_ptr.i32 = (int32_t)(scratch * (1<<30));
@@ -259,6 +264,55 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_v2(uint16_t argc,
 {
 	return nrf_axon_nn_op_extension_sigmoid_base(argc, args, true);
 }
+/**
+ * sigmoid version used when input dequantization is needed.
+ */
+nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_dequantize_input(uint16_t argc,
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args)
+{
+	nrf_axon_nn_op_extension_sig_tanh_args_s *sig_tanh_args =
+		(nrf_axon_nn_op_extension_sig_tanh_args_s *)args;
+	/* 1st dequantize */
+	if (sig_tanh_args->remaining_args.input_byte_width == 1) {
+		/* dequantize 8bit input */
+		/*
+		 * MUST ALWAYS KEEP THE RESERVATION WHEN EXECUING AN INTRISIC
+		 * WITHIN A OP EXTENSION!
+		 */
+		nrf_axon_axpb_2d_8_16(sig_tanh_args->ptr_args.base1.input,
+			sig_tanh_args->remaining_args.input_dequant_multiplier,
+			-sig_tanh_args->remaining_args.input_dequant_zero_pt *
+				sig_tanh_args->remaining_args.input_dequant_multiplier,
+			(int16_t *)sig_tanh_args->ptr_args.scratch,
+			sig_tanh_args->remaining_args.base1.height,
+			sig_tanh_args->remaining_args.base1.width,
+			sig_tanh_args->remaining_args.base1.input_is_packed,
+			sig_tanh_args->remaining_args.input_dequant_rounding_bits,
+			NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
+	} else {
+		/* dequantize 16bit input */
+		nrf_axon_axpb_2d_16_16((int16_t *)sig_tanh_args->ptr_args.base1.input,
+			sig_tanh_args->remaining_args.input_dequant_multiplier,
+			-sig_tanh_args->remaining_args.input_dequant_zero_pt *
+				sig_tanh_args->remaining_args.input_dequant_multiplier,
+			(int16_t *)sig_tanh_args->ptr_args.scratch,
+			sig_tanh_args->remaining_args.base1.height,
+			sig_tanh_args->remaining_args.base1.width,
+			sig_tanh_args->remaining_args.base1.input_is_packed,
+			sig_tanh_args->remaining_args.input_dequant_rounding_bits,
+			NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
+	}
+	/*
+	 * copy params to a nrf_axon_nn_op_extension_base1_args_s
+	 */
+	nrf_axon_nn_op_extension_base1_args_s base1_args;
+	memcpy(&base1_args.ptr_args, &sig_tanh_args->ptr_args.base1, sizeof(sig_tanh_args->ptr_args.base1));
+	/* scratch is the input */
+	base1_args.ptr_args.input = sig_tanh_args->ptr_args.scratch;
+	memcpy(&base1_args.remaining_args, &sig_tanh_args->remaining_args.base1, sizeof(sig_tanh_args->remaining_args.base1));
+	return nrf_axon_nn_op_extension_sigmoid_base(sizeof(base1_args)/sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE),
+		(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *)&base1_args, true);
+}
 
 /**
  * @brief
@@ -293,6 +347,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 	int16_t *input_ptr = (int16_t *)base1_args->ptr_args.input;
 	union {
 		int8_t *i8;
+		int16_t *i16;
 		int32_t *i32;
 		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE value;
 	} output_ptr;
@@ -320,6 +375,10 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 					scratch = roundf(scratch * 128.0f); /* quantized */
 					axon_saturate_i8(scratch, output_ptr.i8, 0);
 					output_ptr.i8++;
+					break;
+				case 2: /* q3.12 output */
+					*output_ptr.i16 = (int16_t)(scratch * (1<<12));
+					output_ptr.i16++;
 					break;
 				case 4: /* q1.30 output */
 					*output_ptr.i32 = (int32_t)(scratch * (1<<30));
@@ -354,6 +413,57 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh_v2(uint16_t argc,
 {
 	return nrf_axon_nn_op_extension_tanh_base(argc, args, true);
 }
+/**
+ * sigmoid version used when input dequantization is needed.
+ */
+nrf_axon_result_e nrf_axon_nn_op_extension_tanh_dequantize_input(uint16_t argc,
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args)
+{
+	nrf_axon_nn_op_extension_sig_tanh_args_s *sig_tanh_args =
+		(nrf_axon_nn_op_extension_sig_tanh_args_s *)args;
+	/* 1st dequantize */
+	if (sig_tanh_args->remaining_args.input_byte_width == 1) {
+		/* dequantize 8bit input */
+		/*
+		 * MUST ALWAYS KEEP THE RESERVATION WHEN EXECUING AN INTRISIC
+		 * WITHIN A OP EXTENSION!
+		 */
+		nrf_axon_axpb_2d_8_16(sig_tanh_args->ptr_args.base1.input,
+			sig_tanh_args->remaining_args.input_dequant_multiplier,
+			-sig_tanh_args->remaining_args.input_dequant_zero_pt *
+				sig_tanh_args->remaining_args.input_dequant_multiplier,
+			(int16_t *)sig_tanh_args->ptr_args.scratch,
+			sig_tanh_args->remaining_args.base1.height,
+			sig_tanh_args->remaining_args.base1.width,
+			sig_tanh_args->remaining_args.base1.input_is_packed,
+			sig_tanh_args->remaining_args.input_dequant_rounding_bits,
+			NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
+	} else {
+		/* dequantize 16bit input */
+		/* dequantize 16bit input */
+		nrf_axon_axpb_2d_16_16((int16_t *)sig_tanh_args->ptr_args.base1.input,
+			sig_tanh_args->remaining_args.input_dequant_multiplier,
+			-sig_tanh_args->remaining_args.input_dequant_zero_pt *
+				sig_tanh_args->remaining_args.input_dequant_multiplier,
+			(int16_t *)sig_tanh_args->ptr_args.scratch,
+			sig_tanh_args->remaining_args.base1.height,
+			sig_tanh_args->remaining_args.base1.width,
+			sig_tanh_args->remaining_args.base1.input_is_packed,
+			sig_tanh_args->remaining_args.input_dequant_rounding_bits,
+			NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
+	}
+	/*
+	 * copy params to a nrf_axon_nn_op_extension_base1_args_s
+	 */
+	nrf_axon_nn_op_extension_base1_args_s base1_args;
+	memcpy(&base1_args.ptr_args, &sig_tanh_args->ptr_args.base1, sizeof(sig_tanh_args->ptr_args.base1));
+	/* scratch is the input */
+	base1_args.ptr_args.input = sig_tanh_args->ptr_args.scratch;
+	memcpy(&base1_args.remaining_args, &sig_tanh_args->remaining_args.base1, sizeof(sig_tanh_args->remaining_args.base1));
+	return nrf_axon_nn_op_extension_tanh_base(sizeof(base1_args)/sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE),
+		(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *)&base1_args, true);
+}
+
 
 nrf_axon_result_e nrf_axon_nn_op_extension_reshape(uint16_t argc,
 	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args)
@@ -410,6 +520,47 @@ nrf_axon_result_e nrf_axon_nn_op_extension_reshape(uint16_t argc,
 	return NRF_AXON_RESULT_SUCCESS;
 }
 
+nrf_axon_result_e nrf_axon_nn_op_extension_reshape_from_axon(uint16_t argc,
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args)
+{
+	if (((argc * sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)) <
+		sizeof(nrf_axon_nn_op_extension_base2_args_s)) || (args == NULL)) {
+		return NRF_AXON_RESULT_FAILURE;
+	}
+	nrf_axon_nn_op_extension_base2_args_s *base2_args =
+		(nrf_axon_nn_op_extension_base2_args_s *)args;
+	unsigned int ax_width_tf_ch = base2_args->remaining_args.input_width;
+	/* iterate through axon space, mapping to tf space */
+	unsigned int ax_stride = base2_args->remaining_args.input_stride;
+	unsigned int height = base2_args->remaining_args.input_height;
+	unsigned int ax_ch_tf_width = base2_args->remaining_args.input_channel_cnt;
+	unsigned int ax_extra_stride = ax_stride - ax_width_tf_ch;
+
+	unsigned int axon_offset = 0;
+	unsigned int tf_offset;
+
+	for (uint16_t chan_ndx = 0;
+		chan_ndx < ax_ch_tf_width;
+		chan_ndx++) { /*channel */
+		tf_offset = chan_ndx;
+		for (uint16_t row_ndx = 0;
+			row_ndx < height;
+			row_ndx++) { /* height */
+
+			for (uint16_t col_ndx = 0;
+				col_ndx < ax_width_tf_ch;
+				col_ndx++) { /*width */
+
+				((int8_t *)base2_args->ptr_args.output)[tf_offset] =
+					((int8_t *)base2_args->ptr_args.input)[axon_offset];
+				tf_offset += ax_ch_tf_width;
+				axon_offset++;
+			}
+			axon_offset += ax_extra_stride;
+		}
+	}
+	return NRF_AXON_RESULT_SUCCESS;
+}
 
 static inline int32_t get_nearest_neighbor(
 	const int input_value,

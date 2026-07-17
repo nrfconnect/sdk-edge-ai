@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_ic
- * Axon Neural Network Compiler Version: 1.3.0
+ * Axon Neural Network Compiler Version: 1.4.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -3755,8 +3755,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic[9670] = {
 0x000000f0,0x00000100,
 0x02000080,0x00010040,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00330040,
 0x01000090,0x000a0040,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l13_weights,
-0x030000a0,0x0001000a,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l13_biasp,0x00050028,0x0001000a,
-0x000000b4,0x00050028,
+0x050000a0,0x0001000a,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l13_biasp,0x00050028,0x0001000a,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),0x00050028,
 0x030000cc,0x00000000,0x03010000,0x00010d05,0x00000205,
 0x02000180,0x00000007,0xffffbf9c,0x00004064,
 0x010001a8,0x0001fce4,0x00000000,
@@ -3765,7 +3764,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic[9670] = {
 // segment 1,length 9,CPU(software)
 0x2fff0009,
 0x00000001,
-(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_softmax,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x40000000,0x00010001,0x0002000a,0x00000004,
+(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_softmax,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x40000000,0x00010001,0x0002000a,0x00000004,
 };
 #define NRF_AXON_MODEL_TINYML_IC_PACKED_OUTPUT_SIZE 40
 
@@ -3773,7 +3772,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic[9670] = {
   uint32_t axon_model_tinyml_ic_packed_output_buf[NRF_AXON_MODEL_TINYML_IC_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_tinyml_ic = {
-    .compiler_version = 0x00010300,
+    .compiler_version = 0x00010400,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = {

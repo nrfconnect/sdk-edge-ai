@@ -660,11 +660,14 @@ def excel_floor(x, s):
     return s * math.floor(float(x)/s)
 
 
-def get_array_from_tensor(input_tensor, transpose_flag=False):
-    if (len(input_tensor.shape) == 4):
-        input_tensor = input_tensor.transpose(0, 3, 1, 2)
-    elif (len(input_tensor.shape) == 3):
-        input_tensor = input_tensor.transpose(2, 0, 1)
+def get_array_from_tensor(input_tensor, transpose_flag=True, op_code=None):
+    if op_code : #checks if the op code of the tensor is in the 'no transpose list' and disable the transpose
+        transpose_flag = transpose_flag and (op_code not in NO_TRANSPOSE_TFLITE_OPERATORS)
+    if transpose_flag:
+        if (len(input_tensor.shape) == 4):
+            input_tensor = input_tensor.transpose(0, 3, 1, 2)
+        elif (len(input_tensor.shape) == 3):
+            input_tensor = input_tensor.transpose(2, 0, 1)
     input_tensor = input_tensor.squeeze()
     op = []
     if (len(input_tensor.shape) == 3):
@@ -1272,7 +1275,7 @@ def convert_range_to_list(range_string: list):
     return list(set(vectors_list))
 
 
-def save_vectors_for_mass_inference(test_vector_file_name, test_vectors_ndx, quantized_test_vectors, test_labels, output_dir, transpose_model_ip_flag=False, save_test_labels=False):
+def save_vectors_for_mass_inference(test_vector_file_name, test_vectors_ndx, quantized_test_vectors, test_labels, output_dir, transpose_model_ip_flag=False, op_type=None, save_test_labels=False):
     """create logger object"""
     logger = logging.getLogger(__name__)
     # print("\nGetting the quantized input test vector and labels for the simulator....")
@@ -1293,12 +1296,12 @@ def save_vectors_for_mass_inference(test_vector_file_name, test_vectors_ndx, qua
             q_test_vector = q_test_vector.transpose(0, 2, 1, 3)
         elif q_input_shape.shape_size == 3:
             q_test_vector = q_test_vector.transpose(0, 2, 1)
-
-    if (q_input_shape.depth > 1):
-        if q_input_shape.shape_size == 4:
-            q_test_vector = q_test_vector.transpose(0, 3, 1, 2)
-        elif q_input_shape.shape_size == 3:
-            q_test_vector = q_test_vector.transpose(0, 2, 1)
+    if op_type != 'Lstm':
+        if (q_input_shape.depth > 1):
+            if q_input_shape.shape_size == 4:
+                q_test_vector = q_test_vector.transpose(0, 3, 1, 2)
+            elif q_input_shape.shape_size == 3:
+                q_test_vector = q_test_vector.transpose(0, 2, 1)
 
     def get_csv_text_map_func(vector):
         test_vector_text_m = ""
@@ -1776,6 +1779,14 @@ def get_unit_test_model_name(test_op_info_dict):
                 test_op_info_dict['BLOCK_SIZE'])
             model_name = model_name + \
                 f"_block_size_{block_size_string}"
+
+    if OP_TYPE == "Lstm" or OP_TYPE == "LstmV2":
+        if 'UNITS' in test_op_info_dict:
+            units_string = get_string_from_array_values(
+                test_op_info_dict['UNITS'])
+            model_name = model_name + \
+                f"_units_{units_string}"
+
     return model_name.lower()
 
 
@@ -1903,3 +1914,5 @@ def print_with_borders(text, border="=", get_text=False):
     print(f"{border_text}")
     print(text)
     print(f"{border_text}")
+
+NO_TRANSPOSE_TFLITE_OPERATORS = [tflite.BuiltinOperator.UNIDIRECTIONAL_SEQUENCE_LSTM]

@@ -85,6 +85,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     axon_layer_num = 0
     tflite_identifier = 0
     total_layer_count = 0
+    previous_op_datawidth = None
     if (test_vectors_ndx.size >= 1):
         test_ndx = test_vectors_ndx[0]
     digit = 0
@@ -179,14 +180,24 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
 
     model_ip_shape = ops.TensorShape(input_shape)
     # prepare a text file for adding all the constants into the file and then generate the const.h file
-    file_content += "\n#define " + model_name.upper() + "_L0_INPUT_BATCH "+str(model_ip_shape.batch)+"\n#define " + model_name.upper() + "_L0_INPUT_CHANNEL "+str(model_ip_shape.depth)+"\n#define " + model_name.upper() + "_L0_INPUT_HEIGHT "+str(model_ip_shape.height)+"\n" + "#define " + model_name.upper() + "_L0_INPUT_WIDTH "+str(model_ip_shape.width) + \
-        "\n" + "#define " + model_name.upper() + "_L0_INPUT_QUANTIZE_INV_SCALING_FACTOR "+str(model_ip_multiplier)+"\n" + "#define " + model_name.upper() + \
-        "_L0_INPUT_QUANTIZE_INV_SCALING_FACTOR_SHIFT " + \
-        str(int(model_ip_scaleshift))+"\n" + "#define " + model_name.upper() + \
-        "_L0_INPUT_QUANTIZE_ZERO_POINT "+str(int(model_ip_zeropoint))
-    file_content += "\n#define " + model_name.upper() + "_L0_INPUT_BYTEWIDTH " + \
-        tflite_axon_wrapper.GetAxonByteWidthEnum(
-            model_ip_datawidth).name + "\n"
+    if (ops_details[0]['op_name'] == 'UNIDIRECTIONAL_SEQUENCE_LSTM'):
+        file_content += "\n#define " + model_name.upper() + "_L0_INPUT_BATCH "+str(model_ip_shape.height)+"\n#define " + model_name.upper() + "_L0_TIME_STEPS "+str(model_ip_shape.width)+"\n#define " + model_name.upper() + "_L0_INPUT_FEATURES "+str(model_ip_shape.depth)+"\n" + \
+            "\n" + "#define " + model_name.upper() + "_L0_INPUT_QUANTIZE_INV_SCALING_FACTOR "+str(model_ip_multiplier)+"\n" + "#define " + model_name.upper() + \
+            "_L0_INPUT_QUANTIZE_INV_SCALING_FACTOR_SHIFT " + \
+            str(int(model_ip_scaleshift))+"\n" + "#define " + model_name.upper() + \
+            "_L0_INPUT_QUANTIZE_ZERO_POINT "+str(int(model_ip_zeropoint))
+        file_content += "\n#define " + model_name.upper() + "_L0_INPUT_BYTEWIDTH " + \
+            tflite_axon_wrapper.GetAxonByteWidthEnum(
+                model_ip_datawidth).name + "\n"
+    else:
+        file_content += "\n#define " + model_name.upper() + "_L0_INPUT_BATCH "+str(model_ip_shape.batch)+"\n#define " + model_name.upper() + "_L0_INPUT_CHANNEL "+str(model_ip_shape.depth)+"\n#define " + model_name.upper() + "_L0_INPUT_HEIGHT "+str(model_ip_shape.height)+"\n" + "#define " + model_name.upper() + "_L0_INPUT_WIDTH "+str(model_ip_shape.width) + \
+            "\n" + "#define " + model_name.upper() + "_L0_INPUT_QUANTIZE_INV_SCALING_FACTOR "+str(model_ip_multiplier)+"\n" + "#define " + model_name.upper() + \
+            "_L0_INPUT_QUANTIZE_INV_SCALING_FACTOR_SHIFT " + \
+            str(int(model_ip_scaleshift))+"\n" + "#define " + model_name.upper() + \
+            "_L0_INPUT_QUANTIZE_ZERO_POINT "+str(int(model_ip_zeropoint))
+        file_content += "\n#define " + model_name.upper() + "_L0_INPUT_BYTEWIDTH " + \
+            tflite_axon_wrapper.GetAxonByteWidthEnum(
+                model_ip_datawidth).name + "\n"
     if (test_flag):
         prediction_digits = []
         # adding code to run the tflite inference to compare the output from the implementation on python
@@ -233,6 +244,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     # reshape_ip_shape = None
     reshape_op_shape = None
     SWAP_MAXPOOL_OP = False
+    SWAP_INPUT_TO_NEXT_RESHAPE = False
     for i, new_op in enumerate(operators_detail_graph):
         if new_op['axon_layer_num'] >= 0:
             axon_layer_num = new_op['axon_layer_num']
@@ -401,6 +413,16 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 if (i in last_layer_ndx) and disable_op_quantization:
                     op_scales[0] = 1
                     op_zeropoint[0] = 0
+                previous_op_datawidth = np.int8
+                previous_op_index = tflite_axon_graph_object.get_index_for_axon_layer_num(
+                    new_op['axon_ip_ops'][0])
+                previous_op_options = operators_detail_graph[previous_op_index]['operator_options']
+                previous_op_datawidth = previous_op_options.op_bitwidth
+                if previous_op_datawidth != ip_datawidth:
+                    ip_datawidth = previous_op_datawidth
+                    ip_bytewidth_enum = tflite_axon_wrapper.GetAxonByteWidthEnum(
+                        ip_datawidth)
+
             else:
                 filter_tensor = options.GetFilterTensor()
                 if filter_tensor.size == 0:
@@ -435,8 +457,12 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                                 (maxpool_reshape_ip_.get_shape()[1] == ip_shape[2]):  # values were swapped after the input
                             # you have to swap the maxpool operation.
                             SWAP_MAXPOOL_OP = True
+                            SWAP_INPUT_TO_NEXT_RESHAPE = True
                 if (op_name == 'STRIDED_SLICE'):
                     kernel_shape = options.GetFilterShape()
+                if (op_name == 'UNIDIRECTIONAL_SEQUENCE_LSTM'):
+                    # LSTM attributes are saved to cpu_op_additional_attrib_list
+                    cpu_op_additional_attrib_list = options.GetCpuAdditionalAttributesTensor()
 
             axons_operation_enum = tflite_axon_wrapper.GetAxonOperationEnum(
                 options.GetAxonsOperationEnumName())
@@ -476,6 +502,10 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
 
             ops_ip_shape = ops.TensorShape(
                 np.array(options.GetOperatorInputShape()))
+            if op_name == "CPU_RESHAPE" and SWAP_INPUT_TO_NEXT_RESHAPE:
+                #the previous OP due to the presence of a MAXPOOL+RESHAPE combo has the height an width swapped, swap accordingly
+                ops_ip_shape.height, ops_ip_shape.width = ops_ip_shape.width, ops_ip_shape.height
+                SWAP_INPUT_TO_NEXT_RESHAPE=False
             ops_kernel_shape = ops.TensorShape(np.array(kernel_shape))
             ops_op_shape = ops.TensorShape(np.array(op_shape))
 
@@ -536,6 +566,11 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 ops_kernel_shape.height, ops_kernel_shape.width = ops_kernel_shape.width, ops_kernel_shape.height
                 ops_padding_details.pad_right, ops_padding_details.pad_bottom = ops_padding_details.pad_bottom, ops_padding_details.pad_right
                 ops_padding_details.pad_top, ops_padding_details.pad_left = ops_padding_details.pad_left, ops_padding_details.pad_top
+            if (op_name == "UNIDIRECTIONAL_SEQUENCE_LSTM"):
+                # LSTM dimensions: channel_cnt = batch, height = time_steps, width = input features/ output units
+                ops_ip_shape.height, ops_op_shape.height = ops_ip_shape.width, ops_op_shape.width
+                ops_ip_shape.width, ops_op_shape.width = ops_ip_shape.depth, ops_op_shape.depth
+                ops_ip_shape.depth, ops_op_shape.depth = ops_ip_shape.batch, ops_op_shape.batch
 
             # fill up the models struct here
             """
@@ -560,8 +595,14 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                     input_operators = operators_detail_graph[input_operator_index]['op_tensors']
                     input_ops_shape = ops.TensorShape(
                         tensor_details[input_operators[0]]['shape'])
+                    input_datatype_value = tensor_details[input_operators[0]]['dtype']
+                    # verify if the datatype is float32, check if the input to this op is from a QUANTIZE?
+                    if input_datatype_value == np.float32:
+                        if operators_detail_graph[new_op['inputs'][input_idx]]['op_name'] == "QUANTIZE":
+                            input_datatype_value = tensor_details[operators_detail_graph[
+                                new_op['inputs'][input_idx]]['op_tensors'][0]]['dtype']
                     input_datatype_enum = tflite_axon_wrapper.GetAxonByteWidthEnum(
-                        tensor_details[input_operators[0]]['dtype'])
+                        input_datatype_value)
                     model_descriptor_layer_struct[0].input_ids[input_idx] = new_op['axon_ip_ops'][input_idx]
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].batch_cnt = input_ops_shape.batch
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].height = input_ops_shape.height
@@ -577,6 +618,14 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].byte_width = input_datatype_enum.value
                     model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx} = {model_descriptor_layer_struct[0].input_ids[input_idx]}, "
                     model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_{shape_text} = {model_descriptor_layer_struct[0].input_dimensions[input_idx].channel_cnt, model_descriptor_layer_struct[0].input_dimensions[input_idx].height, model_descriptor_layer_struct[0].input_dimensions[input_idx].width, model_descriptor_layer_struct[0].input_dimensions[input_idx].byte_width}, "
+                    if new_op['axon_ip_axis_offset'] is not None:
+                        model_descriptor_layer_struct[0].input_split_offsets[
+                            input_idx].axis = operators_detail_graph[input_operator_index]['axon_ip_axis_offset'][0]
+                        model_descriptor_layer_struct[0].input_split_offsets[
+                            input_idx].offset = operators_detail_graph[input_operator_index]['axon_ip_axis_offset'][1]
+                    else:
+                        model_descriptor_layer_struct[0].input_split_offsets[input_idx].axis = 0
+                        model_descriptor_layer_struct[0].input_split_offsets[input_idx].offset = 0
             else:
                 model_descriptor_layer_struct[0].input_ids[0] = new_op['axon_ip_ops'][0]
                 model_descriptor_layer_struct[0].input_dimensions[0].batch_cnt = ops_ip_shape.batch
@@ -591,7 +640,12 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 model_descriptor_layer_struct[0].input_dimensions[0].byte_width = ip_bytewidth_enum.value
                 model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0 = {model_descriptor_layer_struct[0].input_ids[0]}, "
                 model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0_shapes_(C,H,W,DW) = {model_descriptor_layer_struct[0].input_dimensions[0].channel_cnt, model_descriptor_layer_struct[0].input_dimensions[0].height, model_descriptor_layer_struct[0].input_dimensions[0].width, model_descriptor_layer_struct[0].input_dimensions[0].byte_width}, "
-
+                if new_op['axon_ip_axis_offset'] is not None:
+                    model_descriptor_layer_struct[0].input_split_offsets[0].axis = new_op['axon_ip_axis_offset'][0]
+                    model_descriptor_layer_struct[0].input_split_offsets[0].offset = new_op['axon_ip_axis_offset'][1]
+                else:
+                    model_descriptor_layer_struct[0].input_split_offsets[0].axis = 0
+                    model_descriptor_layer_struct[0].input_split_offsets[0].offset = 0
             model_descriptor_layer_struct[0].nn_operation = (
                 axons_operation_enum.value)
             model_descriptor_layer_struct[0].filter_dimensions.height = ops_kernel_shape.height
@@ -646,15 +700,24 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             model_descriptor_layer_struct[0].input_zero_point = ip_zeropoint[0]
             model_descriptor_layer_struct[0].output_zero_point = op_zeropoint[0]
 
-            layer_op_scale, layer_op_zeropoint = copy.deepcopy(
-                tensor_details[new_op['op_tensors'][0]]['quantization'])
+            # layer_op_scale, layer_op_zeropoint = copy.deepcopy(
+            #     tensor_details[new_op['op_tensors'][0]]['quantization'])
+            layer_op_q = options.GetOpQuantizationParameters()
+            layer_output_radix = options.GetLayerOutputRadix()
+            layer_op_scale, layer_op_zeropoint = layer_op_q['scales'], layer_op_q['zero_points']
             layer_op_scaleshift = util.optimized_ip_scaling_shift(
-                (layer_op_scale), 16, 30, 31)[1]
+                layer_op_scale, 8,30, 31, op_zp=layer_op_zeropoint)[1]
             layer_op_multiplier = int(
                 np.round((layer_op_scale)*(2**layer_op_scaleshift)))
+            if layer_output_radix > 0 and layer_output_radix < layer_op_scaleshift:
+                layer_op_scaleshift -= layer_output_radix
 
             model_descriptor_layer_struct[0].output_dequant_shift = layer_op_scaleshift
             model_descriptor_layer_struct[0].output_dequant_multiplier = layer_op_multiplier
+            file_content += line_info + \
+                "_LAYER_OUTPUT_DQ_SHIFT "+str(layer_op_scaleshift)
+            file_content += line_info + \
+                "_LAYER_OUTPUT_DQ_MULTIPLIER "+str(layer_op_multiplier)
 
             model_descriptor_layer_struct[0].scale_shift_cnt = scale_shift.size
             model_descriptor_layer_struct[0].activation_function = activation_function_enum.value
@@ -733,6 +796,12 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             elif key_err.args[0] == -923:
                 logger.error(
                     "CPU Extension Operation Handle threw an error!")
+            elif key_err.args[0] == -924:
+                logger.error(
+                    "Floating Point Var Handle is not supported!")
+            elif key_err.args[0] == -925:
+                logger.error(
+                    "FC has an invalid input shape of size 3 or 4")
             else:
                 logger.warning(new_op["op_name"]+" operator not supported!")
                 raise Exception(key_err)
