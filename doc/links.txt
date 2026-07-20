@@ -17,7 +17,7 @@
 .. _`Nordic Edge AI Lab ready-to-use models`: https://app.lab.nordicsemi.com/#/ready-to-use-models
 .. _`nRF Connect Device Manager`: https://www.nordicsemi.com/Products/Development-tools/nrf-connect-device-manager
 
-.. ### Source: docs.nordicsemi.com (not versioned)
+.. ### Source: docs.nordicsemi.com
 
 .. _`Serial Terminal app`: https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/serial-terminal-app
 .. _`Power Profiler Kit II (PPK2)`: https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html
@@ -35,57 +35,25 @@
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model_creating_pipeline/signal_processing.html
 
-.. ### Source: docs.nordicsemi.com (versioned)
 
-.. _`nRF54H20 ug`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_gs.html#ug-nrf54h20-gs
-.. _`nrf54h20dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54h20dk/doc/index.html#nrf54h20dk
+.. ### tmp
 
-.. _`nRF54L ug`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/device_guides/nrf54l/index.html#ug-nrf54l
-.. _`nrf54lm20dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54lm20dk/doc/index.html#nrf54lm20dk
-.. _`nrf54l15dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk
-.. _`nRF54L10 emulation`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk-nrf54l10
-.. _`nRF54L05 emulation`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54l15dk/doc/index.html#nrf54l15dk-nrf54l05
-.. _`nRF54L15TAG`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf54l15tag/doc/index.html
+..
+       _`Simulated sensor driver`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/drivers/sensor_sim.html
+..
+       _`Peripheral MDS sample: Testing`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/samples/bluetooth/peripheral_mds/README.html#testing
+..
+       _`Configuring devicetree`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/hardware/index.html#configuring-devicetree
 
-.. _`nRF5340 ug`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/device_guides/nrf53/index.html#ug-nrf5340
-.. _`nrf5340dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf5340dk/doc/index.html#nrf5340dk
 
-.. _`Thingy:53`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/device_guides/thingy53/index.html#ug-thingy53
-.. _`thingy53`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/thingy53/doc/index.html#thingy53
-
-.. _`nRF52 ug`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/device_guides/nrf52/index.html#ug-nrf52
-.. _`nrf52dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf52dk/doc/index.html#nrf52dk
-.. _`nrf52840dk`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/boards/nordic/nrf52840dk/doc/index.html#nrf52840dk
-
-.. _`nRF Connect SDK`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/index.html
-.. _`nRF Connect SDK installation guide`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/installation/install_ncs.html
-.. _`Configuring and building`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/index.html#configure-application
-.. _`Building an application`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/building.html#building
-.. _`Programming`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/programming.html#programming
-.. _`Testing and optimization`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/test_and_optimize.html#testing
-.. _`Providing CMake options`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/cmake/index.html#providing_cmake_options
-.. _`Custom build types`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/config_and_build_system.html#app-build-additions-build-types
-.. _`software maturity`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/releases_and_maturity/software_maturity.html
-.. _`Memfault in nRF Connect SDK`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/libraries/debug/memfault_ncs.html
-.. _`Nordic central UART sample`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/samples/bluetooth/central_uart/README.html
-.. _`Nordic UART Service (NUS)`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/libraries/bluetooth/services/nus.html
-.. _`HID Service`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/libraries/bluetooth/services/hids.html
-.. _`Simulated sensor driver`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/drivers/sensor_sim.html
-.. _`Peripheral MDS sample: Testing`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/samples/bluetooth/peripheral_mds/README.html#testing
-.. _`Configuring devicetree`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/hardware/index.html#configuring-devicetree
-
-.. _`Environment Variables`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/develop/env_vars.html
-.. _`Workspace application`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/develop/west/workspaces.html#t2_star_topology_application_is_the_manifest_repository
-.. _`Logging`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/services/logging/index.html#logging-api
-.. _`ZCBOR`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/services/serialization/cbor.html#cbor-api
-.. _`Power Management`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/services/pm/index.html#power-management
-.. _`Sensor`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/hardware/peripherals/sensor/index.html#sensor
-.. _`TensorFlow Lite for Microcontrollers: Hello World`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/samples/modules/tflite-micro/hello_world/README.html#tflite-hello-world
-.. _`Video`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/hardware/peripherals/video.html
-.. _`Devicetree overlays`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/build/dts/howtos.html#use-devicetree-overlays
-.. _`CRC`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/services/crc/index.html
-.. _`Ring Buffers`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/kernel/data_structures/ring_buffers.html
-.. _`UART`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/hardware/peripherals/uart.html
+..
+       _`Video`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/hardware/peripherals/video.html
+..
+       _`Devicetree overlays`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/build/dts/howtos.html#use-devicetree-overlays
+..
+       _`CRC`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/services/crc/index.html
+..
+       _`Ring Buffers`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/kernel/data_structures/ring_buffers.html
 
 .. ### Source: memfault.com
 

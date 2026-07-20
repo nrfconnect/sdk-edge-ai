@@ -62,7 +62,7 @@ Development kits
 
    .. tab:: nRF54LM20 DK
 
-      The `nRF54LM20 DK <nrf54lm20dk_>`_ development kit has two variants with different SoCs: nRF54LM20A and nRF54LM20B.
+      The :doc:`nRF54LM20 DK <zephyr:boards/nordic/nrf54lm20dk/doc/index>` development kit has two variants with different SoCs: nRF54LM20A and nRF54LM20B.
       Both variants require a sensor evaluation board:
 
       .. list-table::
@@ -81,7 +81,7 @@ Development kits
 
    .. tab:: nRF54L15 TAG
 
-      The `nRF54L15TAG`_ is a development board for the nRF54L15 SoC.
+      The :doc:`nRF54L15TAG <zephyr:boards/nordic/nrf54l15tag/doc/index>` is a development board for the nRF54L15 SoC.
       It is a small, low-cost development board that is perfect for prototyping and testing.
 
       .. list-table::
@@ -221,7 +221,7 @@ Build types
 ===========
 
 Each board directory contains per-board configuration files for different build types.
-See `Custom build types`_ and `Providing CMake options`_ for more information.
+See :ref:`nrf:app_build_additions_build_types` and :ref:`nrf:cmake_options` for more information.
 The application supports the following build types:
 
 .. list-table:: Gesture Recognition build types
@@ -287,14 +287,14 @@ You can find raw datasets used for model training on the `training dataset`_ pag
       CONFIG_DATA_COLLECTION_MODE=y
       CONFIG_BLE_MODE_NONE=y
 
-#. If you want to forward the same data over Bluetooth LE using `Nordic UART Service (NUS)`_, additionally switch from No BLE mode to NUS mode:
+#. If you want to forward the same data over Bluetooth LE using :ref:`nrf:nus_service_readme`, additionally switch from No BLE mode to NUS mode:
 
    .. code-block::
 
       CONFIG_DATA_COLLECTION_MODE=y
       CONFIG_BLE_MODE_NUS=y
 
-   In this mode, you must have an additional development kit running the `Nordic central UART sample`_ to receive the NUS data.
+   In this mode, you must have an additional development kit running the :ref:`Central UART sample <nrf:central_uart>` to receive the NUS data.
 
    .. note::
       When using Bluetooth LE NUS mode, some samples may be lost due to RF noise or increased distance between the device and the central.
@@ -526,10 +526,10 @@ Dependencies
 
 This sample uses the following |NCS| services:
 
-* `Nordic UART Service (NUS)`_
-* `HID Service`_
+* :ref:`nrf:nus_service_readme`
+* :ref:`nrf:hids_readme`
 
 This sample uses the following Zephyr libraries:
 
-* `Logging`_
-* `Sensor`_
+* :ref:`zephyr:logging_api`
+* :ref:`zephyr:sensor`
