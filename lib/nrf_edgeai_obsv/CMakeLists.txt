@@ -35,6 +35,10 @@ zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIS
   metrics/nrf_obsv_metric_probs_top2_margin_dist.c
 )
 
+zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST
+  metrics/nrf_obsv_metric_class_streak_dist.c
+)
+
 zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC
   metrics/nrf_obsv_metric_mel_energy_desc.c
 )

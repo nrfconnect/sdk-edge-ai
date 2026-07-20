@@ -174,6 +174,7 @@ enum nrf_edgeai_obsv_metric_id {
 	NRF_EDGEAI_OBSV_METRIC_ID_PROBS_TOP2_MARGIN_DIST = 6,
 	NRF_EDGEAI_OBSV_METRIC_ID_MEL_ENERGY_DESC = 7,
 	NRF_EDGEAI_OBSV_METRIC_ID_MEL_SPECTRAL_DESC = 8,
+	NRF_EDGEAI_OBSV_METRIC_ID_CLASS_STREAK_DIST = 9,
 };
 
 #if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION)
@@ -569,6 +570,71 @@ void nrf_edgeai_obsv_metric_msd_create(nrf_edgeai_obsv_metric_t *metric, void *b
 				       uint16_t n_features);
 
 #endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_SPECTRAL_DESC */
+
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST)
+
+/**
+ * @brief Header (dimension/config/state fields) for the class streak distribution storage.
+ *
+ * Shared between the storage macro and the metric implementation so the layout
+ * is defined in exactly one place. sizeof(_nrf_obsv_csd_hdr_t) == 12, which keeps
+ * the uint32_t counter array that immediately follows naturally aligned.
+ * @c top and @c tolerance are the configured binning ceiling and flicker
+ * tolerance; the @c cur_* fields carry the in-progress streak state across
+ * updates (a streak is recorded only when it ends).
+ *
+ * Not intended for direct use outside of the metric implementation.
+ */
+typedef struct {
+	uint16_t num_classes;
+	uint16_t cur_class;
+	uint8_t bin_num;
+	uint8_t top;
+	uint8_t tolerance;
+	uint8_t cur_len;
+	uint8_t cur_miss;
+	uint8_t _pad[3];
+} _nrf_obsv_csd_hdr_t;
+
+_Static_assert(sizeof(_nrf_obsv_csd_hdr_t) == 12,
+	       "Layout changed; update NRF_EDGEAI_OBSV_CSD_STORAGE_BYTES and storage accessors");
+
+/**
+ * @brief Minimum byte size of a class streak distribution storage buffer for @p n_classes classes.
+ *
+ * Use with @ref nrf_edgeai_obsv_metric_csd_create to size a caller-supplied buffer.
+ * The buffer must be aligned to at least @c sizeof(uint32_t) bytes.
+ */
+#define NRF_EDGEAI_OBSV_CSD_STORAGE_BYTES(n_classes)                                          \
+	(sizeof(_nrf_obsv_csd_hdr_t)                                                          \
+	 + (size_t)(n_classes) * CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_BIN_NUM             \
+	   * sizeof(uint32_t))
+
+/**
+ * @brief Initialize a class streak distribution metric using caller-provided storage.
+ *
+ * Per class, accumulates a histogram of streak lengths: the number of consecutive
+ * inferences whose dominant class (argmax) is that class. A streak is recorded
+ * into its class's histogram row when it ends. Up to
+ * @c CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOLERANCE consecutive mismatching
+ * frames are bridged without ending the streak (and are not counted into its
+ * length); more consecutive mismatches than that end it. Streak lengths are binned
+ * uniformly over [1, TOP], with lengths >= TOP saturating the top bin
+ * (@c CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOP). Consumes the class-probability
+ * stream (@c NRF_EDGEAI_OBSV_SOURCE_PROBS).
+ *
+ * The caller allocates a buffer of at least @ref NRF_EDGEAI_OBSV_CSD_STORAGE_BYTES
+ * bytes, passes it here, then registers the metric with nrf_edgeai_obsv_core_register().
+ *
+ * @param metric    Metric descriptor to fill. Must not be NULL.
+ * @param buf       Buffer of at least NRF_EDGEAI_OBSV_CSD_STORAGE_BYTES(n_classes)
+ *                  bytes, aligned to at least @c sizeof(uint32_t). Must not be NULL.
+ * @param n_classes Number of model output classes (> 0).
+ */
+void nrf_edgeai_obsv_metric_csd_create(nrf_edgeai_obsv_metric_t *metric, void *buf,
+				       uint16_t n_classes);
+
+#endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST */
 
 #ifdef __cplusplus
 }

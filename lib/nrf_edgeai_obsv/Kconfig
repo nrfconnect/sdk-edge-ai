@@ -117,6 +117,47 @@ config NRF_EDGEAI_OBSV_PROBS_TOP2_MARGIN_DIST_BIN_NUM
 
 endif # NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST
 
+config NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST
+	bool "Class streak distribution metric"
+	select NRF_EDGEAI_OBSV_DIST_BINNING
+	help
+	  Per-class histogram of prediction streak lengths: how many consecutive
+	  inferences the dominant class (argmax) stays the same. A streak is
+	  recorded when it ends. Distinguishes stable, held detections from flicker
+	  and shows how long each class is typically sustained. Consumes the
+	  class-probability stream (NRF_EDGEAI_OBSV_SOURCE_PROBS).
+
+if NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST
+
+config NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_BIN_NUM
+	int "Number of streak-length histogram bins"
+	default 4
+	range 2 16
+	help
+	  Number of bins per class. Streak lengths are binned uniformly over
+	  [1, TOP], with the last bin catching lengths >= TOP.
+
+config NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOP
+	int "Streak length saturating the top bin"
+	default 20
+	range 2 255
+	help
+	  Streak lengths >= this value fall into the last bin; bins span [1, TOP]
+	  uniformly, so a length of 1 lands in bin 0 and TOP (or longer) in the top
+	  bin. Set it around the longest streak worth resolving.
+
+config NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOLERANCE
+	int "Flicker tolerance (consecutive mismatched frames bridged)"
+	default 0
+	range 0 255
+	help
+	  How many consecutive inferences whose dominant class differs from the
+	  active streak's class may be skipped without ending the streak. Bridged
+	  frames are not counted into the streak length. 0 means any mismatch ends
+	  the streak (strict "N in a row"). One tolerance applies to all classes.
+
+endif # NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST
+
 config NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC
 	bool "Mel energy descriptor metric"
 	select NRF_EDGEAI_OBSV_DIST_BINNING

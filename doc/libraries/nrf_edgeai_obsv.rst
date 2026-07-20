@@ -295,6 +295,22 @@ The probability top-2 margin distribution builds a histogram of prediction decis
 For each inference it computes the margin between the two largest class probabilities, ``margin = p_top1 - p_top2``, and bins it over ``[0, 1]`` as a ``1 × bin_num`` row.
 A low margin flags ambiguous predictions even when the dominant probability is high.
 
+.. _nrf_edgeai_obsv_metrics_built_in_streak:
+
+Class streak distribution
+-------------------------
+
+The class streak distribution builds a per-class histogram of *streak lengths*: how many consecutive inferences the dominant class (argmax of the probability vector) stays the same.
+The result is a ``num_classes × bin_num`` matrix of ``uint32_t`` counters, where row *i* is the class and each column is a streak-length bin.
+
+A streak is recorded only when it ends.
+Up to ``CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOLERANCE`` consecutive mismatching inferences are bridged without ending the streak (flicker tolerance) and are not counted into its length; a longer run of mismatches ends it.
+Streak lengths are binned uniformly over ``[1, TOP]``, with lengths of ``CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOP`` or longer saturating the top bin.
+A tolerance of ``0`` reduces the metric to strict "N in a row" runs.
+
+Because each streak contributes a single count only when it completes, the rows do **not** sum to the inference count; they total the number of finished streaks per class.
+This metric separates stable, sustained detections (streaks reaching the mid or top bins) from single-frame flicker (streaks pinned in the lowest bin), which the per-inference probability metrics cannot distinguish.
+
 Input-feature metrics
 ----------------------
 
@@ -474,6 +490,7 @@ Enable at least one metric to start collecting data:
   * For the :ref:`prediction switching rate <nrf_edgeai_obsv_metrics_built_in_switching>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PREDICTION_SWITCHING_RATE``.
   * For the :ref:`probability entropy distribution <nrf_edgeai_obsv_metrics_built_in_entropy>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST``, and set the bin count through ``CONFIG_NRF_EDGEAI_OBSV_PROBS_ENTROPY_DIST_BIN_NUM``.
   * For the :ref:`probability top-2 margin distribution <nrf_edgeai_obsv_metrics_built_in_margin>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST``, and set the bin count through ``CONFIG_NRF_EDGEAI_OBSV_PROBS_TOP2_MARGIN_DIST_BIN_NUM``.
+  * For the :ref:`class streak distribution <nrf_edgeai_obsv_metrics_built_in_streak>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST``, and set the bin count, the top-bin streak length, and the flicker tolerance through the matching ``CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_*`` options.
   * For the :ref:`mel energy descriptor <nrf_edgeai_obsv_metrics_built_in_mel_energy>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC``, and set the bin count, the maximum feature length, and the ``[p01, p99]`` scaling percentiles through the matching ``CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_*`` options.
   * For the :ref:`mel spectral descriptor <nrf_edgeai_obsv_metrics_built_in_mel_spectral>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_SPECTRAL_DESC``, and set the bin count through ``CONFIG_NRF_EDGEAI_OBSV_MEL_SPECTRAL_DESC_BIN_NUM``.
 

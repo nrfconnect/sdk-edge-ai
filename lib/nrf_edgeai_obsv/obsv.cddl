@@ -53,3 +53,8 @@ obsv-metric = {
 ;       stats over input mel features, rows: 0 low ratio, 1 mid ratio, 2 high
 ;       ratio, 3 centroid, 4 spread, 5 entropy, 6 flatness, 7 contrast; all
 ;       normalized to [0, 1])
+;   9 = class streak distribution (num_classes x num_bins; per-class histogram of
+;       prediction streak lengths — consecutive inferences with the same argmax
+;       class — binned uniformly over [1, TOP] with lengths >= TOP in the top bin;
+;       up to a configured number of consecutive mismatching frames are bridged
+;       (flicker tolerance) without ending a streak)

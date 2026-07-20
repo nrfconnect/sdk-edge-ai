@@ -152,6 +152,7 @@ METRIC_NAMES = {
     6: "probs_top2_margin_dist",
     7: "mel_energy_desc",
     8: "mel_spectral_desc",
+    9: "class_streak_dist",
 }
 
 EVENT_TYPES = {
@@ -216,6 +217,14 @@ def _decode_one_obsv_payload(decoded: dict, validate: bool = False) -> dict[str,
                 # FEATURES-stream descriptors histogram one entry per feature
                 # update, so every row must total num_features.
                 entry["row_sums_match_num_features"] = all(s == nf for s in row_sums)
+            if mid == 9 and isinstance(n, int):
+                # class_streak_dist records one count per COMPLETED streak, not
+                # per inference, so the matrix totals the number of finished
+                # streaks. Unlike pd/ped/pmd, rows do NOT sum to num_inferences;
+                # the streak count is bounded by (and in practice far below) n.
+                total = sum(row_sums)
+                entry["total_streaks"] = total
+                entry["streaks_le_n"] = total <= n
 
         result["metrics"].append(entry)
 
