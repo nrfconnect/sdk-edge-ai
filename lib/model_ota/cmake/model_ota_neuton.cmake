@@ -6,28 +6,26 @@
 # CMake helper for the Neuton model-only OTA PoC: per-model static library + payload discard.
 #
 # model_ota_neuton_wire(SOLUTION_ID <id> MODEL_SRC <abs-path-to-nrf_edgeai_user_model.c>
-#                       [LIB_NAME <static-lib-target>])
+#                       MAX_NEURONS <cap> [LIB_NAME <static-lib-target>])
 #
 # For each OTA-updatable model:
 #
-#   1. Builds a dedicated static library (default target ota_neuton_<SOLUTION_ID>) containing
-#      only that model's generated nrf_edgeai_user_model.c, and links it into the app. Models
-#      that stay compiled into the app target directly are unaffected and keep their payload
-#      in flash (non-updatable / baked-in models).
+#   1. Builds a dedicated static library (default target ota_neuton_<SOLUTION_ID>) from
+#      lib/model_ota/src/model_ota_neuton_app_stub.c, which #includes MODEL_SRC with
+#      MODEL_OTA_NEUTON_WIRED and a per-model MODEL_OTA_NEUTON_MAX_NEURONS. Models compiled
+#      directly into the app are unaffected and keep compile-time descriptors and payload.
 #
-#   2. Compiles the library with -ffunction-sections -fdata-sections so each file-static payload
-#      array lands in its own input section (.rodata.MODEL_WEIGHTS, ...).
+#   2. Compiles with -ffunction-sections -fdata-sections so payload arrays land in named
+#      input sections (.rodata.MODEL_WEIGHTS, ...).
 #
-#   3. Appends archive-scoped /DISCARD/ rules for *that* library only:
-#        *libota_neuton_<id>.a:*(.rodata.MODEL_WEIGHTS)
-#      GNU ld's archive+section selector drops payload rodata from wired models individually,
-#      without touching identically named sections in other archives or in libapp.a.
+#   3. Appends archive-scoped /DISCARD/ rules for *that* library only.
 #
-# The model source itself is not edited: the same arrays compile in both the app-side library
-# (OTA path, payload discarded) and the partition-image stub (CONFIG_MODEL_OTA_NEUTON undefined,
-# payload kept for the linked image).
+# Partition images use lib/model_ota/src/model_image_stub.c instead (MODEL_OTA_NEUTON_WIRED
+# unset, compile-time descriptor + payload kept for the linked image).
 
 include_guard(GLOBAL)
+
+get_filename_component(MODEL_OTA_ROOT ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
 
 set(MODEL_OTA_NEUTON_PAYLOAD_SECTIONS
     .rodata.MODEL_WEIGHTS
@@ -73,7 +71,7 @@ ${discard_body}
 endfunction()
 
 function(model_ota_neuton_wire)
-  cmake_parse_arguments(MO "" "SOLUTION_ID;MODEL_SRC;LIB_NAME" "" ${ARGN})
+  cmake_parse_arguments(MO "" "SOLUTION_ID;MODEL_SRC;LIB_NAME;MAX_NEURONS" "" ${ARGN})
 
   if(NOT MO_MODEL_SRC)
     message(FATAL_ERROR "model_ota_neuton_wire: MODEL_SRC is required")
@@ -81,22 +79,33 @@ function(model_ota_neuton_wire)
   if(NOT MO_SOLUTION_ID)
     message(FATAL_ERROR "model_ota_neuton_wire: SOLUTION_ID is required")
   endif()
+  if(NOT MO_MAX_NEURONS)
+    message(FATAL_ERROR "model_ota_neuton_wire: MAX_NEURONS is required")
+  endif()
   if(NOT MO_LIB_NAME)
     set(MO_LIB_NAME ota_neuton_${MO_SOLUTION_ID})
   endif()
 
   get_filename_component(model_dir ${MO_MODEL_SRC} DIRECTORY)
+  get_filename_component(model_basename ${MO_MODEL_SRC} NAME)
+  set(stub_src ${MODEL_OTA_ROOT}/src/model_ota_neuton_app_stub.c)
 
   if(TARGET ${MO_LIB_NAME})
     message(FATAL_ERROR "model_ota_neuton_wire: duplicate LIB_NAME/target ${MO_LIB_NAME}")
   endif()
 
-  add_library(${MO_LIB_NAME} STATIC ${MO_MODEL_SRC})
-  target_link_libraries(${MO_LIB_NAME} PRIVATE zephyr_interface zephyr_generated_headers)
-  target_include_directories(${MO_LIB_NAME} PRIVATE
-                             ${model_dir}
-                             $<TARGET_PROPERTY:app,INCLUDE_DIRECTORIES>)
+  add_library(${MO_LIB_NAME} STATIC ${stub_src})
+  target_link_libraries(${MO_LIB_NAME} PRIVATE zephyr_interface)
+  add_dependencies(${MO_LIB_NAME} zephyr_generated_headers)
+  target_include_directories(${MO_LIB_NAME} PRIVATE ${model_dir})
   target_compile_options(${MO_LIB_NAME} PRIVATE -ffunction-sections -fdata-sections)
+  target_compile_definitions(${MO_LIB_NAME} PRIVATE
+                             MODEL_OTA_NEUTON_WIRED=1
+                             MODEL_OTA_NEUTON_MODEL_SRC=${model_basename}
+                             MODEL_OTA_NEUTON_MAX_NEURONS=${MO_MAX_NEURONS})
+  set_source_files_properties(${stub_src}
+                              TARGET_DIRECTORY ${MO_LIB_NAME}
+                              PROPERTIES OBJECT_DEPENDS "${MO_MODEL_SRC}")
   target_link_libraries(app PRIVATE ${MO_LIB_NAME})
 
   set(archive_glob "*lib${MO_LIB_NAME}.a")
@@ -106,7 +115,7 @@ function(model_ota_neuton_wire)
   endforeach()
 
   set_property(GLOBAL APPEND PROPERTY model_ota_neuton_wired
-               "solution ${MO_SOLUTION_ID} (${MO_LIB_NAME}) <- ${MO_MODEL_SRC}")
+               "solution ${MO_SOLUTION_ID} (${MO_LIB_NAME}, max_neurons=${MO_MAX_NEURONS}) <- ${MO_MODEL_SRC}")
 
   model_ota_neuton_regenerate_discard_fragment()
 endfunction()

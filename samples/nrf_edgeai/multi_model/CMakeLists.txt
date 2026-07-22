@@ -42,9 +42,12 @@ target_include_directories(app PRIVATE
 
 if(CONFIG_MODEL_OTA_NEUTON)
   include(${CMAKE_CURRENT_LIST_DIR}/../../../lib/model_ota/cmake/model_ota_neuton.cmake)
-  model_ota_neuton_wire(SOLUTION_ID 90360 MODEL_SRC ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c)
-  model_ota_neuton_wire(SOLUTION_ID 90449 MODEL_SRC ${CLASSIF_MODEL_DIR}/nrf_edgeai_user_model.c)
-  model_ota_neuton_wire(SOLUTION_ID 90508 MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c)
+  model_ota_neuton_wire(SOLUTION_ID 90360 MODEL_SRC ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c
+                        MAX_NEURONS 20)
+  model_ota_neuton_wire(SOLUTION_ID 90449 MODEL_SRC ${CLASSIF_MODEL_DIR}/nrf_edgeai_user_model.c
+                        MAX_NEURONS 80)
+  model_ota_neuton_wire(SOLUTION_ID 90508 MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c
+                        MAX_NEURONS 2)
 
   # Build each model as a self-contained, linked partition IMAGE (Axon-style), placed at its
   # model_storage partition base. The partition header holds a DIRECT pointer to the baked

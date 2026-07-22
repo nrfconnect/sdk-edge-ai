@@ -5,8 +5,8 @@
  *
  * Neuton model partition-image emission.
  *
- * This file is #included at the BOTTOM of a generated per-model stub, right after the model's
- * own nrf_edgeai_user_model.c has been #included with CONFIG_MODEL_OTA_NEUTON *undefined*. That
+ * This file is #included at the BOTTOM of lib/model_ota/src/model_image_stub.c, right after the
+ * model's own nrf_edgeai_user_model.c has been #included with MODEL_OTA_NEUTON_WIRED unset. That
  * exposes, in this same translation unit, the model's file-static compile-time descriptor
  * (`model_instance_`, with every flash pointer baked to the model's own arrays) and its data
  * arrays / output scales. Including the model source is the only way to reach those `static`
@@ -47,8 +47,8 @@ extern char __model_image_end[];
 #define MODEL_IMAGE_VERSION_U32 0x00010000u
 #endif
 
-/* Full NN_DECODED_OUTPUT_INIT from the included model source (CONFIG_MODEL_OTA_NEUTON is
- * undefined here), with every meta pointer baked to absolute flash addresses inside this image.
+/* Full NN_DECODED_OUTPUT_INIT from the included model source (MODEL_OTA_NEUTON_WIRED unset),
+ * with every meta pointer baked to absolute flash addresses inside this image.
  */
 __attribute__((section(".rodata.model_image_decoded_output"), used))
 static const nrf_edgeai_decoded_output_t model_image_decoded_output_ = {NN_DECODED_OUTPUT_INIT};

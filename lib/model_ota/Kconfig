@@ -23,22 +23,13 @@ config MODEL_OTA_NEUTON
 	bool "Enable the Neuton model image loader"
 	depends on NRF_EDGEAI
 	help
-	  Builds model_image_neuton.c and model_image_load_neuton(). When set, the generated Neuton
-	  model source switches its load accessor to load from a flash partition image, and its
-	  compiled-in payload arrays become unreferenced and are dropped from the OTA model's
-	  static library by archive-scoped linker /DISCARD/ rules (drop by section name, not by
-	  #if-ing arrays out of the source). Non-OTA models compiled into the app are unaffected.
+	  Builds model_image_neuton.c and model_image_load_neuton(). OTA-wired models are compiled
+	  via model_ota_neuton_wire(), which sets the per-model CMake macros MODEL_OTA_NEUTON_WIRED
+	  and MODEL_OTA_NEUTON_MAX_NEURONS (see include/model_ota/model_ota_neuton_model.h) and
+	  drops each wired model's payload from its static library by archive-scoped linker
+	  /DISCARD/ rules. Non-OTA models compiled into the app are unaffected.
 	  See lib/model_ota/cmake/model_ota_neuton_image.cmake,
 	  lib/model_ota/cmake/model_ota_neuton.cmake and include/model_ota/model_image.h.
-
-config MODEL_OTA_MAX_NEURONS
-	int "Maximum number of neurons a loaded Neuton model may have"
-	default 128
-	depends on MODEL_OTA_NEUTON
-	help
-	  Sizes the caller-side RAM scratch buffer for neuron activations. Must be large enough
-	  for every model variant that will ever be provisioned on this device, since a model
-	  needing more neurons than this fails to load (MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL).
 
 config MODEL_OTA_LOG_LEVEL
 	int "Log level for the model_image module"

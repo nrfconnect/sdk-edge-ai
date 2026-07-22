@@ -4,15 +4,10 @@
 #include <nrf_edgeai/rt/private/nrf_edgeai_interfaces.h>
 #include <nrf_edgeai/nrf_edgeai_platform.h>
 
-#if defined(CONFIG_MODEL_OTA_NEUTON)
-/* Model-only OTA: payload arrays below stay compiled but are dropped from the OTA model's
- * static library by archive-scoped linker /DISCARD/ rules (model_ota_neuton.cmake); the model
- * is loaded at runtime from a linked partition image (direct model pointer in the partition
- * header).
+/* When MODEL_OTA_NEUTON_WIRED is set by model_ota_neuton_app_stub.c, payload arrays below are
+ * dropped from the OTA static library by archive-scoped linker /DISCARD/ rules; the model is
+ * loaded at runtime from a partition image. See include/model_ota/model_ota_neuton_model.h.
  */
-#include <model_ota/model_image.h>
-#include <zephyr/sys/util.h>
-#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -137,7 +132,7 @@ static const nrf_user_output_t MODEL_OUTPUT_SCALE_MIN[] = {0.2000000};
 
 static const nrf_user_output_t MODEL_OUTPUT_SCALE_MAX[] = {63.7000008};
 
-#if defined(CONFIG_MODEL_OTA_NEUTON)
+#if defined(MODEL_OTA_NEUTON_WIRED)
 /* OTA: the scale arrays are discarded from the image; the loader re-points these at the
  * equivalents in the flash partition image. Neutralize the compile-time init.
  */
@@ -161,14 +156,14 @@ static const nrf_user_output_t MODEL_OUTPUT_SCALE_MAX[] = {63.7000008};
 #endif
 
 /** Model neurons activations buffer */
-#if defined(CONFIG_MODEL_OTA_NEUTON)
-static nrf_user_neuron_t model_neurons_[MAX(MODEL_NEURONS_NUM, CONFIG_MODEL_OTA_MAX_NEURONS)];
+#if defined(MODEL_OTA_NEUTON_WIRED)
+static nrf_user_neuron_t model_neurons_[MAX(MODEL_NEURONS_NUM, MODEL_OTA_NEUTON_MAX_NEURONS)];
 #else
 static nrf_user_neuron_t model_neurons_[MODEL_NEURONS_NUM];
 #endif
 
 /** Neuton model instance */
-#if defined(CONFIG_MODEL_OTA_NEUTON)
+#if defined(MODEL_OTA_NEUTON_WIRED)
 /* OTA: populated at runtime by nrf_edgeai_load_user_model_90508() from a flash partition image; kept
  * writable (non-const, zero-initialized) with no compile-time pointers into discarded arrays.
  */
@@ -259,7 +254,7 @@ nrf_edgeai_t *nrf_edgeai_user_model_90508(void)
 	return &nrf_edgeai_;
 }
 
-#if defined(CONFIG_MODEL_OTA_NEUTON)
+#if defined(MODEL_OTA_NEUTON_WIRED)
 /* Model-only OTA entry point: load+validate the linked model partition image and wire its
  * descriptor (living in XIP flash) into the runtime model, then copy the image's baked
  * NN_DECODED_OUTPUT_INIT into the runtime decode state. Returns NULL if no valid image is
@@ -280,7 +275,7 @@ nrf_edgeai_t *nrf_edgeai_load_user_model_90508(uint8_t fa_id, const uint8_t *par
 
 	return &nrf_edgeai_;
 }
-#endif /* CONFIG_MODEL_OTA_NEUTON */
+#endif /* MODEL_OTA_NEUTON_WIRED */
 
 //////////////////////////////////////////////////////////////////////////////
 
