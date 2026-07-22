@@ -161,7 +161,7 @@ Do **not** flash the raw ``regression_model_pkg.hex`` alone when MCUboot image 1
 The build produces two signed model artifacts:
 
 * ``regression_model_mcuboot.signed.hex`` — first-time flash to ``model_storage`` (imgtool ``--confirm``).
-* ``regression_model_mcuboot.signed.bin`` — SMP OTA upload to image 1 (no ``--confirm``; use ``image test`` / ``image confirm`` after reset).
+* ``regression_model_mcuboot.signed.bin`` — SMP OTA upload to image 1 (no ``--confirm``; use ``image test`` then ``reset``; the app confirms after a successful load).
 
 Model OTA over SMP (UART)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -174,11 +174,10 @@ Close any serial monitor on the application UART port, then:
    mcumgr -c acm1 image list
    mcumgr -c acm1 image test <model_hash>
    mcumgr -c acm1 reset
-   mcumgr -c acm1 image confirm <model_hash>
+
+After reset the application loads the swapped model from ``model_storage``; if load succeeds it calls ``boot_write_img_confirmed_multi(1)`` so the update survives the next reboot. If load fails, the image stays unconfirmed and MCUboot reverts on the following reset.
 
 Firmware-only OTA uses image index 0 (omit ``-n 1``) and ``build/regression/zephyr/zephyr.signed.bin``. Each image can be updated independently.
-
-``image confirm`` for the model (image 1) requires :kconfig:option:`CONFIG_MCUMGR_GRP_IMG_ALLOW_CONFIRM_NON_ACTIVE_IMAGE_ANY` in ``prj.conf``: the application runs on image 0, and MCUmgr otherwise rejects confirming the primary slot of a non-active image (``Error: 1`` / confirmation denied).
 
 Making model OTA optional
 --------------------------
