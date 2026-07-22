@@ -1,0 +1,25 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Multi-model sample"
+
+config SCORE_THRESHOLD
+	int "Person detection score threshold, in per mille"
+	default 250
+	range 0 1000
+	help
+	  Confidence score threshold for person detection postprocessing.
+
+config IOU_THRESHOLD
+	int "Person detection IoU threshold, in per mille"
+	default 450
+	range 0 1000
+	help
+	  Intersection-over-Union threshold for non-maximum suppression.
+
+endmenu
+
+source "Kconfig.zephyr"

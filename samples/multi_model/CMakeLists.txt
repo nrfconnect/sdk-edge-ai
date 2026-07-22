@@ -12,11 +12,18 @@ project(nrf_edgeai_multi_model_sample)
 set(ANOMALY_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/anomaly/src/nrf_edgeai_generated)
 set(CLASSIF_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/classification/src/nrf_edgeai_generated/Neuton)
 set(REGRESS_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/regression/src/nrf_edgeai_generated/Neuton)
+set(WW_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../../applications/ww_kws/src/ww/nrf_edgeai_generated)
+set(PERSON_DET_DIR ${CMAKE_CURRENT_LIST_DIR}/../../applications/person_detection/src)
+set(OKAY_NORDIC_DIR ${CMAKE_CURRENT_LIST_DIR}/../axon/axon_low_power/src)
 
-set(MODEL_SOURCES
+set(NEUTON_MODEL_SOURCES
   ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c
   ${CLASSIF_MODEL_DIR}/nrf_edgeai_user_model.c
   ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c
+)
+
+set(BAKED_MODEL_SOURCES
+  ${WW_MODEL_DIR}/nrf_edgeai_user_model.c
 )
 
 target_include_directories(app PRIVATE include)
@@ -26,18 +33,28 @@ target_sources(app PRIVATE
   src/test_anomaly.c
   src/test_classification.c
   src/test_regression.c
+  src/test_wakeword.c
+  src/test_person_det.c
+  src/test_okay_nordic.c
+  ${PERSON_DET_DIR}/postprocessing.c
 )
 
-# Baked-in models compile directly into the app. OTA-updatable models are linked from dedicated
-# static libraries instead (see model_ota_neuton_wire below).
+# Neuton sample models are partition-loaded when OTA is enabled; other models stay baked in.
 if(NOT CONFIG_MODEL_OTA_NEUTON)
-  target_sources(app PRIVATE ${MODEL_SOURCES})
+  target_sources(app PRIVATE ${NEUTON_MODEL_SOURCES})
 endif()
+
+target_sources(app PRIVATE ${BAKED_MODEL_SOURCES})
 
 target_include_directories(app PRIVATE
   ${ANOMALY_MODEL_DIR}
   ${CLASSIF_MODEL_DIR}
   ${REGRESS_MODEL_DIR}
+  ${WW_MODEL_DIR}
+  ${PERSON_DET_DIR}
+  ${PERSON_DET_DIR}/generated
+  ${OKAY_NORDIC_DIR}
+  ${OKAY_NORDIC_DIR}/generated
 )
 
 if(CONFIG_MODEL_OTA_NEUTON)
