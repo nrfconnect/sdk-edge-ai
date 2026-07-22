@@ -133,6 +133,14 @@ function(nrf_axon_model_stub)
 	dt_reg_addr(partition_addr PATH "${partition_path}")
 	dt_reg_size(partition_size PATH "${partition_path}")
 
+	# When the package is wrapped as an MCUboot image (--pad-header), imgtool prepends a
+	# 32-byte MCUboot header before model_pkg.bin. Link/package for that layout so
+	# package_base matches where the payload actually sits in slot2 after boot.
+	set(model_pkg_addr ${partition_addr})
+	if(CONFIG_BOOTLOADER_MCUBOOT)
+		math(EXPR model_pkg_addr "${partition_addr} + 32")
+	endif()
+
 	# GNU ld does not merge two independently-provided `-T scriptfile` SECTIONS commands the
 	# way one might expect (each unmarked SECTIONS command is meant to fully replace the
 	# default script, so passing two leaves the *second* one's - here, the PROVIDE()-only
@@ -186,11 +194,11 @@ function(nrf_axon_model_stub)
 		OUTPUT ${stub_elf}
 		COMMAND ${CMAKE_LINKER}
 			-T ${combined_ld}
-			--defsym=MODEL_STUB_ADDR=${partition_addr}
+			--defsym=MODEL_STUB_ADDR=${model_pkg_addr}
 			-o ${stub_elf}
 			${stub_obj}
 		DEPENDS ${stub_obj} ${combined_ld}
-		COMMENT "model_ota: linking ${ARG_TARGET} model stub at ${partition_addr}"
+		COMMENT "model_ota: linking ${ARG_TARGET} model stub at ${model_pkg_addr}"
 	)
 
 	# --- Step 3: package the model stub's ELF. Its bytes are already correctly addressed
@@ -201,7 +209,7 @@ function(nrf_axon_model_stub)
 		OUTPUT ${pkg_base}.bin ${pkg_base}.hex
 		COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_TOOLS_DIR}/package_model_axon.py
 			--elf ${stub_elf} --model-name ${ARG_MODEL_NAME} --version ${ARG_VERSION}
-			--address ${partition_addr} --partition-size ${partition_size}
+			--address ${model_pkg_addr} --partition-size ${partition_size}
 			-o ${pkg_base}
 		DEPENDS ${stub_elf} ${MODEL_OTA_TOOLS_DIR}/package_model_axon.py
 		COMMENT "model_ota: packaging ${ARG_TARGET} (${ARG_MODEL_NAME})"

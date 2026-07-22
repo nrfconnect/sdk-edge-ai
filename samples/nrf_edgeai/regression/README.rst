@@ -10,8 +10,8 @@ Regression sample
 The following sample demonstrates running a generated regression model to predict a continuous air quality value based on gas sensor and environmental data.
 
 By default, the model itself is not compiled into the application image: at boot (and periodically thereafter) the sample loads and validates a "model package" from a dedicated ``model_storage`` flash partition, and only then runs inference against it.
-Flashing a new model package to ``model_storage`` — independently of the application binary, and without mcuboot — is enough to change what the device predicts.
-See `Model-only OTA update`_ below, including how to opt out of it and restore the compiled-in-model behavior instead.
+Flashing a new model package to ``model_storage`` — independently of the application binary — is enough to change what the device predicts.
+The sample also runs MCUboot for signed dual-slot firmware and model updates. See `Model-only OTA update`_ and `MCUboot and DFU`_.
 
 Requirements
 ************
@@ -115,10 +115,70 @@ For each case, it prints a line similar to the following:
 Model-only OTA update
 ======================
 
-This sample does not use mcuboot, so its second application slot (``slot1_partition``) is unused on the boards it supports.
-The board overlays in :file:`samples/nrf_edgeai/regression/boards/` repurpose that space as a dedicated ``model_storage`` partition instead, sized to comfortably fit larger models too.
-At boot (and every 5 seconds thereafter), the sample reads and validates a small header-plus-payload "model package" from ``model_storage`` and wires it up for inference — see :ref:`lib_model_ota` for how the package format, host-side packaging tools, and on-device loading work.
-Flashing a new package to ``model_storage`` is enough to change what the device predicts, without rebuilding or reflashing the application.
+On nRF54LM20 DK, this sample uses MCUboot with two updateable images:
+
+* **Image 0 (firmware):** dual-slot swap-using-move over ``slot0_partition`` / ``slot1_partition`` (460 kB each).
+* **Image 1 (model):** dual-slot swap-using-move over ``slot2_partition`` (``model_storage``, live model) and ``slot3_partition`` (staging, 400 kB each).
+
+The shared devicetree layout lives in :file:`dts/nrf54lm20dk_mcuboot_model.dtsi` (included from both the application overlay and :file:`sysbuild/mcuboot/boards/`).
+
+At boot (and every 5 seconds thereafter), the sample reads and validates a header-plus-payload "model package" from ``model_storage`` (``slot2``) and wires it up for inference — see :ref:`lib_model_ota` for the package format, host-side packaging tools, and on-device loading work.
+Flashing a raw ``regression_model_pkg.hex`` to ``model_storage`` still works for direct provisioning; SMP uploads use a MCUboot-signed container and the loader skips the 32-byte MCUboot header automatically.
+
+MCUboot and DFU
+----------------
+
+Both assets follow the normal MCUboot + MCUmgr path: upload a signed image, then test/reset so MCUboot swaps on reboot.
+
+| Asset | Image index | Upload target | After reboot |
+|-------|-------------|---------------|--------------|
+| Firmware | 0 | ``slot1`` (secondary) | MCUboot swaps image 0 |
+| Model | 1 | ``slot3`` (secondary) | MCUboot swaps image 1; live model in ``model_storage`` |
+
+First-time provisioning must flash the **full sysbuild image chain**, not the application ``zephyr.hex`` alone.
+A normal ``west flash`` also programs the MCUboot-signed model image to ``model_storage`` (see :file:`sysbuild.cmake`).
+
+.. code-block:: console
+
+   west flash -d build --recover --no-rebuild
+
+Or with ``nrfutil`` using the build-generated merged image that includes bootloader, application, and model:
+
+.. code-block:: console
+
+   nrfutil device program --firmware build/regression_provision.hex --core Application \
+     --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
+
+If MCUboot reports ``magic=unset`` and ``Unable to find bootable image``, the bootloader or signed application slot was not programmed. Reflash with ``--recover`` (or full chip erase) using either command above, or reflash the merged bootloader/application image and model separately:
+
+.. code-block:: console
+
+   west flash -d build --recover --no-rebuild
+   west flash --hex-file build/regression/regression_model_mcuboot.signed.hex --no-rebuild
+
+Do **not** flash the raw ``regression_model_pkg.hex`` alone when MCUboot image 1 is enabled: ``model_storage`` (``slot2``) must contain a valid MCUboot header at boot. The build produces ``regression_model_mcuboot.signed.hex`` for that purpose; ``regression_model_pkg.hex`` remains useful for direct payload inspection and matches the bytes inside the signed image body.
+
+The build produces two signed model artifacts:
+
+* ``regression_model_mcuboot.signed.hex`` — first-time flash to ``model_storage`` (imgtool ``--confirm``).
+* ``regression_model_mcuboot.signed.bin`` — SMP OTA upload to image 1 (no ``--confirm``; use ``image test`` / ``image confirm`` after reset).
+
+Model OTA over SMP (UART)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Close any serial monitor on the application UART port, then:
+
+.. code-block:: console
+
+   mcumgr -c acm1 image upload -e -n 1 build/regression/regression_model_mcuboot.signed.bin
+   mcumgr -c acm1 image list
+   mcumgr -c acm1 image test <model_hash>
+   mcumgr -c acm1 reset
+   mcumgr -c acm1 image confirm <model_hash>
+
+Firmware-only OTA uses image index 0 (omit ``-n 1``) and ``build/regression/zephyr/zephyr.signed.bin``. Each image can be updated independently.
+
+``image confirm`` for the model (image 1) requires :kconfig:option:`CONFIG_MCUMGR_GRP_IMG_ALLOW_CONFIRM_NON_ACTIVE_IMAGE_ANY` in ``prj.conf``: the application runs on image 0, and MCUmgr otherwise rejects confirming the primary slot of a non-active image (``Error: 1`` / confirmation denied).
 
 Making model OTA optional
 --------------------------

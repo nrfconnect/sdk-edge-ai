@@ -1,0 +1,87 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * Shared MCUboot + model_storage layout for nRF54LM20 DK (internal RRAM).
+ *
+ * Image 0: dual-slot firmware (swap-using-move, equal 460 kB slots).
+ * Image 1: dual-slot model (swap-using-move, equal 400 kB slots).
+ *   slot2 / model_storage = live model (primary).
+ *   slot3 = SMP upload staging (secondary); MCUboot swaps on reboot.
+ *
+ * Use the same fragment in the application overlay and sysbuild/mcuboot overlay.
+ */
+
+/delete-node/ &boot_partition;
+/delete-node/ &slot0_partition;
+/delete-node/ &slot1_partition;
+/delete-node/ &storage_partition;
+
+&cpuapp_rram {
+	partitions {
+		boot_partition: partition@0 {
+			compatible = "zephyr,mapped-partition";
+			label = "mcuboot";
+			reg = <0x0 DT_SIZE_K(68)>;
+		};
+
+		/* Image 0: firmware - equal sizes required for swap-using-move */
+		slot0_partition: partition@11000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-0";
+			reg = <0x11000 DT_SIZE_K(460)>;
+		};
+		slot1_partition: partition@84000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-1";
+			reg = <0x84000 DT_SIZE_K(460)>;
+		};
+
+		/* Image 1: model - equal sizes required for swap-using-move */
+		slot2_partition: model_partition: partition@f7000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_storage";
+			reg = <0xf7000 DT_SIZE_K(400)>;
+		};
+		slot3_partition: partition@15b000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-3";
+			reg = <0x15b000 DT_SIZE_K(400)>;
+		};
+
+		storage_partition: partition@1bf000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x1bf000 DT_SIZE_K(64)>;
+		};
+	};
+};
+
+/ {
+	bootchain {
+		b0_mcuboot {
+			compatible = "nordic,mcuboot";
+			uuid-vid-required;
+			uuid-cid-required;
+			partitions = <&boot_partition>;
+
+			images {
+				application {
+					compatible = "nordic,mcuboot-image";
+					image-index = <0>;
+					uuid-vid = "nordicsemi.com", "nordicsemi.com";
+					uuid-cid = "nRF54LM20_regression_app", "nRF54LM20_regression_app";
+					partitions = <&slot0_partition &slot1_partition>;
+				};
+				model_image {
+					compatible = "nordic,mcuboot-image";
+					image-index = <1>;
+					uuid-vid = "nordicsemi.com", "nordicsemi.com";
+					uuid-cid = "nRF54LM20_regression_model", "nRF54LM20_regression_model";
+					partitions = <&slot2_partition &slot3_partition>;
+				};
+			};
+		};
+	};
+};

@@ -31,6 +31,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <zephyr/storage/flash_map.h>
+
 #include <nrf_edgeai/rt/nrf_edgeai_model_types.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
 
@@ -189,6 +191,14 @@ enum model_pkg_result {
 int model_pkg_load_neuton(uint8_t fa_id, const uint8_t *partition_addr,
 			   nrf_edgeai_model_neuton_t *out_model, void *neurons_buf,
 			   size_t neurons_buf_cap, struct model_pkg_neuton_info *out_info);
+
+/**
+ * @brief Byte offset from the start of a model_storage partition to the model package.
+ *
+ * Returns 32 when the partition starts with a MCUboot image header (SMP upload to MCUboot
+ * image 1), or 0 for a raw model_pkg flashed at offset 0.
+ */
+size_t model_pkg_partition_content_offset(const struct flash_area *fa);
 
 /**
  * On-flash Axon model package header.

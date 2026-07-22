@@ -4,8 +4,10 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include "../dts/nrf54lm20dk_mcuboot_model.dtsi"
+#include "../../../dts/nrf54lm20dk_mcuboot_model.dtsi"
 
-&axon {
-	status = "okay";
+/ {
+	chosen {
+		zephyr,code-partition = &boot_partition;
+	};
 };

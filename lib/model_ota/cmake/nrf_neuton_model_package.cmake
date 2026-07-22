@@ -46,13 +46,20 @@ function(nrf_neuton_model_package)
 	dt_reg_addr(partition_addr PATH "${partition_path}")
 	dt_reg_size(partition_size PATH "${partition_path}")
 
+	# Match Axon: when MCUboot wraps the package (--pad-header), payload sits 32 B
+	# after partition start. Used for .hex base address when provisioning directly.
+	set(model_pkg_addr ${partition_addr})
+	if(CONFIG_BOOTLOADER_MCUBOOT)
+		math(EXPR model_pkg_addr "${partition_addr} + 32")
+	endif()
+
 	set(pkg_base ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}_model_pkg)
 
 	add_custom_command(
 		OUTPUT ${pkg_base}.bin ${pkg_base}.hex
 		COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_TOOLS_DIR}/package_model_neuton.py
 			${ARG_MODEL_C} --name ${ARG_MODEL_NAME} --version ${ARG_VERSION}
-			--address ${partition_addr} --partition-size ${partition_size}
+			--address ${model_pkg_addr} --partition-size ${partition_size}
 			-o ${pkg_base}
 		DEPENDS ${ARG_MODEL_C} ${MODEL_OTA_TOOLS_DIR}/package_model_neuton.py
 		COMMENT "model_ota: packaging ${ARG_TARGET} (${ARG_MODEL_NAME}, Neuton)"

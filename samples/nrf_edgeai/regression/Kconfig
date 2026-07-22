@@ -46,6 +46,18 @@ config NRF_EDGEAI_REGRESSION_MODEL_OTA
 	  application image, and the 29 test cases are validated once at boot (asserting on the
 	  expected accuracy) instead of being reloaded periodically from flash.
 
+config NRF_EDGEAI_REGRESSION_MCUBOOT
+	bool "MCUboot dual-slot FW + model DFU (nRF54LM20)"
+	default y
+	depends on NRF_EDGEAI_REGRESSION_MODEL_OTA
+	depends on SOC_NRF54LM20A || SOC_NRF54LM20B
+	select BOOTLOADER_MCUBOOT
+	help
+	  Enables MCUboot with two updateable images: image 0 for signed firmware
+	  (dual-slot swap-using-move) and image 1 for the model (slot2/model_storage
+	  primary, slot3 staging). SMP uploads to image 1 are applied by MCUboot on
+	  reboot; raw model packages can still be flashed directly to model_storage.
+
 endmenu
 
 source "Kconfig.zephyr"

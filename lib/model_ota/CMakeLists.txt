@@ -8,3 +8,4 @@ zephyr_library()
 
 zephyr_library_sources_ifdef(CONFIG_MODEL_OTA_NEUTON model_pkg_neuton.c)
 zephyr_library_sources_ifdef(CONFIG_MODEL_OTA_AXON model_pkg_axon.c)
+zephyr_library_sources_ifdef(CONFIG_MODEL_OTA model_pkg_flash_offset.c)

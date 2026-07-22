@@ -37,6 +37,7 @@ int model_pkg_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 {
 	const struct flash_area *fa;
 	struct model_pkg_axon_header hdr;
+	size_t content_offset;
 	int rc;
 
 	rc = flash_area_open(fa_id, &fa);
@@ -45,7 +46,9 @@ int model_pkg_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 		return MODEL_PKG_ERR_NO_PARTITION;
 	}
 
-	rc = flash_area_read(fa, 0, &hdr, sizeof(hdr));
+	content_offset = model_pkg_partition_content_offset(fa);
+
+	rc = flash_area_read(fa, content_offset, &hdr, sizeof(hdr));
 	if (rc != 0) {
 		flash_area_close(fa);
 		LOG_ERR("Flash read of package header failed (err %d)", rc);
@@ -86,10 +89,11 @@ int model_pkg_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 			hdr.struct_offset, hdr.struct_size, hdr.payload_size);
 		return MODEL_PKG_ERR_BAD_SECTION_LEN;
 	}
-	if (hdr.payload_size > fa->fa_size - sizeof(hdr)) {
+	if (hdr.payload_size > fa->fa_size - content_offset - sizeof(hdr)) {
 		flash_area_close(fa);
 		LOG_ERR("Package payload (%u B) exceeds model_storage capacity (%u B)",
-			hdr.payload_size, (unsigned)(fa->fa_size - sizeof(hdr)));
+			hdr.payload_size,
+			(unsigned)(fa->fa_size - content_offset - sizeof(hdr)));
 		return MODEL_PKG_ERR_TOO_LARGE;
 	}
 
@@ -98,7 +102,7 @@ int model_pkg_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 	 */
 	flash_area_close(fa);
 
-	const uint8_t *payload_ptr = partition_addr + sizeof(hdr);
+	const uint8_t *payload_ptr = partition_addr + content_offset + sizeof(hdr);
 	const uint8_t *struct_ptr = payload_ptr + hdr.struct_offset;
 
 	/*
