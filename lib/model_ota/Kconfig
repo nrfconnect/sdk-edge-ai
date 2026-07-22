@@ -25,7 +25,7 @@ config MODEL_OTA_NEUTON
 	help
 	  Builds model_image_neuton.c and model_image_load_neuton(). OTA-wired models are compiled
 	  via model_ota_neuton_wire(), which sets the per-model CMake macros MODEL_OTA_NEUTON_WIRED
-	  and MODEL_OTA_NEUTON_MAX_NEURONS (see include/model_ota/model_ota_neuton_model.h) and
+	  and MODEL_OTA_NEUTON_MAX_NEURONS (set per model by model_ota_neuton_wire()) and
 	  drops each wired model's payload from its static library by archive-scoped linker
 	  /DISCARD/ rules. Non-OTA models compiled into the app are unaffected.
 	  See lib/model_ota/cmake/model_ota_neuton_image.cmake,

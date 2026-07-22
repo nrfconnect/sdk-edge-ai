@@ -6,7 +6,7 @@
 
 /* When MODEL_OTA_NEUTON_WIRED is set by model_ota_neuton_app_stub.c, payload arrays below are
  * dropped from the OTA static library by archive-scoped linker /DISCARD/ rules; the model is
- * loaded at runtime from a partition image. See include/model_ota/model_ota_neuton_model.h.
+ * loaded at runtime from a partition image. See lib/model_ota/cmake/model_ota_neuton.cmake.
  */
 
 //////////////////////////////////////////////////////////////////////////////
