@@ -29,7 +29,7 @@ sample with the OTA overlay produces a standalone `<name>_model_partition.hex` (
 `<name>_model_image.bin` per model under the build dir:
 
 ```bash
-cd edge-ai/samples/nrf_edgeai/multi_model
+cd edge-ai/samples/multi_model
 nrfutil toolchain-manager launch --ncs-version v3.4.0 -- \
   west build -p always -b nrf54lm20dk/nrf54lm20b/cpuapp -d build . \
   -- -DEXTRA_CONF_FILE=overlay-ota.conf
