@@ -504,19 +504,16 @@ nrf_edgeai_t *nrf_edgeai_user_model_90449(void)
  */
 nrf_edgeai_t *nrf_edgeai_load_user_model_90449(uint8_t fa_id, const uint8_t *partition_addr)
 {
-	struct model_image_neuton_info info;
 	const struct model_image_neuton_expect expect = {
 		.task = MODEL_TASK,
 		.params_type = MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),
 		.outputs_cap = MODEL_OUTPUTS_NUM,
 	};
 
-	if (model_image_load_neuton(fa_id, partition_addr, &model_instance_, model_neurons_,
-				    ARRAY_SIZE(model_neurons_), &expect, &info) != MODEL_IMAGE_OK) {
+	if (model_image_load_neuton(fa_id, partition_addr, &nrf_edgeai_, model_neurons_,
+				    ARRAY_SIZE(model_neurons_), &expect) != MODEL_IMAGE_OK) {
 		return NULL;
 	}
-
-	nrf_edgeai_.decoded_output.classif = info.decoded_output->classif;
 
 	return &nrf_edgeai_;
 }

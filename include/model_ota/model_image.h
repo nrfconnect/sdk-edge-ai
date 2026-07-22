@@ -45,6 +45,7 @@
 
 #include <nrf_edgeai/rt/nrf_edgeai_model_types.h>
 #include <nrf_edgeai/rt/nrf_edgeai_output_types.h>
+#include <nrf_edgeai/rt/nrf_edgeai_types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,16 +117,6 @@ struct model_image_header {
 /** Byte offset of @ref model_image_header.crc32; used by the host CRC patcher. */
 #define MODEL_IMAGE_CRC32_OFFSET 12
 
-/** Human-readable metadata plus a pointer to the flash-resident baked decode-output init. */
-struct model_image_neuton_info {
-	char name[MODEL_IMAGE_NAME_LEN + 1];
-	uint32_t version;
-	uint16_t neurons_num;
-	uint16_t outputs_num;
-	uint32_t weights_num;
-	const nrf_edgeai_decoded_output_t *decoded_output;
-};
-
 /** Return codes for @ref model_image_load_neuton. */
 enum model_image_result {
 	MODEL_IMAGE_OK = 0,
@@ -161,31 +152,27 @@ struct model_image_neuton_expect {
 };
 
 /**
- * @brief Validate a linked Neuton model partition image and return its baked descriptor,
- * wiring the caller-owned neuron buffer into it.
+ * @brief Validate a linked Neuton model partition image and wire it into a runtime context.
  *
  * The partition is assumed to be memory-mapped (XIP): @p partition_addr is dereferenced
- * directly, no payload is copied to RAM. On success the fully-wired descriptor is written to
- * @p out_model - every flash pointer copied verbatim from the image (already absolute), and
- * only p_neurons overwritten to point at @p neurons_buf. @p out_model is untouched on failure.
+ * directly, no payload is copied to RAM. On success the baked descriptor is written into
+ * @p edgeai's model instance (via @c edgeai->model.instance), with only @c p_neurons patched
+ * to @p neurons_buf, and the image's baked @c NN_DECODED_OUTPUT_INIT is copied into
+ * @p edgeai->decoded_output. @p edgeai is untouched on failure.
  *
  * @param[in]  fa_id           Flash area ID of the partition, e.g. FIXED_PARTITION_ID(x).
  * @param[in]  partition_addr  Memory-mapped base address of that same partition.
- * @param[out] out_model       Descriptor to populate (a caller-owned, writable copy).
- * @param[out] neurons_buf     Caller-owned RAM scratch for neuron activations; out_model's
- *                             p_neurons is set to this. Element type must match the image's
- *                             precision (float/int16_t/uint8_t for f32/q16/q8).
+ * @param[out] edgeai          Runtime context to wire; @c model.instance must already point at
+ *                             the caller-owned writable @ref nrf_edgeai_model_neuton_t.
+ * @param[out] neurons_buf     Caller-owned RAM scratch for neuron activations.
  * @param[in]  neurons_buf_cap Capacity of neurons_buf, in elements (not bytes).
  * @param[in]  expect          Optional app-side expectations (task / precision / output
  *                             capacity) checked before the image is accepted; NULL to skip them.
- * @param[out] out_info        Optional; filled with image metadata on success.
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
-int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr,
-			    nrf_edgeai_model_neuton_t *out_model, void *neurons_buf,
-			    size_t neurons_buf_cap,
-			    const struct model_image_neuton_expect *expect,
-			    struct model_image_neuton_info *out_info);
+int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_edgeai_t *edgeai,
+			    void *neurons_buf, size_t neurons_buf_cap,
+			    const struct model_image_neuton_expect *expect);
 
 #ifdef __cplusplus
 }

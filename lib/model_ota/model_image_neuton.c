@@ -46,14 +46,14 @@ static bool span_in_image(const void *p, size_t nbytes, const uint8_t *base, con
 	return s != NULL && s >= base && (s + nbytes) >= s && (s + nbytes) <= end;
 }
 
-int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr,
-			    nrf_edgeai_model_neuton_t *out_model, void *neurons_buf,
-			    size_t neurons_buf_cap,
-			    const struct model_image_neuton_expect *expect,
-			    struct model_image_neuton_info *out_info)
+int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_edgeai_t *edgeai,
+			    void *neurons_buf, size_t neurons_buf_cap,
+			    const struct model_image_neuton_expect *expect)
 {
 	const struct flash_area *fa;
 	struct model_image_header hdr;
+	nrf_edgeai_model_neuton_t *out_model =
+		(nrf_edgeai_model_neuton_t *)edgeai->model.instance.p_void;
 	int rc;
 
 	rc = flash_area_open(fa_id, &fa);
@@ -250,14 +250,19 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr,
 
 	memcpy(out_model, &built, sizeof(built));
 
-	if (out_info != NULL) {
-		memset(out_info->name, 0, sizeof(out_info->name));
-		memcpy(out_info->name, hdr.name, MODEL_IMAGE_NAME_LEN);
-		out_info->version = hdr.model_version;
-		out_info->neurons_num = neurons_num;
-		out_info->outputs_num = img_model->meta.outputs_num;
-		out_info->weights_num = img_model->meta.weights_num;
-		out_info->decoded_output = hdr.decoded_output;
+	switch (hdr.task) {
+	case NRF_EDGEAI_TASK_ANOMALY_DETECTION:
+		edgeai->decoded_output.anomaly = img_decoded->anomaly;
+		break;
+	case NRF_EDGEAI_TASK_REGRESSION:
+		edgeai->decoded_output.regression = img_decoded->regression;
+		break;
+	case NRF_EDGEAI_TASK_MULT_CLASS:
+	case NRF_EDGEAI_TASK_BIN_CLASS:
+		edgeai->decoded_output.classif = img_decoded->classif;
+		break;
+	default:
+		break;
 	}
 
 	LOG_INF("Loaded Neuton model image '%.*s' v0x%08x (%u neurons, %u weights, %u outputs)",
