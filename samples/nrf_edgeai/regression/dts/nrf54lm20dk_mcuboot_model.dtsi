@@ -30,30 +30,27 @@
 		slot0_partition: partition@11000 {
 			compatible = "zephyr,mapped-partition";
 			label = "image-0";
-			reg = <0x11000 DT_SIZE_K(460)>;
+			reg = <0x11000 DT_SIZE_K(684)>;
 		};
-		slot1_partition: partition@84000 {
+		slot1_partition: partition@bc000 {
 			compatible = "zephyr,mapped-partition";
 			label = "image-1";
-			reg = <0x84000 DT_SIZE_K(460)>;
+			reg = <0xbc000 DT_SIZE_K(684)>;
 		};
 
-		/* Image 1: model - equal sizes required for swap-using-move */
-		slot2_partition: model_partition: partition@f7000 {
+		/* Image 1: model - single memory area labeled as 2 different partitions
+		   to allow single slot image DFU while having double slot application DFU
+		 */
+		slot2_partition: slot3_partition: model_partition: partition@167000 {
 			compatible = "zephyr,mapped-partition";
 			label = "model_storage";
-			reg = <0xf7000 DT_SIZE_K(400)>;
-		};
-		slot3_partition: partition@15b000 {
-			compatible = "zephyr,mapped-partition";
-			label = "image-3";
-			reg = <0x15b000 DT_SIZE_K(400)>;
+			reg = <0x167000 DT_SIZE_K(340)>;
 		};
 
-		storage_partition: partition@1bf000 {
+		storage_partition: partition@1bd000 {
 			compatible = "zephyr,mapped-partition";
 			label = "storage";
-			reg = <0x1bf000 DT_SIZE_K(64)>;
+			reg = <0x1bd000 DT_SIZE_K(64)>;
 		};
 	};
 };
