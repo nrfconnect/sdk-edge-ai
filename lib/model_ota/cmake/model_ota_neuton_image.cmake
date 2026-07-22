@@ -72,11 +72,16 @@ function(model_ota_neuton_image)
 
   get_filename_component(model_dir ${MI_MODEL_SRC} DIRECTORY)
 
-  set(stub_c   ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_image_stub.c)
-  set(image_elf ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_image.elf)
-  set(image_bin_raw ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_image_raw.bin)
-  set(image_bin ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_image.bin)
-  set(image_hex ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_partition.hex)
+  # Intermediates (stub, ELF, raw bin) live under <target>/; only the flashable
+  # .bin and addressed .hex are emitted at the build directory root.
+  set(work_dir ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET})
+  file(MAKE_DIRECTORY ${work_dir})
+
+  set(stub_c        ${work_dir}/${MI_TARGET}_model_image_stub.c)
+  set(image_elf     ${work_dir}/${MI_TARGET}_model_image.elf)
+  set(image_bin_raw ${work_dir}/${MI_TARGET}_model_image_raw.bin)
+  set(image_bin     ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_image.bin)
+  set(image_hex     ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_partition.hex)
 
   set(stub_body ${MODEL_OTA_ROOT}/src/model_image_stub_body.h)
   set(linker_script ${MODEL_OTA_ROOT}/linker/model_image_neuton.ld)
@@ -138,7 +143,8 @@ function(model_ota_neuton_image)
     COMMAND_EXPAND_LISTS
     VERBATIM)
 
-  # Standalone, independently-flashable per-model artifacts (<TARGET>_model_image.bin /
-  # <TARGET>_model_partition.hex under the build dir). Not folded into zephyr.hex.
+  # Standalone, independently-flashable per-model artifacts at the build dir root:
+  #   <TARGET>_model_image.bin, <TARGET>_model_partition.hex
+  # Intermediates remain under <TARGET>/.
   add_custom_target(${MI_TARGET}_model_image ALL DEPENDS ${image_bin} ${image_hex})
 endfunction()
