@@ -5,11 +5,12 @@
 #include <nrf_edgeai/nrf_edgeai_platform.h>
 
 #if defined(CONFIG_MODEL_OTA_NEUTON)
-/* Model-only OTA: payload arrays below stay compiled but are dropped from the application image
- * by a linker /DISCARD/ fragment; the model is loaded at runtime from a linked partition image
- * (direct model pointer in the partition header). Only the static initializers that would hold
- * compile-time pointers into those (discarded) arrays, and the load accessor, are guarded - the
- * arrays themselves are left untouched.
+/* Model-only OTA: payload arrays below stay compiled but are dropped from the OTA model's
+ * static library by archive-scoped linker /DISCARD/ rules (model_ota_neuton.cmake); the model
+ * is loaded at runtime from a linked partition image (direct model pointer in the partition
+ * header). Only the static initializers that would hold compile-time pointers into those
+ * (discarded) arrays, and the load accessor, are guarded - the arrays themselves are left
+ * untouched.
  */
 #include <model_ota/model_image.h>
 #include <zephyr/sys/util.h>

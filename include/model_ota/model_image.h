@@ -34,8 +34,9 @@
  * model_neurons_ from zephyr.elf, pure Axon style) cannot disambiguate the three identical
  * file-static `model_neurons_` symbols the multi_model sample compiles.
  *
- * The app image still drops its own copy of the model payload via the linker /DISCARD/ fragment
- * (model_ota_neuton.cmake), so the payload lives only in the partition image.
+ * Each OTA-wired model's payload is dropped from its dedicated static library via archive-scoped
+ * linker /DISCARD/ rules (model_ota_neuton.cmake), so the payload lives only in the partition
+ * image. Models compiled directly into the app are unaffected.
  */
 
 #include <stdint.h>

@@ -3,89 +3,110 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-# CMake helper for the Neuton model-only OTA PoC: app-image payload discard.
+# CMake helper for the Neuton model-only OTA PoC: per-model static library + payload discard.
 #
-# model_ota_neuton_wire(SOLUTION_ID <id> MODEL_SRC <abs-path-to-nrf_edgeai_user_model.c>)
+# model_ota_neuton_wire(SOLUTION_ID <id> MODEL_SRC <abs-path-to-nrf_edgeai_user_model.c>
+#                       [LIB_NAME <static-lib-target>])
 #
-# does two things for a generated Neuton model translation unit whose compiled-in payload
-# should be OTA-updatable rather than baked into the application image:
+# For each OTA-updatable model:
 #
-#   1. Compiles that translation unit with -ffunction-sections -fdata-sections so each
-#      file-static payload array lands in its own input section (.rodata.MODEL_WEIGHTS,
-#      .rodata.MODEL_NEURONS_LINKS, ...). Zephyr already enables these flags globally, so this
-#      is belt-and-suspenders: it keeps the mechanism working even if that default ever
-#      changes, and documents intent at the call site.
+#   1. Builds a dedicated static library (default target ota_neuton_<SOLUTION_ID>) containing
+#      only that model's generated nrf_edgeai_user_model.c, and links it into the app. Models
+#      that stay compiled into the app target directly are unaffected and keep their payload
+#      in flash (non-updatable / baked-in models).
 #
-#   2. Generates a linker /DISCARD/ fragment that drops those payload input sections from the
-#      final app link *by section name* (never by #if-ing the arrays out of the source), and
-#      registers it with zephyr_linker_sources(ROM_SECTIONS ...). ROM_SECTIONS places the
-#      fragment right before the generic rodata collector (*(.rodata.*)) in the Zephyr linker
-#      script, so GNU ld's first-match rule assigns the payload sections to /DISCARD/ instead
-#      of to the image. If any of these sections were still referenced (e.g. a mis-guarded
-#      static initializer), the link would fail loudly ("referenced in section ... discarded"),
-#      which is the intended safety net.
+#   2. Compiles the library with -ffunction-sections -fdata-sections so each file-static payload
+#      array lands in its own input section (.rodata.MODEL_WEIGHTS, ...).
 #
-# The discard is intentionally global: it matches .rodata.MODEL_* from every translation unit
-# in the image. CONFIG_MODEL_OTA_NEUTON is a whole-application switch, so when it is on *all*
-# generated Neuton model sources take the OTA path and their payloads are meant to be dropped
-# together (this is what lets the multi_model sample coexist without static-symbol collisions).
-# SOLUTION_ID / MODEL_SRC are recorded in the generated fragment for traceability.
+#   3. Appends archive-scoped /DISCARD/ rules for *that* library only:
+#        *libota_neuton_<id>.a:*(.rodata.MODEL_WEIGHTS)
+#      GNU ld's archive+section selector drops payload rodata from wired models individually,
+#      without touching identically named sections in other archives or in libapp.a.
+#
+# The model source itself is not edited: the same arrays compile in both the app-side library
+# (OTA path, payload discarded) and the partition-image stub (CONFIG_MODEL_OTA_NEUTON undefined,
+# payload kept for the linked image).
 
-function(model_ota_neuton_wire)
-  cmake_parse_arguments(MO "" "SOLUTION_ID;MODEL_SRC" "" ${ARGN})
+include_guard(GLOBAL)
 
-  if(NOT MO_MODEL_SRC)
-    message(FATAL_ERROR "model_ota_neuton_wire: MODEL_SRC is required")
-  endif()
+set(MODEL_OTA_NEUTON_PAYLOAD_SECTIONS
+    .rodata.MODEL_WEIGHTS
+    .rodata.MODEL_NEURON_ACTIVATION_WEIGHTS
+    .rodata.MODEL_NEURON_ACTIVATION_TYPE_MASK
+    .rodata.MODEL_NEURONS_LINKS
+    .rodata.MODEL_NEURON_INTERNAL_LINKS_NUM
+    .rodata.MODEL_NEURON_EXTERNAL_LINKS_NUM
+    .rodata.MODEL_OUTPUT_NEURONS_INDICES
+    .rodata.MODEL_OUTPUT_SCALE_MIN
+    .rodata.MODEL_OUTPUT_SCALE_MAX
+    .rodata.MODEL_AVERAGE_EMBEDDING
+)
 
-  # 1. Per-source compile options (idempotent).
-  set_property(SOURCE ${MO_MODEL_SRC} APPEND PROPERTY COMPILE_OPTIONS
-               -ffunction-sections -fdata-sections)
-
-  # Accumulate a human-readable record of every model wired for OTA, for the fragment comment.
-  set_property(GLOBAL APPEND PROPERTY model_ota_neuton_wired
-               "solution ${MO_SOLUTION_ID} <- ${MO_MODEL_SRC}")
-
-  # 2. (Re)generate the discard fragment. The payload sections are exactly the model's raw
-  # arrays that the on-device loader supplies from the flash partition image instead (they live
-  # in the linked image, see lib/model_ota/src/model_image_stub_body.h). Names are the
-  # file-static array names, which -fdata-sections turns into .rodata.<name> sections. Rewritten
-  # on every call so
-  # the traceability comment lists every OTA-wired model; the fragment content itself is fixed
-  # (a global, drop-by-section-name discard).
+function(model_ota_neuton_regenerate_discard_fragment)
   set(frag "${CMAKE_CURRENT_BINARY_DIR}/model_ota_neuton_discard.ld")
 
   get_property(wired GLOBAL PROPERTY model_ota_neuton_wired)
   string(REPLACE ";" "\n *   " wired_comment "${wired}")
 
+  get_property(discard_lines GLOBAL PROPERTY model_ota_neuton_discard_lines)
+  string(REPLACE ";" "\n" discard_body "${discard_lines}")
+
   file(WRITE ${frag}
 "/* Auto-generated by model_ota_neuton_wire(); do not edit.
- * Drops the compiled-in Neuton model payload arrays from the application image so they can be
- * updated over-the-air from a flash partition instead. Placed via ROM_SECTIONS (before the
- * generic rodata collector) so GNU ld's first-match rule routes them here.
+ * Drops payload rodata from each OTA-wired model static library only (archive-scoped rules).
+ * Placed via ROM_SECTIONS (before the generic rodata collector) so GNU ld's first-match rule
+ * routes matching sections here. Non-wired models compiled into the app keep their payload.
  * OTA-wired model(s):
  *   ${wired_comment}
  */
 /DISCARD/ :
 {
-	*(.rodata.MODEL_WEIGHTS)
-	*(.rodata.MODEL_NEURON_ACTIVATION_WEIGHTS)
-	*(.rodata.MODEL_NEURON_ACTIVATION_TYPE_MASK)
-	*(.rodata.MODEL_NEURONS_LINKS)
-	*(.rodata.MODEL_NEURON_INTERNAL_LINKS_NUM)
-	*(.rodata.MODEL_NEURON_EXTERNAL_LINKS_NUM)
-	*(.rodata.MODEL_OUTPUT_NEURONS_INDICES)
-	*(.rodata.MODEL_OUTPUT_SCALE_MIN)
-	*(.rodata.MODEL_OUTPUT_SCALE_MAX)
-	*(.rodata.MODEL_AVERAGE_EMBEDDING)
+${discard_body}
 }
 ")
 
-  # Register the fragment with the linker exactly once (the file content above is rewritten on
-  # every call, but it only needs to be #included into the linker script a single time).
   get_property(registered GLOBAL PROPERTY model_ota_neuton_discard_registered)
   if(NOT registered)
     set_property(GLOBAL PROPERTY model_ota_neuton_discard_registered TRUE)
     zephyr_linker_sources(ROM_SECTIONS ${frag})
   endif()
+endfunction()
+
+function(model_ota_neuton_wire)
+  cmake_parse_arguments(MO "" "SOLUTION_ID;MODEL_SRC;LIB_NAME" "" ${ARGN})
+
+  if(NOT MO_MODEL_SRC)
+    message(FATAL_ERROR "model_ota_neuton_wire: MODEL_SRC is required")
+  endif()
+  if(NOT MO_SOLUTION_ID)
+    message(FATAL_ERROR "model_ota_neuton_wire: SOLUTION_ID is required")
+  endif()
+  if(NOT MO_LIB_NAME)
+    set(MO_LIB_NAME ota_neuton_${MO_SOLUTION_ID})
+  endif()
+
+  get_filename_component(model_dir ${MO_MODEL_SRC} DIRECTORY)
+
+  if(TARGET ${MO_LIB_NAME})
+    message(FATAL_ERROR "model_ota_neuton_wire: duplicate LIB_NAME/target ${MO_LIB_NAME}")
+  endif()
+
+  add_library(${MO_LIB_NAME} STATIC ${MO_MODEL_SRC})
+  target_link_libraries(${MO_LIB_NAME} PRIVATE zephyr_interface zephyr_generated_headers)
+  target_include_directories(${MO_LIB_NAME} PRIVATE
+                             ${model_dir}
+                             $<TARGET_PROPERTY:app,INCLUDE_DIRECTORIES>)
+  target_compile_options(${MO_LIB_NAME} PRIVATE -ffunction-sections -fdata-sections)
+  target_link_libraries(app PRIVATE ${MO_LIB_NAME})
+
+  set(archive_glob "*lib${MO_LIB_NAME}.a")
+  foreach(section ${MODEL_OTA_NEUTON_PAYLOAD_SECTIONS})
+    set_property(GLOBAL APPEND PROPERTY model_ota_neuton_discard_lines
+                 "\t${archive_glob}:*(${section})")
+  endforeach()
+
+  set_property(GLOBAL APPEND PROPERTY model_ota_neuton_wired
+               "solution ${MO_SOLUTION_ID} (${MO_LIB_NAME}) <- ${MO_MODEL_SRC}")
+
+  model_ota_neuton_regenerate_discard_fragment()
 endfunction()

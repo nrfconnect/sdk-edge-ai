@@ -13,17 +13,26 @@ set(ANOMALY_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../anomaly/src/nrf_edgeai_genera
 set(CLASSIF_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../classification/src/nrf_edgeai_generated/Neuton)
 set(REGRESS_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../regression/src/nrf_edgeai_generated/Neuton)
 
-target_include_directories(app PRIVATE include)
-
-target_sources(app PRIVATE
+set(MODEL_SOURCES
   ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c
   ${CLASSIF_MODEL_DIR}/nrf_edgeai_user_model.c
   ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c
+)
+
+target_include_directories(app PRIVATE include)
+
+target_sources(app PRIVATE
   src/main.c
   src/test_anomaly.c
   src/test_classification.c
   src/test_regression.c
 )
+
+# Baked-in models compile directly into the app. OTA-updatable models are linked from dedicated
+# static libraries instead (see model_ota_neuton_wire below).
+if(NOT CONFIG_MODEL_OTA_NEUTON)
+  target_sources(app PRIVATE ${MODEL_SOURCES})
+endif()
 
 target_include_directories(app PRIVATE
   ${ANOMALY_MODEL_DIR}
@@ -31,10 +40,6 @@ target_include_directories(app PRIVATE
   ${REGRESS_MODEL_DIR}
 )
 
-# Model-only OTA: when enabled, drop each model's compiled-in payload arrays from the app image
-# (by linker section discard, not by #if) so they can be updated from flash partitions
-# independently of the app. Because all three model.c files share identical file-static symbol
-# names, this doubles as the proof that the discard is section-based and collision-free.
 if(CONFIG_MODEL_OTA_NEUTON)
   include(${CMAKE_CURRENT_LIST_DIR}/../../../lib/model_ota/cmake/model_ota_neuton.cmake)
   model_ota_neuton_wire(SOLUTION_ID 90360 MODEL_SRC ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c)
@@ -43,13 +48,12 @@ if(CONFIG_MODEL_OTA_NEUTON)
 
   # Build each model as a self-contained, linked partition IMAGE (Axon-style), placed at its
   # model_storage partition base. The partition header holds a DIRECT pointer to the baked
-  # nrf_edgeai_model_neuton_t; the app loads it via model_image_load_neuton(), patching only
-  # p_neurons. Partition nodelabels come from boards/*.overlay.
+  # nrf_edgeai_model_neuton_t; the app loads it via model_image_load_neuton(). Partition
+  # nodelabels come from boards/*.overlay.
   #
   # Each model image is a SEPARATE, independently-flashable artifact
   # (<name>_model_partition.hex + <name>_model_image.bin under the build dir). They are NOT
-  # merged into zephyr.hex: the app and each model partition are flashed/updated on their own,
-  # which is the whole point of model-only OTA.
+  # merged into zephyr.hex: the app and each model partition are flashed/updated on their own.
   include(${CMAKE_CURRENT_LIST_DIR}/../../../lib/model_ota/cmake/model_ota_neuton_image.cmake)
   model_ota_neuton_image(TARGET gear_anomaly NAME gear_anomaly VERSION 1.0.0
                          PARTITION_NODELABEL model_anomaly_storage
