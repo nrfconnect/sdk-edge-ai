@@ -1,0 +1,40 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+/*
+ * Model-only OTA: repurpose the unused (no-MCUboot) slot1_partition region as three dedicated
+ * "model_storage"-style partitions, one per Neuton model, so each model image can be flashed and
+ * updated independently of the application image. Only meaningful with
+ * -DEXTRA_CONF_FILE=overlay-ota.conf; harmless (just reserved, unused flash) otherwise.
+ *
+ * The OTA build emits a standalone <name>_model_partition.hex per model (linked at the matching
+ * partition base). Flash one into its partition without disturbing the app or the other models:
+ *   nrfutil device program --firmware gear_anomaly_model_partition.hex \
+ *       --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
+ */
+/delete-node/ &slot1_partition;
+
+&cpuapp_rram {
+	partitions {
+		model_anomaly_storage: partition@102000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_anomaly_storage";
+			reg = <0x102000 DT_SIZE_K(32)>;
+		};
+
+		model_classif_storage: partition@10a000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_classif_storage";
+			reg = <0x10a000 DT_SIZE_K(32)>;
+		};
+
+		model_regress_storage: partition@112000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_regress_storage";
+			reg = <0x112000 DT_SIZE_K(32)>;
+		};
+	};
+};

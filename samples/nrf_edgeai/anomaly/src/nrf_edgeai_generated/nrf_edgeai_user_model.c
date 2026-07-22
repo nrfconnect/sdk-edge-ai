@@ -4,6 +4,17 @@
 #include <nrf_edgeai/rt/private/nrf_edgeai_interfaces.h>
 #include <nrf_edgeai/nrf_edgeai_platform.h>
 
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+/* Model-only OTA: payload arrays below stay compiled but are dropped from the application image
+ * by a linker /DISCARD/ fragment; the model is loaded at runtime from a linked partition image
+ * (direct model pointer in the partition header). Only the static initializers that would hold
+ * compile-time pointers into those (discarded) arrays, and the load accessor, are guarded - the
+ * arrays themselves are left untouched.
+ */
+#include <model_ota/model_image.h>
+#include <zephyr/sys/util.h>
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 #define EDGEAI_LAB_SOLUTION_ID_STR	"90360"
@@ -382,6 +393,17 @@ static const nrf_user_output_t MODEL_AVERAGE_EMBEDDING[] = {
 	0.8292735, 0.8226876, 0.8751104, 0.4926738, 0.5999025,
 	0.4841458, 0.4264121, 0.4509522, 0.7913507, 0.8032691};
 
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+/* OTA: the scale/embedding arrays are discarded from the image; the loader re-points these at
+ * the equivalents in the flash partition image. Neutralize the compile-time init so it holds no pointer
+ * into a discarded section.
+ */
+#define NN_DECODED_OUTPUT_INIT                                                                     \
+	.anomaly = {                                                                               \
+		.score = 0.f,                                                                      \
+		.meta = {.p_scale_min = NULL, .p_scale_max = NULL, .p_average_embedding = NULL},   \
+	}
+#else
 #define NN_DECODED_OUTPUT_INIT                                                                     \
 	.anomaly = {                                                                               \
 		.score = 0.f,                                                                      \
@@ -389,11 +411,22 @@ static const nrf_user_output_t MODEL_AVERAGE_EMBEDDING[] = {
 			 .p_scale_max = MODEL_OUTPUT_SCALE_MAX,                                    \
 			 .p_average_embedding = MODEL_AVERAGE_EMBEDDING},                          \
 	}
+#endif
 
 /** Model neurons activations buffer */
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+static nrf_user_neuron_t model_neurons_[MAX(MODEL_NEURONS_NUM, CONFIG_MODEL_OTA_MAX_NEURONS)];
+#else
 static nrf_user_neuron_t model_neurons_[MODEL_NEURONS_NUM];
+#endif
 
 /** Neuton model instance */
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+/* OTA: populated at runtime by nrf_edgeai_load_user_model_90360() from a flash partition image; kept
+ * writable (non-const, zero-initialized) with no compile-time pointers into discarded arrays.
+ */
+static nrf_edgeai_model_neuton_t model_instance_;
+#else
 static const nrf_edgeai_model_neuton_t model_instance_ = {
 	///
 	.meta.p_neuron_internal_links_num = MODEL_NEURON_INTERNAL_LINKS_NUM,
@@ -412,6 +445,7 @@ static const nrf_edgeai_model_neuton_t model_instance_ = {
 			.p_neurons = model_neurons_,
 		},
 };
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 #define NN_INPUT_INIT_INTERFACE	       nrf_edgeai_input_init_discrete_window
@@ -477,6 +511,34 @@ nrf_edgeai_t *nrf_edgeai_user_model_90360(void)
 {
 	return &nrf_edgeai_;
 }
+
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+/* Model-only OTA entry point: load+validate the linked model partition image and wire its
+ * descriptor (living in XIP flash) into the runtime model, then re-point the anomaly decode
+ * metadata at the image's own scale/embedding arrays. Returns NULL if no valid image is
+ * present. The compiled-in payload arrays above are dropped from the app image by the linker.
+ */
+nrf_edgeai_t *nrf_edgeai_load_user_model_90360(uint8_t fa_id, const uint8_t *partition_addr)
+{
+	struct model_image_neuton_info info;
+	const struct model_image_neuton_expect expect = {
+		.task = MODEL_TASK,
+		.params_type = MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),
+		.outputs_cap = MODEL_OUTPUTS_NUM,
+	};
+
+	if (model_image_load_neuton(fa_id, partition_addr, &model_instance_, model_neurons_,
+				    ARRAY_SIZE(model_neurons_), &expect, &info) != MODEL_IMAGE_OK) {
+		return NULL;
+	}
+
+	nrf_edgeai_.decoded_output.anomaly.meta.p_scale_min = info.output_scale_min;
+	nrf_edgeai_.decoded_output.anomaly.meta.p_scale_max = info.output_scale_max;
+	nrf_edgeai_.decoded_output.anomaly.meta.p_average_embedding = info.average_embedding;
+
+	return &nrf_edgeai_;
+}
+#endif /* CONFIG_MODEL_OTA_NEUTON */
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -7,6 +7,7 @@
 menu "Libraries"
 
 rsource "nrf_edgeai/Kconfig"
+rsource "model_ota/Kconfig"
 rsource "nrf_edgeai_obsv/Kconfig"
 rsource "nrf_edgeai_obsv_memfault/Kconfig"
 

@@ -1,0 +1,80 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * Neuton model partition-image emission.
+ *
+ * This file is #included at the BOTTOM of a generated per-model stub, right after the model's
+ * own nrf_edgeai_user_model.c has been #included with CONFIG_MODEL_OTA_NEUTON *undefined*. That
+ * exposes, in this same translation unit, the model's file-static compile-time descriptor
+ * (`model_instance_`, with every flash pointer baked to the model's own arrays) and its data
+ * arrays / output scales. Including the model source is the only way to reach those `static`
+ * symbols - they are not addressable from any other translation unit, which is precisely why
+ * the plain Axon "reference the model symbol from a separate stub" approach cannot be reused
+ * verbatim here.
+ *
+ * We emit a single @ref model_image_header into section ".model_image.header". model_image.ld
+ * links it first, at the partition base, followed by all reachable .rodata (the descriptor and
+ * its data). Because the image is linked at the partition base, &model_instance_ and the scale
+ * arrays are already correct absolute flash addresses, so they are stored directly in the
+ * header. --gc-sections drops everything the header does not (transitively) reference: the
+ * runtime nrf_edgeai_t object, its function pointers to app code, the DSP pipeline, input
+ * scales, etc. image_size is a link-time constant from the __model_image_end anchor; crc32 is
+ * left 0 here and patched over the finished binary by tools/model_ota/patch_image_crc.py.
+ */
+
+#ifndef NRF_MODEL_PARTITION_ADDR
+#error "NRF_MODEL_PARTITION_ADDR must be defined when compiling the model image stub"
+#endif
+
+#include <model_ota/model_image.h>
+
+/* Absolute-flash extent of the linked image (see model_image.ld). */
+extern char __model_image_end[];
+
+/* Map the model's MODEL_PARAMS_TYPE token (f32/q16/q8) to enum model_image_params_type, using the
+ * shared mapping in model_image.h so the baked value and the app-side expectation cannot diverge.
+ */
+#define MODEL_IMAGE_PARAMS_TYPE_NUM MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE)
+
+/* Output-scale arrays only exist for some tasks (guarded identically in the model source). */
+#if MODEL_TASK == __NRF_EDGEAI_TASK_ANOMALY_DETECTION
+#define MODEL_IMAGE_SCALE_MIN MODEL_OUTPUT_SCALE_MIN
+#define MODEL_IMAGE_SCALE_MAX MODEL_OUTPUT_SCALE_MAX
+#define MODEL_IMAGE_AVG_EMB   MODEL_AVERAGE_EMBEDDING
+#elif MODEL_TASK == __NRF_EDGEAI_TASK_REGRESSION
+#define MODEL_IMAGE_SCALE_MIN MODEL_OUTPUT_SCALE_MIN
+#define MODEL_IMAGE_SCALE_MAX MODEL_OUTPUT_SCALE_MAX
+#define MODEL_IMAGE_AVG_EMB   NULL
+#else /* classification: no output-scale metadata */
+#define MODEL_IMAGE_SCALE_MIN NULL
+#define MODEL_IMAGE_SCALE_MAX NULL
+#define MODEL_IMAGE_AVG_EMB   NULL
+#endif
+
+/* Name / version default to the model's own solution id if the build does not override them. */
+#ifndef MODEL_IMAGE_NAME_STR
+#define MODEL_IMAGE_NAME_STR EDGEAI_LAB_SOLUTION_ID_STR
+#endif
+#ifndef MODEL_IMAGE_VERSION_U32
+#define MODEL_IMAGE_VERSION_U32 0x00010000u
+#endif
+
+__attribute__((section(".model_image.header"), used))
+const struct model_image_header nrf_edgeai_model_image_hdr = {
+	.magic = {MODEL_IMAGE_MAGIC0, MODEL_IMAGE_MAGIC1, MODEL_IMAGE_MAGIC2, MODEL_IMAGE_MAGIC3},
+	.format_version = MODEL_IMAGE_FORMAT_VERSION,
+	.params_type = MODEL_IMAGE_PARAMS_TYPE_NUM,
+	.task = MODEL_TASK,
+	/* Whole-image byte count as a link-time constant (base .. __model_image_end). */
+	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)NRF_MODEL_PARTITION_ADDR),
+	.crc32 = 0, /* patched over the finished binary by patch_image_crc.py */
+	/* Absolute flash address of the baked descriptor - a DIRECT pointer, not an offset. */
+	.model = &model_instance_,
+	.output_scale_min = MODEL_IMAGE_SCALE_MIN,
+	.output_scale_max = MODEL_IMAGE_SCALE_MAX,
+	.average_embedding = MODEL_IMAGE_AVG_EMB,
+	.name = MODEL_IMAGE_NAME_STR,
+	.model_version = MODEL_IMAGE_VERSION_U32,
+};

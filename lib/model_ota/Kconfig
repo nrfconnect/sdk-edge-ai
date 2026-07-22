@@ -1,0 +1,49 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig MODEL_OTA
+	bool "Model-only OTA update PoC (Neuton, linked partition image)"
+	depends on FLASH && FLASH_MAP && CRC
+	help
+	  Proof-of-concept library that loads and validates a Neuton NN model from a dedicated
+	  flash partition at runtime, independently of the application image, and without relying
+	  on MCUboot for integrity checking or transport. The model is built as a self-contained,
+	  linked partition image (the compiled nrf_edgeai_model_neuton_t descriptor and its data
+	  linked AT the partition base, with a header holding a DIRECT pointer to the descriptor).
+	  Model pointers are used directly in the memory-mapped partition (XIP) - there is no
+	  RAM-copy loading mode. Enable CONFIG_FLASH, CONFIG_FLASH_MAP and CONFIG_CRC in the
+	  application's prj.conf.
+
+if MODEL_OTA
+
+config MODEL_OTA_NEUTON
+	bool "Enable the Neuton model image loader"
+	depends on NRF_EDGEAI
+	help
+	  Builds model_image_neuton.c and model_image_load_neuton(). When set, the generated Neuton
+	  model source switches its load accessor to load from a flash partition image, and its
+	  compiled-in payload arrays become unreferenced and are dropped from the application image
+	  by a generated linker /DISCARD/ fragment (drop by section name, not by #if-ing arrays out
+	  of the source). See lib/model_ota/cmake/model_ota_neuton_image.cmake,
+	  lib/model_ota/cmake/model_ota_neuton.cmake and include/model_ota/model_image.h.
+
+config MODEL_OTA_MAX_NEURONS
+	int "Maximum number of neurons a loaded Neuton model may have"
+	default 128
+	depends on MODEL_OTA_NEUTON
+	help
+	  Sizes the caller-side RAM scratch buffer for neuron activations. Must be large enough
+	  for every model variant that will ever be provisioned on this device, since a model
+	  needing more neurons than this fails to load (MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL).
+
+config MODEL_OTA_LOG_LEVEL
+	int "Log level for the model_image module"
+	default 3
+	range 0 4
+	help
+	  0 = off, 1 = err, 2 = wrn, 3 = inf, 4 = dbg.
+
+endif # MODEL_OTA

@@ -59,6 +59,15 @@ LOG_MODULE_REGISTER(multi_anomaly, LOG_LEVEL_INF);
 
 nrf_edgeai_t *nrf_edgeai_user_model_90360(void);
 
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+#include <zephyr/storage/flash_map.h>
+
+nrf_edgeai_t *nrf_edgeai_load_user_model_90360(uint8_t fa_id, const uint8_t *partition_addr);
+
+BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_anomaly_storage),
+	     "board devicetree is missing model_anomaly_storage - see boards/*.overlay");
+#endif
+
 /**
  * @brief Model Configuration Constants
  *
@@ -313,9 +322,22 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_
 void run_anomaly_tests(void)
 {
 	/*  Get user generated model pointer */
+#if defined(CONFIG_MODEL_OTA_NEUTON)
+	/* Model-only OTA: load the payload from its flash partition (XIP) at runtime. */
+	nrf_edgeai_t *p_user_model = nrf_edgeai_load_user_model_90360(
+		PARTITION_ID(model_anomaly_storage),
+		(const uint8_t *)PARTITION_ADDRESS(model_anomaly_storage));
+
+	if (p_user_model == NULL) {
+		LOG_WRN("No valid anomaly model image in model_anomaly_storage - skipping (flash "
+			"gear_anomaly_model_partition.hex)");
+		return;
+	}
+#else
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model_90360();
 
 	__ASSERT_NO_MSG(p_user_model != NULL);
+#endif
 
 	/* Validate that the loaded model matches our expected configuration */
 	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
