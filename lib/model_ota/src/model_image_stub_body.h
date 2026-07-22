@@ -15,13 +15,14 @@
  * verbatim here.
  *
  * We emit a single @ref model_image_header into section ".model_image.header". model_image.ld
- * links it first, at the partition base, followed by all reachable .rodata (the descriptor and
- * its data). Because the image is linked at the partition base, &model_instance_ and the scale
- * arrays are already correct absolute flash addresses, so they are stored directly in the
- * header. --gc-sections drops everything the header does not (transitively) reference: the
- * runtime nrf_edgeai_t object, its function pointers to app code, the DSP pipeline, input
- * scales, etc. image_size is a link-time constant from the __model_image_end anchor; crc32 is
- * left 0 here and patched over the finished binary by tools/model_ota/patch_image_crc.py.
+ * links it first, at the partition base, followed by all reachable .rodata (the descriptor,
+ * decode-output init and data). Because the image is linked at the partition base,
+ * &model_instance_, &model_image_decoded_output_ and the scale arrays are already correct
+ * absolute flash addresses, so they are stored directly in the header. --gc-sections drops
+ * everything the header does not (transitively) reference: the runtime nrf_edgeai_t object,
+ * its function pointers to app code, the DSP pipeline, input scales, etc. image_size is a
+ * link-time constant from the __model_image_end anchor; crc32 is left 0 here and patched over
+ * the finished binary by tools/model_ota/patch_image_crc.py.
  */
 
 #ifndef NRF_MODEL_PARTITION_ADDR
@@ -38,21 +39,6 @@ extern char __model_image_end[];
  */
 #define MODEL_IMAGE_PARAMS_TYPE_NUM MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE)
 
-/* Output-scale arrays only exist for some tasks (guarded identically in the model source). */
-#if MODEL_TASK == __NRF_EDGEAI_TASK_ANOMALY_DETECTION
-#define MODEL_IMAGE_SCALE_MIN MODEL_OUTPUT_SCALE_MIN
-#define MODEL_IMAGE_SCALE_MAX MODEL_OUTPUT_SCALE_MAX
-#define MODEL_IMAGE_AVG_EMB   MODEL_AVERAGE_EMBEDDING
-#elif MODEL_TASK == __NRF_EDGEAI_TASK_REGRESSION
-#define MODEL_IMAGE_SCALE_MIN MODEL_OUTPUT_SCALE_MIN
-#define MODEL_IMAGE_SCALE_MAX MODEL_OUTPUT_SCALE_MAX
-#define MODEL_IMAGE_AVG_EMB   NULL
-#else /* classification: no output-scale metadata */
-#define MODEL_IMAGE_SCALE_MIN NULL
-#define MODEL_IMAGE_SCALE_MAX NULL
-#define MODEL_IMAGE_AVG_EMB   NULL
-#endif
-
 /* Name / version default to the model's own solution id if the build does not override them. */
 #ifndef MODEL_IMAGE_NAME_STR
 #define MODEL_IMAGE_NAME_STR EDGEAI_LAB_SOLUTION_ID_STR
@@ -60,6 +46,12 @@ extern char __model_image_end[];
 #ifndef MODEL_IMAGE_VERSION_U32
 #define MODEL_IMAGE_VERSION_U32 0x00010000u
 #endif
+
+/* Full NN_DECODED_OUTPUT_INIT from the included model source (CONFIG_MODEL_OTA_NEUTON is
+ * undefined here), with every meta pointer baked to absolute flash addresses inside this image.
+ */
+__attribute__((section(".rodata.model_image_decoded_output"), used))
+static const nrf_edgeai_decoded_output_t model_image_decoded_output_ = {NN_DECODED_OUTPUT_INIT};
 
 __attribute__((section(".model_image.header"), used))
 const struct model_image_header nrf_edgeai_model_image_hdr = {
@@ -72,9 +64,7 @@ const struct model_image_header nrf_edgeai_model_image_hdr = {
 	.crc32 = 0, /* patched over the finished binary by patch_image_crc.py */
 	/* Absolute flash address of the baked descriptor - a DIRECT pointer, not an offset. */
 	.model = &model_instance_,
-	.output_scale_min = MODEL_IMAGE_SCALE_MIN,
-	.output_scale_max = MODEL_IMAGE_SCALE_MAX,
-	.average_embedding = MODEL_IMAGE_AVG_EMB,
+	.decoded_output = &model_image_decoded_output_,
 	.name = MODEL_IMAGE_NAME_STR,
 	.model_version = MODEL_IMAGE_VERSION_U32,
 };

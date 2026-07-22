@@ -498,11 +498,13 @@ nrf_edgeai_t *nrf_edgeai_user_model_90449(void)
 
 #if defined(CONFIG_MODEL_OTA_NEUTON)
 /* Model-only OTA entry point: load+validate the linked model partition image and wire its
- * descriptor (living in XIP flash) into the runtime model. Classification has no output-scale
- * metadata to re-point. Returns NULL if no valid image is present.
+ * descriptor (living in XIP flash) into the runtime model, then copy the image's baked
+ * NN_DECODED_OUTPUT_INIT into the runtime decode state. Returns NULL if no valid image is
+ * present.
  */
 nrf_edgeai_t *nrf_edgeai_load_user_model_90449(uint8_t fa_id, const uint8_t *partition_addr)
 {
+	struct model_image_neuton_info info;
 	const struct model_image_neuton_expect expect = {
 		.task = MODEL_TASK,
 		.params_type = MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),
@@ -510,9 +512,11 @@ nrf_edgeai_t *nrf_edgeai_load_user_model_90449(uint8_t fa_id, const uint8_t *par
 	};
 
 	if (model_image_load_neuton(fa_id, partition_addr, &model_instance_, model_neurons_,
-				    ARRAY_SIZE(model_neurons_), &expect, NULL) != MODEL_IMAGE_OK) {
+				    ARRAY_SIZE(model_neurons_), &expect, &info) != MODEL_IMAGE_OK) {
 		return NULL;
 	}
+
+	nrf_edgeai_.decoded_output.classif = info.decoded_output->classif;
 
 	return &nrf_edgeai_;
 }

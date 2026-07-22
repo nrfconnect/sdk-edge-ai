@@ -44,13 +44,14 @@
 #include <zephyr/toolchain.h> /* for __packed */
 
 #include <nrf_edgeai/rt/nrf_edgeai_model_types.h>
+#include <nrf_edgeai/rt/nrf_edgeai_output_types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Image format version (independent of the model's own version). */
-#define MODEL_IMAGE_FORMAT_VERSION 1
+#define MODEL_IMAGE_FORMAT_VERSION 2
 
 /** Length of the @ref model_image_header.name field, not necessarily NUL-terminated. */
 #define MODEL_IMAGE_NAME_LEN 16
@@ -90,8 +91,8 @@ enum model_image_params_type {
  * address) in section ".model_image.header".
  *
  * All pointer fields are absolute flash addresses baked by the linker (the image is linked at
- * the partition base). @ref model and the output-scale pointers therefore point *into this same
- * image*; the loader range-checks them against [base, base + image_size).
+ * the partition base). @ref model and @ref decoded_output therefore point *into this same image*;
+ * the loader range-checks them against [base, base + image_size).
  *
  * Field offsets are fixed (every field is 4-byte, pointers are 32-bit on the target) so the
  * host-side CRC patcher (tools/model_ota/patch_image_crc.py) and layout validator can locate
@@ -106,29 +107,23 @@ struct model_image_header {
 	uint32_t crc32;          /**< off 12: CRC32/IEEE over the image with this field zeroed */
 	/** off 16: DIRECT absolute-flash pointer to the baked descriptor (NOT an offset). */
 	const nrf_edgeai_model_neuton_t *model;
-	const float *output_scale_min;  /**< off 20: [outputs_num] or NULL (classification) */
-	const float *output_scale_max;  /**< off 24: [outputs_num] or NULL (classification) */
-	const float *average_embedding; /**< off 28: [outputs_num] or NULL (non-anomaly) */
-	char name[MODEL_IMAGE_NAME_LEN]; /**< off 32: free-form, not necessarily NUL-terminated */
-	uint32_t model_version;          /**< off 48: free-form major.minor.patch */
+	/** off 20: DIRECT pointer to the baked decode-output init (NN_DECODED_OUTPUT_INIT). */
+	const nrf_edgeai_decoded_output_t *decoded_output;
+	char name[MODEL_IMAGE_NAME_LEN]; /**< off 24: free-form, not necessarily NUL-terminated */
+	uint32_t model_version;          /**< off 40: free-form major.minor.patch */
 } __packed;
 
 /** Byte offset of @ref model_image_header.crc32; used by the host CRC patcher. */
 #define MODEL_IMAGE_CRC32_OFFSET 12
 
-/** Human-readable metadata plus the flash-resident scale pointers of a loaded image. Field
- *  names match the fields the generated accessor uses to re-point its decode metadata after a
- *  successful load.
- */
+/** Human-readable metadata plus a pointer to the flash-resident baked decode-output init. */
 struct model_image_neuton_info {
 	char name[MODEL_IMAGE_NAME_LEN + 1];
 	uint32_t version;
 	uint16_t neurons_num;
 	uint16_t outputs_num;
 	uint32_t weights_num;
-	const float *output_scale_min;  /**< [outputs_num] or NULL */
-	const float *output_scale_max;  /**< [outputs_num] or NULL */
-	const float *average_embedding; /**< [outputs_num] or NULL */
+	const nrf_edgeai_decoded_output_t *decoded_output;
 };
 
 /** Return codes for @ref model_image_load_neuton. */

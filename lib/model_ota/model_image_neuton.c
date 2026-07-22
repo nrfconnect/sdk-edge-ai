@@ -188,21 +188,49 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr,
 		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 	}
 
-	/* Optional output-scale arrays live in the header; when present they are outputs_num floats
-	 * inside this same image.
+	/* Baked NN_DECODED_OUTPUT_INIT lives in the image; confirm the struct and any flash-resident
+	 * meta pointers it references lie inside [base, image_end).
 	 */
-	if ((hdr.output_scale_min != NULL &&
-	     !span_in_image(hdr.output_scale_min, (size_t)outputs_num * sizeof(float),
-			    partition_addr, image_end)) ||
-	    (hdr.output_scale_max != NULL &&
-	     !span_in_image(hdr.output_scale_max, (size_t)outputs_num * sizeof(float),
-			    partition_addr, image_end)) ||
-	    (hdr.average_embedding != NULL &&
-	     !span_in_image(hdr.average_embedding, (size_t)outputs_num * sizeof(float),
-			    partition_addr, image_end))) {
-		LOG_ERR("Header scale pointer outside image [%p, %p)", (const void *)partition_addr,
+	if (!span_in_image(hdr.decoded_output, sizeof(nrf_edgeai_decoded_output_t), partition_addr,
+			   image_end)) {
+		LOG_ERR("Header decoded_output pointer %p outside image [%p, %p)",
+			(void *)hdr.decoded_output, (const void *)partition_addr,
 			(const void *)image_end);
 		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
+	}
+
+	const nrf_edgeai_decoded_output_t *img_decoded = hdr.decoded_output;
+
+	switch (hdr.task) {
+	case NRF_EDGEAI_TASK_ANOMALY_DETECTION:
+		if (!span_in_image(img_decoded->anomaly.meta.p_scale_min,
+				   (size_t)outputs_num * sizeof(float), partition_addr,
+				   image_end) ||
+		    !span_in_image(img_decoded->anomaly.meta.p_scale_max,
+				    (size_t)outputs_num * sizeof(float), partition_addr,
+				    image_end) ||
+		    !span_in_image(img_decoded->anomaly.meta.p_average_embedding,
+				    (size_t)outputs_num * sizeof(float), partition_addr,
+				    image_end)) {
+			LOG_ERR("Baked anomaly decode meta pointer outside image [%p, %p)",
+				(const void *)partition_addr, (const void *)image_end);
+			return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
+		}
+		break;
+	case NRF_EDGEAI_TASK_REGRESSION:
+		if (!span_in_image(img_decoded->regression.meta.p_scale_min,
+				   (size_t)outputs_num * sizeof(float), partition_addr,
+				   image_end) ||
+		    !span_in_image(img_decoded->regression.meta.p_scale_max,
+				    (size_t)outputs_num * sizeof(float), partition_addr,
+				    image_end)) {
+			LOG_ERR("Baked regression decode meta pointer outside image [%p, %p)",
+				(const void *)partition_addr, (const void *)image_end);
+			return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
+		}
+		break;
+	default:
+		break;
 	}
 
 	/* Copy the flash-resident parameter pointer-triple, then overwrite only p_neurons. All
@@ -229,9 +257,7 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr,
 		out_info->neurons_num = neurons_num;
 		out_info->outputs_num = img_model->meta.outputs_num;
 		out_info->weights_num = img_model->meta.weights_num;
-		out_info->output_scale_min = hdr.output_scale_min;
-		out_info->output_scale_max = hdr.output_scale_max;
-		out_info->average_embedding = hdr.average_embedding;
+		out_info->decoded_output = hdr.decoded_output;
 	}
 
 	LOG_INF("Loaded Neuton model image '%.*s' v0x%08x (%u neurons, %u weights, %u outputs)",

@@ -514,8 +514,8 @@ nrf_edgeai_t *nrf_edgeai_user_model_90360(void)
 
 #if defined(CONFIG_MODEL_OTA_NEUTON)
 /* Model-only OTA entry point: load+validate the linked model partition image and wire its
- * descriptor (living in XIP flash) into the runtime model, then re-point the anomaly decode
- * metadata at the image's own scale/embedding arrays. Returns NULL if no valid image is
+ * descriptor (living in XIP flash) into the runtime model, then copy the image's baked
+ * NN_DECODED_OUTPUT_INIT into the runtime decode state. Returns NULL if no valid image is
  * present. The compiled-in payload arrays above are dropped from the app image by the linker.
  */
 nrf_edgeai_t *nrf_edgeai_load_user_model_90360(uint8_t fa_id, const uint8_t *partition_addr)
@@ -532,9 +532,7 @@ nrf_edgeai_t *nrf_edgeai_load_user_model_90360(uint8_t fa_id, const uint8_t *par
 		return NULL;
 	}
 
-	nrf_edgeai_.decoded_output.anomaly.meta.p_scale_min = info.output_scale_min;
-	nrf_edgeai_.decoded_output.anomaly.meta.p_scale_max = info.output_scale_max;
-	nrf_edgeai_.decoded_output.anomaly.meta.p_average_embedding = info.average_embedding;
+	nrf_edgeai_.decoded_output.anomaly = info.decoded_output->anomaly;
 
 	return &nrf_edgeai_;
 }

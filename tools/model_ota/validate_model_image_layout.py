@@ -29,9 +29,9 @@ from pathlib import Path
 MAGIC = b"NEI5"
 
 # struct model_image_header (see include/model_ota/model_image.h), little-endian, __packed:
-#   magic[4] version:H params_type:B task:B image_size:I crc32:I model:I
-#   scale_min:I scale_max:I avg_emb:I name[16] model_version:I
-HEADER_FMT = "<4sHBBIIIIII16sI"
+#   magic[4] version:H params_type:B task:B image_size:I crc32:I model:I decoded_output:I
+#   name[16] model_version:I
+HEADER_FMT = "<4sHBBIIII16sI"
 HEADER_SIZE = struct.calcsize(HEADER_FMT)
 
 
@@ -101,8 +101,8 @@ def main():
         print("image binary shorter than header", file=sys.stderr)
         sys.exit(1)
 
-    (magic, version, params_type, task, image_size, crc32, model_ptr,
-     scale_min, scale_max, avg_emb, name, model_version) = struct.unpack(HEADER_FMT, header_bytes)
+    (magic, version, params_type, task, image_size, crc32, model_ptr, decoded_output_ptr,
+     name, model_version) = struct.unpack(HEADER_FMT, header_bytes)
 
     if magic != MAGIC:
         errors.append("magic %r != %r" % (magic, MAGIC))
@@ -119,6 +119,10 @@ def main():
         errors.append("model pointer 0x%x outside image [0x%x, 0x%x)" % (model_ptr, start, end))
     if model_sym is not None and model_ptr != model_sym:
         errors.append("header model 0x%x != &%s 0x%x" % (model_ptr, args.model_symbol, model_sym))
+
+    if decoded_output_ptr < start or decoded_output_ptr >= end:
+        errors.append("decoded_output pointer 0x%x outside image [0x%x, 0x%x)"
+                      % (decoded_output_ptr, start, end))
 
     if crc32 == 0:
         errors.append("crc32 is 0 (patch_image_crc.py did not run)")
