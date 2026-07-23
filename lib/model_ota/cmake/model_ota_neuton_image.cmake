@@ -15,7 +15,7 @@
 #      MODEL_OTA_NEUTON_MODEL_SRC set to the model basename (Axon-style #include of the generated
 #      nrf_edgeai_user_model.c) with MODEL_OTA_NEUTON_WIRED unset, then #includes
 #      model_image_stub_body.h, which emits the partition header into section .model_image.header.
-#   2. Links that object at the partition's flash base (from devicetree) with model_image_neuton.ld
+#   2. Links that object at the partition's flash base (from devicetree) with model_image.ld
 #      and --gc-sections, so the header + descriptor + data land in one .model_image section at
 #      the base and every intra-image pointer is a correct absolute flash address. All the
 #      runtime glue (nrf_edgeai_t, its app-code function pointers, the DSP pipeline, ...) is
@@ -32,6 +32,8 @@
 # coexist - a PROVIDE()-from-ELF approach cannot tell them apart.
 
 include_guard(GLOBAL)
+
+include(${CMAKE_CURRENT_LIST_DIR}/model_ota_common.cmake)
 
 get_filename_component(MODEL_OTA_ROOT ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
 get_filename_component(EDGE_AI_MODULE_ROOT ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSOLUTE)
@@ -50,19 +52,7 @@ function(model_ota_neuton_image)
     set(MI_VERSION "1.0.0")
   endif()
 
-  # Pack "x.y.z" into major<<16 | minor<<8 | patch for the header's model_version.
-  string(REPLACE "." ";" ver_parts "${MI_VERSION}")
-  list(LENGTH ver_parts ver_len)
-  list(GET ver_parts 0 ver_major)
-  set(ver_minor 0)
-  set(ver_patch 0)
-  if(ver_len GREATER 1)
-    list(GET ver_parts 1 ver_minor)
-  endif()
-  if(ver_len GREATER 2)
-    list(GET ver_parts 2 ver_patch)
-  endif()
-  math(EXPR ver_u32 "(${ver_major} << 16) | (${ver_minor} << 8) | ${ver_patch}")
+  model_ota_pack_version("${MI_VERSION}" ver_u32)
 
   # Partition base + size from the mapped-partition devicetree node.
   dt_nodelabel(partition_node NODELABEL ${MI_PARTITION_NODELABEL} REQUIRED)
@@ -84,7 +74,7 @@ function(model_ota_neuton_image)
   set(image_bin     ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_image.bin)
   set(image_hex     ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_partition.hex)
 
-  set(linker_script ${MODEL_OTA_ROOT}/linker/model_image_neuton.ld)
+  set(linker_script ${MODEL_OTA_ROOT}/linker/model_image.ld)
   set(crc_tool ${EDGE_AI_MODULE_ROOT}/tools/model_ota/patch_image_crc.py)
   set(validate_tool ${EDGE_AI_MODULE_ROOT}/tools/model_ota/validate_model_image_layout.py)
   set(defs_header ${EDGE_AI_MODULE_ROOT}/include/model_ota/model_image.h)
