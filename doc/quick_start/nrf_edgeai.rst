@@ -76,8 +76,12 @@ You can obtain training data in one of the following ways:
 * Start with preloaded datasets - Ideal for learning and experimentation.
   `Nordic Edge AI Lab`_ includes `sample datasets <Nordic Edge AI Lab preloaded datasets_>`_  that you can use.
 * Use your own data - If you have custom datasets or want to use publicly available ones, you can upload them directly to the platform.
-* Collect live sensor data - Use or modify the :ref:`app_gesture_recognition` application to gather real-time data from sensors on your Nordic development board.
-  See :ref:`building_firmware_for_data_collection` for steps on how to build the application in the data collection mode.
+* Collect live sensor data - Use or modify the :ref:`data_forwarder_sample` sample to gather real-time data from sensors on your Nordic development board.
+  You can modify the sample for custom hardware setups to have full control over data collection.
+  On the PC side use :ref:`data_forwarder_host_tool` to visualize, record and export the training data to output CSV files compatible with `Nordic Edge AI Lab`_.
+
+  * Alternatively, you can use the :ref:`app_gesture_recognition` application to collect the sensor data.
+    See :ref:`building_firmware_for_data_collection` for steps on how to build the application in the data collection mode.
 
 Refer to `Nordic Edge AI Lab Model Dataset Requirements`_ for details on data format, size requirements, and best practices for preparing your dataset.
 
