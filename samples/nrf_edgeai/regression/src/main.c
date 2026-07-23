@@ -42,17 +42,18 @@
  *
  * **Model-only OTA update:**
  *   By default (CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=y) the application image does not
- *   contain a model: at boot (and periodically thereafter) it loads and validates a "model
- *   package" from the model_storage flash partition (see lib/model_ota/model_pkg_neuton.c /
- *   model_pkg_axon.c), and only then runs inference against it. Flashing a new model package
- *   to model_storage - independently of the application binary - is enough to change what the
- *   device predicts, without rebuilding or reflashing the application. If model_storage does
- *   not currently hold a valid package (missing, corrupted, incompatible, wrong backend), the
- *   application stays alive and simply skips inference instead of crashing. With MCUboot and
- *   dual physical model slots (CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT), a
- *   successful load after an SMP test boot also confirms image 1 so MCUboot can revert on the
- *   next reset if the update was bad. See README.rst for slot layouts and the packaging/flashing
- *   workflow. Build with CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=n to
+ *   contain a model: it loads and validates a "model package" from the model_storage flash
+ *   partition (see lib/model_ota/model_pkg_neuton.c / model_pkg_axon.c), and only then runs
+ *   inference against it. Without MCUboot, the sample reloads from flash every 5 seconds so a
+ *   raw package flashed to model_storage while running is picked up without a reboot. With
+ *   MCUboot single-slot model layout, inference reads the same flash region that SMP upload
+ *   overwrites in place, so the sample loads once at boot, pauses inference for image-1 SMP
+ *   uploads, and requires a reset before using a newly uploaded model. With MCUboot dual
+ *   physical model slots (CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT), uploads go
+ *   to a staging slot and the sample reloads periodically; a successful load after an SMP
+ *   test boot also confirms image 1 so MCUboot can revert on the next reset if the update was
+ *   bad. See README.rst for slot layouts and the packaging/flashing workflow. Build with
+ *   CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=n to
  *   restore this sample's original behavior instead: the model is compiled directly into the
  *   image and validated once at boot. Either way, the actual model wiring - including, for
  *   CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=y, the model_storage loading itself - lives in
@@ -76,12 +77,12 @@ LOG_MODULE_REGISTER(regression, LOG_LEVEL_INF);
 
 #include <zephyr/storage/flash_map.h>
 
+/** MCUboot updateable image index for the model (image 1). */
+#define MODEL_IMAGE_INDEX 1
+
 #if defined(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT) && \
 	defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT)
 #include <zephyr/dfu/mcuboot.h>
-
-/** MCUboot updateable image index for the model (slot2 primary, slot3 staging). */
-#define MODEL_IMAGE_INDEX 1
 
 static bool model_ota_confirm_attempted;
 
@@ -116,6 +117,111 @@ static void try_confirm_model_ota(void)
 	LOG_INF("Model loaded OK; image %d confirmed permanently", MODEL_IMAGE_INDEX);
 }
 #endif /* CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT && CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT */
+
+#if defined(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT) && \
+	!defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT)
+#include <zephyr/mgmt/mcumgr/mgmt/callbacks.h>
+#include <zephyr/mgmt/mcumgr/grp/img_mgmt/img_mgmt_callbacks.h>
+#include <zephyr/mgmt/mcumgr/mgmt/mgmt.h>
+#include <zephyr/sys/atomic.h>
+
+/** Leading fields of img_mgmt_upload_req (see zephyr img_mgmt.h); mirrored here to avoid
+ * pulling bootutil/image.h into the application.
+ */
+struct model_smp_upload_req_head {
+	uint32_t image;
+	size_t off;
+};
+
+static atomic_t model_smp_upload_active;
+static atomic_t model_smp_upload_pending_reset;
+static bool model_smp_upload_log_once;
+static K_MUTEX_DEFINE(model_inference_lock);
+
+static enum mgmt_cb_return model_smp_upload_callback(uint32_t event, enum mgmt_cb_return prev_status,
+						     int32_t *rc, uint16_t *group, bool *abort_more,
+						     void *data, size_t data_size)
+{
+	ARG_UNUSED(prev_status);
+	ARG_UNUSED(group);
+	ARG_UNUSED(abort_more);
+
+	switch (event) {
+	case MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK: {
+		const struct img_mgmt_upload_check *upload_check;
+
+		if (data == NULL || data_size != sizeof(struct img_mgmt_upload_check)) {
+			break;
+		}
+
+		upload_check = data;
+
+		const struct model_smp_upload_req_head *req =
+			(const struct model_smp_upload_req_head *)upload_check->req;
+
+		if (req->image == MODEL_IMAGE_INDEX && req->off == 0) {
+			if (k_mutex_lock(&model_inference_lock, K_SECONDS(60)) != 0) {
+				LOG_WRN("Model SMP upload rejected - inference still running");
+				*rc = MGMT_ERR_EBUSY;
+				return MGMT_CB_ERROR_RC;
+			}
+
+			atomic_set(&model_smp_upload_active, 1);
+			model_smp_upload_log_once = false;
+			LOG_WRN("Model SMP upload started - inference paused until reset");
+		}
+		break;
+	}
+
+	case MGMT_EVT_OP_IMG_MGMT_DFU_STOPPED:
+		if (atomic_get(&model_smp_upload_active)) {
+			atomic_set(&model_smp_upload_active, 0);
+			atomic_set(&model_smp_upload_pending_reset, 1);
+			model_smp_upload_log_once = false;
+			k_mutex_unlock(&model_inference_lock);
+			LOG_WRN("Model SMP upload finished - reset device to load new model");
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return MGMT_CB_OK;
+}
+
+static struct mgmt_callback model_smp_upload_mgmt_cb = {
+	.callback = model_smp_upload_callback,
+	.event_id = (MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK | MGMT_EVT_OP_IMG_MGMT_DFU_STOPPED),
+};
+
+static void model_smp_upload_register_callback(void)
+{
+	mgmt_callback_register(&model_smp_upload_mgmt_cb);
+}
+
+static bool model_smp_upload_blocks_inference(void)
+{
+	if (atomic_get(&model_smp_upload_active)) {
+		if (!model_smp_upload_log_once) {
+			model_smp_upload_log_once = true;
+			LOG_WRN("Model SMP upload in progress - inference paused");
+		}
+		return true;
+	}
+
+	if (atomic_get(&model_smp_upload_pending_reset)) {
+		if (!model_smp_upload_log_once) {
+			model_smp_upload_log_once = true;
+			LOG_WRN("Model SMP upload complete - reset device to load new model");
+		}
+		return true;
+	}
+
+	model_smp_upload_log_once = false;
+	return false;
+}
+#endif /* CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT && !CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT */
 
 /*
  * Fail the build with a clear message if this board's devicetree overlay doesn't define the
@@ -348,10 +454,42 @@ int main(void)
 	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
 		v.field.patch);
 
+#if defined(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT) && \
+	!defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT)
+	model_smp_upload_register_callback();
+
+	nrf_edgeai_t *p_user_model = NULL;
+	bool model_loaded = false;
+
 	while (1) {
-		/* The model is not compiled in: load (and validate) it from the model_storage
-		 * flash partition every iteration, so a model update flashed while the device
-		 * is running is picked up without needing a reboot.
+		if (model_smp_upload_blocks_inference()) {
+			/* Single-slot SMP upload overwrites model_storage in place. */
+		} else if (!model_loaded) {
+			p_user_model = nrf_edgeai_user_model(
+				PARTITION_ID(model_partition),
+				(const uint8_t *)PARTITION_ADDRESS(model_partition));
+
+			if (p_user_model == NULL) {
+				LOG_WRN("No valid model in model_storage - waiting for one to be "
+					"flashed. Inference is skipped until then.");
+			} else {
+				model_loaded = true;
+				if (k_mutex_lock(&model_inference_lock, K_NO_WAIT) == 0) {
+					run_inference_loop(p_user_model);
+					k_mutex_unlock(&model_inference_lock);
+				}
+			}
+		} else if (k_mutex_lock(&model_inference_lock, K_NO_WAIT) == 0) {
+			run_inference_loop(p_user_model);
+			k_mutex_unlock(&model_inference_lock);
+		}
+
+		k_sleep(K_MSEC(5000));
+	}
+#else
+	while (1) {
+		/* Without MCUboot single-slot constraints, reload every iteration so a raw
+		 * model package flashed while the device is running is picked up without reboot.
 		 */
 		nrf_edgeai_t *p_user_model = nrf_edgeai_user_model(
 			PARTITION_ID(model_partition),
@@ -370,6 +508,7 @@ int main(void)
 
 		k_sleep(K_MSEC(5000));
 	}
+#endif
 
 	return 0;
 }

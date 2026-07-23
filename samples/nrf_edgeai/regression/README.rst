@@ -122,7 +122,9 @@ On nRF54LM20 DK, this sample uses MCUboot with two updateable images:
 
 The devicetree fragments live under :file:`dts/` (included from the application overlay and :file:`sysbuild/mcuboot/boards/`).
 
-At boot (and every 5 seconds thereafter), the sample reads and validates a header-plus-payload "model package" from ``model_storage`` (MCUboot slot2 primary) and wires it up for inference — see :ref:`lib_model_ota` for the package format, host-side packaging tools, and on-device loading work.
+At boot the sample reads and validates a header-plus-payload "model package" from ``model_storage`` (MCUboot slot2 primary) and wires it up for inference — see :ref:`lib_model_ota` for the package format, host-side packaging tools, and on-device loading work.
+With the default single-slot model layout, inference runs against that loaded model until an SMP upload to image 1 starts; the application then pauses inference until you reset after the upload completes.
+With the dual-slot model layout, the sample reloads from ``model_storage`` every 5 seconds and can keep running inference while a new model is uploaded to the staging slot.
 The loader skips the 32-byte MCUboot header automatically when present.
 
 Model slot layout
@@ -138,6 +140,7 @@ Single-slot model (default)
 * One 340 kB ``model_storage`` region; devicetree labels it as both ``slot2_partition`` and ``slot3_partition``.
 * Larger application slots (684 kB each).
 * SMP model uploads overwrite ``model_storage`` in place. **No MCUboot revert** to a previous model in another slot.
+* The application loads the model once at boot, pauses inference during image-1 SMP uploads, and requires a **reset** after upload before running against the new model.
 * Build produces ``regression_model_mcuboot.signed.bin`` and ``regression_model_mcuboot.signed.hex`` (same image; use either for provision or SMP).
 
 Dual-slot model
@@ -205,7 +208,7 @@ Close any serial monitor on the application UART port, then:
 
 **Dual-slot only:** after reset, if the application loads the swapped model successfully, it calls ``boot_write_img_confirmed_multi(1)`` so the update survives the next reboot. If load fails, the image stays unconfirmed and MCUboot reverts on the following reset.
 
-**Single-slot:** there is no separate staging slot or revert; validate model behavior in the application after each OTA.
+**Single-slot:** there is no separate staging slot or revert. Inference is paused while image 1 is uploaded because SMP writes to the same ``model_storage`` region the model executes from. After upload completes, **reset the device** before validating the new model; the sample does not hot-reload an in-place SMP update.
 
 Firmware-only OTA uses image index 0 (omit ``-n 1``) and ``build/regression/zephyr/zephyr.signed.bin``. Each image can be updated independently.
 

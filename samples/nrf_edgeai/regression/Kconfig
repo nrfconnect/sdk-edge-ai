@@ -39,12 +39,13 @@ config NRF_EDGEAI_REGRESSION_MODEL_OTA
 	select MODEL_OTA_AXON if NRF_EDGEAI_REGRESSION_MODEL_AXON
 	help
 	  When enabled (the default), this sample does not ship a compiled-in model: it loads,
-	  validates, and periodically reloads a model package - matching the backend selected
-	  above - from the model_storage flash partition at runtime instead (see
-	  doc/libraries/model_ota.rst). Disable this to restore this sample's original
-	  pre-model-OTA behavior: the selected backend's model is compiled directly into the
-	  application image, and the 29 test cases are validated once at boot (asserting on the
-	  expected accuracy) instead of being reloaded periodically from flash.
+	  validates, and (unless MCUboot single-slot model layout is selected) periodically
+	  reloads a model package - matching the backend selected above - from the
+	  model_storage flash partition at runtime instead (see doc/libraries/model_ota.rst).
+	  Disable this to restore this sample's original pre-model-OTA behavior: the selected
+	  backend's model is compiled directly into the application image, and the 29 test cases
+	  are validated once at boot (asserting on the expected accuracy) instead of being
+	  reloaded periodically from flash.
 
 config NRF_EDGEAI_REGRESSION_MCUBOOT
 	bool "MCUboot dual-slot FW + model DFU (nRF54LM20)"
