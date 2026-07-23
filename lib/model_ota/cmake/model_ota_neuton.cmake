@@ -10,8 +10,10 @@
 #
 # For each OTA-updatable model:
 #
-#   1. Builds a dedicated static library (default target ota_neuton_<SOLUTION_ID>) from
-#      lib/model_ota/src/model_ota_neuton_app_stub.c with MODEL_OTA_NEUTON_WIRED and a per-model
+#   1. Generates lib/model_ota/src/model_ota_neuton_wired.c.in into
+#      ${CMAKE_CURRENT_BINARY_DIR}/model_ota_neuton_wired_<SOLUTION_ID>.c (partition-load
+#      wrapper + #include of the generated model). Builds a dedicated static library (default
+#      target ota_neuton_<SOLUTION_ID>) from that file with MODEL_OTA_NEUTON_WIRED and a per-model
 #      MODEL_OTA_NEUTON_MAX_NEURONS. Models compiled directly into the app are unaffected
 #      and keep compile-time descriptors and payload.
 #
@@ -88,22 +90,24 @@ function(model_ota_neuton_wire)
 
   get_filename_component(model_dir ${MO_MODEL_SRC} DIRECTORY)
   get_filename_component(model_basename ${MO_MODEL_SRC} NAME)
-  set(stub_src ${MODEL_OTA_ROOT}/src/model_ota_neuton_app_stub.c)
+  set(wired_tpl ${MODEL_OTA_ROOT}/src/model_ota_neuton_wired.c.in)
+  set(wired_src ${CMAKE_CURRENT_BINARY_DIR}/model_ota_neuton_wired_${MO_SOLUTION_ID}.c)
 
   if(TARGET ${MO_LIB_NAME})
     message(FATAL_ERROR "model_ota_neuton_wire: duplicate LIB_NAME/target ${MO_LIB_NAME}")
   endif()
 
-  add_library(${MO_LIB_NAME} STATIC ${stub_src})
+  set(SOLUTION_ID ${MO_SOLUTION_ID})
+  set(MAX_NEURONS ${MO_MAX_NEURONS})
+  set(MODEL_SRC_BASENAME ${model_basename})
+  configure_file(${wired_tpl} ${wired_src} @ONLY)
+
+  add_library(${MO_LIB_NAME} STATIC ${wired_src})
   target_link_libraries(${MO_LIB_NAME} PRIVATE zephyr_interface)
   add_dependencies(${MO_LIB_NAME} zephyr_generated_headers)
-  target_include_directories(${MO_LIB_NAME} PRIVATE ${model_dir})
+  target_include_directories(${MO_LIB_NAME} PRIVATE ${model_dir} ${MODEL_OTA_ROOT}/src)
   target_compile_options(${MO_LIB_NAME} PRIVATE -ffunction-sections -fdata-sections)
-  target_compile_definitions(${MO_LIB_NAME} PRIVATE
-                             MODEL_OTA_NEUTON_WIRED=1
-                             MODEL_OTA_NEUTON_MODEL_SRC=${model_basename}
-                             MODEL_OTA_NEUTON_MAX_NEURONS=${MO_MAX_NEURONS})
-  set_source_files_properties(${stub_src}
+  set_source_files_properties(${wired_src}
                               TARGET_DIRECTORY ${MO_LIB_NAME}
                               PROPERTIES OBJECT_DEPENDS "${MO_MODEL_SRC}")
   target_link_libraries(app PRIVATE ${MO_LIB_NAME})

@@ -39,7 +39,8 @@ ls build/multi_model/*_model_partition.hex build/multi_model/*_model_image.bin
 The per-image build steps live in `lib/model_ota/cmake/model_ota_neuton_image.cmake`
 (compile a model stub, link at the partition base with `lib/model_ota/linker/model_image.ld`,
 `objcopy` the `.model_image` section, patch CRC, validate, emit the addressed hex). The
-app-image payload discard lives in `lib/model_ota/cmake/model_ota_neuton.cmake`.
+app-image payload discard lives in `lib/model_ota/cmake/model_ota_neuton.cmake`
+(`configure_file` from `lib/model_ota/src/model_ota_neuton_wired.c.in`).
 
 ## Flashing (separate from the app)
 
@@ -55,5 +56,6 @@ nrfutil device program --firmware gear_anomaly_model_partition.hex \
 
 - Image format and loader: `include/model_ota/model_image.h`, `lib/model_ota/model_image_neuton.c`
 - Build wiring: `lib/model_ota/cmake/model_ota_neuton_image.cmake`,
-  `lib/model_ota/cmake/model_ota_neuton.cmake`, `lib/model_ota/src/model_ota_neuton_image_stub.c`,
+  `lib/model_ota/cmake/model_ota_neuton.cmake`, `lib/model_ota/src/model_ota_neuton_wired.c.in`,
+  `lib/model_ota/src/model_ota_neuton_image_stub.c`,
   `lib/model_ota/src/model_ota_stub_macros.h`, `lib/model_ota/linker/model_image.ld`

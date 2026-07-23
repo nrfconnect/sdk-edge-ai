@@ -4,11 +4,6 @@
 #include <nrf_edgeai/rt/private/nrf_edgeai_interfaces.h>
 #include <nrf_edgeai/nrf_edgeai_platform.h>
 
-/* When MODEL_OTA_NEUTON_WIRED is set by model_ota_neuton_app_stub.c, payload arrays below are
- * dropped from the OTA static library by archive-scoped linker /DISCARD/ rules; the model is
- * loaded at runtime from a partition image. See lib/model_ota/cmake/model_ota_neuton.cmake.
- */
-
 //////////////////////////////////////////////////////////////////////////////
 
 #define EDGEAI_LAB_SOLUTION_ID_STR	"90360"
@@ -387,17 +382,7 @@ static const nrf_user_output_t MODEL_AVERAGE_EMBEDDING[] = {
 	0.8292735, 0.8226876, 0.8751104, 0.4926738, 0.5999025,
 	0.4841458, 0.4264121, 0.4509522, 0.7913507, 0.8032691};
 
-#if defined(MODEL_OTA_NEUTON_WIRED)
-/* OTA: the scale/embedding arrays are discarded from the image; the loader re-points these at
- * the equivalents in the flash partition image. Neutralize the compile-time init so it holds no pointer
- * into a discarded section.
- */
-#define NN_DECODED_OUTPUT_INIT                                                                     \
-	.anomaly = {                                                                               \
-		.score = 0.f,                                                                      \
-		.meta = {.p_scale_min = NULL, .p_scale_max = NULL, .p_average_embedding = NULL},   \
-	}
-#else
+#ifndef NN_DECODED_OUTPUT_INIT
 #define NN_DECODED_OUTPUT_INIT                                                                     \
 	.anomaly = {                                                                               \
 		.score = 0.f,                                                                      \
@@ -407,18 +392,15 @@ static const nrf_user_output_t MODEL_AVERAGE_EMBEDDING[] = {
 	}
 #endif
 
-/** Model neurons activations buffer */
-#if defined(MODEL_OTA_NEUTON_WIRED)
-static nrf_user_neuron_t model_neurons_[MAX(MODEL_NEURONS_NUM, MODEL_OTA_NEUTON_MAX_NEURONS)];
-#else
-static nrf_user_neuron_t model_neurons_[MODEL_NEURONS_NUM];
+#ifndef MODEL_OTA_NEUTON_NEURONS_CAP
+#define MODEL_OTA_NEUTON_NEURONS_CAP MODEL_NEURONS_NUM
 #endif
 
+/** Model neurons activations buffer */
+static nrf_user_neuron_t model_neurons_[MODEL_OTA_NEUTON_NEURONS_CAP];
+
 /** Neuton model instance */
-#if defined(MODEL_OTA_NEUTON_WIRED)
-/* OTA: populated at runtime by nrf_edgeai_load_user_model_90360() from a flash partition image; kept
- * writable (non-const, zero-initialized) with no compile-time pointers into discarded arrays.
- */
+#ifdef MODEL_OTA_NEUTON_RUNTIME_WIRED
 static nrf_edgeai_model_neuton_t model_instance_;
 #else
 static const nrf_edgeai_model_neuton_t model_instance_ = {
@@ -505,29 +487,6 @@ nrf_edgeai_t *nrf_edgeai_user_model_90360(void)
 {
 	return &nrf_edgeai_;
 }
-
-#if defined(MODEL_OTA_NEUTON_WIRED)
-/* Model-only OTA entry point: load+validate the linked model partition image and wire its
- * descriptor (living in XIP flash) into the runtime model, then copy the image's baked
- * NN_DECODED_OUTPUT_INIT into the runtime decode state. Returns NULL if no valid image is
- * present. The compiled-in payload arrays above are dropped from the app image by the linker.
- */
-nrf_edgeai_t *nrf_edgeai_load_user_model_90360(uint8_t fa_id, const uint8_t *partition_addr)
-{
-	const struct model_image_neuton_expect expect = {
-		.task = MODEL_TASK,
-		.params_type = MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),
-		.outputs_cap = MODEL_OUTPUTS_NUM,
-	};
-
-	if (model_image_load_neuton(fa_id, partition_addr, &nrf_edgeai_, model_neurons_,
-				    ARRAY_SIZE(model_neurons_), &expect) != MODEL_IMAGE_OK) {
-		return NULL;
-	}
-
-	return &nrf_edgeai_;
-}
-#endif /* MODEL_OTA_NEUTON_WIRED */
 
 //////////////////////////////////////////////////////////////////////////////
 

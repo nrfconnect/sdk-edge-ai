@@ -16,10 +16,11 @@
  *   MODEL_IMAGE_VERSION_U32      - optional (default: 0x00010000)
  *
  * Neuton app wired (model_ota_neuton_wire):
- *   lib/model_ota/src/model_ota_neuton_app_stub.c
- *   MODEL_OTA_NEUTON_MODEL_SRC   - basename of nrf_edgeai_user_model.c
- *   MODEL_OTA_NEUTON_WIRED=1
- *   MODEL_OTA_NEUTON_MAX_NEURONS  - neuron scratch buffer capacity
+ *   Generated: ${CMAKE_CURRENT_BINARY_DIR}/model_ota_neuton_wired_<SOLUTION_ID>.c
+ *   from lib/model_ota/src/model_ota_neuton_wired.c.in
+ *   MAX_NEURONS substituted at configure time; sets MODEL_OTA_NEUTON_RUNTIME_WIRED and
+ *   MODEL_OTA_NEUTON_NEURONS_CAP before #include of generated nrf_edgeai_user_model.c;
+ *   defines nrf_edgeai_load_user_model_<SOLUTION_ID>() (declared via model_ota_neuton.h).
  *
  * Axon partition image (model_ota_axon_image):
  *   lib/model_ota/src/model_ota_axon_image_stub.c

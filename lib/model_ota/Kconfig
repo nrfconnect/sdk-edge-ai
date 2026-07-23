@@ -24,9 +24,9 @@ config MODEL_OTA_NEUTON
 	depends on NRF_EDGEAI
 	help
 	  Builds model_image_neuton.c and model_image_load_neuton(). OTA-wired models are compiled
-	  via model_ota_neuton_wire(), which compiles lib/model_ota/src/model_ota_neuton_app_stub.c
-	  with MODEL_OTA_NEUTON_WIRED and a per-model MODEL_OTA_NEUTON_MAX_NEURONS, then drops each
-	  wired model's payload from its static library by archive-scoped linker /DISCARD/ rules.
+	  via model_ota_neuton_wire(), which configure_file()s lib/model_ota/src/model_ota_neuton_wired.c.in
+	  into a per-model wired translation unit (includes generated nrf_edgeai_user_model.c and
+	  defines nrf_edgeai_load_user_model_<SOLUTION_ID>()), then drops each wired model's payload from its static library by archive-scoped linker /DISCARD/ rules.
 	  Build-time macro contract: model_ota_stub_macros.h.
 	  See lib/model_ota/cmake/model_ota_neuton_image.cmake,
 	  lib/model_ota/cmake/model_ota_neuton.cmake and include/model_ota/model_image.h.

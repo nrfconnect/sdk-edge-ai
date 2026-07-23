@@ -54,9 +54,10 @@ LOG_MODULE_REGISTER(multi_regress, LOG_LEVEL_INF);
 nrf_edgeai_t *nrf_edgeai_user_model_90508(void);
 
 #if defined(CONFIG_MODEL_OTA_NEUTON)
+#include <model_ota/model_ota_neuton.h>
 #include <zephyr/storage/flash_map.h>
 
-nrf_edgeai_t *nrf_edgeai_load_user_model_90508(uint8_t fa_id, const uint8_t *partition_addr);
+MODEL_OTA_NEUTON_LOAD_DECL(90508);
 
 BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_regress_storage),
 	     "board devicetree is missing model_regress_storage - see boards/*.overlay");
