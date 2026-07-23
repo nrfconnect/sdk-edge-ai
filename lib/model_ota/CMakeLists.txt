@@ -7,3 +7,4 @@
 zephyr_library()
 
 zephyr_library_sources_ifdef(CONFIG_MODEL_OTA_NEUTON model_image_neuton.c)
+zephyr_library_sources_ifdef(CONFIG_MODEL_OTA_AXON model_image_axon.c)

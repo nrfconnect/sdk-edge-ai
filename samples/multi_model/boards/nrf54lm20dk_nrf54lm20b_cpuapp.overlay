@@ -5,9 +5,9 @@
  */
 
 /*
- * Model-only OTA: repurpose the unused (no-MCUboot) slot1_partition region as three dedicated
- * "model_storage"-style partitions, one per Neuton model, so each model image can be flashed and
- * updated independently of the application image. Only meaningful with
+ * Model-only OTA: repurpose the unused (no-MCUboot) slot1_partition region as dedicated
+ * model_storage partitions (three Neuton models + two Axon models). Wakeword stays
+ * baked into the app.
  * -DEXTRA_CONF_FILE=overlay-ota.conf; harmless (just reserved, unused flash) otherwise.
  *
  * The OTA build emits a standalone <name>_model_partition.hex per model (linked at the matching
@@ -35,6 +35,18 @@
 			compatible = "zephyr,mapped-partition";
 			label = "model_regress_storage";
 			reg = <0x112000 DT_SIZE_K(32)>;
+		};
+
+		model_person_det_storage: partition@11a000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_person_det_storage";
+			reg = <0x11a000 DT_SIZE_K(256)>;
+		};
+
+		model_okay_nordic_storage: partition@15a000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_okay_nordic_storage";
+			reg = <0x15a000 DT_SIZE_K(128)>;
 		};
 	};
 };

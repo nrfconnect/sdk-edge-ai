@@ -8,7 +8,7 @@
 
 /**
  * @file
- * @brief On-flash "model partition image" format for the Neuton model-only OTA PoC.
+ * @brief On-flash "model partition image" format for model-only OTA (Neuton and Axon).
  *
  * A model *image* is a self-contained, fully linked artifact - built exactly like the Axon
  * "compiled-into-partition-image" flow:
@@ -48,6 +48,8 @@
 #include <nrf_edgeai/rt/nrf_edgeai_output_types.h>
 #include <nrf_edgeai/rt/nrf_edgeai_types.h>
 
+#include <drivers/axon/nrf_axon_nn_infer.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -74,6 +76,19 @@ enum model_image_params_type {
 	MODEL_IMAGE_PARAMS_F32 = 0,
 	MODEL_IMAGE_PARAMS_Q16 = 1,
 	MODEL_IMAGE_PARAMS_Q8 = 2,
+	/** Pure Axon compiled model (nrf_axon_nn_compiled_model_s); @ref decoded_output is NULL. */
+	MODEL_IMAGE_PARAMS_AXON = 3,
+};
+
+/**
+ * Shared storage for @ref model_image_header.model.
+ *
+ * Neuton images store @ref neuton; Axon images store the compiled model pointer in @ref axon
+ * (same bit width as @ref neuton on the target).
+ */
+union model_image_model_ptr {
+	const nrf_edgeai_model_neuton_t *neuton;
+	const nrf_axon_nn_compiled_model_s *axon;
 };
 
 /**
@@ -107,9 +122,11 @@ struct model_image_header {
 	uint8_t task;            /**< off 7:  nrf_edgeai_model_task_t of the baked model */
 	uint32_t image_size;     /**< off 8:  bytes from base to __model_image_end (whole image) */
 	uint32_t crc32;          /**< off 12: CRC32/IEEE over the image with this field zeroed */
-	/** off 16: DIRECT absolute-flash pointer to the baked descriptor (NOT an offset). */
-	const nrf_edgeai_model_neuton_t *model;
-	/** off 20: DIRECT pointer to the baked decode-output init (NN_DECODED_OUTPUT_INIT). */
+	/** off 16: DIRECT absolute-flash pointer to the baked model (NOT an offset). */
+	union model_image_model_ptr model;
+	/** off 20: DIRECT pointer to the baked decode-output init (NN_DECODED_OUTPUT_INIT).
+	 *  NULL for pure Axon images (@ref params_type == @ref MODEL_IMAGE_PARAMS_AXON).
+	 */
 	const nrf_edgeai_decoded_output_t *decoded_output;
 	char name[MODEL_IMAGE_NAME_LEN]; /**< off 24: free-form, not necessarily NUL-terminated */
 	uint32_t model_version;          /**< off 40: free-form major.minor.patch */
@@ -137,6 +154,10 @@ enum model_image_result {
 	MODEL_IMAGE_ERR_OUTPUTS_TOO_MANY = -11,
 	/** A baked descriptor/scale pointer falls outside the image's flash extent. */
 	MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE = -12,
+	/** Image is not an Axon model (@ref params_type != @ref MODEL_IMAGE_PARAMS_AXON). */
+	MODEL_IMAGE_ERR_NOT_AXON_IMAGE = -13,
+	/** Loaded Axon model failed nrf_axon_nn_model_validate(). */
+	MODEL_IMAGE_ERR_AXON_VALIDATE = -14,
 };
 
 /**
@@ -174,6 +195,22 @@ struct model_image_neuton_expect {
 int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_edgeai_t *edgeai,
 			    void *neurons_buf, size_t neurons_buf_cap,
 			    const struct model_image_neuton_expect *expect);
+
+/**
+ * @brief Validate a linked Axon model partition image and return its compiled model pointer.
+ *
+ * The partition is memory-mapped (XIP). App-owned RAM pointers inside the baked model
+ * (interlayer buffer, packed output, op extensions) are resolved at model-image link time
+ * from zephyr.elf symbol addresses. @p out_model is set to the header's direct model pointer
+ * on success.
+ *
+ * @param[in]  fa_id           Flash area ID of the partition.
+ * @param[in]  partition_addr  Memory-mapped base address of that partition.
+ * @param[out] out_model       On success, pointer to the model inside the partition.
+ * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
+ */
+int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
+			  const nrf_axon_nn_compiled_model_s **out_model);
 
 #ifdef __cplusplus
 }

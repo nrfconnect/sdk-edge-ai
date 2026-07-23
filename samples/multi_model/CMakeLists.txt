@@ -22,9 +22,8 @@ set(NEUTON_MODEL_SOURCES
   ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c
 )
 
-set(BAKED_MODEL_SOURCES
-  ${WW_MODEL_DIR}/nrf_edgeai_user_model.c
-)
+set(PERSON_DET_HEADER ${PERSON_DET_DIR}/generated/nrf_axon_model_person_det_.h)
+set(OKAY_NORDIC_HEADER ${OKAY_NORDIC_DIR}/generated/nrf_axon_model_okay_nordic.h)
 
 target_include_directories(app PRIVATE include)
 
@@ -37,14 +36,13 @@ target_sources(app PRIVATE
   src/test_person_det.c
   src/test_okay_nordic.c
   ${PERSON_DET_DIR}/postprocessing.c
+  ${WW_MODEL_DIR}/nrf_edgeai_user_model.c
 )
 
-# Neuton sample models are partition-loaded when OTA is enabled; other models stay baked in.
+# Neuton models are partition-loaded when OTA is enabled; wakeword stays baked in.
 if(NOT CONFIG_MODEL_OTA_NEUTON)
   target_sources(app PRIVATE ${NEUTON_MODEL_SOURCES})
 endif()
-
-target_sources(app PRIVATE ${BAKED_MODEL_SOURCES})
 
 target_include_directories(app PRIVATE
   ${ANOMALY_MODEL_DIR}
@@ -66,14 +64,6 @@ if(CONFIG_MODEL_OTA_NEUTON)
   model_ota_neuton_wire(SOLUTION_ID 90508 MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c
                         MAX_NEURONS 2)
 
-  # Build each model as a self-contained, linked partition IMAGE (Axon-style), placed at its
-  # model_storage partition base. The partition header holds a DIRECT pointer to the baked
-  # nrf_edgeai_model_neuton_t; the app loads it via model_image_load_neuton(). Partition
-  # nodelabels come from boards/*.overlay.
-  #
-  # Each model image is a SEPARATE, independently-flashable artifact
-  # (<name>_model_partition.hex + <name>_model_image.bin under the build dir). They are NOT
-  # merged into zephyr.hex: the app and each model partition are flashed/updated on their own.
   include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_neuton_image.cmake)
   model_ota_neuton_image(TARGET gear_anomaly NAME gear_anomaly VERSION 1.0.0
                          PARTITION_NODELABEL model_anomaly_storage
@@ -84,4 +74,18 @@ if(CONFIG_MODEL_OTA_NEUTON)
   model_ota_neuton_image(TARGET temp_regress NAME temp_regress VERSION 1.0.0
                          PARTITION_NODELABEL model_regress_storage
                          MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c)
+endif()
+
+if(CONFIG_MODEL_OTA_AXON)
+  include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_axon.cmake)
+  model_ota_axon_wire(HEADER ${PERSON_DET_HEADER})
+  model_ota_axon_wire(HEADER ${OKAY_NORDIC_HEADER})
+
+  include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_axon_image.cmake)
+  model_ota_axon_image(TARGET person_det NAME person_det VERSION 1.0.0
+                         PARTITION_NODELABEL model_person_det_storage
+                         HEADER ${PERSON_DET_HEADER})
+  model_ota_axon_image(TARGET okay_nordic NAME okay_nordic VERSION 1.0.0
+                         PARTITION_NODELABEL model_okay_nordic_storage
+                         HEADER ${OKAY_NORDIC_HEADER})
 endif()

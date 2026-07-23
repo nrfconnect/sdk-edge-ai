@@ -27,6 +27,7 @@ import sys
 from pathlib import Path
 
 MAGIC = b"NEI5"
+PARAMS_AXON = 3
 
 # struct model_image_header (see include/model_ota/model_image.h), little-endian, __packed:
 #   magic[4] version:H params_type:B task:B image_size:I crc32:I model:I decoded_output:I
@@ -51,7 +52,8 @@ def main():
     parser.add_argument("--elf", type=Path, required=True)
     parser.add_argument("--bin", type=Path, required=True)
     parser.add_argument("--partition-addr", type=lambda x: int(x, 0), required=True)
-    parser.add_argument("--model-symbol", default="model_instance_")
+    parser.add_argument("--model-symbol", default="model_instance_",
+                        help="Expected baked model symbol (Axon: e.g. model_person_det)")
     parser.add_argument("--header-symbol", default="nrf_edgeai_model_image_hdr")
     parser.add_argument("--defs-header", type=Path, default=None,
                         help="model_image.h, to read the expected MODEL_IMAGE_FORMAT_VERSION")
@@ -78,6 +80,8 @@ def main():
     start = lookup_symbol(args.nm, args.elf, "__model_image_start")
     end = lookup_symbol(args.nm, args.elf, "__model_image_end")
     hdr_sym = lookup_symbol(args.nm, args.elf, args.header_symbol)
+    if hdr_sym is None:
+        hdr_sym = lookup_symbol(args.nm, args.elf, "model_image_hdr")
     model_sym = lookup_symbol(args.nm, args.elf, args.model_symbol)
 
     if start is None or end is None:
@@ -120,7 +124,10 @@ def main():
     if model_sym is not None and model_ptr != model_sym:
         errors.append("header model 0x%x != &%s 0x%x" % (model_ptr, args.model_symbol, model_sym))
 
-    if decoded_output_ptr < start or decoded_output_ptr >= end:
+    if params_type == PARAMS_AXON:
+        if decoded_output_ptr != 0:
+            errors.append("Axon image decoded_output must be NULL, got 0x%x" % decoded_output_ptr)
+    elif decoded_output_ptr < start or decoded_output_ptr >= end:
         errors.append("decoded_output pointer 0x%x outside image [0x%x, 0x%x)"
                       % (decoded_output_ptr, start, end))
 

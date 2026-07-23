@@ -50,7 +50,11 @@ const static struct
 
 extern const int8_t axonpro_int8_packing_filter[4];
 
+#if defined(MODEL_OTA_AXON_IMAGE)
+extern int32_t axon_model_okay_nordic_persistent_vars[1160];
+#else
 int32_t axon_model_okay_nordic_persistent_vars[1160];
+#endif
 
 extern nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(void*, uint16_t, void*);
 

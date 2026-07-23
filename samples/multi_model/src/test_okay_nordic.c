@@ -10,12 +10,17 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/storage/flash_map.h>
 
 #include <axon/nrf_axon_platform.h>
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
 
+#if defined(CONFIG_MODEL_OTA_AXON)
+#include <model_ota/model_image.h>
+#else
 #include "generated/nrf_axon_model_okay_nordic.h"
+#endif
 
 LOG_MODULE_REGISTER(multi_okay_nordic, LOG_LEVEL_INF);
 
@@ -58,10 +63,24 @@ static float dequantize_output(const int8_t *value, const nrf_axon_nn_compiled_m
 void run_okay_nordic_tests(void)
 {
 	nrf_axon_result_e result;
-	const nrf_axon_nn_compiled_model_s *model = &model_axon_user_instance_wakeword;
-	const nrf_axon_nn_compiled_model_input_s *model_input =
-		nrf_axon_nn_model_1st_external_input(model);
+	const nrf_axon_nn_compiled_model_s *model;
+	const nrf_axon_nn_compiled_model_input_s *model_input;
 	int err;
+
+#if defined(CONFIG_MODEL_OTA_AXON)
+	if (model_image_load_axon(PARTITION_ID(model_okay_nordic_storage),
+				  (const uint8_t *)PARTITION_ADDRESS(model_okay_nordic_storage),
+				  &model) != MODEL_IMAGE_OK ||
+	    model == NULL) {
+		LOG_WRN("No valid okay_nordic model image in model_okay_nordic_storage - skipping "
+			"(flash okay_nordic_model_partition.hex)");
+		return;
+	}
+#else
+	model = &model_axon_user_instance_wakeword;
+#endif
+
+	model_input = nrf_axon_nn_model_1st_external_input(model);
 
 	result = nrf_axon_platform_init();
 	__ASSERT_NO_MSG(result == NRF_AXON_RESULT_SUCCESS);

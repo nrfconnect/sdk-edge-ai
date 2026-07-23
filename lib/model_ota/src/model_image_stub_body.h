@@ -63,7 +63,7 @@ const struct model_image_header nrf_edgeai_model_image_hdr = {
 	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)NRF_MODEL_PARTITION_ADDR),
 	.crc32 = 0, /* patched over the finished binary by patch_image_crc.py */
 	/* Absolute flash address of the baked descriptor - a DIRECT pointer, not an offset. */
-	.model = &model_instance_,
+	.model.neuton = &model_instance_,
 	.decoded_output = &model_image_decoded_output_,
 	.name = MODEL_IMAGE_NAME_STR,
 	.model_version = MODEL_IMAGE_VERSION_U32,

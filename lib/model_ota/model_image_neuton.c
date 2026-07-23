@@ -132,16 +132,16 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	 * dereference it.
 	 */
 	const uint8_t *image_end = partition_addr + hdr.image_size;
-	const uint8_t *model_bytes = (const uint8_t *)hdr.model;
+	const uint8_t *model_bytes = (const uint8_t *)hdr.model.neuton;
 
 	if (model_bytes < partition_addr ||
 	    model_bytes + sizeof(nrf_edgeai_model_neuton_t) > image_end) {
-		LOG_ERR("Header model pointer %p outside image [%p, %p)", (void *)hdr.model,
+		LOG_ERR("Header model pointer %p outside image [%p, %p)", (void *)hdr.model.neuton,
 			(const void *)partition_addr, (const void *)image_end);
 		return MODEL_IMAGE_ERR_MODEL_PTR_OUT_OF_RANGE;
 	}
 
-	const nrf_edgeai_model_neuton_t *img_model = hdr.model;
+	const nrf_edgeai_model_neuton_t *img_model = hdr.model.neuton;
 	uint16_t neurons_num = img_model->meta.neurons_num;
 	uint16_t outputs_num = img_model->meta.outputs_num;
 	uint32_t weights_num = img_model->meta.weights_num;
