@@ -26,7 +26,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-MAGIC = b"NEI5"
+MAGIC = b"NEI\x00"
 PARAMS_AXON = 3
 
 # struct model_image_header (see include/model_ota/model_image.h), little-endian, __packed:

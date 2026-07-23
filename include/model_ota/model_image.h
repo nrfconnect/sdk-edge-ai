@@ -60,17 +60,16 @@ extern "C" {
 /** Length of the @ref model_image_header.name field, not necessarily NUL-terminated. */
 #define MODEL_IMAGE_NAME_LEN 16
 
-/* Magic {'N','E','I','5'} = Neuton Edge-ai Image. */
+/* Magic {'N','E','I','\0'} = Neuton Edge-ai Image (version is @ref format_version only). */
 #define MODEL_IMAGE_MAGIC0 'N'
 #define MODEL_IMAGE_MAGIC1 'E'
 #define MODEL_IMAGE_MAGIC2 'I'
-#define MODEL_IMAGE_MAGIC3 '5'
+#define MODEL_IMAGE_MAGIC3 '\0'
 
 /**
  * Precision of the baked model's weights/act_weights, matching MODEL_PARAMS_TYPE in the
- * generated model source. All three nrf_edgeai_model_neuton_params_* structs are pointer-
- * triples with identical layout, so this only selects which union member is *documented*; the
- * loader patches p_neurons at the same struct offset regardless of precision.
+ * generated model source. The Neuton loader selects the matching nrf_edgeai_model_neuton_params_*
+ * union member when range-checking baked pointers and patching p_neurons.
  */
 enum model_image_params_type {
 	MODEL_IMAGE_PARAMS_F32 = 0,
@@ -116,7 +115,7 @@ union model_image_model_ptr {
  * @ref crc32 at a constant offset without parsing the struct.
  */
 struct model_image_header {
-	uint8_t magic[4];        /**< off 0:  {'N','E','I','5'} */
+	uint8_t magic[4];        /**< off 0:  {'N','E','I','\0'} */
 	uint16_t format_version; /**< off 4:  MODEL_IMAGE_FORMAT_VERSION */
 	uint8_t params_type;     /**< off 6:  enum model_image_params_type */
 	uint8_t task;            /**< off 7:  nrf_edgeai_model_task_t of the baked model */
@@ -160,6 +159,8 @@ enum model_image_result {
 	MODEL_IMAGE_ERR_NOT_AXON_IMAGE = -13,
 	/** Loaded Axon model failed nrf_axon_nn_model_validate(). */
 	MODEL_IMAGE_ERR_AXON_VALIDATE = -14,
+	/** Image @ref params_type is not a supported Neuton precision (f32/q16/q8). */
+	MODEL_IMAGE_ERR_BAD_PARAMS_TYPE = -15,
 };
 
 /**
