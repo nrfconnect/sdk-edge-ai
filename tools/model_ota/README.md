@@ -55,5 +55,5 @@ nrfutil device program --firmware gear_anomaly_model_partition.hex \
 
 - Image format and loader: `include/model_ota/model_image.h`, `lib/model_ota/model_image_neuton.c`
 - Build wiring: `lib/model_ota/cmake/model_ota_neuton_image.cmake`,
-  `lib/model_ota/cmake/model_ota_neuton.cmake`, `lib/model_ota/src/model_image_stub_body.h`,
-  `lib/model_ota/linker/model_image.ld`
+  `lib/model_ota/cmake/model_ota_neuton.cmake`, `lib/model_ota/src/model_ota_neuton_image_stub.c`,
+  `lib/model_ota/src/model_ota_stub_macros.h`, `lib/model_ota/linker/model_image.ld`

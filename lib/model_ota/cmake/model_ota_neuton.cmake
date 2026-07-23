@@ -11,17 +11,17 @@
 # For each OTA-updatable model:
 #
 #   1. Builds a dedicated static library (default target ota_neuton_<SOLUTION_ID>) from
-#      lib/model_ota/src/model_ota_neuton_app_stub.c, which #includes MODEL_SRC with
-#      MODEL_OTA_NEUTON_WIRED and a per-model MODEL_OTA_NEUTON_MAX_NEURONS. Models compiled
-#      directly into the app are unaffected and keep compile-time descriptors and payload.
+#      lib/model_ota/src/model_ota_neuton_app_stub.c with MODEL_OTA_NEUTON_WIRED and a per-model
+#      MODEL_OTA_NEUTON_MAX_NEURONS. Models compiled directly into the app are unaffected
+#      and keep compile-time descriptors and payload.
 #
 #   2. Compiles with -ffunction-sections -fdata-sections so payload arrays land in named
 #      input sections (.rodata.MODEL_WEIGHTS, ...).
 #
 #   3. Appends archive-scoped /DISCARD/ rules for *that* library only.
 #
-# Partition images use lib/model_ota/src/model_image_stub.c instead (MODEL_OTA_NEUTON_WIRED
-# unset, compile-time descriptor + payload kept for the linked image).
+# Partition images use lib/model_ota/src/model_ota_neuton_image_stub.c instead (compile-time
+# descriptor + payload kept for the linked image).
 
 include_guard(GLOBAL)
 

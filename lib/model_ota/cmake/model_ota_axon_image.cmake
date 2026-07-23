@@ -9,7 +9,7 @@
 # model_ota_axon_image(TARGET <prefix> HEADER <abs nrf_axon_model_*.h>
 #                       PARTITION_NODELABEL <dt-nodelabel> [NAME <str>] [VERSION <x.y.z>])
 #
-# After zephyr.elf exists, compiles model_image_stub_axon.c, links it at the partition base with
+# After zephyr.elf exists, compiles model_ota_axon_image_stub.c, links it at the partition base with
 # model_image.ld plus a generated PROVIDE() fragment for app-owned symbols, then patches CRC,
 # validates layout, and emits standalone .bin/.hex artifacts.
 
@@ -46,8 +46,7 @@ function(model_ota_axon_image)
   set(work_dir ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET})
   file(MAKE_DIRECTORY ${work_dir})
 
-  set(stub_src          ${MODEL_OTA_ROOT}/src/model_image_stub_axon.c)
-  set(stub_body         ${MODEL_OTA_ROOT}/src/model_image_stub_axon_body.h)
+  set(stub_src          ${MODEL_OTA_ROOT}/src/model_ota_axon_image_stub.c)
   set(axon_model_gen    ${EDGE_AI_MODULE_ROOT}/tools/model_ota/gen_axon_model_image_fixups.py)
   set(extract_syms      ${EDGE_AI_MODULE_ROOT}/tools/model_ota/extract_elf_syms.py)
   set(crc_tool          ${EDGE_AI_MODULE_ROOT}/tools/model_ota/patch_image_crc.py)
@@ -152,7 +151,7 @@ function(model_ota_axon_image)
             --model-symbol ${model_image_model_sym}
     COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex --change-addresses=${partition_addr}
             ${image_bin} ${image_hex}
-    DEPENDS ${stub_src} ${stub_body} ${model_syms_ld}
+    DEPENDS ${stub_src} ${model_syms_ld}
             ${MI_HEADER}
             ${CMAKE_CURRENT_BINARY_DIR}/zephyr/zephyr.elf
             ${linker_script} ${crc_tool} ${validate_tool}

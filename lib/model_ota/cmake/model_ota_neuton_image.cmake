@@ -11,10 +11,9 @@
 #
 # adds a target `<prefix>_model_image` (built by default) that:
 #
-#   1. Compiles lib/model_ota/src/model_image_stub.c as an OBJECT library with
-#      MODEL_OTA_NEUTON_MODEL_SRC set to the model basename (Axon-style #include of the generated
-#      nrf_edgeai_user_model.c) with MODEL_OTA_NEUTON_WIRED unset, then #includes
-#      model_image_stub_body.h, which emits the partition header into section .model_image.header.
+#   1. Compiles lib/model_ota/src/model_ota_neuton_image_stub.c as an OBJECT library with
+#      MODEL_OTA_NEUTON_MODEL_SRC set to the model basename. The stub #includes the generated
+#      nrf_edgeai_user_model.c and emits the partition header into section .model_image.header.
 #   2. Links that object at the partition's flash base (from devicetree) with model_image.ld
 #      and --gc-sections, so the header + descriptor + data land in one .model_image section at
 #      the base and every intra-image pointer is a correct absolute flash address. All the
@@ -67,8 +66,7 @@ function(model_ota_neuton_image)
   set(work_dir ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET})
   file(MAKE_DIRECTORY ${work_dir})
 
-  set(stub_src       ${MODEL_OTA_ROOT}/src/model_image_stub.c)
-  set(stub_body      ${MODEL_OTA_ROOT}/src/model_image_stub_body.h)
+  set(stub_src       ${MODEL_OTA_ROOT}/src/model_ota_neuton_image_stub.c)
   set(image_elf     ${work_dir}/${MI_TARGET}_model_image.elf)
   set(image_bin_raw ${work_dir}/${MI_TARGET}_model_image_raw.bin)
   set(image_bin     ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_image.bin)
@@ -92,7 +90,7 @@ function(model_ota_neuton_image)
                              MODEL_IMAGE_VERSION_U32=${ver_u32}u)
   set_source_files_properties(${stub_src}
                               TARGET_DIRECTORY ${stub}
-                              PROPERTIES OBJECT_DEPENDS "${MI_MODEL_SRC};${stub_body}")
+                              PROPERTIES OBJECT_DEPENDS "${MI_MODEL_SRC}")
 
   add_custom_command(
     OUTPUT ${image_bin} ${image_hex}
@@ -119,7 +117,7 @@ function(model_ota_neuton_image)
     #    on their own.
     COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex --change-addresses=${partition_addr}
             ${image_bin} ${image_hex}
-    DEPENDS $<TARGET_OBJECTS:${stub}> ${linker_script} ${stub_body} ${crc_tool} ${validate_tool}
+    DEPENDS $<TARGET_OBJECTS:${stub}> ${linker_script} ${crc_tool} ${validate_tool}
     COMMENT "Building Neuton model partition image '${MI_NAME}' at ${partition_addr}"
     COMMAND_EXPAND_LISTS
     VERBATIM)

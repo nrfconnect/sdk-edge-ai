@@ -3,22 +3,39 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  *
- * Axon model partition-image emission.
+ * Axon model partition-image stub (one translation unit, compiled once per model image).
  *
- * Included at the bottom of model_image_stub_axon.c after MODEL_IMAGE_HEADER pulls in
- * the compiler-generated model. Emits a @ref model_image_header with a DIRECT pointer to
- * the baked nrf_axon_nn_compiled_model_s and NULL decoded_output.
+ * model_ota_axon_image() compiles this file with MODEL_IMAGE_HEADER and MODEL_IMAGE_MODEL_SYM,
+ * then links the result at the partition base. App-owned pointer fields are resolved from
+ * zephyr.elf via a generated PROVIDE() linker fragment.
  */
 
+#include "model_ota_stub_macros.h"
+
+#include <stddef.h>
+#include <stdint.h>
+#include <assert.h>
+
+#define NRF_AXON_MODEL_APP_STORAGE extern
+
+#include <axon/nrf_axon_platform.h>
+#include <drivers/axon/nrf_axon_driver.h>
+#include <drivers/axon/nrf_axon_nn_infer.h>
+#include <model_ota/model_image.h>
+
 #ifndef NRF_MODEL_PARTITION_ADDR
-#error "NRF_MODEL_PARTITION_ADDR must be defined when compiling the Axon model image stub"
+#error "NRF_MODEL_PARTITION_ADDR must be defined when linking the Axon model image"
+#endif
+
+#ifndef MODEL_IMAGE_HEADER
+#error "MODEL_IMAGE_HEADER must be defined when building the Axon model image stub"
 #endif
 
 #ifndef MODEL_IMAGE_MODEL_SYM
 #error "MODEL_IMAGE_MODEL_SYM must be defined when building the Axon model image stub"
 #endif
 
-#include <model_ota/model_image.h>
+#include MODEL_IMAGE_HEADER
 
 extern char __model_image_end[];
 
