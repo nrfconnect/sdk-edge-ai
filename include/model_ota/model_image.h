@@ -55,7 +55,7 @@ extern "C" {
 #endif
 
 /** Image format version (independent of the model's own version). */
-#define MODEL_IMAGE_FORMAT_VERSION 2
+#define MODEL_IMAGE_FORMAT_VERSION 3
 
 /** Length of the @ref model_image_header.name field, not necessarily NUL-terminated. */
 #define MODEL_IMAGE_NAME_LEN 16
@@ -130,6 +130,8 @@ struct model_image_header {
 	const nrf_edgeai_decoded_output_t *decoded_output;
 	char name[MODEL_IMAGE_NAME_LEN]; /**< off 24: free-form, not necessarily NUL-terminated */
 	uint32_t model_version;          /**< off 40: free-form major.minor.patch */
+	/** off 44: Axon packed-output bytes required by the baked model; 0 for Neuton images. */
+	uint32_t axon_packed_output_bytes;
 } __packed;
 
 /** Byte offset of @ref model_image_header.crc32; used by the host CRC patcher. */

@@ -83,6 +83,22 @@ function(model_ota_axon_image)
     COMMAND_ERROR_IS_FATAL ANY
   )
 
+  set(_packed_output_bytes 0)
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} ${axon_model_gen}
+            --header ${MI_HEADER}
+            --print-packed-output
+    OUTPUT_VARIABLE _packed_raw
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY
+  )
+  if(_packed_raw)
+    string(REGEX MATCH "^([^ ]+) ([0-9]+)$" _packed_match "${_packed_raw}")
+    if(_packed_match)
+      set(_packed_output_bytes ${CMAKE_MATCH_2})
+    endif()
+  endif()
+
   set(model_sym_list    ${work_dir}/${MI_TARGET}_model_syms.list)
   set(model_syms_ld     ${work_dir}/${MI_TARGET}_model_syms.ld)
   set(model_image_o     ${work_dir}/${MI_TARGET}_model_image.o)
@@ -139,6 +155,7 @@ function(model_ota_axon_image)
             -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}
             -DMODEL_IMAGE_NAME_STR=${MI_NAME}
             -DMODEL_IMAGE_VERSION_U32=${ver_u32}
+            -DMODEL_IMAGE_PACKED_OUTPUT_BYTES=${_packed_output_bytes}
             -DINCLUDE_DIR_EDGE_AI=${EDGE_AI_MODULE_ROOT}/include
             -DZEPHYR_BASE=${ZEPHYR_BASE}
             -DZEPHYR_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}

@@ -23,7 +23,7 @@ extern "C" {
  * 1.3.0
  * - batch support added for SpaceToBatch, BatchToSpace, and convolutions.
  *   This enables dilation on convolutions.
- * 
+ *
  * 1.2.1 05/04/2026
  * - Remove RRAM work-around.
  *
@@ -68,6 +68,9 @@ extern "C" {
 #define NRF_AXON_GENERATE_VERSION(major,minor,patch) ( ((major)<<16) | ((minor) << 8) | (patch))
 #define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(1, 3, 0)
 
+#ifndef NRF_AXON_MODEL_APP_STORAGE
+#define NRF_AXON_MODEL_APP_STORAGE
+#endif
 
 #if !defined(AXON_FORCE_32BIT_ADDR) && ((defined(__SIZEOF_POINTER__) && (__SIZEOF_POINTER__==8)) || defined(_WIN64))
 typedef uint64_t NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE;

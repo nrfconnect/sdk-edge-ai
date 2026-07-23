@@ -32,9 +32,10 @@ LOG_MODULE_REGISTER(multi_person_det, LOG_LEVEL_INF);
 
 static int8_t input_buf[MODEL_WIDTH * MODEL_HEIGHT * 3];
 #if defined(CONFIG_MODEL_OTA_AXON)
-#define NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE 17280
-#endif
+static int8_t output_buf[OTA_AXON_PERSON_DET_PACKED_OUTPUT_BYTES];
+#else
 static int8_t output_buf[NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE];
+#endif
 
 static inline int8_t quantize(const float value, const nrf_axon_nn_compiled_model_input_s *in)
 {

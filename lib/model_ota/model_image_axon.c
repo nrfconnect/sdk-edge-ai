@@ -24,6 +24,7 @@ int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 	const struct flash_area *fa;
 	struct model_image_header hdr;
 	int rc;
+	const nrf_axon_nn_compiled_model_s *model;
 
 	if (out_model == NULL) {
 		return MODEL_IMAGE_ERR_AXON_VALIDATE;
@@ -102,13 +103,15 @@ int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 	}
 
-	if (nrf_axon_nn_model_validate(hdr.model.axon) != NRF_AXON_RESULT_SUCCESS) {
+	model = hdr.model.axon;
+
+	if (nrf_axon_nn_model_validate(model) != NRF_AXON_RESULT_SUCCESS) {
 		LOG_ERR("Axon model validate failed for image '%.*s'", MODEL_IMAGE_NAME_LEN,
 			hdr.name);
 		return MODEL_IMAGE_ERR_AXON_VALIDATE;
 	}
 
-	*out_model = hdr.model.axon;
+	*out_model = model;
 
 	LOG_INF("Loaded Axon model image '%.*s' v0x%08x", MODEL_IMAGE_NAME_LEN, hdr.name,
 		hdr.model_version);

@@ -30,6 +30,10 @@ extern char __model_image_end[];
 #define MODEL_IMAGE_VERSION_U32 0x00010000u
 #endif
 
+#ifndef MODEL_IMAGE_PACKED_OUTPUT_BYTES
+#define MODEL_IMAGE_PACKED_OUTPUT_BYTES 0u
+#endif
+
 static const union model_image_model_ptr model_image_model = {
 	.axon = &MODEL_IMAGE_MODEL_SYM,
 };
@@ -46,4 +50,5 @@ const struct model_image_header model_image_hdr = {
 	.decoded_output = NULL,
 	.name = MODEL_IMAGE_NAME_STR,
 	.model_version = MODEL_IMAGE_VERSION_U32,
+	.axon_packed_output_bytes = MODEL_IMAGE_PACKED_OUTPUT_BYTES,
 };

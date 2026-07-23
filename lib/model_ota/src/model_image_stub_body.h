@@ -67,4 +67,5 @@ const struct model_image_header nrf_edgeai_model_image_hdr = {
 	.decoded_output = &model_image_decoded_output_,
 	.name = MODEL_IMAGE_NAME_STR,
 	.model_version = MODEL_IMAGE_VERSION_U32,
+	.axon_packed_output_bytes = 0,
 };

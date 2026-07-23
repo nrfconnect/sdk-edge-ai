@@ -31,8 +31,8 @@ PARAMS_AXON = 3
 
 # struct model_image_header (see include/model_ota/model_image.h), little-endian, __packed:
 #   magic[4] version:H params_type:B task:B image_size:I crc32:I model:I decoded_output:I
-#   name[16] model_version:I
-HEADER_FMT = "<4sHBBIIII16sI"
+#   name[16] model_version:I axon_packed_output_bytes:I
+HEADER_FMT = "<4sHBBIIII16sII"
 HEADER_SIZE = struct.calcsize(HEADER_FMT)
 
 
@@ -106,7 +106,7 @@ def main():
         sys.exit(1)
 
     (magic, version, params_type, task, image_size, crc32, model_ptr, decoded_output_ptr,
-     name, model_version) = struct.unpack(HEADER_FMT, header_bytes)
+     name, model_version, axon_packed_output_bytes) = struct.unpack(HEADER_FMT, header_bytes)
 
     if magic != MAGIC:
         errors.append("magic %r != %r" % (magic, MAGIC))
