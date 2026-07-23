@@ -19,7 +19,7 @@ endif()
 
 include(${APP_DIR}/../../../lib/model_ota/cmake/nrf_model_sysbuild.cmake)
 
-nrf_model_sysbuild_provision(
+nrf_model_register_provision_hex(
 	APP_IMAGE regression
 	MODEL_HEX ${CMAKE_BINARY_DIR}/regression/regression_model_mcuboot.signed.hex
 )

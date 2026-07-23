@@ -3,27 +3,23 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-# Sysbuild helpers for model-only OTA samples that also use MCUboot.
+# Sysbuild helpers for model-only OTA.
 #
-# nrf_model_sysbuild_provision() registers the model package hex as an extra
+# nrf_model_register_provision_hex() registers the model package hex as an extra
 # sysbuild flash domain (west flash programs it after the bootloader and app)
 # and, when MCUboot is enabled, builds a single merged provision hex for
 # nrfutil or west flash --hex-file.
 
-function(nrf_model_sysbuild_provision)
+function(nrf_model_register_provision_hex)
 	cmake_parse_arguments(ARG "" "APP_IMAGE;MODEL_HEX" "" ${ARGN})
 
 	if(NOT ARG_APP_IMAGE OR NOT ARG_MODEL_HEX)
 		message(FATAL_ERROR
-			"nrf_model_sysbuild_provision() requires APP_IMAGE and MODEL_HEX")
+			"${CMAKE_CURRENT_FUNCTION}() requires APP_IMAGE and MODEL_HEX")
 	endif()
 	if(NOT IS_ABSOLUTE "${ARG_MODEL_HEX}")
 		message(FATAL_ERROR
-			"nrf_model_sysbuild_provision(): MODEL_HEX must be an absolute path")
-	endif()
-
-	if(SB_CONFIG_PARTITION_MANAGER)
-		return()
+			"${CMAKE_CURRENT_FUNCTION}(): MODEL_HEX must be an absolute path")
 	endif()
 
 	include(${ZEPHYR_NRF_MODULE_DIR}/sysbuild/image_flasher.cmake)

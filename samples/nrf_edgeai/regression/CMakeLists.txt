@@ -12,15 +12,6 @@ project(nrf_edgeai_regression_sample)
 
 target_include_directories(app PRIVATE include)
 
-# Each backend's nrf_edgeai_generated/<Backend>/nrf_edgeai_user_model.c is both the model itself
-# (what an actual Edge AI Lab export would be, plus a mutable runtime instance so it works
-# compiled-in or OTA-loaded without duplicating anything) and, for the CONFIG_MODEL_OTA_AXON /
-# CONFIG_MODEL_OTA_NEUTON builds, home to the model_storage-loading logic itself
-# (nrf_edgeai_load_user_model_36025() / _90508(), declared alongside the rest of that backend's
-# generated API in nrf_edgeai_user_model.h; only main.c's nrf_edgeai_user_model() macro calls
-# into it, so it stays backend-agnostic). See
-# tools/model_ota/examples/hypothetical_ota_generator_output/ for the design this mirrors, and
-# doc/libraries/model_ota.rst for the bigger picture.
 if(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON)
   target_sources(app PRIVATE
     src/nrf_edgeai_generated/Axon/nrf_edgeai_user_model.c
@@ -57,26 +48,14 @@ endif()
 
 if(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT)
   include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/nrf_model_mcuboot_sign.cmake)
-  if(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT)
-    nrf_model_mcuboot_sign(
-      TARGET regression
-      PKG_BIN ${CMAKE_CURRENT_BINARY_DIR}/regression_model_pkg.bin
-      PKG_TARGET regression_model_pkg
-      PARTITION_NODELABEL model_partition
-      UUID_CID nRF54LM20_regression_model
-      UUID_VID nordicsemi.com
-      PROVISION_CONFIRM
-    )
-  else()
-    nrf_model_mcuboot_sign(
-      TARGET regression
-      PKG_BIN ${CMAKE_CURRENT_BINARY_DIR}/regression_model_pkg.bin
-      PKG_TARGET regression_model_pkg
-      PARTITION_NODELABEL model_partition
-      UUID_CID nRF54LM20_regression_model
-      UUID_VID nordicsemi.com
-    )
-  endif()
+  nrf_model_mcuboot_sign(
+    TARGET regression
+    PKG_BIN ${CMAKE_CURRENT_BINARY_DIR}/regression_model_pkg.bin
+    PKG_TARGET regression_model_pkg
+    PARTITION_NODELABEL model_partition
+    UUID_CID nRF54LM20_regression_model
+    UUID_VID nordicsemi.com
+  )
 endif()
 
 target_sources(app PRIVATE src/main.c)

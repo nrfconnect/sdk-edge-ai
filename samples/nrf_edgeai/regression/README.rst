@@ -59,7 +59,7 @@ See board-specific configuration and overlays in the :file:`samples/nrf_edgeai/r
 When using the Axon backend, the generated model saves its buffer requirements in the :file:`prj_example.conf` file as the ``CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE`` and ``CONFIG_NRF_AXON_PSUM_BUFFER_SIZE`` Kconfig options.
 You must manually include these values in your :file:`prj.conf` file before building.
 
-Selecting a backend only determines which model package type the sample expects to find in the ``model_storage`` flash partition at runtime — it does not compile in a model of either type. See `Model-only OTA update`_.
+Selecting a backend only determines which model package type the sample expects to find in the ``model_storage`` flash partition at runtime - it does not compile in a model of either type. See `Model-only OTA update`_.
 
 Configuration options
 =====================
@@ -151,7 +151,7 @@ Dual-slot model
 * Separate equal 340 kB slots: ``slot2_partition`` / ``model_storage`` (live) and ``slot3_partition`` (staging).
 * Smaller application slots (460 kB each) to fit both model slots.
 * SMP uploads target slot3; MCUboot swaps on reboot. If the application fails to load the new model, image 1 stays unconfirmed and MCUboot **reverts** on the next reset.
-* Build produces ``regression_model_mcuboot.signed.hex`` (confirmed, first flash to ``model_storage``) and ``regression_model_mcuboot.signed.bin`` (SMP OTA, unconfirmed until the app confirms after a successful load).
+* Build produces ``regression_model_mcuboot.signed.hex`` (first flash to ``model_storage``) and ``regression_model_mcuboot.signed.bin`` (SMP OTA). Both are unconfirmed at build time; after a dual-slot SMP swap the application confirms image 1 once the new model loads successfully.
 
 Example dual-slot sysbuild invocation:
 

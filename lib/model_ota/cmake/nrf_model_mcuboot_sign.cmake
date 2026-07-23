@@ -3,36 +3,34 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-# Signs a raw model_ota package (.bin) as an MCUboot image for slot2 (image 1
-# primary). Required when model_storage is an MCUboot updateable image: MCUboot
-# validates every configured image at boot and rejects non-MCUboot content.
+# Signs a raw model_ota package (.bin) as an MCUboot image.
 
 function(nrf_model_mcuboot_sign)
-	cmake_parse_arguments(ARG "PROVISION_CONFIRM"
+	cmake_parse_arguments(ARG ""
 		"TARGET;PKG_BIN;PKG_TARGET;PARTITION_NODELABEL;UUID_CID;UUID_VID" "" ${ARGN})
 
-	if(NOT ARG_TARGET OR NOT ARG_PKG_BIN OR NOT ARG_PARTITION_NODELABEL OR NOT ARG_UUID_CID OR NOT ARG_UUID_VID)
+	if(NOT ARG_TARGET OR NOT ARG_PKG_BIN OR NOT ARG_PARTITION_NODELABEL)
 		message(FATAL_ERROR
-			"nrf_model_mcuboot_sign() requires TARGET, PKG_BIN, PARTITION_NODELABEL, UUID_CID, UUID_VID")
+			"${CMAKE_CURRENT_FUNCTION}() requires TARGET, PKG_BIN, and PARTITION_NODELABEL")
 	endif()
 
 	if(NOT DEFINED IMGTOOL)
 		message(FATAL_ERROR
-			"nrf_model_mcuboot_sign(${ARG_TARGET}): IMGTOOL not found (MCUboot module missing?)")
+			"${CMAKE_CURRENT_FUNCTION}(${ARG_TARGET}): IMGTOOL not found (MCUboot module missing?)")
 	endif()
 
 	set(keyfile "${CONFIG_MCUBOOT_SIGNATURE_KEY_FILE}")
 	string(CONFIGURE "${keyfile}" keyfile)
 	if(NOT keyfile OR NOT EXISTS "${keyfile}")
 		message(FATAL_ERROR
-			"nrf_model_mcuboot_sign(${ARG_TARGET}): CONFIG_MCUBOOT_SIGNATURE_KEY_FILE "
+			"${CMAKE_CURRENT_FUNCTION}(${ARG_TARGET}): CONFIG_MCUBOOT_SIGNATURE_KEY_FILE "
 			"not set or missing (${keyfile})")
 	endif()
 
 	dt_nodelabel(slot_path NODELABEL ${ARG_PARTITION_NODELABEL})
 	if(NOT slot_path)
 		message(FATAL_ERROR
-			"nrf_model_mcuboot_sign(${ARG_TARGET}): no devicetree node labelled "
+			"${CMAKE_CURRENT_FUNCTION}(${ARG_TARGET}): no devicetree node labelled "
 			"'${ARG_PARTITION_NODELABEL}'")
 	endif()
 	dt_reg_addr(slot_addr PATH "${slot_path}")
@@ -50,6 +48,14 @@ function(nrf_model_mcuboot_sign)
 		set(imgtool_hash_arg --sha 512)
 	endif()
 
+	set(imgtool_uuid_args)
+	if(ARG_UUID_VID)
+		list(APPEND imgtool_uuid_args --vid "${ARG_UUID_VID}")
+	endif()
+	if(ARG_UUID_CID)
+		list(APPEND imgtool_uuid_args --cid "${ARG_UUID_CID}")
+	endif()
+
 	set(imgtool_sign_base ${PYTHON_EXECUTABLE} ${IMGTOOL} sign
 		--version ${CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION}
 		--header-size 32
@@ -59,8 +65,7 @@ function(nrf_model_mcuboot_sign)
 		--slot-size ${slot_size}
 		--align ${write_block_size}
 		--rom-fixed ${slot_addr}
-		--vid "${ARG_UUID_VID}"
-		--cid "${ARG_UUID_CID}"
+		${imgtool_uuid_args}
 		-k "${keyfile}"
 	)
 
@@ -71,27 +76,14 @@ function(nrf_model_mcuboot_sign)
 
 	set(outputs ${out_base}.signed.bin ${out_base}.signed.hex)
 
-	if(ARG_PROVISION_CONFIRM)
-		# Dual-slot: unconfirmed .bin for SMP OTA; confirmed .hex for first flash to slot2.
-		add_custom_command(
-			OUTPUT ${outputs}
-			COMMAND ${imgtool_sign_base} ${ARG_PKG_BIN} ${out_base}.signed.bin
-			COMMAND ${imgtool_sign_base} --confirm --hex-addr ${slot_addr}
-				${ARG_PKG_BIN} ${out_base}.signed.hex
-			DEPENDS ${deps}
-			COMMENT "model_ota: signing ${ARG_TARGET} model for MCUboot slot2 (dual-slot)"
-		)
-	else()
-		# Single-slot: one signed image for provision and SMP (in-place overwrite, no revert).
-		add_custom_command(
-			OUTPUT ${outputs}
-			COMMAND ${imgtool_sign_base} ${ARG_PKG_BIN} ${out_base}.signed.bin
-			COMMAND ${imgtool_sign_base} --hex-addr ${slot_addr}
-				${ARG_PKG_BIN} ${out_base}.signed.hex
-			DEPENDS ${deps}
-			COMMENT "model_ota: signing ${ARG_TARGET} model for MCUboot slot2 (single-slot)"
-		)
-	endif()
+	add_custom_command(
+		OUTPUT ${outputs}
+		COMMAND ${imgtool_sign_base} ${ARG_PKG_BIN} ${out_base}.signed.bin
+		COMMAND ${imgtool_sign_base} --hex-addr ${slot_addr}
+			${ARG_PKG_BIN} ${out_base}.signed.hex
+		DEPENDS ${deps}
+		COMMENT "model_ota: signing ${ARG_TARGET} model for MCUboot"
+	)
 
 	add_custom_target(${ARG_TARGET}_model_mcuboot_signed ALL DEPENDS ${outputs})
 endfunction()
