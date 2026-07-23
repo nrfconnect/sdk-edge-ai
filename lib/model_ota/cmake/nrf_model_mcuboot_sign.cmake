@@ -8,7 +8,8 @@
 # validates every configured image at boot and rejects non-MCUboot content.
 
 function(nrf_model_mcuboot_sign)
-	cmake_parse_arguments(ARG "" "TARGET;PKG_BIN;PKG_TARGET;PARTITION_NODELABEL;UUID_CID;UUID_VID" "" ${ARGN})
+	cmake_parse_arguments(ARG "PROVISION_CONFIRM"
+		"TARGET;PKG_BIN;PKG_TARGET;PARTITION_NODELABEL;UUID_CID;UUID_VID" "" ${ARGN})
 
 	if(NOT ARG_TARGET OR NOT ARG_PKG_BIN OR NOT ARG_PARTITION_NODELABEL OR NOT ARG_UUID_CID OR NOT ARG_UUID_VID)
 		message(FATAL_ERROR
@@ -68,18 +69,29 @@ function(nrf_model_mcuboot_sign)
 		list(APPEND deps ${ARG_PKG_TARGET})
 	endif()
 
-	# .signed.bin: SMP OTA upload (no --confirm; use image test/confirm after reset).
-	# .signed.hex: direct flash to model_storage primary (--confirm for provisioning).
-	add_custom_command(
-		OUTPUT ${out_base}.signed.bin ${out_base}.signed.hex
-		COMMAND ${imgtool_sign_base} ${ARG_PKG_BIN} ${out_base}.signed.bin
-		COMMAND ${imgtool_sign_base} --confirm --hex-addr ${slot_addr}
-			${ARG_PKG_BIN} ${out_base}.signed.hex
-		DEPENDS ${deps}
-		COMMENT "model_ota: signing ${ARG_TARGET} model for MCUboot slot2 (image 1)"
-	)
+	set(outputs ${out_base}.signed.bin ${out_base}.signed.hex)
 
-	add_custom_target(${ARG_TARGET}_model_mcuboot_signed ALL
-		DEPENDS ${out_base}.signed.bin ${out_base}.signed.hex
-	)
+	if(ARG_PROVISION_CONFIRM)
+		# Dual-slot: unconfirmed .bin for SMP OTA; confirmed .hex for first flash to slot2.
+		add_custom_command(
+			OUTPUT ${outputs}
+			COMMAND ${imgtool_sign_base} ${ARG_PKG_BIN} ${out_base}.signed.bin
+			COMMAND ${imgtool_sign_base} --confirm --hex-addr ${slot_addr}
+				${ARG_PKG_BIN} ${out_base}.signed.hex
+			DEPENDS ${deps}
+			COMMENT "model_ota: signing ${ARG_TARGET} model for MCUboot slot2 (dual-slot)"
+		)
+	else()
+		# Single-slot: one signed image for provision and SMP (in-place overwrite, no revert).
+		add_custom_command(
+			OUTPUT ${outputs}
+			COMMAND ${imgtool_sign_base} ${ARG_PKG_BIN} ${out_base}.signed.bin
+			COMMAND ${imgtool_sign_base} --hex-addr ${slot_addr}
+				${ARG_PKG_BIN} ${out_base}.signed.hex
+			DEPENDS ${deps}
+			COMMENT "model_ota: signing ${ARG_TARGET} model for MCUboot slot2 (single-slot)"
+		)
+	endif()
+
+	add_custom_target(${ARG_TARGET}_model_mcuboot_signed ALL DEPENDS ${outputs})
 endfunction()

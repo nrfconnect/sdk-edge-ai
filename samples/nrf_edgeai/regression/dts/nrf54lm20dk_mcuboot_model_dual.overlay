@@ -1,0 +1,11 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * Sysbuild applies this overlay when SB_CONFIG_NRF_EDGEAI_REGRESSION_MODEL_SLOT_DUAL is
+ * enabled. It replaces the default single-slot partition map (already included from the
+ * board overlay) with the dual-slot model layout.
+ */
+
+#include "nrf54lm20dk_mcuboot_partitions_dual.dtsi"

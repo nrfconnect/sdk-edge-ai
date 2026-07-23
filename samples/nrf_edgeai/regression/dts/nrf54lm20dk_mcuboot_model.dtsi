@@ -3,82 +3,16 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  *
- * Shared MCUboot + model_storage layout for nRF54LM20 DK (internal RRAM).
+ * Default nRF54LM20 DK MCUboot + model_storage layout (single-slot model profile).
  *
- * Image 0: dual-slot firmware (swap-using-move, equal 460 kB slots).
- * Image 1: dual-slot model (swap-using-move, equal 400 kB slots).
- *   slot2 / model_storage = live model (primary).
- *   slot3 = SMP upload staging (secondary); MCUboot swaps on reboot.
+ * Image 0: dual-slot firmware (swap-using-move, 684 kB slots).
+ * Image 1: single-slot model (340 kB model_storage; slot2 and slot3 label the same region).
  *
- * Use the same fragment in the application overlay and sysbuild/mcuboot overlay.
+ * For dual-slot model (separate slot2/slot3 with swap/revert), build with
+ * SB_CONFIG_NRF_EDGEAI_REGRESSION_MODEL_SLOT_DUAL=y (see README.rst).
+ *
+ * Use in the application overlay and sysbuild/mcuboot/boards/ overlay.
  */
 
-/delete-node/ &boot_partition;
-/delete-node/ &slot0_partition;
-/delete-node/ &slot1_partition;
-/delete-node/ &storage_partition;
-
-&cpuapp_rram {
-	partitions {
-		boot_partition: partition@0 {
-			compatible = "zephyr,mapped-partition";
-			label = "mcuboot";
-			reg = <0x0 DT_SIZE_K(68)>;
-		};
-
-		/* Image 0: firmware - equal sizes required for swap-using-move */
-		slot0_partition: partition@11000 {
-			compatible = "zephyr,mapped-partition";
-			label = "image-0";
-			reg = <0x11000 DT_SIZE_K(684)>;
-		};
-		slot1_partition: partition@bc000 {
-			compatible = "zephyr,mapped-partition";
-			label = "image-1";
-			reg = <0xbc000 DT_SIZE_K(684)>;
-		};
-
-		/* Image 1: model - single memory area labeled as 2 different partitions
-		   to allow single slot image DFU while having double slot application DFU
-		 */
-		slot2_partition: slot3_partition: model_partition: partition@167000 {
-			compatible = "zephyr,mapped-partition";
-			label = "model_storage";
-			reg = <0x167000 DT_SIZE_K(340)>;
-		};
-
-		storage_partition: partition@1bd000 {
-			compatible = "zephyr,mapped-partition";
-			label = "storage";
-			reg = <0x1bd000 DT_SIZE_K(64)>;
-		};
-	};
-};
-
-/ {
-	bootchain {
-		b0_mcuboot {
-			compatible = "nordic,mcuboot";
-			uuid-vid-required;
-			uuid-cid-required;
-			partitions = <&boot_partition>;
-
-			images {
-				application {
-					compatible = "nordic,mcuboot-image";
-					image-index = <0>;
-					uuid-vid = "nordicsemi.com", "nordicsemi.com";
-					uuid-cid = "nRF54LM20_regression_app", "nRF54LM20_regression_app";
-					partitions = <&slot0_partition &slot1_partition>;
-				};
-				model_image {
-					compatible = "nordic,mcuboot-image";
-					image-index = <1>;
-					uuid-vid = "nordicsemi.com", "nordicsemi.com";
-					uuid-cid = "nRF54LM20_regression_model", "nRF54LM20_regression_model";
-					partitions = <&slot2_partition &slot3_partition>;
-				};
-			};
-		};
-	};
-};
+#include "nrf54lm20dk_mcuboot_partitions_single.dtsi"
+#include "nrf54lm20dk_mcuboot_bootchain.dtsi"

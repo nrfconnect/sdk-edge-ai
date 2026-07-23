@@ -7,4 +7,33 @@
 config PARTITION_MANAGER
 	default n
 
+menu "nRF Edge AI Regression sample (sysbuild)"
+
+choice NRF_EDGEAI_REGRESSION_MODEL_SLOT_MODE
+	prompt "Model MCUboot slot layout (nRF54LM20)"
+	default NRF_EDGEAI_REGRESSION_MODEL_SLOT_SINGLE
+	depends on MCUBOOT_UPDATEABLE_IMAGES >= 2
+	help
+	  Select how MCUboot image 1 (model) is laid out in internal RRAM.
+	  Image 0 (application) always uses dual-slot swap-using-move.
+	  This choice is fixed at build time; changing it requires a full reflash.
+
+config NRF_EDGEAI_REGRESSION_MODEL_SLOT_SINGLE
+	bool "Single slot (alias slot2/slot3, in-place model DFU, less flash)"
+	help
+	  One physical model_storage region is labeled as both MCUboot slot2 and slot3.
+	  SMP uploads overwrite model_storage in place. There is no swap/revert to a
+	  previous model in another slot.
+
+config NRF_EDGEAI_REGRESSION_MODEL_SLOT_DUAL
+	bool "Dual slot (slot2 + slot3, swap/revert, 2x model flash)"
+	help
+	  Separate equal model slots: slot2/model_storage (live) and slot3 (staging).
+	  MCUboot swap-using-move can revert a bad model OTA if the application does not
+	  confirm image 1 after a successful load. App firmware slots are smaller (460 kB).
+
+endchoice
+
+endmenu
+
 source "share/sysbuild/Kconfig"

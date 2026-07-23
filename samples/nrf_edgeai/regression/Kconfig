@@ -54,9 +54,16 @@ config NRF_EDGEAI_REGRESSION_MCUBOOT
 	select BOOTLOADER_MCUBOOT
 	help
 	  Enables MCUboot with two updateable images: image 0 for signed firmware
-	  (dual-slot swap-using-move) and image 1 for the model (slot2/model_storage
-	  primary, slot3 staging). SMP uploads to image 1 are applied by MCUboot on
-	  reboot; raw model packages can still be flashed directly to model_storage.
+	  (dual-slot swap-using-move) and image 1 for the model. The model slot layout
+	  (single alias vs dual slot with revert) is selected in sysbuild via
+	  SB_CONFIG_NRF_EDGEAI_REGRESSION_MODEL_SLOT_*; see README.rst.
+
+config NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT
+	bool "Dual physical model slots (MCUboot swap/revert for image 1)"
+	depends on NRF_EDGEAI_REGRESSION_MCUBOOT
+	help
+	  Set by sysbuild when SB_CONFIG_NRF_EDGEAI_REGRESSION_MODEL_SLOT_DUAL is
+	  enabled. Do not set manually in prj.conf.
 
 endmenu
 

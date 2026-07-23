@@ -1,0 +1,36 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * MCUboot bootchain for nRF54LM20 regression sample (image 0 = app, image 1 = model).
+ * Include together with nrf54lm20dk_mcuboot_partitions_single.dtsi or the dual layout overlay.
+ */
+
+/ {
+	bootchain {
+		b0_mcuboot {
+			compatible = "nordic,mcuboot";
+			uuid-vid-required;
+			uuid-cid-required;
+			partitions = <&boot_partition>;
+
+			images {
+				application {
+					compatible = "nordic,mcuboot-image";
+					image-index = <0>;
+					uuid-vid = "nordicsemi.com", "nordicsemi.com";
+					uuid-cid = "nRF54LM20_regression_app", "nRF54LM20_regression_app";
+					partitions = <&slot0_partition &slot1_partition>;
+				};
+				model_image {
+					compatible = "nordic,mcuboot-image";
+					image-index = <1>;
+					uuid-vid = "nordicsemi.com", "nordicsemi.com";
+					uuid-cid = "nRF54LM20_regression_model", "nRF54LM20_regression_model";
+					partitions = <&slot2_partition &slot3_partition>;
+				};
+			};
+		};
+	};
+};

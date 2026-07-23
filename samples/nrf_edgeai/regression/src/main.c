@@ -48,10 +48,11 @@
  *   to model_storage - independently of the application binary - is enough to change what the
  *   device predicts, without rebuilding or reflashing the application. If model_storage does
  *   not currently hold a valid package (missing, corrupted, incompatible, wrong backend), the
- *   application stays alive and simply skips inference instead of crashing. With MCUboot dual-slot
- *   model OTA (CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT), a successful load after an SMP test boot
- *   also confirms image 1 so MCUboot does not revert on the next reset. See README.rst for
- *   the packaging/flashing workflow. Build with CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=n to
+ *   application stays alive and simply skips inference instead of crashing. With MCUboot and
+ *   dual physical model slots (CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT), a
+ *   successful load after an SMP test boot also confirms image 1 so MCUboot can revert on the
+ *   next reset if the update was bad. See README.rst for slot layouts and the packaging/flashing
+ *   workflow. Build with CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=n to
  *   restore this sample's original behavior instead: the model is compiled directly into the
  *   image and validated once at boot. Either way, the actual model wiring - including, for
  *   CONFIG_NRF_EDGEAI_REGRESSION_MODEL_OTA=y, the model_storage loading itself - lives in
@@ -75,10 +76,11 @@ LOG_MODULE_REGISTER(regression, LOG_LEVEL_INF);
 
 #include <zephyr/storage/flash_map.h>
 
-#if defined(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT)
+#if defined(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT) && \
+	defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT)
 #include <zephyr/dfu/mcuboot.h>
 
-/** MCUboot updateable image index for the model (slot2/slot3). */
+/** MCUboot updateable image index for the model (slot2 primary, slot3 staging). */
 #define MODEL_IMAGE_INDEX 1
 
 static bool model_ota_confirm_attempted;
@@ -113,7 +115,7 @@ static void try_confirm_model_ota(void)
 
 	LOG_INF("Model loaded OK; image %d confirmed permanently", MODEL_IMAGE_INDEX);
 }
-#endif /* CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT */
+#endif /* CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT && CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT */
 
 /*
  * Fail the build with a clear message if this board's devicetree overlay doesn't define the
@@ -359,7 +361,8 @@ int main(void)
 			LOG_WRN("No valid model in model_storage - waiting for one to be "
 				"flashed. Inference is skipped until then.");
 		} else {
-#if defined(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT)
+#if defined(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT) && \
+			defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT)
 			try_confirm_model_ota();
 #endif
 			run_inference_loop(p_user_model);

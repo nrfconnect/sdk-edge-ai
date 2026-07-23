@@ -1,0 +1,48 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * Single-slot model layout (default): one 340 kB region aliased as slot2, slot3, and
+ * model_storage. Image 0 keeps dual-slot swap-using-move (684 kB app slots).
+ */
+
+/delete-node/ &boot_partition;
+/delete-node/ &slot0_partition;
+/delete-node/ &slot1_partition;
+/delete-node/ &storage_partition;
+
+&cpuapp_rram {
+	partitions {
+		boot_partition: partition@0 {
+			compatible = "zephyr,mapped-partition";
+			label = "mcuboot";
+			reg = <0x0 DT_SIZE_K(68)>;
+		};
+
+		/* Image 0: firmware - equal sizes required for swap-using-move */
+		slot0_partition: partition@11000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-0";
+			reg = <0x11000 DT_SIZE_K(684)>;
+		};
+		slot1_partition: partition@bc000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-1";
+			reg = <0xbc000 DT_SIZE_K(684)>;
+		};
+
+		/* Image 1: one physical region; slot2/slot3 labels satisfy MCUboot image 1 */
+		slot2_partition: slot3_partition: model_partition: partition@167000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_storage";
+			reg = <0x167000 DT_SIZE_K(340)>;
+		};
+
+		storage_partition: partition@1bd000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x1bd000 DT_SIZE_K(64)>;
+		};
+	};
+};

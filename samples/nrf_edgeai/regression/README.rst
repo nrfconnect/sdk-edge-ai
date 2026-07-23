@@ -117,23 +117,56 @@ Model-only OTA update
 
 On nRF54LM20 DK, this sample uses MCUboot with two updateable images:
 
-* **Image 0 (firmware):** dual-slot swap-using-move over ``slot0_partition`` / ``slot1_partition`` (460 kB each).
-* **Image 1 (model):** dual-slot swap-using-move over ``slot2_partition`` (``model_storage``, live model) and ``slot3_partition`` (staging, 400 kB each).
+* **Image 0 (firmware):** dual-slot swap-using-move over ``slot0_partition`` / ``slot1_partition``.
+* **Image 1 (model):** layout selected at **sysbuild** time (see `Model slot layout`_ below).
 
-The shared devicetree layout lives in :file:`dts/nrf54lm20dk_mcuboot_model.dtsi` (included from both the application overlay and :file:`sysbuild/mcuboot/boards/`).
+The devicetree fragments live under :file:`dts/` (included from the application overlay and :file:`sysbuild/mcuboot/boards/`).
 
-At boot (and every 5 seconds thereafter), the sample reads and validates a header-plus-payload "model package" from ``model_storage`` (``slot2``) and wires it up for inference — see :ref:`lib_model_ota` for the package format, host-side packaging tools, and on-device loading work.
-Flashing a raw ``regression_model_pkg.hex`` to ``model_storage`` still works for direct provisioning; SMP uploads use a MCUboot-signed container and the loader skips the 32-byte MCUboot header automatically.
+At boot (and every 5 seconds thereafter), the sample reads and validates a header-plus-payload "model package" from ``model_storage`` (MCUboot slot2 primary) and wires it up for inference — see :ref:`lib_model_ota` for the package format, host-side packaging tools, and on-device loading work.
+The loader skips the 32-byte MCUboot header automatically when present.
+
+Model slot layout
+-----------------
+
+Choose the model profile in sysbuild Kconfig (fixed at build time; changing it requires a full reflash with ``--recover``).
+
+Single-slot model (default)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``SB_CONFIG_NRF_EDGEAI_REGRESSION_MODEL_SLOT_SINGLE=y`` (default)
+
+* One 340 kB ``model_storage`` region; devicetree labels it as both ``slot2_partition`` and ``slot3_partition``.
+* Larger application slots (684 kB each).
+* SMP model uploads overwrite ``model_storage`` in place. **No MCUboot revert** to a previous model in another slot.
+* Build produces ``regression_model_mcuboot.signed.bin`` and ``regression_model_mcuboot.signed.hex`` (same image; use either for provision or SMP).
+
+Dual-slot model
+^^^^^^^^^^^^^^^
+
+``SB_CONFIG_NRF_EDGEAI_REGRESSION_MODEL_SLOT_DUAL=y``
+
+* Separate equal 340 kB slots: ``slot2_partition`` / ``model_storage`` (live) and ``slot3_partition`` (staging).
+* Smaller application slots (460 kB each) to fit both model slots.
+* SMP uploads target slot3; MCUboot swaps on reboot. If the application fails to load the new model, image 1 stays unconfirmed and MCUboot **reverts** on the next reset.
+* Build produces ``regression_model_mcuboot.signed.hex`` (confirmed, first flash to ``model_storage``) and ``regression_model_mcuboot.signed.bin`` (SMP OTA, unconfirmed until the app confirms after a successful load).
+
+Example dual-slot sysbuild invocation:
+
+.. code-block:: console
+
+   west build -b nrf54lm20dk/nrf54lm20a/cpuapp samples/nrf_edgeai/regression -d build_dual \
+       -- -DSB_CONFIG_NRF_EDGEAI_REGRESSION_MODEL_SLOT_DUAL=y
 
 MCUboot and DFU
 ----------------
 
-Both assets follow the normal MCUboot + MCUmgr path: upload a signed image, then test/reset so MCUboot swaps on reboot.
+Both assets follow the normal MCUboot + MCUmgr path: upload a signed image, then test/reset so MCUboot applies the update (swap for dual-slot model, in-place for single-slot).
 
 | Asset | Image index | Upload target | After reboot |
 |-------|-------------|---------------|--------------|
 | Firmware | 0 | ``slot1`` (secondary) | MCUboot swaps image 0 |
-| Model | 1 | ``slot3`` (secondary) | MCUboot swaps image 1; live model in ``model_storage`` |
+| Model (dual-slot) | 1 | ``slot3`` (secondary) | MCUboot swaps image 1; live model in ``model_storage`` |
+| Model (single-slot) | 1 | same ``model_storage`` region | In-place overwrite of ``model_storage`` |
 
 First-time provisioning must flash the **full sysbuild image chain**, not the application ``zephyr.hex`` alone.
 A normal ``west flash`` also programs the MCUboot-signed model image to ``model_storage`` (see :file:`sysbuild.cmake`).
@@ -156,12 +189,7 @@ If MCUboot reports ``magic=unset`` and ``Unable to find bootable image``, the bo
    west flash -d build --recover --no-rebuild
    west flash --hex-file build/regression/regression_model_mcuboot.signed.hex --no-rebuild
 
-Do **not** flash the raw ``regression_model_pkg.hex`` alone when MCUboot image 1 is enabled: ``model_storage`` (``slot2``) must contain a valid MCUboot header at boot. The build produces ``regression_model_mcuboot.signed.hex`` for that purpose; ``regression_model_pkg.hex`` remains useful for direct payload inspection and matches the bytes inside the signed image body.
-
-The build produces two signed model artifacts:
-
-* ``regression_model_mcuboot.signed.hex`` — first-time flash to ``model_storage`` (imgtool ``--confirm``).
-* ``regression_model_mcuboot.signed.bin`` — SMP OTA upload to image 1 (no ``--confirm``; use ``image test`` then ``reset``; the app confirms after a successful load).
+Do **not** flash the raw ``regression_model_pkg.hex`` alone when MCUboot image 1 is enabled: ``model_storage`` must contain a valid MCUboot header at boot. The build produces ``regression_model_mcuboot.signed.hex`` for provisioning; ``regression_model_pkg.hex`` remains useful for direct payload inspection and matches the bytes inside the signed image body.
 
 Model OTA over SMP (UART)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -175,7 +203,9 @@ Close any serial monitor on the application UART port, then:
    mcumgr -c acm1 image test <model_hash>
    mcumgr -c acm1 reset
 
-After reset the application loads the swapped model from ``model_storage``; if load succeeds it calls ``boot_write_img_confirmed_multi(1)`` so the update survives the next reboot. If load fails, the image stays unconfirmed and MCUboot reverts on the following reset.
+**Dual-slot only:** after reset, if the application loads the swapped model successfully, it calls ``boot_write_img_confirmed_multi(1)`` so the update survives the next reboot. If load fails, the image stays unconfirmed and MCUboot reverts on the following reset.
+
+**Single-slot:** there is no separate staging slot or revert; validate model behavior in the application after each OTA.
 
 Firmware-only OTA uses image index 0 (omit ``-n 1``) and ``build/regression/zephyr/zephyr.signed.bin``. Each image can be updated independently.
 

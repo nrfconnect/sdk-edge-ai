@@ -57,14 +57,26 @@ endif()
 
 if(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT)
   include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/nrf_model_mcuboot_sign.cmake)
-  nrf_model_mcuboot_sign(
-    TARGET regression
-    PKG_BIN ${CMAKE_CURRENT_BINARY_DIR}/regression_model_pkg.bin
-    PKG_TARGET regression_model_pkg
-    PARTITION_NODELABEL model_partition
-    UUID_CID nRF54LM20_regression_model
-    UUID_VID nordicsemi.com
-  )
+  if(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT)
+    nrf_model_mcuboot_sign(
+      TARGET regression
+      PKG_BIN ${CMAKE_CURRENT_BINARY_DIR}/regression_model_pkg.bin
+      PKG_TARGET regression_model_pkg
+      PARTITION_NODELABEL model_partition
+      UUID_CID nRF54LM20_regression_model
+      UUID_VID nordicsemi.com
+      PROVISION_CONFIRM
+    )
+  else()
+    nrf_model_mcuboot_sign(
+      TARGET regression
+      PKG_BIN ${CMAKE_CURRENT_BINARY_DIR}/regression_model_pkg.bin
+      PKG_TARGET regression_model_pkg
+      PARTITION_NODELABEL model_partition
+      UUID_CID nRF54LM20_regression_model
+      UUID_VID nordicsemi.com
+    )
+  endif()
 endif()
 
 target_sources(app PRIVATE src/main.c)

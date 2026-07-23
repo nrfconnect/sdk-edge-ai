@@ -1,0 +1,54 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * Dual-slot model layout: separate equal 340 kB slot2 (live model) and slot3 (staging).
+ * App slots are 460 kB each to fit both model slots in internal RRAM.
+ */
+
+/delete-node/ &boot_partition;
+/delete-node/ &slot0_partition;
+/delete-node/ &slot1_partition;
+/delete-node/ &model_partition;
+/delete-node/ &storage_partition;
+
+&cpuapp_rram {
+	partitions {
+		boot_partition: partition@0 {
+			compatible = "zephyr,mapped-partition";
+			label = "mcuboot";
+			reg = <0x0 DT_SIZE_K(68)>;
+		};
+
+		/* Image 0: firmware - equal sizes required for swap-using-move */
+		slot0_partition: partition@11000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-0";
+			reg = <0x11000 DT_SIZE_K(460)>;
+		};
+		slot1_partition: partition@84000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-1";
+			reg = <0x84000 DT_SIZE_K(460)>;
+		};
+
+		/* Image 1: model - equal sizes required for swap-using-move */
+		slot2_partition: model_partition: partition@f7000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_storage";
+			reg = <0xf7000 DT_SIZE_K(340)>;
+		};
+		slot3_partition: partition@14c000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-3";
+			reg = <0x14c000 DT_SIZE_K(340)>;
+		};
+
+		storage_partition: partition@1a1000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x1a1000 DT_SIZE_K(64)>;
+		};
+	};
+};
