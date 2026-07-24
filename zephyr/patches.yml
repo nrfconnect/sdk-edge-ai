@@ -1,0 +1,12 @@
+patches:
+  - path: zephyr/compliance-skip-release-notes-kconfig.patch.patch
+    sha256sum: a64472881036e71f321149642db3c296115e944277aa2725be5245bf087e8c22
+    module: zephyr
+    author: Szymon Antkowiak
+    email: szymon.antkowiak@nordicsemi.no
+    date: 2026-07-09
+    upstreamable: true
+    comments: |
+      Skip doc/release_notes_and_migration in the undefined Kconfig symbol check.
+      Edge AI add-on release notes document renamed or removed Kconfig options,
+      matching the exclusion used for doc/nrf/releases_and_maturity in NCS.
