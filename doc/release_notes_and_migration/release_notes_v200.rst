@@ -16,7 +16,7 @@ Changelog
 *********
 
 .. note::
-  The current release of the Edge AI Add-On is `experimental <software maturity_>`_.
+  The current release of the Edge AI Add-On is :ref:`experimental <nrf:software_maturity>`.
 
 This release is based on the |NCS| release v3.3.0-preview2.
 

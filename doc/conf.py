@@ -63,6 +63,7 @@ ZEPHYR_VERSION           = f"v{ZEPHYR_VERSION_NUMBER}"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.intersphinx',
     'sphinx_tabs.tabs',
     'sphinx_copybutton',
     'options_from_kconfig',
@@ -193,6 +194,19 @@ SUBSTITUTIONS = [
 
 # Consumed by the edge_ai_project_info extension (source-read handler).
 edge_ai_substitutions = SUBSTITUTIONS
+
+# -- Options for intersphinx --------------------------------------------------
+#
+# Hosted NCS inventories are published at nrfconnectdocs.nordicsemi.com.
+# See https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
+
+_NCS_DOCS_BASE = f"https://nrfconnectdocs.nordicsemi.com/ncs/{NCS_VERSION_NUMBER}"
+_NCS_DOCS_STORAGE = f"https://ncsdoc.z6.web.core.windows.net/ncs/{NCS_VERSION_NUMBER}"
+
+intersphinx_mapping = {
+    "nrf": (f"{_NCS_DOCS_BASE}/nrf/", f"{_NCS_DOCS_STORAGE}/nrf/objects.inv"),
+    "zephyr": (f"{_NCS_DOCS_BASE}/zephyr/", f"{_NCS_DOCS_STORAGE}/zephyr/objects.inv"),
+}
 
 # -- rst_epilog: pre-expanded links.txt + shortcuts.txt ----------------------
 

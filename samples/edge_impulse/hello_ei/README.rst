@@ -44,7 +44,7 @@ Build types
 ===========
 
 The ``nrf54lm20dk/nrf54lm20b/cpuapp`` board target supports the following build types.
-See `Custom build types`_ and `Providing CMake options`_ for more information.
+See :ref:`nrf:app_build_additions_build_types` and :ref:`nrf:cmake_options` for more information.
 
 .. list-table:: Hello Edge Impulse build types for ``nrf54lm20dk/nrf54lm20b/cpuapp``
    :widths: auto
@@ -166,7 +166,7 @@ Dependencies
 
 This sample uses the following Zephyr libraries:
 
-* `Logging`_
+* :ref:`zephyr:logging_api`
 
 This sample uses the following external components:
 

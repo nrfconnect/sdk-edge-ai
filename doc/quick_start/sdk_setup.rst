@@ -32,7 +32,7 @@ To get the |EAI| code, you can either:
       Clone the |EAI| code, together with the compatible |NCS|:
 
       1. Ensure you have installed `Visual Studio Code`_ and the `nRF Connect for Visual Studio Code`_ extension.
-      #. Follow the `nRF Connect SDK installation guide`_ to install |NCS| prerequisites and toolchain |toolchain_ncs_id|.
+      #. Follow the :ref:`nRF Connect SDK installation guide <nrf:install_ncs>` to install |NCS| prerequisites and toolchain |toolchain_ncs_id|.
 
          .. note::
 
@@ -54,7 +54,7 @@ To get the |EAI| code, you can either:
 
          Use this method when you wish to specifically evaluate Edge AI capabilities, but do not have the |NCS| setup yet.
 
-      1. Follow the `nRF Connect SDK installation guide`_ to install |NCS| prerequisites and toolchain |toolchain_ncs_id|.
+      1. Follow the :ref:`nRF Connect SDK installation guide <nrf:install_ncs>` to install |NCS| prerequisites and toolchain |toolchain_ncs_id|.
 
          .. note::
 
@@ -121,7 +121,7 @@ To get the |EAI| code, you can either:
 
       .. note::
 
-         Use this method when running a `Workspace application`_ or if you prefer to use a modification of the |NCS| manifest.
+         Use this method when running a :ref:`zephyr:zephyr-workspace-app` or if you prefer to use a modification of the |NCS| manifest.
 
       1. Add Add-on repository as a project in west manifest by including the following lines in your :file:`west.yml` under the ``projects`` key:
 
@@ -163,7 +163,7 @@ To get the |EAI| code, you can either:
 
       #. Set the CMake or environment variable ``EXTRA_ZEPHYR_MODULES`` to the Add-on code path.
          Use absolute path to ensure proper path resolution.
-         Check the `Environment Variables`_ documentation for different ways of setting environment variables in Zephyr.
+         Check the :ref:`zephyr:env_vars` documentation for different ways of setting environment variables in Zephyr.
 
          .. note::
 

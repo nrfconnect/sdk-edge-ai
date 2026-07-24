@@ -160,7 +160,7 @@ Check and configure the following library options that are used by the applicati
 Build types
 ===========
 
-For build type overview and guidance on how to run them, see `Custom build types`_ and `Providing CMake options`_.
+For build type overview and guidance on how to run them, see :ref:`nrf:app_build_additions_build_types` and :ref:`nrf:cmake_options`.
 The application supports the following build types:
 
 .. list-table:: Wakeword and Keyword Spotting build types
@@ -183,7 +183,7 @@ Configuration files
 The application provides predefined :file:`observability.conf` configuration file for enabling observability.
 This file enables the ``CONFIG_MODELS_OBSERVABILITY`` Kconfig option, Bluetooth LE, Memfault Diagnostic Service and required dependencies to provide observability for bundled models.
 
-Check `Providing CMake options`_ and use :makevar:`EXTRA_CONF_FILE` variable to include this configuration file.
+Check :ref:`nrf:cmake_options` and use :makevar:`EXTRA_CONF_FILE` variable to include this configuration file.
 
 .. note::
    Set the ``CONFIG_MEMFAULT_NCS_PROJECT_KEY`` Kconfig option to your `Memfault`_ project key to successfully send metrics to Memfault.
@@ -213,7 +213,7 @@ If you have enabled the model observability, also complete the following steps:
 
 #. Connect gateway to your device.
    Ready-to-use gateways are `nRF Connect Device Manager`_ or `Memfault WebBluetooth Client`_.
-   Check `Peripheral MDS sample <Peripheral MDS sample: Testing_>`_ for details.
+   Check Testing section of :ref:`nrf:peripheral_mds` for details.
 #. Wait for a duration set by the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC`` Kconfig option.
 #. In a web browser, navigate to `Memfault`_.
 #. In the left-hand menu, go to :guilabel:`CDR Payloads`.
@@ -252,9 +252,9 @@ This application uses the following |EAI| library:
 
 This application uses the following Zephyr libraries:
 
-* `Logging`_
-* Audio (DMIC)
-* UART Driver
+* :ref:`zephyr:logging_api`
+* :ref:`zephyr:audio_dmic_api`
+* :ref:`zephyr:uart_api`
 
 API documentation
 *****************

@@ -35,7 +35,7 @@ The module is organized as three cooperating layers:
   It has no Zephyr RTOS dependency and you can use it in bare-metal environments, other RTOSes, or host-side test builds.
 * Zephyr wrapper (:file:`lib/nrf_edgeai_obsv/`) - Wraps the core in a mutex-protected context so that multiple threads can feed inferences and trigger encoding without data races, and integrates the library into the Zephyr build system (CMake, Kconfig, logging).
 * Memfault CDR transport (:file:`lib/nrf_edgeai_obsv_memfault/`) - Encodes the accumulated metric snapshots as a CBOR blob and stages them as a `Memfault Custom Data Recording`_ (CDR) that the Memfault SDK packetizer uploads on the next transport drain cycle.
-  For Memfault Kconfig, keys, and transports in |NCS|, see `Memfault in nRF Connect SDK`_.
+  For Memfault Kconfig, keys, and transports in |NCS|, see :ref:`nrf:mod_memfault`.
 
 .. uml::
    :caption: High-level data flow from application inference through observability to nRF Cloud and downstream tools.
@@ -493,7 +493,7 @@ Core library
 Memfault CDR transport
 ======================
 
-The Memfault module registers a CDR source with the Memfault SDK; see `Memfault Custom Data Recording`_ for callback semantics, payload metadata, and upload limits, `Memfault`_ for the vendor platform, and `Memfault in nRF Connect SDK`_ for integration in |NCS|.
+The Memfault module registers a CDR source with the Memfault SDK; see `Memfault Custom Data Recording`_ for callback semantics, payload metadata, and upload limits, `Memfault`_ for the vendor platform, and :ref:`nrf:ug_memfault` in |NCS|.
 
 .. options-from-kconfig:: /lib/nrf_edgeai_obsv_memfault/Kconfig
    :show-type:
@@ -625,7 +625,7 @@ Observability core with Zephyr wrapper
 
 This module uses the following Zephyr libraries:
 
-* `ZCBOR`_
+* :ref:`zephyr:cbor_api`
 
 Memfault CDR transport module
 =============================
@@ -636,11 +636,11 @@ This module uses the following |EAI| library:
 
 This module uses the following Zephyr libraries:
 
-* `Logging`_
+* :ref:`zephyr:logging_api`
 
 This module uses the following |NCS| libraries:
 
-* `Memfault in nRF Connect SDK`_
+* :ref:`nrf:mod_memfault`
 
 .. _nrf_edgeai_obsv_lib_api:
 
