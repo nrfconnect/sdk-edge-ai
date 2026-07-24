@@ -1,0 +1,42 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * MCUboot bootchain for ww_kws (image 0 = app, image 1 = WW model, image 2 = KWS model).
+ */
+
+/ {
+	bootchain {
+		b0_mcuboot {
+			compatible = "nordic,mcuboot";
+			uuid-vid-required;
+			uuid-cid-required;
+			partitions = <&boot_partition>;
+
+			images {
+				application {
+					compatible = "nordic,mcuboot-image";
+					image-index = <0>;
+					uuid-vid = "nordicsemi.com", "nordicsemi.com";
+					uuid-cid = "nRF54LM20_ww_kws_app", "nRF54LM20_ww_kws_app";
+					partitions = <&slot0_partition &slot1_partition>;
+				};
+				ww_model_image {
+					compatible = "nordic,mcuboot-image";
+					image-index = <1>;
+					uuid-vid = "nordicsemi.com", "nordicsemi.com";
+					uuid-cid = "nRF54LM20_ww_kws_model_ww", "nRF54LM20_ww_kws_model_ww";
+					partitions = <&slot2_partition &slot3_partition>;
+				};
+				kws_model_image {
+					compatible = "nordic,mcuboot-image";
+					image-index = <2>;
+					uuid-vid = "nordicsemi.com", "nordicsemi.com";
+					uuid-cid = "nRF54LM20_ww_kws_model_kws", "nRF54LM20_ww_kws_model_kws";
+					partitions = <&slot4_partition &slot5_partition>;
+				};
+			};
+		};
+	};
+};

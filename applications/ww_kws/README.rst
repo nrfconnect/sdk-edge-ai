@@ -82,23 +82,29 @@ With :kconfig:option:`CONFIG_APP_MODEL_OTA` enabled (the default - see "Model-on
 Model-only OTA update
 ======================
 
-This application does not use mcuboot, so its second application slot (``slot1_partition``) is unused on the boards it supports.
-The board overlay in :file:`applications/ww_kws/boards/` repurposes that space as two dedicated partitions instead - ``model_storage_ww`` and ``model_storage_kws``, one per model - sized to comfortably fit larger models too.
-At boot, the application loads and validates each model's own package from its partition and wires it up for inference - see :ref:`lib_model_ota` for how the package format, host-side packaging tools, and on-device loading work, including how CPU op extensions and ``persistent_vars`` (both used by the bundled models) are handled.
-Flashing a new package to either partition is enough to change what that model predicts, without rebuilding or reflashing the application.
+On nRF54LM20 DK, this application uses MCUboot with three updateable images:
+
+* **Image 0 (firmware):** dual-slot swap-using-move over ``slot0_partition`` / ``slot1_partition``.
+* **Image 1 (wakeword model):** single-slot layout in ``model_storage_ww`` (``slot2_partition`` / ``slot3_partition`` alias the same region).
+* **Image 2 (keyword-spotting model):** single-slot layout in ``model_storage_kws`` (``slot4_partition`` / ``slot5_partition`` alias the same region).
+
+The devicetree fragments live under :file:`dts/` (included from the application overlay and :file:`sysbuild/mcuboot/boards/`).
+
+At boot the application loads and validates each model's own package from its partition - see :ref:`lib_model_ota` for the package format, host-side packaging tools, and on-device loading work.
+With the default single-slot model layout, inference is paused during SMP uploads to the corresponding model image and a **reset** is required before running against a newly uploaded model.
 
 Making model OTA optional
 --------------------------
 
-Model-only OTA is enabled by default (:kconfig:option:`CONFIG_APP_MODEL_OTA` defaults to ``y``).
-Build with it disabled to restore this application's original, pre-model-OTA behavior instead: both models are compiled directly into the application image, and no ``model_storage_ww``/``model_storage_kws`` partitions or flash packages are involved.
+Model-only OTA is enabled by default (``CONFIG_APP_MODEL_OTA`` defaults to ``y``).
+Build with it disabled to restore pre-model-OTA behavior instead: both models are compiled directly into the application image, and no ``model_storage_ww``/``model_storage_kws`` partitions or flash packages are involved.
 
 .. code-block:: console
 
    west build -b nrf54lm20dk/nrf54lm20b/cpuapp applications/ww_kws -- -DCONFIG_APP_MODEL_OTA=n
 
-Packaging and flashing a model
---------------------------------
+Packaging and first-time provisioning
+--------------------------------------
 
 Both models' packages are built automatically as part of a normal application build - no separate build or manual packaging step is needed:
 
@@ -106,17 +112,65 @@ Both models' packages are built automatically as part of a normal application bu
 
    west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws
 
-This produces ``build/ww_kws/ww_model_pkg.bin``/``.hex`` and ``build/ww_kws/kws_model_pkg.bin``/``.hex``.
-A normal ``west flash`` (see "Building and running" below) programs the application and both model packages in one step, using the same sysbuild flash-domain registration as :file:`samples/nrf_edgeai/regression` (``nrf_model_register_provision_hex()`` in :file:`sysbuild.cmake`).
+This produces:
 
-To update a single model later without reflashing the application, program only that model's package:
+* ``build/ww_kws/ww_model_mcuboot.signed.{bin,hex}`` - wakeword model (MCUboot image 1)
+* ``build/ww_kws/kws_model_mcuboot.signed.{bin,hex}`` - keyword-spotting model (MCUboot image 2)
+* ``build/ww_kws/zephyr/zephyr.signed.{bin,hex}`` - application firmware (MCUboot image 0)
+* ``build/ww_kws_provision.hex`` - merged bootloader, application, and both signed models
+
+First-time provisioning must flash the **full sysbuild image chain**, not the application ``zephyr.hex`` alone.
 
 .. code-block:: console
 
-   nrfutil device program --firmware build/ww_kws/ww_model_pkg.hex --core Application \
-     --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_NONE
-   nrfutil device program --firmware build/ww_kws/kws_model_pkg.hex --core Application \
+   west flash -d build --recover --no-rebuild
+
+Or with ``nrfutil`` using the build-generated merged image:
+
+.. code-block:: console
+
+   nrfutil device program --firmware build/ww_kws_provision.hex --core Application \
      --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
+
+Do **not** flash the raw ``ww_model_pkg.hex`` or ``kws_model_pkg.hex`` alone when MCUboot is enabled: each ``model_storage_*`` partition must contain a valid MCUboot header at boot.
+
+MCUboot and DFU
+----------------
+
+Both assets follow the normal MCUboot + MCUmgr path: upload a signed image, then test/reset so MCUboot applies the update.
+
++----------------------+--------------+-----------------------------------+
+| Asset                | Image index  | After reboot                      |
++======================+==============+===================================+
+| Firmware             | 0            | MCUboot swaps image 0             |
++----------------------+--------------+-----------------------------------+
+| Wakeword model       | 1            | In-place overwrite of             |
+|                      |              | ``model_storage_ww``              |
++----------------------+--------------+-----------------------------------+
+| Keyword-spotting     | 2            | In-place overwrite of             |
+| model                |              | ``model_storage_kws``             |
++----------------------+--------------+-----------------------------------+
+
+Model OTA over SMP (UART)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+SMP uses the application UART (``uart20`` on nRF54LM20 DK). Close any serial monitor on that port, then:
+
+.. code-block:: console
+
+   mcumgr -c acm1 image upload -e -n 1 build/ww_kws/ww_model_mcuboot.signed.bin
+   mcumgr -c acm1 image test <ww_model_hash>
+   mcumgr -c acm1 reset
+
+   mcumgr -c acm1 image upload -e -n 2 build/ww_kws/kws_model_mcuboot.signed.bin
+   mcumgr -c acm1 image test <kws_model_hash>
+   mcumgr -c acm1 reset
+
+Inference is paused while the corresponding model image is uploaded because SMP writes to the same flash region the model executes from.
+After upload completes, **reset the device** before validating the new model.
+
+Firmware-only OTA uses image index 0 (omit ``-n``) and ``build/ww_kws/zephyr/zephyr.signed.bin``.
+Each image can be updated independently.
 
 ``reset=RESET_SYSTEM`` on the last command ensures the board resumes execution automatically; without it, ``nrfutil`` leaves the CPU halted after flashing.
 

@@ -50,4 +50,31 @@ if(CONFIG_APP_MODEL_OTA)
     HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/kws/nrf_edgeai_generated/nrf_edgeai_user_model_axon.h
     PARTITION_NODELABEL model_storage_kws
   )
+
+  if(CONFIG_APP_MCUBOOT)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/model_ota/cmake/nrf_model_mcuboot_sign.cmake)
+
+    nrf_model_mcuboot_sign(
+      TARGET ww
+      PKG_BIN ${CMAKE_CURRENT_BINARY_DIR}/ww_model_pkg.bin
+      PKG_TARGET ww_model_pkg
+      PARTITION_NODELABEL model_storage_ww
+      UUID_CID nRF54LM20_ww_kws_model_ww
+      UUID_VID nordicsemi.com
+    )
+    nrf_model_mcuboot_sign(
+      TARGET kws
+      PKG_BIN ${CMAKE_CURRENT_BINARY_DIR}/kws_model_pkg.bin
+      PKG_TARGET kws_model_pkg
+      PARTITION_NODELABEL model_storage_kws
+      UUID_CID nRF54LM20_ww_kws_model_kws
+      UUID_VID nordicsemi.com
+    )
+  endif()
+endif()
+
+target_sources_ifdef(CONFIG_APP_MCUBOOT app PRIVATE src/model_update.c)
+
+if(CONFIG_APP_MCUBOOT)
+  target_link_libraries(app PRIVATE MCUBOOT_BOOTUTIL)
 endif()

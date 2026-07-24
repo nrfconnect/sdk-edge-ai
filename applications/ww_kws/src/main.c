@@ -10,6 +10,7 @@
 #include <zephyr/audio/dmic.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 #include "ble/ble_mds.h"
@@ -17,6 +18,9 @@
 #include "dmic.h"
 #include "kws/kws.h"
 #include "leds.h"
+#if defined(CONFIG_APP_MCUBOOT)
+#include "model_update.h"
+#endif
 #include "ww/wakeword.h"
 
 LOG_MODULE_REGISTER(main);
@@ -37,6 +41,12 @@ static int ww_loop(void)
 	print_control_output((struct control_message){CONTROL_MESSAGE_WAITING_WW});
 
 	while (true) {
+#if defined(CONFIG_APP_MCUBOOT)
+		if (model_update_is_pending_reset()) {
+			k_sleep(K_MSEC(100));
+			continue;
+		}
+#endif
 		err = dmic_read(dmic_dev, 0, &audio_buffer, &audio_buffer_size, DMIC_READ_TIMEOUT);
 		if (err < 0) {
 			LOG_ERR("Failed to read from DMIC (err %d)", err);
@@ -77,6 +87,12 @@ static int kws_loop(void)
 	print_control_output((struct control_message){.type = CONTROL_MESSAGE_WAITING_KW});
 
 	while (IS_ENABLED(CONFIG_APP_MODE_KWS_ONLY) || spotting_timeout > k_uptime_get_32()) {
+#if defined(CONFIG_APP_MCUBOOT)
+		if (model_update_is_pending_reset()) {
+			k_sleep(K_MSEC(100));
+			continue;
+		}
+#endif
 		err = dmic_read(dmic_dev, 0, &audio_buffer, &audio_buffer_size, DMIC_READ_TIMEOUT);
 		if (err < 0) {
 			LOG_ERR("Failed to read from DMIC (err %d)", err);
@@ -144,6 +160,10 @@ int main(void)
 	if (err) {
 		return err;
 	}
+
+#if defined(CONFIG_APP_MCUBOOT)
+	model_update_init();
+#endif
 
 	LOG_INF("Initialization completed, check output on VCOM0");
 

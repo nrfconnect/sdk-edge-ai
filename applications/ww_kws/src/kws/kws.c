@@ -16,6 +16,9 @@
 
 #include "../dmic.h"
 #include "../model_utils.h"
+#if defined(CONFIG_APP_MCUBOOT)
+#include "../model_update.h"
+#endif
 #include "kws.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model_labels.h"
@@ -196,6 +199,13 @@ static void kws_postprocess(struct kws_prediction *const prediction)
 int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 		struct kws_prediction *const prediction)
 {
+#if defined(CONFIG_APP_MCUBOOT)
+	if (model_update_blocks_kws_inference()) {
+		free_dmic_buffer(audio_buffer);
+		return -EBUSY;
+	}
+#endif
+
 	__ASSERT_NO_MSG(audio_buffer);
 	__ASSERT_NO_MSG(num_samples == nrf_edgeai_input_window_size(kws_model));
 	__ASSERT_NO_MSG(prediction);

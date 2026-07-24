@@ -98,6 +98,17 @@ config APP_KWS_PERSISTENT_VARS_SIZE
 	  generated header (src/kws/nrf_edgeai_generated/nrf_edgeai_user_model_axon.h) - update
 	  this alongside that header whenever the KWS model is regenerated.
 
+config APP_MCUBOOT
+	bool "MCUboot dual-slot FW + model DFU (nRF54LM20)"
+	default y
+	depends on APP_MODEL_OTA
+	depends on SOC_NRF54LM20B
+	select BOOTLOADER_MCUBOOT
+	help
+	  Enables MCUboot with three updateable images: image 0 for signed firmware
+	  (dual-slot swap-using-move), image 1 for the wakeword model, and image 2 for the
+	  keyword-spotting model. Model uploads use SMP over UART by default; see README.rst.
+
 endif # APP_MODEL_OTA
 
 config MODELS_OBSERVABILITY

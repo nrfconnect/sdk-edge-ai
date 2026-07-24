@@ -1,0 +1,16 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * Default nRF54LM20 DK MCUboot layout for ww_kws (single-slot model profile).
+ *
+ * Image 0: dual-slot firmware (swap-using-move, 460 kB slots).
+ * Image 1: single-slot wakeword model (64 kB model_storage_ww; slot2 and slot3 alias).
+ * Image 2: single-slot keyword-spotting model (512 kB model_storage_kws; slot4 and slot5 alias).
+ *
+ * Use in the application overlay and sysbuild/mcuboot/boards/ overlay.
+ */
+
+#include "nrf54lm20dk_mcuboot_partitions_single.dtsi"
+#include "nrf54lm20dk_mcuboot_bootchain.dtsi"

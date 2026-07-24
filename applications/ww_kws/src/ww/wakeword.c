@@ -16,6 +16,9 @@
 
 #include "../dmic.h"
 #include "../model_utils.h"
+#if defined(CONFIG_APP_MCUBOOT)
+#include "../model_update.h"
+#endif
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "wakeword.h"
 
@@ -134,6 +137,13 @@ static bool ww_postprocess(void)
 
 int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *const ww_detected)
 {
+#if defined(CONFIG_APP_MCUBOOT)
+	if (model_update_blocks_ww_inference()) {
+		free_dmic_buffer(audio_buffer);
+		return -EBUSY;
+	}
+#endif
+
 	__ASSERT_NO_MSG(audio_buffer);
 	__ASSERT_NO_MSG(num_samples == nrf_edgeai_input_window_size(ww_model));
 	__ASSERT_NO_MSG(ww_detected);
