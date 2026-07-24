@@ -9,7 +9,9 @@
 
 void run_anomaly_tests(void);
 void run_classification_tests(void);
+void run_classification_axon_tests(void);
 void run_regression_tests(void);
+void run_regression_axon_tests(void);
 void run_wakeword_tests(void);
 void run_person_det_tests(void);
 void run_okay_nordic_tests(void);

@@ -11,7 +11,9 @@ project(nrf_edgeai_multi_model_sample)
 
 set(ANOMALY_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/anomaly/src/nrf_edgeai_generated)
 set(CLASSIF_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/classification/src/nrf_edgeai_generated/Neuton)
+set(CLASSIF_AXON_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/classification/src/nrf_edgeai_generated/Axon)
 set(REGRESS_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/regression/src/nrf_edgeai_generated/Neuton)
+set(REGRESS_AXON_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/regression/src/nrf_edgeai_generated/Axon)
 set(WW_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../../applications/ww_kws/src/ww/nrf_edgeai_generated)
 set(PERSON_DET_DIR ${CMAKE_CURRENT_LIST_DIR}/../../applications/person_detection/src)
 set(OKAY_NORDIC_DIR ${CMAKE_CURRENT_LIST_DIR}/../axon/axon_low_power/src)
@@ -31,15 +33,20 @@ target_sources(app PRIVATE
   src/main.c
   src/test_anomaly.c
   src/test_classification.c
+  src/test_classification_axon.c
   src/test_regression.c
+  src/test_regression_axon.c
   src/test_wakeword.c
   src/test_person_det.c
   src/test_okay_nordic.c
   ${PERSON_DET_DIR}/postprocessing.c
   ${WW_MODEL_DIR}/nrf_edgeai_user_model.c
+  ${CLASSIF_AXON_MODEL_DIR}/nrf_edgeai_user_model.c
+  ${REGRESS_AXON_MODEL_DIR}/nrf_edgeai_user_model.c
 )
 
-# Neuton models are partition-loaded when OTA is enabled; wakeword stays baked in.
+# Neuton models are partition-loaded when OTA is enabled; wakeword and Axon Edge AI models stay
+# baked into the app.
 if(NOT CONFIG_MODEL_OTA_NEUTON)
   target_sources(app PRIVATE ${NEUTON_MODEL_SOURCES})
 endif()

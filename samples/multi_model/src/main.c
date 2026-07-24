@@ -21,8 +21,14 @@ int main(void)
 	run_classification_tests();
 	LOG_INF("Classification tests passed");
 
+	run_classification_axon_tests();
+	LOG_INF("Axon classification tests passed");
+
 	run_regression_tests();
 	LOG_INF("Regression tests passed");
+
+	run_regression_axon_tests();
+	LOG_INF("Axon regression tests passed");
 
 	run_wakeword_tests();
 	LOG_INF("Wakeword tests passed");
