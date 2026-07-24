@@ -86,11 +86,11 @@ You can replace the bundled models using the `Text to Wake Word Detection <Nordi
 Requirements
 ************
 
-The application supports the following development kit:
+The application supports the following development kits:
 
 .. table-from-sample-yaml::
 
-The application also requires PDM digital microphone connected to the pins specified in the :file:`boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay` file.
+The application also requires PDM digital microphone connected to the pins specified in the board overlay file (:file:`boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay` or :file:`boards/nrf7120dk_nrf7120e_cpuapp.overlay`).
 The application is expecting audio data to be provided on left channel.
 
 Pin mapping
@@ -103,17 +103,23 @@ The following table show how to connect this module to the DK:
 .. list-table::
    :header-rows: 1
 
-   * - Adafurit DMIC
+   * - Adafruit DMIC
      - nRF54LM20 DK
+     - nRF7120 DK
    * - ``3V``
+     - ``VDD:IO``
      - ``VDD:IO``
    * - ``GND``
      - ``GND``
+     - ``GND``
    * - ``SEL``
+     - ``GND``
      - ``GND``
    * - ``CLK``
      - ``P1.4``
+     - ``P1.4``
    * - ``DAT``
+     - ``P1.5``
      - ``P1.5``
 
 The ``SEL`` pin is responsible for selecting audio channel and connecting it to ground selects left channel.
@@ -133,7 +139,7 @@ LED0:
 LED1:
    Blinks for one second on each keyword spotted.
 
-UART30 (VCOM0):
+UART30 (VCOM0) on the nRF54LM20 DK, UART21 on the nRF7120 DK:
    Prints runtime state messages:
 
    * ``Waiting for wakeword``
@@ -215,7 +221,7 @@ Testing
 
 #. |connect_kit|
 #. |connect_terminal_kit| The application is using both serial ports.
-#. Open one terminal for Zephyr logs and one for control output from UART30.
+#. Open one terminal for Zephyr logs and one for control output from UART30 (nRF54LM20 DK) or UART21 (nRF7120 DK).
 #. Say the wakeword phrase "Okay Nordic".
 #. Observe **LED0** light up.
 #. Say one of the bundled model keywords (for example, "Yes" or "No").
@@ -245,7 +251,7 @@ If you have enabled the model observability, also complete the following steps:
 Application output
 ==================
 
-The application shows the following output from UART30 (VCOM0):
+The application shows the following output from UART30 (VCOM0) on the nRF54LM20 DK, or from UART21 on the nRF7120 DK:
 
 .. code-block:: console
 

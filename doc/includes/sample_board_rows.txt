@@ -40,7 +40,11 @@
 
 .. nrf7120dk_nrf7120_cpuapp
 
-| nRF7120 DK |   | nrf7120dk | ``nrf7120dk/nrf7120/cpuapp`` |
+| :ref:`nRF7120 DK <nrf:ug_nrf71>` | PCA10217 | :doc:`nrf7120dk <zephyr:boards/nordic/nrf7120dk/doc/index>` | ``nrf7120dk/nrf7120/cpuapp`` |
+
+.. nrf7120dk_nrf7120e_cpuapp
+
+| :ref:`nRF7120 DK <nrf:ug_nrf71>` | PCA10217 | :doc:`nrf7120dk <zephyr:boards/nordic/nrf7120dk/doc/index>` | ``nrf7120dk/nrf7120e/cpuapp`` |
 
 
 
