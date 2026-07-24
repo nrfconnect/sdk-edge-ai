@@ -109,8 +109,9 @@ function(model_ota_neuton_image)
     COMMAND ${PYTHON_EXECUTABLE} ${crc_tool} --bin ${image_bin_raw} -o ${image_bin}
     # 4. Fail the build if the on-flash header disagrees with the linked layout.
     COMMAND ${PYTHON_EXECUTABLE} ${validate_tool}
-            --nm ${CMAKE_NM} --elf ${image_elf} --bin ${image_bin}
-            --partition-addr ${partition_addr} --defs-header ${defs_header}
+            --elf ${image_elf} --bin ${image_bin}
+            --partition-addr ${partition_addr} --partition-size ${partition_size}
+            --defs-header ${defs_header}
     # 5. Addressed hex for flashing the model into its partition, INDEPENDENTLY of the app.
     #    This is a separate, standalone artifact; it is deliberately NOT merged into zephyr.hex,
     #    since model-only OTA means the app image and each model partition are flashed/updated

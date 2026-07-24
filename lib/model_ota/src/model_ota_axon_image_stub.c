@@ -5,9 +5,9 @@
  *
  * Axon model partition-image stub (one translation unit, compiled once per model image).
  *
- * model_ota_axon_image() compiles this file with MODEL_IMAGE_HEADER and MODEL_IMAGE_MODEL_SYM,
- * then links the result at the partition base. App-owned pointer fields are resolved from
- * zephyr.elf via a generated PROVIDE() linker fragment.
+ * model_ota_axon_model() compiles this file with probe-derived configuration,
+ * then links the result at the partition base. App-owned pointer fields are
+ * resolved from zephyr.elf via a generated PROVIDE() linker fragment.
  */
 
 #include "model_ota_stub_macros.h"
@@ -27,15 +27,28 @@
 #error "NRF_MODEL_PARTITION_ADDR must be defined when linking the Axon model image"
 #endif
 
-#ifndef MODEL_IMAGE_HEADER
-#error "MODEL_IMAGE_HEADER must be defined when building the Axon model image stub"
+#if !defined(MODEL_OTA_AXON_CONFIG_VERSION) || (MODEL_OTA_AXON_CONFIG_VERSION != 1)
+#error "Unsupported or missing Axon OTA configuration"
 #endif
 
-#ifndef MODEL_IMAGE_MODEL_SYM
-#error "MODEL_IMAGE_MODEL_SYM must be defined when building the Axon model image stub"
+#ifndef MODEL_OTA_AXON_HEADER
+#error "MODEL_OTA_AXON_HEADER is missing"
 #endif
 
-#include MODEL_IMAGE_HEADER
+#ifndef MODEL_OTA_AXON_MODEL_SYM
+#error "MODEL_OTA_AXON_MODEL_SYM is missing"
+#endif
+
+#if (MODEL_OTA_AXON_PACKED_OUTPUT_BYTES > 0) && MODEL_OTA_AXON_PACKED_OUTPUT_ALLOC
+/*
+ * Opt-in (model_ota_axon_model(ALLOCATE_PACKED_OUTPUT)): wire the linked model's
+ * packed_output_buf field to app-owned storage, resolved via the generated PROVIDE()
+ * linker fragment. Otherwise the image links with packed_output_buf NULL.
+ */
+#define NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER 1
+#endif
+
+#include MODEL_OTA_AXON_HEADER
 
 extern char __model_image_end[];
 
@@ -47,12 +60,8 @@ extern char __model_image_end[];
 #define MODEL_IMAGE_VERSION_U32 0x00010000u
 #endif
 
-#ifndef MODEL_IMAGE_PACKED_OUTPUT_BYTES
-#define MODEL_IMAGE_PACKED_OUTPUT_BYTES 0u
-#endif
-
 static const union model_image_model_ptr model_image_model = {
-	.axon = &MODEL_IMAGE_MODEL_SYM,
+	.axon = &MODEL_OTA_AXON_MODEL_SYM,
 };
 
 __attribute__((section(".model_image.header"), used))
@@ -67,5 +76,5 @@ const struct model_image_header model_image_hdr = {
 	.decoded_output = NULL,
 	.name = MODEL_IMAGE_NAME_STR,
 	.model_version = MODEL_IMAGE_VERSION_U32,
-	.axon_packed_output_bytes = MODEL_IMAGE_PACKED_OUTPUT_BYTES,
+	.axon_packed_output_bytes = MODEL_OTA_AXON_PACKED_OUTPUT_BYTES,
 };

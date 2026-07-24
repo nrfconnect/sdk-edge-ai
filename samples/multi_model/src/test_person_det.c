@@ -20,7 +20,14 @@
 
 #if defined(CONFIG_MODEL_OTA_AXON)
 #include <model_ota/model_image.h>
+#include <model_ota/axon/person_det.h>
 #else
+/*
+ * Non-OTA build: allocate the packed-output buffer inline (this TU owns
+ * model_person_det's storage), so model_person_det.packed_output_buf is non-NULL,
+ * matching the OTA build's ALLOCATE_PACKED_OUTPUT-wired image.
+ */
+#define NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER 1
 #include "generated/nrf_axon_model_person_det_.h"
 #endif
 
@@ -31,11 +38,6 @@ LOG_MODULE_REGISTER(multi_person_det, LOG_LEVEL_INF);
 #define MAX_BOXES    8
 
 static int8_t input_buf[MODEL_WIDTH * MODEL_HEIGHT * 3];
-#if defined(CONFIG_MODEL_OTA_AXON)
-static int8_t output_buf[OTA_AXON_PERSON_DET_PACKED_OUTPUT_BYTES];
-#else
-static int8_t output_buf[NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE];
-#endif
 
 static inline int8_t quantize(const float value, const nrf_axon_nn_compiled_model_input_s *in)
 {
@@ -75,6 +77,14 @@ void run_person_det_tests(void)
 	model = &model_person_det;
 #endif
 
+	/*
+	 * Use the model's own packed-output buffer (app-owned storage; OTA-wired via
+	 * ALLOCATE_PACKED_OUTPUT) rather than a separate local buffer, so this path is
+	 * always exercised and any build/wiring regression that leaves it NULL is caught
+	 * immediately instead of silently falling back.
+	 */
+	__ASSERT_NO_MSG(model->packed_output_buf != NULL);
+
 	model_input = nrf_axon_nn_model_1st_external_input(model);
 
 	result = nrf_axon_platform_init();
@@ -86,10 +96,10 @@ void run_person_det_tests(void)
 	prefill_dummy_input(model_input);
 	decode_init(model);
 
-	result = nrf_axon_nn_model_infer_sync(model, input_buf, output_buf);
+	result = nrf_axon_nn_model_infer_sync(model, input_buf, model->packed_output_buf);
 	__ASSERT_NO_MSG(result == NRF_AXON_RESULT_SUCCESS);
 
-	const size_t detections = decode_output(model, output_buf, boxes, MAX_BOXES);
+	const size_t detections = decode_output(model, model->packed_output_buf, boxes, MAX_BOXES);
 
 	LOG_INF("Person detection inference on dummy gray input: %zu detection(s)",
 		detections);

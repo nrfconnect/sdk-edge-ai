@@ -78,14 +78,14 @@ endif()
 
 if(CONFIG_MODEL_OTA_AXON)
   include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_axon.cmake)
-  model_ota_axon_wire(HEADER ${PERSON_DET_HEADER})
-  model_ota_axon_wire(HEADER ${OKAY_NORDIC_HEADER} PERSISTENT_VARS_CAP 1160)
-
-  include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_axon_image.cmake)
-  model_ota_axon_image(TARGET person_det NAME person_det VERSION 1.0.0
-                         PARTITION_NODELABEL model_person_det_storage
-                         HEADER ${PERSON_DET_HEADER})
-  model_ota_axon_image(TARGET okay_nordic NAME okay_nordic VERSION 1.0.0
-                         PARTITION_NODELABEL model_okay_nordic_storage
-                         HEADER ${OKAY_NORDIC_HEADER})
+  # ALLOCATE_PACKED_OUTPUT: keeps this build path (app-owned storage wired into the
+  # linked image's packed_output_buf) covered by every OTA build/flash of this sample.
+  model_ota_axon_model(TARGET person_det NAME person_det VERSION 1.0.0
+                       PARTITION_NODELABEL model_person_det_storage
+                       HEADER ${PERSON_DET_HEADER}
+                       ALLOCATE_PACKED_OUTPUT)
+  model_ota_axon_model(TARGET okay_nordic NAME okay_nordic VERSION 1.0.0
+                       PARTITION_NODELABEL model_okay_nordic_storage
+                       HEADER ${OKAY_NORDIC_HEADER}
+                       PERSISTENT_VARS_CAP 1160)
 endif()

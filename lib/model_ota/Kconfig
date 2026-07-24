@@ -36,9 +36,9 @@ config MODEL_OTA_AXON
 	depends on NRF_AXON
 	help
 	  Builds model_image_axon.c and model_image_load_axon(). Pure Axon models are built as
-	  self-contained partition images via model_ota_axon_image(); app-owned symbols referenced
-	  by the model are retained via model_ota_axon_wire(). See
-	  lib/model_ota/cmake/model_ota_axon_image.cmake and include/model_ota/model_image.h.
+	  self-contained partition images and wired to the application with one
+	  model_ota_axon_model() declaration. See lib/model_ota/cmake/model_ota_axon.cmake and
+	  include/model_ota/model_image.h.
 
 config MODEL_OTA_LOG_LEVEL
 	int "Log level for the model_image module"

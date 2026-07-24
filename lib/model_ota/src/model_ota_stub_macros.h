@@ -22,22 +22,10 @@
  *   MODEL_OTA_NEUTON_NEURONS_CAP before #include of generated nrf_edgeai_user_model.c;
  *   defines nrf_edgeai_load_user_model_<SOLUTION_ID>() (declared via model_ota_neuton.h).
  *
- * Axon partition image (model_ota_axon_image):
- *   lib/model_ota/src/model_ota_axon_image_stub.c
- *   MODEL_IMAGE_HEADER           - compiler-generated model header filename
- *   MODEL_IMAGE_MODEL_SYM        - baked model symbol name
- *   NRF_MODEL_PARTITION_ADDR
- *   MODEL_IMAGE_NAME_STR         - optional (default: "axon_model")
- *   MODEL_IMAGE_VERSION_U32      - optional (default: 0x00010000)
- *   MODEL_IMAGE_PACKED_OUTPUT_BYTES - optional (default: 0)
- *
- * Axon app wired (model_ota_axon_wire):
- *   lib/model_ota/src/model_ota_axon_app_stub.c
- *   MODEL_OTA_AXON_HEADER        - model header filename (via -D"...")
- *   MODEL_OTA_AXON_WIRED=1
- *   MODEL_OTA_AXON_PERSISTENT_VARS_REQUIRED / MODEL_OTA_AXON_PERSISTENT_VARS_CAP
- *   MODEL_OTA_AXON_PERSISTENT_VARS_SYM - required when persistent vars > 0
- *   MODEL_OTA_AXON_PACKED_OUTPUT_BYTES / MODEL_OTA_AXON_PACKED_OUTPUT_SYM - when packed > 0
+ * Axon OTA build helpers (ELF probe + generated metadata, see tools/model_ota/axon_elf.py):
+ *   Probe: model_ota_axon_probe.c
+ *   App wired stub: model_ota_axon_app_stub.c
+ *   Partition image stub: model_ota_axon_image_stub.c
  */
 
 #ifndef MODEL_OTA_STUB_MACROS_H_

@@ -4,27 +4,30 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-"""Validate the layout of a linked Neuton model partition image.
+"""Validate the layout of a linked Neuton or Axon model partition image.
 
-Adapted from the Axon validate_model_partition_layout.py. Confirms, after linking:
+Confirms, after linking:
 
   - the image was linked at the partition base (__model_image_start == partition addr),
   - the header sits first, at the base,
   - header magic / format_version are correct,
   - header.image_size equals the linker extent (__model_image_end - __model_image_start) and the
-    binary size,
-  - the header's DIRECT model pointer equals &model_instance_ and lies inside the image, and
-  - the crc32 field is non-zero (i.e. patch_image_crc.py ran).
+    binary size, and fits within the partition,
+  - the header's DIRECT model pointer equals &<model symbol> and lies inside the image, and
+  - the crc32 field is non-zero and matches a recomputed CRC (i.e. patch_image_crc.py ran).
 
-Unlike the Axon validator there is no model_offset arithmetic: the header stores an absolute
-flash pointer, which we compare directly against the model symbol address.
+There is no model_offset arithmetic: the header stores an absolute flash pointer, which is
+compared directly against the model symbol's address (default `model_instance_` for Neuton;
+pass `--model-symbol` for Axon, normally read from the generated config header instead).
 """
 import argparse
 import re
 import struct
-import subprocess
 import sys
+import zlib
 from pathlib import Path
+
+from axon_elf import lookup_symbol
 
 MAGIC = b"NEI\x00"
 PARAMS_AXON = 3
@@ -36,29 +39,48 @@ HEADER_FMT = "<4sHBBIIII16sII"
 HEADER_SIZE = struct.calcsize(HEADER_FMT)
 
 
-def lookup_symbol(nm, elf, symbol):
-    out = subprocess.check_output([nm, str(elf)], text=True, errors="replace")
-    for line in out.splitlines():
-        parts = line.split()
-        if len(parts) >= 3 and parts[-1] == symbol:
-            return int(parts[0], 16)
-    return None
+def symbol(elf, name):
+    entry = lookup_symbol(elf, name)
+    if entry is None or entry.is_undefined:
+        return None
+    return entry
 
 
-def main():
+def config_define(path, name):
+    if path is None:
+        return None
+    match = re.search(
+        rf"^\s*#define\s+{re.escape(name)}\s+([A-Za-z_]\w*|0[xX][0-9A-Fa-f]+|\d+)[uUlL]*\s*$",
+        path.read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
+    return match.group(1) if match is not None else None
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--nm", required=True)
     parser.add_argument("--elf", type=Path, required=True)
     parser.add_argument("--bin", type=Path, required=True)
     parser.add_argument("--partition-addr", type=lambda x: int(x, 0), required=True)
+    parser.add_argument("--partition-size", type=lambda x: int(x, 0))
+    parser.add_argument("--params-type", type=lambda x: int(x, 0))
     parser.add_argument("--model-symbol", default="model_instance_",
                         help="Expected baked model symbol (Axon: e.g. model_person_det)")
     parser.add_argument("--header-symbol", default="nrf_edgeai_model_image_hdr")
+    parser.add_argument("--config-header", type=Path,
+                        help="Generated Axon private configuration header")
     parser.add_argument("--defs-header", type=Path, default=None,
                         help="model_image.h, to read the expected MODEL_IMAGE_FORMAT_VERSION")
     parser.add_argument("--version", type=int, default=None)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+
+    configured_model = config_define(args.config_header, "MODEL_OTA_AXON_MODEL_SYM")
+    if configured_model is not None:
+        args.model_symbol = configured_model
+    configured_packed = config_define(
+        args.config_header, "MODEL_OTA_AXON_PACKED_OUTPUT_BYTES"
+    )
 
     if not args.elf.is_file():
         print("ELF not found: %s" % args.elf, file=sys.stderr)
@@ -77,24 +99,30 @@ def main():
         print("expected format version not provided", file=sys.stderr)
         sys.exit(1)
 
-    start = lookup_symbol(args.nm, args.elf, "__model_image_start")
-    end = lookup_symbol(args.nm, args.elf, "__model_image_end")
-    hdr_sym = lookup_symbol(args.nm, args.elf, args.header_symbol)
+    start_sym = symbol(args.elf, "__model_image_start")
+    end_sym = symbol(args.elf, "__model_image_end")
+    hdr_sym = symbol(args.elf, args.header_symbol)
     if hdr_sym is None:
-        hdr_sym = lookup_symbol(args.nm, args.elf, "model_image_hdr")
-    model_sym = lookup_symbol(args.nm, args.elf, args.model_symbol)
+        hdr_sym = symbol(args.elf, "model_image_hdr")
+    model_sym = symbol(args.elf, args.model_symbol)
 
-    if start is None or end is None:
+    if start_sym is None or end_sym is None:
         print("missing linker anchors __model_image_start/__model_image_end", file=sys.stderr)
         sys.exit(1)
 
+    start = start_sym.address
+    end = end_sym.address
     errors = []
 
     if start != args.partition_addr:
         errors.append("partition base mismatch: linker start 0x%x != 0x%x"
                       % (start, args.partition_addr))
-    if hdr_sym is not None and hdr_sym != start:
-        errors.append("header not at image start: hdr 0x%x, start 0x%x" % (hdr_sym, start))
+    if hdr_sym is None:
+        errors.append("missing model image header symbol")
+    elif hdr_sym.address != start:
+        errors.append(
+            "header not at image start: hdr 0x%x, start 0x%x" % (hdr_sym.address, start)
+        )
 
     linker_size = end - start
     if linker_size <= HEADER_SIZE:
@@ -118,11 +146,27 @@ def main():
     bin_size = args.bin.stat().st_size
     if bin_size != linker_size:
         errors.append("binary size 0x%x != linker extent 0x%x" % (bin_size, linker_size))
+    if args.partition_size is not None and image_size > args.partition_size:
+        errors.append(
+            "image size 0x%x exceeds partition size 0x%x"
+            % (image_size, args.partition_size)
+        )
 
-    if model_ptr < start or model_ptr + 1 > end:
+    model_extent = model_sym.size if model_sym is not None and model_sym.size > 0 else 1
+    if model_ptr < start or model_ptr + model_extent > end:
         errors.append("model pointer 0x%x outside image [0x%x, 0x%x)" % (model_ptr, start, end))
-    if model_sym is not None and model_ptr != model_sym:
-        errors.append("header model 0x%x != &%s 0x%x" % (model_ptr, args.model_symbol, model_sym))
+    if model_sym is None:
+        errors.append("missing model symbol %s" % args.model_symbol)
+    elif model_ptr != model_sym.address:
+        errors.append(
+            "header model 0x%x != &%s 0x%x"
+            % (model_ptr, args.model_symbol, model_sym.address)
+        )
+
+    if args.params_type is not None and params_type != args.params_type:
+        errors.append(
+            "params_type %d != expected %d" % (params_type, args.params_type)
+        )
 
     if params_type == PARAMS_AXON:
         if decoded_output_ptr != 0:
@@ -133,6 +177,22 @@ def main():
 
     if crc32 == 0:
         errors.append("crc32 is 0 (patch_image_crc.py did not run)")
+    else:
+        crc_data = bytearray(args.bin.read_bytes())
+        struct.pack_into("<I", crc_data, 12, 0)
+        computed_crc = zlib.crc32(crc_data) & 0xFFFFFFFF
+        if crc32 != computed_crc:
+            errors.append(
+                "crc32 0x%08x != computed 0x%08x" % (crc32, computed_crc)
+            )
+
+    if configured_packed is not None:
+        expected_packed = int(configured_packed, 0)
+        if axon_packed_output_bytes != expected_packed:
+            errors.append(
+                "Axon packed output %d != expected %d"
+                % (axon_packed_output_bytes, expected_packed)
+            )
 
     if errors:
         for e in errors:
