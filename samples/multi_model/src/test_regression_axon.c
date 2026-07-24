@@ -13,9 +13,19 @@
 #include <zephyr/sys/util.h>
 #include <math.h>
 
-LOG_MODULE_REGISTER(multi_regress_axon, LOG_LEVEL_INF);
+#if defined(CONFIG_MODEL_OTA_AXON)
+#include <model_ota/model_ota_axon_edgeai.h>
+#include <zephyr/storage/flash_map.h>
 
+MODEL_OTA_AXON_EDGEAI_LOAD_DECL(36025);
+
+BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_regress_axon_storage),
+	     "board devicetree is missing model_regress_axon_storage - see boards/*.overlay");
+#else
 nrf_edgeai_t *nrf_edgeai_user_model_36025(void);
+#endif
+
+LOG_MODULE_REGISTER(multi_regress_axon, LOG_LEVEL_INF);
 
 static flt32_t fill_features_buffer(flt32_t *p_buffer, const size_t buffer_size,
 				    const size_t sample_index)
@@ -61,7 +71,22 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, flt32_t *p_input_featur
 
 void run_regression_axon_tests(void)
 {
+#if defined(CONFIG_MODEL_OTA_AXON)
+	/* Model-only OTA: the compiled Axon model is loaded from its flash partition (XIP) at
+	 * runtime and wired into the app-compiled nrf_edgeai_t wrapper.
+	 */
+	nrf_edgeai_t *p_user_model = nrf_edgeai_load_user_model_36025(
+		PARTITION_ID(model_regress_axon_storage),
+		(const uint8_t *)PARTITION_ADDRESS(model_regress_axon_storage));
+
+	if (p_user_model == NULL) {
+		LOG_WRN("No valid regression model image in model_regress_axon_storage - "
+			"skipping (flash regress_axon_model_partition.hex)");
+		return;
+	}
+#else
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model_36025();
+#endif
 
 	__ASSERT_NO_MSG(p_user_model != NULL);
 	__ASSERT_NO_MSG(p_user_model->model.type == NRF_EDGEAI_MODEL_AXON);

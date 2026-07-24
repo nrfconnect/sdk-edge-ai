@@ -14,7 +14,13 @@ set(CLASSIF_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/classification/src
 set(CLASSIF_AXON_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/classification/src/nrf_edgeai_generated/Axon)
 set(REGRESS_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/regression/src/nrf_edgeai_generated/Neuton)
 set(REGRESS_AXON_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/regression/src/nrf_edgeai_generated/Axon)
+set(CLASSIF_AXON_MODEL_SRC ${CLASSIF_AXON_MODEL_DIR}/nrf_edgeai_user_model.c)
+set(CLASSIF_AXON_MODEL_HEADER ${CLASSIF_AXON_MODEL_DIR}/nrf_edgeai_user_model_axon.h)
+set(REGRESS_AXON_MODEL_SRC ${REGRESS_AXON_MODEL_DIR}/nrf_edgeai_user_model.c)
+set(REGRESS_AXON_MODEL_HEADER ${REGRESS_AXON_MODEL_DIR}/nrf_edgeai_user_model_axon.h)
 set(WW_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../../applications/ww_kws/src/ww/nrf_edgeai_generated)
+set(WW_MODEL_SRC ${WW_MODEL_DIR}/nrf_edgeai_user_model.c)
+set(WW_MODEL_HEADER ${WW_MODEL_DIR}/nrf_edgeai_user_model_axon.h)
 set(PERSON_DET_DIR ${CMAKE_CURRENT_LIST_DIR}/../../applications/person_detection/src)
 set(OKAY_NORDIC_DIR ${CMAKE_CURRENT_LIST_DIR}/../axon/axon_low_power/src)
 
@@ -40,15 +46,23 @@ target_sources(app PRIVATE
   src/test_person_det.c
   src/test_okay_nordic.c
   ${PERSON_DET_DIR}/postprocessing.c
-  ${WW_MODEL_DIR}/nrf_edgeai_user_model.c
-  ${CLASSIF_AXON_MODEL_DIR}/nrf_edgeai_user_model.c
-  ${REGRESS_AXON_MODEL_DIR}/nrf_edgeai_user_model.c
 )
 
 # Neuton models are partition-loaded when OTA is enabled; wakeword and Axon Edge AI models stay
 # baked into the app.
 if(NOT CONFIG_MODEL_OTA_NEUTON)
   target_sources(app PRIVATE ${NEUTON_MODEL_SOURCES})
+endif()
+
+# The Edge AI Lab solutions with an Axon backend (wakeword, classification, regression) are
+# partition-loaded when Axon OTA is enabled: their compiled Axon models are wired via
+# model_ota_axon_edgeai_wire() below instead.
+if(NOT CONFIG_MODEL_OTA_AXON)
+  target_sources(app PRIVATE
+    ${WW_MODEL_SRC}
+    ${CLASSIF_AXON_MODEL_SRC}
+    ${REGRESS_AXON_MODEL_SRC}
+  )
 endif()
 
 target_include_directories(app PRIVATE
@@ -95,4 +109,22 @@ if(CONFIG_MODEL_OTA_AXON)
                        PARTITION_NODELABEL model_okay_nordic_storage
                        HEADER ${OKAY_NORDIC_HEADER}
                        PERSISTENT_VARS_CAP 1160)
+
+  # Edge AI Lab solutions (nrf_edgeai_t wrapper, Axon backend): only the compiled Axon model is
+  # partition-loaded, the wrapper (DSP pipeline, decode interfaces) stays in the app. See
+  # lib/model_ota/cmake/model_ota_axon_edgeai.cmake.
+  include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_axon_edgeai.cmake)
+  model_ota_axon_edgeai_wire(SOLUTION_ID 36711 MODEL_SRC ${WW_MODEL_SRC}
+                             HEADER ${WW_MODEL_HEADER}
+                             NAME wakeword VERSION 1.0.0
+                             PARTITION_NODELABEL model_wakeword_storage
+                             PERSISTENT_VARS_CAP 1160)
+  model_ota_axon_edgeai_wire(SOLUTION_ID 36237 MODEL_SRC ${CLASSIF_AXON_MODEL_SRC}
+                             HEADER ${CLASSIF_AXON_MODEL_HEADER}
+                             NAME classif_axon VERSION 1.0.0
+                             PARTITION_NODELABEL model_classif_axon_storage)
+  model_ota_axon_edgeai_wire(SOLUTION_ID 36025 MODEL_SRC ${REGRESS_AXON_MODEL_SRC}
+                             HEADER ${REGRESS_AXON_MODEL_HEADER}
+                             NAME regress_axon VERSION 1.0.0
+                             PARTITION_NODELABEL model_regress_axon_storage)
 endif()

@@ -48,6 +48,14 @@ Axon app wiring and image generation use one `model_ota_axon_model()` declaratio
 models that require a dedicated packing buffer (the `multi_model` sample's `person_det`
 declaration uses this option, so both code paths are exercised by its OTA build).
 
+A "Nordic EdgeAI Lab" solution exported for the Axon backend (a `nrf_edgeai_t` wrapper -
+input windowing, DSP feature pipeline, decode interfaces - around a compiled Axon model) uses
+`model_ota_axon_edgeai_wire()` in `lib/model_ota/cmake/model_ota_axon_edgeai.cmake` instead.
+Only the compiled Axon model is partition-loaded (via `model_ota_axon_model()`, same as a pure
+Axon model); the wrapper stays compiled into the app, and its `model.instance.p_void` is patched
+at runtime by the generated `nrf_edgeai_load_user_model_<id>()` loader (the `multi_model`
+sample's `wakeword`, `classif_axon`, and `regress_axon` declarations exercise this path).
+
 ## Flashing (separate from the app)
 
 The app (`zephyr.hex`) and each model partition are flashed independently. Program one model
@@ -67,3 +75,6 @@ nrfutil device program --firmware gear_anomaly_model_partition.hex \
   `lib/model_ota/src/model_ota_stub_macros.h`, `lib/model_ota/linker/model_image.ld`
 - Axon wiring: `lib/model_ota/cmake/model_ota_axon.cmake`,
   `tools/model_ota/axon_elf.py`
+- Edge AI Lab / Axon-backend wiring: `lib/model_ota/cmake/model_ota_axon_edgeai.cmake`,
+  `lib/model_ota/src/model_ota_axon_edgeai_wired.c.in`,
+  `include/model_ota/model_ota_axon_edgeai.h`

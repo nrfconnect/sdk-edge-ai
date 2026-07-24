@@ -71,8 +71,14 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_axon_user_instance_360
 };
 #define NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_PACKED_OUTPUT_SIZE 4
 
+/*
+ * model_ota: app-owned RAM storage. NRF_AXON_MODEL_APP_STORAGE expands to "extern" when this
+ * header is compiled as part of an OTA-wired model (see lib/model_ota/src/model_ota_axon_app_stub.c
+ * and model_ota_axon_image_stub.c); it is empty otherwise (see nrf_axon_driver.h), matching the
+ * plain, non-OTA build of this generated model.
+ */
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-  uint32_t axon_model_axon_user_instance_36025_packed_output_buf[NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
+NRF_AXON_MODEL_APP_STORAGE uint32_t axon_model_axon_user_instance_36025_packed_output_buf[NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_axon_user_instance_36025 = {
     .compiler_version = 0x00010300,

@@ -6,8 +6,8 @@
 
 /*
  * Model-only OTA: repurpose the unused (no-MCUboot) slot1_partition region as dedicated
- * model_storage partitions (three Neuton models + two Axon models). Wakeword stays
- * baked into the app.
+ * model_storage partitions (three Neuton models + five Axon models, including the Edge AI Lab
+ * wakeword/classification/regression solutions' Axon backends).
  * -DEXTRA_CONF_FILE=overlay-ota.conf; harmless (just reserved, unused flash) otherwise.
  *
  * The OTA build emits a standalone <name>_model_partition.hex per model (linked at the matching
@@ -47,6 +47,24 @@
 			compatible = "zephyr,mapped-partition";
 			label = "model_okay_nordic_storage";
 			reg = <0x15a000 DT_SIZE_K(128)>;
+		};
+
+		model_wakeword_storage: partition@17a000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_wakeword_storage";
+			reg = <0x17a000 DT_SIZE_K(64)>;
+		};
+
+		model_classif_axon_storage: partition@18a000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_classif_axon_storage";
+			reg = <0x18a000 DT_SIZE_K(32)>;
+		};
+
+		model_regress_axon_storage: partition@192000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_regress_axon_storage";
+			reg = <0x192000 DT_SIZE_K(32)>;
 		};
 	};
 };
