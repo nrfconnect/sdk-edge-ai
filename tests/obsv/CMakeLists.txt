@@ -20,6 +20,7 @@ target_sources(app PRIVATE
   src/suite_pred_switch_rate.c
   src/suite_probs_entropy_dist.c
   src/suite_probs_top2_margin_dist.c
+  src/suite_class_streak_dist.c
   src/suite_mel_energy_desc.c
   src/suite_mel_spectral_desc.c
 )

@@ -208,6 +208,22 @@
 #define _NRF_EDGEAI_OBSV_ENCODE_MSD 0
 #endif
 
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST)
+
+/* Class streak distribution emits num_classes rows x bin_num histogram. */
+#define _NRF_EDGEAI_OBSV_ENCODE_CSD_PER_CLASS                                          \
+	(_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                                     \
+	 (CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_BIN_NUM *                            \
+	  _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST))
+
+#define _NRF_EDGEAI_OBSV_ENCODE_CSD                                                     \
+	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                                   \
+	 (CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES * _NRF_EDGEAI_OBSV_ENCODE_CSD_PER_CLASS))
+
+#else
+#define _NRF_EDGEAI_OBSV_ENCODE_CSD 0
+#endif
+
 /**
  * @brief CBOR encoded size budget for one custom metric.
  *
@@ -245,6 +261,7 @@
 	 _NRF_EDGEAI_OBSV_ENCODE_TM + _NRF_EDGEAI_OBSV_ENCODE_PSR +              \
 	 _NRF_EDGEAI_OBSV_ENCODE_PED + _NRF_EDGEAI_OBSV_ENCODE_PMD +             \
 	 _NRF_EDGEAI_OBSV_ENCODE_MED + _NRF_EDGEAI_OBSV_ENCODE_MSD +             \
+	 _NRF_EDGEAI_OBSV_ENCODE_CSD +                                          \
 	 CONFIG_NRF_EDGEAI_OBSV_EXTRA_ENCODE_BYTES)
 
 /**
