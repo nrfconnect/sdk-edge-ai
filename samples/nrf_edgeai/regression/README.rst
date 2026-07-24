@@ -79,6 +79,27 @@ In your :file:`prj.conf` file, the following settings are applied to ensure the 
 
 .. include:: /includes/include_kconfig_edgeai.txt
 
+Build types
+===========
+
+The sample supports the following build types:
+
+.. list-table:: Regression sample build types
+   :widths: auto
+   :header-rows: 1
+
+   * - Build type
+     - File name
+     - Description
+   * - Default
+     - :file:`prj.conf`
+     - Model OTA over SMP (UART) and MCUboot dual-image boot.
+   * - BLE Memfault gateway
+     - :file:`prj_ble_memfault.conf`
+     - Adds Bluetooth LE SMP and the Memfault MCUmgr command group so a phone or gateway can read device identity, fetch a model release from Memfault, and upload it over BLE.
+
+See `Custom build types`_ and `Providing CMake options`_ for more information.
+
 Building and running
 ********************
 
@@ -211,6 +232,54 @@ Close any serial monitor on the application UART port, then:
 **Single-slot:** there is no separate staging slot or revert. Inference is paused while image 1 is uploaded because SMP writes to the same ``model_storage`` region the model executes from. After upload completes, **reset the device** before validating the new model; the sample does not hot-reload an in-place SMP update.
 
 Firmware-only OTA uses image index 0 (omit ``-n 1``) and ``build/regression/zephyr/zephyr.signed.bin``. Each image can be updated independently.
+
+Model OTA over BLE (Memfault gateway)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The device does not download model images from Memfault by itself in this flow.
+A BLE-connected gateway (phone, PC, or custom tool) reads Memfault metadata from the device, fetches the signed model from Memfault, and uploads it with SMP image management (same MCUboot image 1 path as UART above).
+
+Build and flash with the BLE overlay (dual-slot model layout is recommended so a bad model can revert):
+
+.. code-block:: console
+
+   west build -b nrf54lm20dk/nrf54lm20a/cpuapp samples/nrf_edgeai/regression -d build_ble \
+       -- -DEXTRA_CONF_FILE=prj_ble_memfault.conf \
+          -DSB_CONFIG_NRF_EDGEAI_REGRESSION_MODEL_SLOT_DUAL=y \
+          -DCONFIG_MEMFAULT_NCS_PROJECT_KEY=<your-memfault-project-key>
+   west flash -d build_ble --recover --no-rebuild
+
+Set ``CONFIG_MEMFAULT_NCS_DEVICE_ID`` in :file:`prj_ble_memfault.conf` (or pass ``-DCONFIG_MEMFAULT_NCS_DEVICE_ID=...``) so each board has a unique serial in Memfault.
+
+In Memfault, create model releases using software type ``regression-model`` (separate from the application type ``regression-app`` reported by the device).
+Upload ``build_ble/regression/regression_model_mcuboot.signed.bin`` as the OTA payload for that software type.
+Use a separate Memfault project for model-only releases, or the same project with a distinct software type, depending on how you want to manage cohorts.
+
+Gateway workflow:
+
+#. Connect to the device over Bluetooth LE (advertised as ``EdgeAI Regression``).
+#. If you previously connected with an older firmware that required SMP pairing, remove the bond in the phone OS Bluetooth settings or in Device Manager before retrying.
+#. Read Memfault MCUmgr group 128, command 0 (device info) and command 1 (project key).
+   The gateway needs ``device_serial``, ``hardware_version``, and ``project_key`` to query Memfault.
+   Use software type ``regression-model`` (not ``regression-app`` from device info) when calling the Memfault releases API for model binaries.
+#. Compare the model version on the device (``mcumgr image list``, image index 1) with the latest Memfault release for ``regression-model``.
+#. Download ``regression_model_mcuboot.signed.bin`` from Memfault when an update is available.
+#. Upload to the device over BLE SMP, then test and reset:
+
+   .. code-block:: console
+
+      mcumgr --conntype ble --connstring peer_name='EdgeAI Regression' \
+          image upload -e -n 1 build_ble/regression/regression_model_mcuboot.signed.bin
+      mcumgr --conntype ble --connstring peer_name='EdgeAI Regression' image list
+      mcumgr --conntype ble --connstring peer_name='EdgeAI Regression' image test <model_hash>
+      mcumgr --conntype ble --connstring peer_name='EdgeAI Regression' reset
+
+   On Linux you may need ``peer_id=<BLE address>`` instead of ``peer_name`` if name-based lookup fails.
+
+#. After reset, confirm the sample loads the new model and (dual-slot only) calls ``boot_write_img_confirmed_multi(1)`` when validation succeeds.
+
+Ready-made gateways that speak SMP over BLE include `nRF Connect Device Manager`_ (application firmware, image 0) and custom tools built on the Memfault MCUmgr command group (`Memfault in nRF Connect SDK`_).
+For image 1 (model-only) uploads, use ``mcumgr`` over BLE as shown above or extend your gateway to pass ``-n 1`` / image index 1 to SMP image management.
 
 Making model OTA optional
 --------------------------

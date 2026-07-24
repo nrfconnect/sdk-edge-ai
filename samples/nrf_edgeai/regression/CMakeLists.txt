@@ -59,3 +59,5 @@ if(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT)
 endif()
 
 target_sources(app PRIVATE src/main.c)
+
+target_sources_ifdef(CONFIG_MCUMGR_TRANSPORT_BT app PRIVATE src/ble_smp.c)

@@ -67,6 +67,10 @@
 #include <math.h>
 #include <stdio.h>
 
+#if defined(CONFIG_MCUMGR_TRANSPORT_BT)
+#include "ble_smp.h"
+#endif
+
 LOG_MODULE_REGISTER(regression, LOG_LEVEL_INF);
 
 #include <nrf_edgeai/nrf_edgeai.h>
@@ -454,6 +458,10 @@ int main(void)
 	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
 		v.field.patch);
 
+#if defined(CONFIG_MCUMGR_TRANSPORT_BT)
+	start_smp_bluetooth_adverts();
+#endif
+
 #if defined(CONFIG_NRF_EDGEAI_REGRESSION_MCUBOOT) && \
 	!defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_MCUBOOT_DUAL_SLOT)
 	model_smp_upload_register_callback();
@@ -523,6 +531,10 @@ int main(void)
 
 	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
 		v.field.patch);
+
+#if defined(CONFIG_MCUMGR_TRANSPORT_BT)
+	start_smp_bluetooth_adverts();
+#endif
 
 	/* The model is compiled directly into the image (see nrf_edgeai_generated/<Backend>/
 	 * nrf_edgeai_user_model.c): validate it once against all 29 test cases, asserting on
