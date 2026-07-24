@@ -14,10 +14,29 @@
 extern "C" {
 #endif
 
+#if defined(CONFIG_APP_MODEL_OTA)
+/**
+ * @brief Load the model from a package in flash and get its instance (@ref nrf_edgeai_t).
+ *
+ * @param fa_id           Flash area ID of the partition to load from.
+ * @param partition_addr  Base address of that same partition.
+ * @return Pointer to a ready-to-use nrf_edgeai_t, or NULL if the load failed.
+ */
+nrf_edgeai_t *nrf_edgeai_load_user_model_36712(uint8_t fa_id, const uint8_t *partition_addr);
+
+/**
+ * @brief Get the current model instance (@ref nrf_edgeai_t) as-is, without loading anything.
+ *
+ * Only valid to call after a successful nrf_edgeai_load_user_model_36712() - use that instead
+ * unless a load already happened and only the pointer is needed again.
+ */
+nrf_edgeai_t *nrf_edgeai_user_model_36712(void);
+#else
 /**
  * @brief Get pointer to the Nordic Edge AI Lab model instance (@ref nrf_edgeai_t).
  */
-nrf_edgeai_t* nrf_edgeai_user_model_36712(void);
+nrf_edgeai_t *nrf_edgeai_user_model_36712(void);
+#endif
 /**
  * @brief Get size FLASH/ROM size of the Nordic Edge AI model.
  *
@@ -26,10 +45,15 @@ nrf_edgeai_t* nrf_edgeai_user_model_36712(void);
 uint32_t nrf_edgeai_user_model_size_36712(void);
 
 /**
- * @brief Alias for the Nordic Edge AI Lab user model API name.
+ * @brief Alias for the Nordic Edge AI Lab user model API name: the load function when OTA is
+ * enabled (kws_init() loads from flash at boot), the plain accessor otherwise.
  */
 #ifndef nrf_edgeai_user_model
+#if defined(CONFIG_APP_MODEL_OTA)
+#define nrf_edgeai_user_model nrf_edgeai_load_user_model_36712
+#else
 #define nrf_edgeai_user_model nrf_edgeai_user_model_36712
+#endif
 #endif
 
 /**

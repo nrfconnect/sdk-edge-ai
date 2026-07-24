@@ -9,9 +9,6 @@ cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(ww_kws)
 
-# src/*/model_wiring_axon.c replace src/*/nrf_edgeai_generated/nrf_edgeai_user_model.c (not
-# built here at all any more): each is a drop-in equivalent that additionally branches on
-# CONFIG_APP_MODEL_OTA internally - see the comment at the top of either file.
 target_sources(app PRIVATE
   src/main.c
 
@@ -20,17 +17,22 @@ target_sources(app PRIVATE
   src/leds.c
 
   src/ww/wakeword.c
-  src/ww/model_wiring_axon.c
+  src/ww/nrf_edgeai_generated/nrf_edgeai_user_model.c
 
   src/kws/kws.c
-  src/kws/model_wiring_axon.c
+  src/kws/nrf_edgeai_generated/nrf_edgeai_user_model.c
+)
+
+target_include_directories(app PRIVATE
+  src/ww/nrf_edgeai_generated
+  src/kws/nrf_edgeai_generated
 )
 
 target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_MDS app PRIVATE src/ble/ble_mds.c)
 
 if(CONFIG_APP_MODEL_OTA)
   # Neither model is compiled in: each is loaded from its own model_storage_{ww,kws} flash
-  # partition instead (see src/*/model_wiring_axon.c and doc/libraries/model_ota.rst). The
+  # partition instead (see nrf_edgeai_user_model.c and doc/libraries/model_ota.rst). The
   # generated headers stay out of the application link entirely - nrf_axon_model_stub() compiles
   # each one only into its own standalone "model stub", used solely to produce that model's
   # package as a build artifact.

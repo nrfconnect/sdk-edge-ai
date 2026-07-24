@@ -17,8 +17,15 @@
 #include "../dmic.h"
 #include "../model_utils.h"
 #include "kws.h"
-#include "model_wiring.h"
+#include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model_labels.h"
+
+#if defined(CONFIG_APP_MODEL_OTA)
+#include <zephyr/storage/flash_map.h>
+
+BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_storage_kws),
+	     "board devicetree is missing the model_storage_kws node - see boards/*.overlay");
+#endif
 
 LOG_MODULE_REGISTER(kws);
 
@@ -104,7 +111,13 @@ static int kws_obsv_init(nrf_edgeai_t *model)
 
 int kws_init(void)
 {
-	kws_model = kws_model_ota_load();
+#if defined(CONFIG_APP_MODEL_OTA)
+	kws_model = nrf_edgeai_load_user_model_36712(PARTITION_ID(model_storage_kws),
+						     (const uint8_t *)PARTITION_ADDRESS(
+							     model_storage_kws));
+#else
+	kws_model = nrf_edgeai_user_model_36712();
+#endif
 	if (kws_model == NULL) {
 		LOG_ERR("No usable KWS model - see model_storage_kws flashing instructions in "
 			"doc/libraries/model_ota.rst");

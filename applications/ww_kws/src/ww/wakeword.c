@@ -16,8 +16,15 @@
 
 #include "../dmic.h"
 #include "../model_utils.h"
-#include "model_wiring.h"
+#include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "wakeword.h"
+
+#if defined(CONFIG_APP_MODEL_OTA)
+#include <zephyr/storage/flash_map.h>
+
+BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_storage_ww),
+	     "board devicetree is missing the model_storage_ww node - see boards/*.overlay");
+#endif
 
 LOG_MODULE_REGISTER(ww);
 
@@ -68,7 +75,13 @@ static int ww_obsv_init(nrf_edgeai_t *model)
 
 int ww_init(void)
 {
-	ww_model = ww_model_ota_load();
+#if defined(CONFIG_APP_MODEL_OTA)
+	ww_model = nrf_edgeai_load_user_model_36711(PARTITION_ID(model_storage_ww),
+						    (const uint8_t *)PARTITION_ADDRESS(
+							    model_storage_ww));
+#else
+	ww_model = nrf_edgeai_user_model_36711();
+#endif
 	if (ww_model == NULL) {
 		LOG_ERR("No usable WW model - see model_storage_ww flashing instructions in "
 			"doc/libraries/model_ota.rst");
