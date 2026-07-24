@@ -5,7 +5,7 @@
  */
 
 /**
- * @file main.c
+ * @file test_anomaly.c
  * @brief Mechanical Gear Anomaly Detection Model using Vibration Analysis
  *
  * This file implements an anomaly detection neural network model for monitoring gear health

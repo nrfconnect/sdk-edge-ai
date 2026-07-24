@@ -3,8 +3,8 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-# Neuton model-only OTA PoC: build the model as a self-contained, linked partition IMAGE
-# (the Axon "compiled-into-partition-image" flow).
+# Neuton model-only OTA: build the model as a self-contained, linked partition IMAGE
+# (same linked-at-partition-base layout as Axon images).
 #
 # model_ota_neuton_image(TARGET <prefix> MODEL_SRC <abs nrf_edgeai_user_model.c>
 #                        PARTITION_NODELABEL <dt-nodelabel> [NAME <str>] [VERSION <x.y.z>])

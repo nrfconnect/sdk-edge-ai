@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-# CMake helper for the Neuton model-only OTA PoC: per-model static library + payload discard.
+# CMake helper for Neuton model-only OTA: per-model static library + payload discard.
 #
 # model_ota_neuton_wire(SOLUTION_ID <id> MODEL_SRC <abs-path-to-nrf_edgeai_user_model.c>
 #                       MAX_NEURONS <cap> [LIB_NAME <static-lib-target>])

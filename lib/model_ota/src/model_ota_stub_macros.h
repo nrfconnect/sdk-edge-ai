@@ -26,6 +26,12 @@
  *   Probe: model_ota_axon_probe.c
  *   App wired stub: model_ota_axon_app_stub.c
  *   Partition image stub: model_ota_axon_image_stub.c
+ *
+ * Axon Edge AI Lab wired (model_ota_axon_edgeai_wire):
+ *   Generated: ${CMAKE_CURRENT_BINARY_DIR}/model_ota_axon_edgeai_wired_<SOLUTION_ID>.c
+ *   from lib/model_ota/src/model_ota_axon_edgeai_wired.c.in
+ *   Sets MODEL_OTA_AXON_RUNTIME_WIRED before #include of generated nrf_edgeai_user_model.c;
+ *   defines nrf_edgeai_load_user_model_<SOLUTION_ID>() (declared via model_ota_axon_edgeai.h).
  */
 
 #ifndef MODEL_OTA_STUB_MACROS_H_

@@ -5,17 +5,16 @@
 #
 
 menuconfig MODEL_OTA
-	bool "Model-only OTA update PoC (Neuton, linked partition image)"
+	bool "Model-only OTA update (linked partition images)"
 	depends on FLASH && FLASH_MAP && CRC
 	help
-	  Proof-of-concept library that loads and validates a Neuton NN model from a dedicated
-	  flash partition at runtime, independently of the application image, and without relying
-	  on MCUboot for integrity checking or transport. The model is built as a self-contained,
-	  linked partition image (the compiled nrf_edgeai_model_neuton_t descriptor and its data
-	  linked AT the partition base, with a header holding a DIRECT pointer to the descriptor).
-	  Model pointers are used directly in the memory-mapped partition (XIP) - there is no
-	  RAM-copy loading mode. Enable CONFIG_FLASH, CONFIG_FLASH_MAP and CONFIG_CRC in the
-	  application's prj.conf.
+	  Proof-of-concept library that loads and validates NN models from dedicated flash
+	  partitions at runtime, independently of the application image, and without relying on
+	  MCUboot for integrity checking or transport. Neuton and Axon models are built as
+	  self-contained, linked partition images (descriptor and data linked AT the partition
+	  base, with a header holding a DIRECT pointer to the model). Model pointers are used
+	  directly in the memory-mapped partition (XIP) - there is no RAM-copy loading mode.
+	  Enable CONFIG_FLASH, CONFIG_FLASH_MAP and CONFIG_CRC in the application's prj.conf.
 
 if MODEL_OTA
 
@@ -37,8 +36,10 @@ config MODEL_OTA_AXON
 	help
 	  Builds model_image_axon.c and model_image_load_axon(). Pure Axon models are built as
 	  self-contained partition images and wired to the application with one
-	  model_ota_axon_model() declaration. See lib/model_ota/cmake/model_ota_axon.cmake and
-	  include/model_ota/model_image.h.
+	  model_ota_axon_model() declaration. Edge AI Lab solutions with an Axon backend use
+	  model_ota_axon_edgeai_wire() (lib/model_ota/cmake/model_ota_axon_edgeai.cmake): only
+	  the compiled Axon model is partition-loaded; the nrf_edgeai_t wrapper stays in the app.
+	  See lib/model_ota/cmake/model_ota_axon.cmake and include/model_ota/model_image.h.
 
 config MODEL_OTA_LOG_LEVEL
 	int "Log level for the model_image module"

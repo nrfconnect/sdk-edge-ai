@@ -34,9 +34,10 @@
  * model_neurons_ from zephyr.elf, pure Axon style) cannot disambiguate the three identical
  * file-static `model_neurons_` symbols the multi_model sample compiles.
  *
- * Each OTA-wired model's payload is dropped from its dedicated static library via archive-scoped
- * linker /DISCARD/ rules (model_ota_neuton.cmake), so the payload lives only in the partition
- * image. Models compiled directly into the app are unaffected.
+ * Each OTA-wired Neuton model's payload is dropped from its dedicated static library via
+ * archive-scoped linker /DISCARD/ rules (model_ota_neuton.cmake). Edge AI Lab / Axon-backend
+ * models omit the compiled Axon weights from the app via MODEL_OTA_AXON_RUNTIME_WIRED instead
+ * (model_ota_axon_edgeai.cmake). Models compiled directly into the app are unaffected.
  */
 
 #include <stdint.h>

@@ -5,7 +5,7 @@
  */
 
 /**
- * @file main.c
+ * @file test_classification.c
  * @brief Parcel State Classification Model using Acceleration Data
  *
  * This file implements a multi-class neural network model for classifying the state and

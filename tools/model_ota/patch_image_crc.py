@@ -4,14 +4,14 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-"""Patch the CRC32 field of a linked Neuton model partition image.
+"""Patch the CRC32 field of a linked Neuton or Axon model partition image.
 
 The image binary is produced by the compiler/linker + `objcopy -O binary -j .model_image`, with
 the header's crc32 field left as 0. This tool computes CRC-32/IEEE (== zlib.crc32, == Zephyr's
 crc32_ieee) over the whole image with the crc32 field held at 0, and writes the result back into
-that field. The on-device loader (model_image_load_neuton) recomputes the CRC exactly the same
-way, so the model *data* remains entirely compiler/linker-produced - only these 4 CRC bytes are
-written by the host.
+that field. The on-device loaders (model_image_load_neuton() / model_image_load_axon())
+recompute the CRC exactly the same way, so the model *data* remains entirely
+compiler/linker-produced - only these 4 CRC bytes are written by the host.
 """
 import argparse
 import struct

@@ -5,7 +5,7 @@
  */
 
 /**
- * @file main.c
+ * @file test_regression.c
  * @brief Air Quality Prediction Regression Model
  *
  * This file implements a regression-based machine learning model for predicting air quality

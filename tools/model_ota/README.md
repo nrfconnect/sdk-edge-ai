@@ -35,13 +35,13 @@ nrfutil toolchain-manager launch --ncs-version v3.4.0 -- \
 ls build/multi_model/*_model_partition.hex build/multi_model/*_model_image.bin
 ```
 
-The per-image build steps live in `lib/model_ota/cmake/model_ota_neuton_image.cmake`
+Neuton per-image build steps live in `lib/model_ota/cmake/model_ota_neuton_image.cmake`
 (compile a model stub, link at the partition base with `lib/model_ota/linker/model_image.ld`,
-`objcopy` the `.model_image` section, patch CRC, validate, emit the addressed hex). The
-app-image payload discard lives in `lib/model_ota/cmake/model_ota_neuton.cmake`
+`objcopy` the `.model_image` section, patch CRC, validate, emit the addressed hex). Neuton
+app-image payload discard and partition loaders live in `lib/model_ota/cmake/model_ota_neuton.cmake`
 (`configure_file` from `lib/model_ota/src/model_ota_neuton_wired.c.in`).
 
-Axon app wiring and image generation use one `model_ota_axon_model()` declaration in
+Axon per-image build steps and app wiring use one `model_ota_axon_model()` declaration in
 `lib/model_ota/cmake/model_ota_axon.cmake`. By default the linked image's optional
 `packed_output_buf` field is NULL and no app RAM is spent on it; pass
 `ALLOCATE_PACKED_OUTPUT` to allocate app-owned storage and wire it into the image for
@@ -53,8 +53,9 @@ input windowing, DSP feature pipeline, decode interfaces - around a compiled Axo
 `model_ota_axon_edgeai_wire()` in `lib/model_ota/cmake/model_ota_axon_edgeai.cmake` instead.
 Only the compiled Axon model is partition-loaded (via `model_ota_axon_model()`, same as a pure
 Axon model); the wrapper stays compiled into the app, and its `model.instance.p_void` is patched
-at runtime by the generated `nrf_edgeai_load_user_model_<id>()` loader (the `multi_model`
-sample's `wakeword`, `classif_axon`, and `regress_axon` declarations exercise this path).
+at runtime by `nrf_edgeai_load_user_model_<id>()` from
+`lib/model_ota/src/model_ota_axon_edgeai_wired.c.in` (the `multi_model` sample's `wakeword`,
+`classif_axon`, and `regress_axon` declarations exercise this path).
 
 ## Flashing (separate from the app)
 
@@ -68,7 +69,8 @@ nrfutil device program --firmware gear_anomaly_model_partition.hex \
 
 ## References
 
-- Image format and loader: `include/model_ota/model_image.h`, `lib/model_ota/model_image_neuton.c`
+- Image format and loader: `include/model_ota/model_image.h`,
+  `lib/model_ota/model_image_neuton.c`, `lib/model_ota/model_image_axon.c`
 - Build wiring: `lib/model_ota/cmake/model_ota_neuton_image.cmake`,
   `lib/model_ota/cmake/model_ota_neuton.cmake`, `lib/model_ota/src/model_ota_neuton_wired.c.in`,
   `lib/model_ota/src/model_ota_neuton_image_stub.c`,

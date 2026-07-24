@@ -48,8 +48,8 @@ target_sources(app PRIVATE
   ${PERSON_DET_DIR}/postprocessing.c
 )
 
-# Neuton models are partition-loaded when OTA is enabled; wakeword and Axon Edge AI models stay
-# baked into the app.
+# Neuton models are partition-loaded when CONFIG_MODEL_OTA_NEUTON is enabled; compiled directly
+# into the app otherwise.
 if(NOT CONFIG_MODEL_OTA_NEUTON)
   target_sources(app PRIVATE ${NEUTON_MODEL_SOURCES})
 endif()
