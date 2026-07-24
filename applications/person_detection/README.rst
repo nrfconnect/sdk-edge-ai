@@ -28,12 +28,13 @@ The application continuously captures frames at regular intervals, processes the
 Requirements
 ************
 
-The application supports the following development kit:
+The application supports the following development kits:
 
 .. table-from-sample-yaml::
 
 The application also requires an SPI camera and was tested with `Arducam Mega 5MP (B401) camera <Arducam Mega 5MP_>`_.
 Configure the development kit using `Board Configurator`_ to provide 3.3V to power the camera.
+On the nRF7120 DK, the camera is connected to port P4 over a bit-banged SPI bus, so also set the ``VDD_IO_P4_3V3`` rail to 3.3V.
 
 Pin mapping
 ===========
@@ -46,26 +47,33 @@ See the following table for the camera-to-DK pin mapping:
    * - Description
      - Arducam Mega Pin
      - nRF54LM20 DK Pin
+     - nRF7120 DK Pin
    * - Power supply (3.3V)
      - ``VCC``
      - ``VDD:IO``
+     - ``VDD:IO``
    * - Ground
+     - ``GND``
      - ``GND``
      - ``GND``
    * - Chip select
      - ``CS``
      - ``P1.7``
+     - ``P4.5``
    * - SPI MOSI
      - ``MOSI``
      - ``P1.6``
+     - ``P4.3``
    * - SPI MISO
      - ``MISO``
      - ``P1.5``
+     - ``P4.4``
    * - SPI Clock
      - ``SCK``
      - ``P1.4``
+     - ``P4.2``
 
-For detailed pin configuration, refer to the device tree overlay :file:`boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay` file.
+For detailed pin configuration, refer to the board device tree overlay file (:file:`boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay` or :file:`boards/nrf7120dk_nrf7120e_cpuapp.overlay`).
 
 .. _app_person_detection_ui:
 
