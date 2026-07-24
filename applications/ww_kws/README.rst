@@ -107,7 +107,9 @@ Both models' packages are built automatically as part of a normal application bu
    west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws
 
 This produces ``build/ww_kws/ww_model_pkg.bin``/``.hex`` and ``build/ww_kws/kws_model_pkg.bin``/``.hex``.
-Flash the application as usual, then flash either (or both) model packages to their partitions:
+A normal ``west flash`` (see "Building and running" below) programs the application and both model packages in one step, using the same sysbuild flash-domain registration as :file:`samples/nrf_edgeai/regression` (``nrf_model_register_provision_hex()`` in :file:`sysbuild.cmake`).
+
+To update a single model later without reflashing the application, program only that model's package:
 
 .. code-block:: console
 
@@ -117,7 +119,6 @@ Flash the application as usual, then flash either (or both) model packages to th
      --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
 
 ``reset=RESET_SYSTEM`` on the last command ensures the board resumes execution automatically; without it, ``nrfutil`` leaves the CPU halted after flashing.
-Repeat after replacing a model (see "Replacing models" above) and rebuilding, to observe the new model's behavior - no need to reflash anything but that one model's package.
 
 Requirements
 ************

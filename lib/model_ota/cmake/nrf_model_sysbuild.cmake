@@ -11,11 +11,14 @@
 # nrfutil or west flash --hex-file.
 
 function(nrf_model_register_provision_hex)
-	cmake_parse_arguments(ARG "" "APP_IMAGE;MODEL_HEX" "" ${ARGN})
+	cmake_parse_arguments(ARG "" "APP_IMAGE;MODEL_HEX;FLASHER_NAME" "" ${ARGN})
 
 	if(NOT ARG_APP_IMAGE OR NOT ARG_MODEL_HEX)
 		message(FATAL_ERROR
 			"${CMAKE_CURRENT_FUNCTION}() requires APP_IMAGE and MODEL_HEX")
+	endif()
+	if(NOT ARG_FLASHER_NAME)
+		set(ARG_FLASHER_NAME ${ARG_APP_IMAGE}_model)
 	endif()
 	if(NOT IS_ABSOLUTE "${ARG_MODEL_HEX}")
 		message(FATAL_ERROR
@@ -24,7 +27,7 @@ function(nrf_model_register_provision_hex)
 
 	include(${ZEPHYR_NRF_MODULE_DIR}/sysbuild/image_flasher.cmake)
 
-	set(flasher_image ${ARG_APP_IMAGE}_model)
+	set(flasher_image ${ARG_FLASHER_NAME})
 
 	add_image_flasher(
 		NAME ${flasher_image}
