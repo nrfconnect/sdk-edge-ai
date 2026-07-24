@@ -20,24 +20,30 @@ tests:
   applications.ww_kws.zdebug:
     platform_allow:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
 
   applications.ww_kws.zrelease:
     extra_args:
       - FILE_SUFFIX=release
     platform_allow:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
 
   applications.ww_kws.obsv.zdebug:
     extra_args:
       - EXTRA_CONF_FILE="observability.conf"
     platform_allow:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
 
   applications.ww_kws.obsv.zrelease:
     extra_args:
@@ -45,5 +51,7 @@ tests:
       - EXTRA_CONF_FILE="observability.conf"
     platform_allow:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
