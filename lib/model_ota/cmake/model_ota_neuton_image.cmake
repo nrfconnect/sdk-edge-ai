@@ -37,12 +37,17 @@ include(${CMAKE_CURRENT_LIST_DIR}/model_ota_common.cmake)
 get_filename_component(MODEL_OTA_ROOT ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
 get_filename_component(EDGE_AI_MODULE_ROOT ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSOLUTE)
 
+include(${CMAKE_CURRENT_LIST_DIR}/model_ota_context.cmake)
+
 function(model_ota_neuton_image)
-  cmake_parse_arguments(MI "" "TARGET;MODEL_SRC;PARTITION_NODELABEL;NAME;VERSION" "" ${ARGN})
+  cmake_parse_arguments(MI "" "TARGET;MODEL_SRC;PARTITION_NODELABEL;NAME;VERSION;NEURONS_CAP" "" ${ARGN})
 
   if(NOT MI_TARGET OR NOT MI_MODEL_SRC OR NOT MI_PARTITION_NODELABEL)
     message(FATAL_ERROR
             "model_ota_neuton_image requires TARGET, MODEL_SRC and PARTITION_NODELABEL")
+  endif()
+  if(NOT MI_NEURONS_CAP)
+    message(FATAL_ERROR "model_ota_neuton_image requires NEURONS_CAP (must match model_ota_neuton_wire)")
   endif()
   if(NOT MI_NAME)
     set(MI_NAME ${MI_TARGET})
@@ -76,6 +81,16 @@ function(model_ota_neuton_image)
   set(crc_tool ${EDGE_AI_MODULE_ROOT}/tools/model_ota/patch_image_crc.py)
   set(validate_tool ${EDGE_AI_MODULE_ROOT}/tools/model_ota/validate_model_image_layout.py)
   set(defs_header ${EDGE_AI_MODULE_ROOT}/include/model_ota/model_image.h)
+  set(_compat_tool ${EDGE_AI_MODULE_ROOT}/tools/model_ota/check_model_compat.py)
+  set(_generated_context ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context.json)
+
+  if(MODEL_OTA_FW_CONTEXT)
+    set(_compat_context ${MODEL_OTA_FW_CONTEXT})
+  else()
+    set(_compat_context ${_generated_context})
+  endif()
+
+  model_ota_using_released_fw(_using_released_fw)
 
   set(stub tgt_${MI_TARGET}_model_image_stub)
   add_library(${stub} OBJECT ${stub_src})
@@ -83,11 +98,30 @@ function(model_ota_neuton_image)
   add_dependencies(${stub} zephyr_generated_headers)
   target_include_directories(${stub} PRIVATE ${model_dir})
   target_compile_options(${stub} PRIVATE -ffunction-sections -fdata-sections)
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} -c
+            "import sys; from pathlib import Path; sys.path.insert(0, r'${EDGE_AI_MODULE_ROOT}/tools/model_ota'); from model_contract import neuton_contract_from_model_c; print(neuton_contract_from_model_c(Path(r'${MI_MODEL_SRC}'), int(${MI_NEURONS_CAP})))"
+    OUTPUT_VARIABLE MI_NEUTON_CONTRACT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY
+  )
+
+  if(CONFIG_MODEL_OTA AND NOT _using_released_fw)
+    model_ota_context_register_slot(
+      TARGET ${MI_TARGET}
+      BACKEND neuton
+      PARTITION_NODELABEL ${MI_PARTITION_NODELABEL}
+      NAME ${MI_NAME}
+      CONTRACT_HASH ${MI_NEUTON_CONTRACT_HASH}
+      NEURONS_CAP ${MI_NEURONS_CAP})
+  endif()
+
   target_compile_definitions(${stub} PRIVATE
                              MODEL_OTA_NEUTON_MODEL_SRC=${model_basename}
                              NRF_MODEL_PARTITION_ADDR=${partition_addr}
                              MODEL_IMAGE_NAME_STR=\"${MI_NAME}\"
-                             MODEL_IMAGE_VERSION_U32=${ver_u32}u)
+                             MODEL_IMAGE_VERSION_U32=${ver_u32}u
+                             MODEL_OTA_NEUTON_CONTRACT_HASH=${MI_NEUTON_CONTRACT_HASH}u)
   set_source_files_properties(${stub_src}
                               TARGET_DIRECTORY ${stub}
                               PROPERTIES OBJECT_DEPENDS "${MI_MODEL_SRC}")
@@ -118,7 +152,11 @@ function(model_ota_neuton_image)
     #    on their own.
     COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex --change-addresses=${partition_addr}
             ${image_bin} ${image_hex}
+    COMMAND ${PYTHON_EXECUTABLE} ${_compat_tool}
+            --context ${_compat_context} --image ${image_bin} --slot ${MI_TARGET}
+            --report-only
     DEPENDS $<TARGET_OBJECTS:${stub}> ${linker_script} ${crc_tool} ${validate_tool}
+            ${_compat_context} ${_compat_tool}
     COMMENT "Building Neuton model partition image '${MI_NAME}' at ${partition_addr}"
     COMMAND_EXPAND_LISTS
     VERBATIM)
@@ -127,4 +165,7 @@ function(model_ota_neuton_image)
   #   <TARGET>_model_image.bin, <TARGET>_model_partition.hex
   # Intermediates remain under <TARGET>/.
   add_custom_target(${MI_TARGET}_model_image ALL DEPENDS ${image_bin} ${image_hex})
+  if(TARGET model_ota_context AND NOT _using_released_fw)
+    add_dependencies(${MI_TARGET}_model_image model_ota_context)
+  endif()
 endfunction()

@@ -9,6 +9,8 @@ cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(nrf_edgeai_multi_model_sample)
 
+include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_context.cmake)
+
 set(ANOMALY_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/anomaly/src/nrf_edgeai_generated)
 set(CLASSIF_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/classification/src/nrf_edgeai_generated/Neuton)
 set(CLASSIF_AXON_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/classification/src/nrf_edgeai_generated/Axon)
@@ -87,13 +89,13 @@ if(CONFIG_MODEL_OTA_NEUTON)
 
   include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_neuton_image.cmake)
   model_ota_neuton_image(TARGET gear_anomaly NAME gear_anomaly VERSION 1.0.0
-                         PARTITION_NODELABEL model_anomaly_storage
+                         PARTITION_NODELABEL model_anomaly_storage NEURONS_CAP 20
                          MODEL_SRC ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c)
   model_ota_neuton_image(TARGET gesture_class NAME gesture_class VERSION 1.0.0
-                         PARTITION_NODELABEL model_classif_storage
+                         PARTITION_NODELABEL model_classif_storage NEURONS_CAP 80
                          MODEL_SRC ${CLASSIF_MODEL_DIR}/nrf_edgeai_user_model.c)
   model_ota_neuton_image(TARGET temp_regress NAME temp_regress VERSION 1.0.0
-                         PARTITION_NODELABEL model_regress_storage
+                         PARTITION_NODELABEL model_regress_storage NEURONS_CAP 2
                          MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c)
 endif()
 
@@ -127,4 +129,8 @@ if(CONFIG_MODEL_OTA_AXON)
                              HEADER ${REGRESS_AXON_MODEL_HEADER}
                              NAME regress_axon VERSION 1.0.0
                              PARTITION_NODELABEL model_regress_axon_storage)
+endif()
+
+if(CONFIG_MODEL_OTA)
+  model_ota_context_finalize()
 endif()

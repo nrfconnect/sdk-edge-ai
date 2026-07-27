@@ -12,6 +12,7 @@
 
 #include "model_ota_stub_macros.h"
 
+#include <model_ota/model_contract.h>
 #include <model_ota/model_image.h>
 #include <model_ota/model_ota_neuton.h>
 #include <zephyr/sys/util.h>
@@ -23,6 +24,14 @@
 
 #include "@MODEL_SRC_BASENAME@"
 
+#define MODEL_OTA_NEUTON_PIPELINE_HASH_                                           \
+	MODEL_OTA_NEUTON_PIPELINE_HASH(INPUT_FEATURE_DATA_TYPE, INPUT_WINDOW_SIZE, \
+				       INPUT_WINDOW_SHIFT, INPUT_UNIQ_FEATURES_NUM, \
+				       MODEL_USES_AS_INPUT_INPUT_FEATURES,        \
+				       MODEL_USES_AS_INPUT_DSP_FEATURES)
+
+#define MODEL_OTA_NEUTON_CONTRACT_HASH @NEUTON_CONTRACT_HASH@u
+
 nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(uint8_t fa_id,
 							 const uint8_t *partition_addr)
 {
@@ -30,6 +39,9 @@ nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(uint8_t fa_id,
 		.task = MODEL_TASK,
 		.params_type = MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),
 		.outputs_cap = MODEL_OUTPUTS_NUM,
+		.inputs_num = INPUT_UNIQ_FEATURES_NUM,
+		.neurons_cap = MODEL_OTA_NEUTON_NEURONS_CAP,
+		.contract_hash = MODEL_OTA_NEUTON_CONTRACT_HASH,
 	};
 
 	if (model_image_load_neuton(fa_id, partition_addr, &nrf_edgeai_, model_neurons_,

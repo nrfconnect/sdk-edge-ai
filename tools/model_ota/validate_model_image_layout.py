@@ -33,15 +33,15 @@ MAGIC = b"NEI\x00"
 PARAMS_AXON = 3
 
 # struct model_image_header (see include/model_ota/model_image.h), little-endian, __packed:
-#   magic[4] version:H params_type:B reserved:B image_size:I model_version:I crc32:I
-#   name:I backend[12]
-# backend Neuton: model:I task:B pad[3]:BBB decoded_output:I
-# backend Axon:   model:I axon_packed_output_bytes:I pad:I
-HEADER_FMT = "<4sHBBIIII12s"
+#   magic[4] version:H params_type:B reserved:B image_size:I model_version:I
+#   contract_hash:I crc32:I name:I backend[20]
+# backend Neuton (first 12 B): model:I task:B pad[3]:BBB decoded_output:I
+# backend Axon (20 B): model:I packed_output:I persistent_required:I binding:I binding_count:I
+HEADER_FMT = "<4sHBBIIIII20s"
 HEADER_SIZE = struct.calcsize(HEADER_FMT)
 BACKEND_NEUTON_FMT = "<IBBBBI"
-BACKEND_AXON_FMT = "<III"
-CRC32_OFFSET = 16
+BACKEND_AXON_FMT = "<IIIII"
+CRC32_OFFSET = 20
 
 
 def name_in_image(name_ptr, image_bytes, start, end):
@@ -101,6 +101,9 @@ def main(argv=None):
     configured_packed = config_define(
         args.config_header, "MODEL_OTA_AXON_PACKED_OUTPUT_BYTES"
     )
+    configured_persistent = config_define(
+        args.config_header, "MODEL_OTA_AXON_PERSISTENT_VARS_REQUIRED"
+    )
 
     if not args.elf.is_file():
         print("ELF not found: %s" % args.elf, file=sys.stderr)
@@ -110,11 +113,12 @@ def main(argv=None):
         sys.exit(1)
 
     expected_version = args.version
-    if expected_version is None and args.defs_header is not None:
-        m = re.search(r"#define\s+MODEL_IMAGE_FORMAT_VERSION\s+(\d+)",
-                      args.defs_header.read_text(encoding="utf-8"))
-        if m is not None:
-            expected_version = int(m.group(1))
+    if args.defs_header is not None:
+        text = args.defs_header.read_text(encoding="utf-8")
+        if expected_version is None:
+            m = re.search(r"#define\s+MODEL_IMAGE_FORMAT_VERSION\s+(\d+)", text)
+            if m is not None:
+                expected_version = int(m.group(1))
     if expected_version is None:
         print("expected format version not provided", file=sys.stderr)
         sys.exit(1)
@@ -155,13 +159,14 @@ def main(argv=None):
 
     image_bytes = args.bin.read_bytes()
 
-    (magic, version, params_type, _reserved, image_size, model_version, crc32, name_ptr,
-     backend_bytes) = struct.unpack(HEADER_FMT, header_bytes)
+    (magic, version, params_type, _reserved, image_size, model_version, contract_hash, crc32,
+     name_ptr, backend_bytes) = struct.unpack(HEADER_FMT, header_bytes)
 
     if magic != MAGIC:
         errors.append("magic %r != %r" % (magic, MAGIC))
     if version != expected_version:
-        errors.append("format_version %d != expected %d" % (version, expected_version))
+        errors.append("format_version %d != expected %d"
+                      % (version, expected_version))
     if _reserved != 0:
         errors.append("reserved byte %d != 0" % _reserved)
     if image_size != linker_size:
@@ -173,14 +178,20 @@ def main(argv=None):
                       % name_ptr)
 
     if params_type == PARAMS_AXON:
-        model_ptr, axon_packed_output_bytes, backend_pad = struct.unpack(
-            BACKEND_AXON_FMT, backend_bytes
-        )
-        if backend_pad != 0:
-            errors.append("Axon backend pad must be 0, got 0x%x" % backend_pad)
+        (model_ptr, axon_packed_output_bytes, persistent_required, binding_ptr,
+         binding_count) = struct.unpack(BACKEND_AXON_FMT, backend_bytes)
+        if binding_count > 0:
+            binding_bytes = binding_count * 8
+            if binding_ptr < start or binding_ptr + binding_bytes > end:
+                errors.append(
+                    "binding pointer 0x%x + %u B outside image [0x%x, 0x%x)"
+                    % (binding_ptr, binding_bytes, start, end)
+                )
+        elif binding_ptr != 0:
+            errors.append("binding_count 0 but binding pointer 0x%x != 0" % binding_ptr)
     else:
         model_ptr, task, pad0, pad1, pad2, decoded_output_ptr = struct.unpack(
-            BACKEND_NEUTON_FMT, backend_bytes
+            BACKEND_NEUTON_FMT, backend_bytes[:struct.calcsize(BACKEND_NEUTON_FMT)]
         )
         if (pad0, pad1, pad2) != (0, 0, 0):
             errors.append("Neuton backend pad must be 0, got %d,%d,%d" % (pad0, pad1, pad2))
@@ -234,6 +245,16 @@ def main(argv=None):
                 % (axon_packed_output_bytes, expected_packed)
             )
 
+    if configured_persistent is not None:
+        expected_persistent = int(configured_persistent, 0)
+        if params_type != PARAMS_AXON:
+            errors.append("persistent vars config given for non-Axon image")
+        elif persistent_required != expected_persistent:
+            errors.append(
+                "Axon persistent vars %d != expected %d"
+                % (persistent_required, expected_persistent)
+            )
+
     if errors:
         for e in errors:
             print("layout validation failed: %s" % e, file=sys.stderr)
@@ -242,11 +263,11 @@ def main(argv=None):
     if params_type == PARAMS_AXON:
         task_field = 0
     else:
-        task_field = struct.unpack(BACKEND_NEUTON_FMT, backend_bytes)[1]
+        task_field = struct.unpack(BACKEND_NEUTON_FMT, backend_bytes[:struct.calcsize(BACKEND_NEUTON_FMT)])[1]
     print("model image layout ok: base 0x%x, size 0x%x, model 0x%x (&%s), "
-          "params_type %d, task %d, crc32 0x%08x, name '%s' v0x%08x"
-          % (start, image_size, model_ptr, args.model_symbol, params_type, task_field, crc32,
-             name_str if name_str is not None else "?", model_version))
+          "params_type %d, task %d, contract 0x%08x, crc32 0x%08x, name '%s' v0x%08x"
+          % (start, image_size, model_ptr, args.model_symbol, params_type, task_field,
+             contract_hash, crc32, name_str if name_str is not None else "?", model_version))
     return 0
 
 

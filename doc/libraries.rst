@@ -14,3 +14,4 @@ Nordic Semiconductor provides libraries and services that are used in samples an
    libraries/nrf_edgeai_changelog
    libraries/nrf_edgeai_obsv
    libraries/axon
+   libraries/model_ota

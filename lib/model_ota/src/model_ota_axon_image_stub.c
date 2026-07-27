@@ -21,14 +21,15 @@
 #include <axon/nrf_axon_platform.h>
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
+#include <model_ota/model_contract.h>
 #include <model_ota/model_image.h>
-
-#ifndef NRF_MODEL_PARTITION_ADDR
-#error "NRF_MODEL_PARTITION_ADDR must be defined when linking the Axon model image"
-#endif
 
 #if !defined(MODEL_OTA_AXON_CONFIG_VERSION) || (MODEL_OTA_AXON_CONFIG_VERSION != 1)
 #error "Unsupported or missing Axon OTA configuration"
+#endif
+
+#ifndef NRF_MODEL_PARTITION_ADDR
+#error "NRF_MODEL_PARTITION_ADDR must be defined when linking the Axon model image"
 #endif
 
 #ifndef MODEL_OTA_AXON_HEADER
@@ -50,6 +51,16 @@
 
 #include MODEL_OTA_AXON_HEADER
 
+#if MODEL_OTA_AXON_KEEP_SYMBOL_COUNT > 0
+#define MODEL_OTA_AXON_BINDING_ENTRY(symbol) \
+	{ MODEL_OTA_AXON_SYM_HASH(symbol), (const void *)(uintptr_t)&symbol },
+
+__attribute__((section(".rodata.model_image_binding"), used))
+static const struct model_image_binding_entry model_image_binding_[] = {
+	MODEL_OTA_AXON_KEEP_REFS(MODEL_OTA_AXON_BINDING_ENTRY)
+};
+#endif
+
 extern char __model_image_end[];
 
 #ifndef MODEL_IMAGE_NAME_STR
@@ -59,6 +70,10 @@ extern char __model_image_end[];
 #ifndef MODEL_IMAGE_VERSION_U32
 #define MODEL_IMAGE_VERSION_U32 0x00010000u
 #endif
+
+#define MODEL_OTA_AXON_CONTRACT_HASH                                           \
+	MODEL_OTA_CONTRACT_HASH_AXON(MODEL_OTA_AXON_PERSISTENT_VARS_REQUIRED,  \
+				     MODEL_OTA_AXON_PACKED_OUTPUT_BYTES)
 
 __attribute__((section(".rodata.model_image_name"), used))
 static const char model_image_name_[] = MODEL_IMAGE_NAME_STR;
@@ -70,11 +85,19 @@ const struct model_image_header model_image_hdr = {
 	.params_type = MODEL_IMAGE_PARAMS_AXON,
 	._reserved = 0,
 	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)NRF_MODEL_PARTITION_ADDR),
+	.model_version = MODEL_IMAGE_VERSION_U32,
+	.contract_hash = MODEL_OTA_AXON_CONTRACT_HASH,
 	.crc32 = 0,
 	.name = model_image_name_,
-	.model_version = MODEL_IMAGE_VERSION_U32,
 	.axon = {
 		.model = &MODEL_OTA_AXON_MODEL_SYM,
 		.axon_packed_output_bytes = MODEL_OTA_AXON_PACKED_OUTPUT_BYTES,
+		.persistent_vars_required = MODEL_OTA_AXON_PERSISTENT_VARS_REQUIRED,
+#if MODEL_OTA_AXON_KEEP_SYMBOL_COUNT > 0
+		.binding = model_image_binding_,
+#else
+		.binding = NULL,
+#endif
+		.binding_count = MODEL_OTA_AXON_KEEP_SYMBOL_COUNT,
 	},
 };

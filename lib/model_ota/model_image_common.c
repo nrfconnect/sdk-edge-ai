@@ -15,8 +15,10 @@
 
 LOG_MODULE_REGISTER(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
 
-BUILD_ASSERT(sizeof(struct model_image_header) == 36,
+BUILD_ASSERT(sizeof(struct model_image_header) == 48,
 	     "model_image_header size must match host layout tools");
+BUILD_ASSERT(offsetof(struct model_image_header, contract_hash) == 16,
+	     "contract_hash offset must match host layout tools");
 BUILD_ASSERT(offsetof(struct model_image_header, crc32) == MODEL_IMAGE_CRC32_OFFSET,
 	     "crc32 offset must match patch_image_crc.py");
 BUILD_ASSERT(offsetof(struct model_image_header, name) % sizeof(uint32_t) == 0,
@@ -27,6 +29,10 @@ BUILD_ASSERT(offsetof(struct model_image_header, neuton.decoded_output) % sizeof
 	     "neuton.decoded_output must be word-aligned");
 BUILD_ASSERT(offsetof(struct model_image_header, axon.model) % sizeof(uint32_t) == 0,
 	     "axon.model must be word-aligned");
+BUILD_ASSERT(sizeof(struct model_image_neuton_backend) == 12,
+	     "neuton backend size must match host layout tools");
+BUILD_ASSERT(sizeof(struct model_image_axon_backend) == 20,
+	     "axon backend size must match host layout tools");
 
 static bool magic_is_valid(const struct model_image_header *hdr)
 {

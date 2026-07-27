@@ -22,8 +22,9 @@
  *     base+offset arithmetic is ever needed.
  *
  *   - The partition header (@ref model_image_header) therefore stores a DIRECT POINTER to the
- *     baked descriptor (@ref model_image_neuton_backend.model / @ref model_image_axon_backend.model),
- *     not a model_offset. The loader validates the header and hands that pointer straight back.
+ *     baked descriptor (@ref model_image_neuton_backend.model /
+ *     @ref model_image_axon_backend.model), not a model_offset. The loader validates the header
+ *     and hands that pointer straight back.
  *
  * The one field that cannot be a partition-flash address is
  * nrf_edgeai_model_neuton_t.params.*.p_neurons: it must point at the application's neuron-
@@ -56,7 +57,7 @@ extern "C" {
 #endif
 
 /** Image format version (independent of the model's own version). */
-#define MODEL_IMAGE_FORMAT_VERSION 4
+#define MODEL_IMAGE_FORMAT_VERSION 5
 
 /* Magic {'N','E','I','\0'} = Neuton Edge-ai Image (version is @ref format_version only). */
 #define MODEL_IMAGE_MAGIC0 'N'
@@ -90,7 +91,13 @@ enum model_image_params_type {
 #define MODEL_IMAGE_PARAMS_TYPE_OF_q8     MODEL_IMAGE_PARAMS_Q8
 
 /** Byte offset of @ref model_image_header.crc32; used by the host CRC patcher. */
-#define MODEL_IMAGE_CRC32_OFFSET 16
+#define MODEL_IMAGE_CRC32_OFFSET 20
+
+/** One row in an Axon address-binding table (@ref model_image_axon_backend.binding). */
+struct model_image_binding_entry {
+	uint32_t name_hash;
+	const void *address;
+};
 
 /**
  * Neuton backend fields (@ref params_type != @ref MODEL_IMAGE_PARAMS_AXON).
@@ -112,17 +119,22 @@ struct model_image_axon_backend {
 	const nrf_axon_nn_compiled_model_s *model;
 	/** Packed-output bytes required by the baked model (0 when unused). */
 	uint32_t axon_packed_output_bytes;
-	uint32_t _pad;
+	/** Persistent-vars elements (int32_t) required by the baked model. */
+	uint32_t persistent_vars_required;
+	/** DIRECT absolute-flash pointer to @ref model_image_binding_entry[count] (NOT an offset). */
+	const struct model_image_binding_entry *binding;
+	/** Number of binding entries (0 when @ref binding is NULL). */
+	uint32_t binding_count;
 };
 
 /**
  * On-flash model partition image header, placed at offset 0 of the image (== the partition base
  * address) in section ".model_image.header".
  *
- * Layout: shared envelope and metadata first, then a 12-byte anonymous backend union holding all
- * backend-specific fields including the baked model pointer. @ref name points at a
- * NUL-terminated string stored elsewhere in the image (typically .rodata). All pointer fields are
- * absolute flash addresses baked by the linker (the image is linked at the partition base).
+ * Layout: shared envelope and metadata first, then a backend union (20 bytes). @ref name points
+ * at a NUL-terminated string stored elsewhere in the image (typically .rodata). All pointer
+ * fields are absolute flash addresses baked by the linker (the image is linked at the partition
+ * base).
  *
  * Field offsets are fixed (pointers are 32-bit on the target) so the host-side CRC patcher
  * (tools/model_ota/patch_image_crc.py) and layout validator can locate @ref crc32 at a constant
@@ -137,16 +149,17 @@ struct model_image_header {
 	uint8_t _reserved;       /**< off 7:  0 */
 	uint32_t image_size;     /**< off 8:  bytes from base to __model_image_end */
 	uint32_t model_version;  /**< off 12: free-form major.minor.patch */
-	uint32_t crc32;          /**< off 16: CRC32/IEEE over the image with this field zeroed */
-	/** off 20: DIRECT pointer to a NUL-terminated name stored elsewhere in the image. */
+	uint32_t contract_hash;  /**< off 16: FNV-1a over the firmware ABI contract */
+	uint32_t crc32;          /**< off 20: CRC32/IEEE over the image with this field zeroed */
+	/** off 24: DIRECT pointer to a NUL-terminated name stored elsewhere in the image. */
 	const char *name;
-	union {
-		struct model_image_neuton_backend neuton; /**< off 24 */
-		struct model_image_axon_backend axon;
+	union {                  /**< off 28 */
+		struct model_image_neuton_backend neuton;   /**< 12 B; tail 8 B unused in slot */
+		struct model_image_axon_backend axon; /**< 20 B */
 	};
 } __packed;
 
-/** Return codes for @ref model_image_load_neuton. */
+/** Return codes for @ref model_image_load_neuton and @ref model_image_load_axon. */
 enum model_image_result {
 	MODEL_IMAGE_OK = 0,
 	MODEL_IMAGE_ERR_NO_PARTITION = -1,
@@ -171,19 +184,40 @@ enum model_image_result {
 	MODEL_IMAGE_ERR_AXON_VALIDATE = -14,
 	/** Image @ref params_type is not a supported Neuton precision (f32/q16/q8). */
 	MODEL_IMAGE_ERR_BAD_PARAMS_TYPE = -15,
+	/** Image @ref contract_hash does not match the app's compiled contract. */
+	MODEL_IMAGE_ERR_CONTRACT_MISMATCH = -16,
+	/** Image input count does not match the app's compiled pipeline. */
+	MODEL_IMAGE_ERR_INPUTS_MISMATCH = -17,
+	/** Axon binding address does not match the running firmware. */
+	MODEL_IMAGE_ERR_BINDING_MISMATCH = -18,
+	/** Image needs more persistent vars than the app allocated. */
+	MODEL_IMAGE_ERR_PERSISTENT_VARS_TOO_MANY = -19,
+	/** Image needs more packed-output space than the app allocated. */
+	MODEL_IMAGE_ERR_PACKED_OUTPUT_TOO_LARGE = -20,
 };
 
 /**
  * App-side expectations validated by @ref model_image_load_neuton. These are the compile-time
- * invariants of the *solution* that a mere model update must not break: the inference task, the
- * weight/neuron precision (which also fixes the neuron-buffer element size), and the capacity of
- * the app-owned, compile-time-sized output buffers. Pass NULL to skip these checks (the CRC and
- * pointer-range checks always run regardless).
+ * invariants of the *solution* that a mere model update must not break.
  */
 struct model_image_neuton_expect {
 	uint8_t task;         /**< expected nrf_edgeai_model_task_t of the baked model */
 	uint8_t params_type;  /**< expected enum model_image_params_type */
 	uint16_t outputs_cap; /**< capacity of the app's output buffers, in elements */
+	uint16_t inputs_num;  /**< INPUT_UNIQ_FEATURES_NUM of the compiled solution */
+	uint16_t neurons_cap; /**< MODEL_OTA_NEUTON_NEURONS_CAP scratch buffer capacity */
+	uint32_t contract_hash; /**< expected @ref model_image_header.contract_hash */
+};
+
+/**
+ * App-side expectations validated by @ref model_image_load_axon.
+ */
+struct model_image_axon_expect {
+	uint32_t contract_hash;
+	uint32_t persistent_vars_cap;
+	uint32_t packed_output_cap; /**< allocated bytes; 0 when not allocated in app */
+	/** Live binding table from model_ota_axon_keep_refs.S: [count, hash0, addr0, ...]. */
+	const uint32_t *binding_table;
 };
 
 /**
@@ -201,8 +235,7 @@ struct model_image_neuton_expect {
  *                             the caller-owned writable @ref nrf_edgeai_model_neuton_t.
  * @param[out] neurons_buf     Caller-owned RAM scratch for neuron activations.
  * @param[in]  neurons_buf_cap Capacity of neurons_buf, in elements (not bytes).
- * @param[in]  expect          Optional app-side expectations (task / precision / output
- *                             capacity) checked before the image is accepted; NULL to skip them.
+ * @param[in]  expect          App-side contract and capacity expectations (required).
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
 int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_edgeai_t *edgeai,
@@ -214,15 +247,16 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
  *
  * The partition is memory-mapped (XIP). App-owned RAM pointers inside the baked model
  * (interlayer buffer, packed output, op extensions) are resolved at model-image link time
- * from zephyr.elf symbol addresses. @p out_model is set to the header's direct model pointer
- * on success.
+ * from zephyr.elf symbol addresses and verified against the running firmware binding table.
  *
  * @param[in]  fa_id           Flash area ID of the partition.
  * @param[in]  partition_addr  Memory-mapped base address of that partition.
+ * @param[in]  expect          App-side contract, caps, and binding expectations (required).
  * @param[out] out_model       On success, pointer to the model inside the partition.
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
 int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
+			  const struct model_image_axon_expect *expect,
 			  const nrf_axon_nn_compiled_model_s **out_model);
 
 #ifdef __cplusplus

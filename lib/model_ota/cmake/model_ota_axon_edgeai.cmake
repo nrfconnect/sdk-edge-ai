@@ -85,6 +85,11 @@ function(model_ota_axon_edgeai_wire)
   endif()
   model_ota_axon_model(${_axon_args})
 
+  model_ota_using_released_fw(_using_released_fw)
+  if(_using_released_fw)
+    return()
+  endif()
+
   # Step 2: wired nrf_edgeai_t wrapper (DSP pipeline, decode interfaces, loader) -> app.
   get_filename_component(model_dir ${MO_MODEL_SRC} DIRECTORY)
   get_filename_component(model_basename ${MO_MODEL_SRC} NAME)
@@ -92,14 +97,20 @@ function(model_ota_axon_edgeai_wire)
   set(wired_tpl ${MODEL_OTA_ROOT}/src/model_ota_axon_edgeai_wired.c.in)
   set(wired_src ${CMAKE_CURRENT_BINARY_DIR}/model_ota_axon_edgeai_wired_${MO_SOLUTION_ID}.c)
 
+  set(AXON_TARGET ${_axon_target})
+  string(TOUPPER ${_axon_target} AXON_TOKEN)
+  string(REGEX REPLACE "[^A-Z0-9]" "_" AXON_TOKEN "${AXON_TOKEN}")
   set(SOLUTION_ID ${MO_SOLUTION_ID})
   set(MODEL_SRC_BASENAME ${model_basename})
   configure_file(${wired_tpl} ${wired_src} @ONLY)
 
   add_library(${_wired_lib} STATIC ${wired_src})
   target_link_libraries(${_wired_lib} PRIVATE zephyr_interface)
-  add_dependencies(${_wired_lib} zephyr_generated_headers)
-  target_include_directories(${_wired_lib} PRIVATE ${model_dir} ${MODEL_OTA_ROOT}/src)
+  add_dependencies(${_wired_lib} zephyr_generated_headers ${_axon_target}_axon_metadata)
+  target_include_directories(${_wired_lib} PRIVATE
+                             ${model_dir}
+                             ${MODEL_OTA_ROOT}/src
+                             ${CMAKE_CURRENT_BINARY_DIR}/model_ota/${_axon_target}/include)
   set_source_files_properties(${wired_src}
                               TARGET_DIRECTORY ${_wired_lib}
                               PROPERTIES OBJECT_DEPENDS "${MO_MODEL_SRC}")

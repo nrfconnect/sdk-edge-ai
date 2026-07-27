@@ -19,6 +19,7 @@
 include_guard(GLOBAL)
 
 include(${CMAKE_CURRENT_LIST_DIR}/model_ota_common.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/model_ota_context.cmake)
 
 get_filename_component(MODEL_OTA_ROOT ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
 get_filename_component(EDGE_AI_MODULE_ROOT ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSOLUTE)
@@ -32,6 +33,8 @@ set(MODEL_OTA_AXON_LINKER_SCRIPT ${MODEL_OTA_ROOT}/linker/model_image.ld)
 set(MODEL_OTA_AXON_CRC_TOOL ${EDGE_AI_MODULE_ROOT}/tools/model_ota/patch_image_crc.py)
 set(MODEL_OTA_AXON_VALIDATE_TOOL
     ${EDGE_AI_MODULE_ROOT}/tools/model_ota/validate_model_image_layout.py)
+set(MODEL_OTA_AXON_CONTEXT_SLOT_TOOL
+    ${EDGE_AI_MODULE_ROOT}/tools/model_ota/emit_axon_context_slot.py)
 set(MODEL_OTA_IMAGE_DEFS ${EDGE_AI_MODULE_ROOT}/include/model_ota/model_image.h)
 
 function(model_ota_axon_zephyr_c_compile_flags OUT_VAR)
@@ -137,25 +140,54 @@ function(model_ota_axon_model)
   set(_meta_target ${MI_TARGET}_axon_metadata)
   add_custom_target(${_meta_target} DEPENDS ${_private_h} ${_public_h})
 
-  set(_app_lib ota_axon_${MI_TARGET})
-  add_library(${_app_lib} STATIC ${MODEL_OTA_AXON_APP_STUB} ${MODEL_OTA_AXON_KEEP_REFS})
-  target_link_libraries(${_app_lib} PRIVATE zephyr_interface)
-  target_include_directories(${_app_lib} PRIVATE
-                             ${MODEL_OTA_ROOT}/src ${_header_dir}
-                             ${EDGE_AI_MODULE_ROOT}/include)
-  target_compile_options(${_app_lib} PRIVATE "SHELL:-include \"${_private_h}\"")
-  target_compile_definitions(${_app_lib} PRIVATE
-                             MODEL_OTA_AXON_KEEP_LABEL=model_ota_axon_keep_${MI_TARGET})
-  set_source_files_properties(
-    ${MODEL_OTA_AXON_APP_STUB} ${MODEL_OTA_AXON_KEEP_REFS}
-    TARGET_DIRECTORY ${_app_lib}
-    PROPERTIES OBJECT_DEPENDS "${MI_HEADER};${_private_h}")
-  add_dependencies(${_app_lib} ${_meta_target} zephyr_generated_headers)
+  set(_context_slot ${_work_dir}/context_slot.json)
+  add_custom_command(
+    OUTPUT ${_context_slot}
+    COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_CONTEXT_SLOT_TOOL}
+            --config ${_private_h}
+            --probe ${_probe_o}
+            --out ${_context_slot}
+            --interlayer-size ${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE}
+            --psum-size ${CONFIG_NRF_AXON_PSUM_BUFFER_SIZE}
+    DEPENDS ${_private_h} ${_probe_o} ${MODEL_OTA_AXON_CONTEXT_SLOT_TOOL}
+    COMMENT "Emitting Axon OTA context slot metadata (${MI_TARGET})"
+    VERBATIM
+  )
+  add_custom_target(${MI_TARGET}_axon_context_slot DEPENDS ${_context_slot})
+  add_dependencies(${_meta_target} ${MI_TARGET}_axon_context_slot)
 
-  target_link_libraries(app PRIVATE ${_app_lib})
-  target_include_directories(app PRIVATE ${_public_include_dir})
-  add_dependencies(app ${_meta_target})
-  toolchain_ld_force_undefined_symbols(model_ota_axon_keep_${MI_TARGET})
+  model_ota_using_released_fw(_using_released_fw)
+
+  if(CONFIG_MODEL_OTA AND NOT _using_released_fw)
+    model_ota_context_register_slot(
+      TARGET ${MI_TARGET}
+      BACKEND axon
+      PARTITION_NODELABEL ${MI_PARTITION_NODELABEL}
+      NAME ${MI_NAME})
+    model_ota_context_register_axon_slot_build(SLOT_JSON ${_context_slot})
+  endif()
+
+  if(NOT _using_released_fw)
+    set(_app_lib ota_axon_${MI_TARGET})
+    add_library(${_app_lib} STATIC ${MODEL_OTA_AXON_APP_STUB} ${MODEL_OTA_AXON_KEEP_REFS})
+    target_link_libraries(${_app_lib} PRIVATE zephyr_interface)
+    target_include_directories(${_app_lib} PRIVATE
+                               ${MODEL_OTA_ROOT}/src ${_header_dir}
+                               ${EDGE_AI_MODULE_ROOT}/include)
+    target_compile_options(${_app_lib} PRIVATE "SHELL:-include \"${_private_h}\"")
+    target_compile_definitions(${_app_lib} PRIVATE
+                               MODEL_OTA_AXON_KEEP_LABEL=model_ota_axon_keep_${MI_TARGET})
+    set_source_files_properties(
+      ${MODEL_OTA_AXON_APP_STUB} ${MODEL_OTA_AXON_KEEP_REFS}
+      TARGET_DIRECTORY ${_app_lib}
+      PROPERTIES OBJECT_DEPENDS "${MI_HEADER};${_private_h}")
+    add_dependencies(${_app_lib} ${_meta_target} zephyr_generated_headers)
+
+    target_link_libraries(app PRIVATE ${_app_lib})
+    target_include_directories(app PRIVATE ${_public_include_dir})
+    add_dependencies(app ${_meta_target})
+    toolchain_ld_force_undefined_symbols(model_ota_axon_keep_${MI_TARGET})
+  endif()
 
   set(_image_obj ${MI_TARGET}_axon_image_obj)
   add_library(${_image_obj} OBJECT ${MODEL_OTA_AXON_IMAGE_STUB})
@@ -181,16 +213,37 @@ function(model_ota_axon_model)
   set(_image_bin ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_image.bin)
   set(_image_hex ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_partition.hex)
   set(_zephyr_elf ${CMAKE_CURRENT_BINARY_DIR}/zephyr/zephyr.elf)
+  set(_generated_context ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context.json)
+  set(_compat_tool ${EDGE_AI_MODULE_ROOT}/tools/model_ota/check_model_compat.py)
+
+  if(MODEL_OTA_FW_ELF)
+    set(_symbol_elf ${MODEL_OTA_FW_ELF})
+  else()
+    set(_symbol_elf ${_zephyr_elf})
+  endif()
+
+  if(MODEL_OTA_FW_CONTEXT)
+    set(_compat_context ${MODEL_OTA_FW_CONTEXT})
+  else()
+    set(_compat_context ${_generated_context})
+  endif()
+
+  set(_provide_deps ${MODEL_OTA_AXON_ELF} $<TARGET_OBJECTS:${_image_obj}>)
+  if(MODEL_OTA_FW_ELF)
+    list(APPEND _provide_deps ${MODEL_OTA_FW_ELF})
+  else()
+    list(APPEND _provide_deps ${_zephyr_elf})
+  endif()
 
   add_custom_command(
     OUTPUT ${_model_syms_ld}
     COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_ELF} provide
             --object $<TARGET_OBJECTS:${_image_obj}>
-            --elf ${_zephyr_elf}
+            --elf ${_symbol_elf}
             -o ${_model_syms_ld}
-    DEPENDS ${MODEL_OTA_AXON_ELF} ${_zephyr_elf} $<TARGET_OBJECTS:${_image_obj}>
+    DEPENDS ${_provide_deps}
     COMMAND_EXPAND_LISTS
-    COMMENT "Resolving Axon app symbols from zephyr.elf (${MI_TARGET})"
+    COMMENT "Resolving Axon app symbols from ${_symbol_elf} (${MI_TARGET})"
     VERBATIM)
 
   add_custom_command(
@@ -213,12 +266,23 @@ function(model_ota_axon_model)
             --params-type 3 --config-header ${_private_h}
     COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex
             --change-addresses=${_partition_addr} ${_image_bin} ${_image_hex}
+    COMMAND ${PYTHON_EXECUTABLE} ${_compat_tool}
+            --context ${_compat_context} --image ${_image_bin} --slot ${MI_TARGET}
+            --elf ${_symbol_elf} --report-only
     DEPENDS $<TARGET_OBJECTS:${_image_obj}> ${_model_syms_ld} ${_private_h}
+            ${_compat_context}
             ${MODEL_OTA_AXON_LINKER_SCRIPT} ${MODEL_OTA_AXON_CRC_TOOL}
-            ${MODEL_OTA_AXON_VALIDATE_TOOL}
+            ${MODEL_OTA_AXON_VALIDATE_TOOL} ${_compat_tool}
     COMMAND_EXPAND_LISTS
     COMMENT "Building Axon model partition image '${MI_NAME}' at ${_partition_addr}"
     VERBATIM)
 
-  add_custom_target(${MI_TARGET}_model_image ALL DEPENDS ${_image_bin} ${_image_hex})
+  if(_using_released_fw AND NOT MODEL_OTA_FW_ELF)
+    add_custom_target(${MI_TARGET}_model_image DEPENDS ${_image_bin} ${_image_hex})
+  else()
+    add_custom_target(${MI_TARGET}_model_image ALL DEPENDS ${_image_bin} ${_image_hex})
+  endif()
+  if(TARGET model_ota_context AND NOT _using_released_fw)
+    add_dependencies(${MI_TARGET}_model_image model_ota_context)
+  endif()
 endfunction()

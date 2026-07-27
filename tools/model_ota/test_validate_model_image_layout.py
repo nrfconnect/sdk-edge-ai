@@ -31,14 +31,15 @@ class LayoutValidationTests(unittest.TestCase):
         header = struct.pack(
             validator.HEADER_FMT,
             validator.MAGIC,
-            4,
+            5,
             validator.PARAMS_AXON,
             0,
             image_size,
             0x10000,
+            0xAABBCCDD,
             0,
             name_ptr,
-            struct.pack(validator.BACKEND_AXON_FMT, model_ptr, 4, 0),
+            struct.pack(validator.BACKEND_AXON_FMT, model_ptr, 4, 0, 0, 0),
         )
         data = bytearray(header + b"\0" * self.MODEL_SIZE + self.NAME)
         struct.pack_into("<I", data, validator.CRC32_OFFSET, zlib.crc32(data) & 0xFFFFFFFF)
@@ -48,7 +49,7 @@ class LayoutValidationTests(unittest.TestCase):
         defs = directory / "model_image.h"
         elf.write_bytes(b"ELF fixture is mocked")
         binary.write_bytes(data)
-        defs.write_text("#define MODEL_IMAGE_FORMAT_VERSION 4\n", encoding="ascii")
+        defs.write_text("#define MODEL_IMAGE_FORMAT_VERSION 5\n", encoding="ascii")
         return elf, binary, defs
 
     def _symbol(self, name: str) -> ElfSymbol | None:

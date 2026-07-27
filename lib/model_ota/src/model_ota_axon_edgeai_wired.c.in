@@ -16,17 +16,26 @@
 
 #include <model_ota/model_image.h>
 #include <model_ota/model_ota_axon_edgeai.h>
+#include <model_ota/axon/@AXON_TARGET@.h>
 
 #define MODEL_OTA_AXON_RUNTIME_WIRED 1
 
 #include "@MODEL_SRC_BASENAME@"
 
+extern const uint32_t MODEL_OTA_AXON_@AXON_TOKEN@_KEEP_LABEL[];
+
 nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(uint8_t fa_id,
 							 const uint8_t *partition_addr)
 {
 	const nrf_axon_nn_compiled_model_s *model;
+	const struct model_image_axon_expect expect = {
+		.contract_hash = MODEL_OTA_AXON_@AXON_TOKEN@_CONTRACT_HASH,
+		.persistent_vars_cap = MODEL_OTA_AXON_@AXON_TOKEN@_PERSISTENT_VARS_CAP,
+		.packed_output_cap = MODEL_OTA_AXON_@AXON_TOKEN@_PACKED_OUTPUT_BYTES,
+		.binding_table = MODEL_OTA_AXON_@AXON_TOKEN@_KEEP_LABEL,
+	};
 
-	if (model_image_load_axon(fa_id, partition_addr, &model) != MODEL_IMAGE_OK) {
+	if (model_image_load_axon(fa_id, partition_addr, &expect, &model) != MODEL_IMAGE_OK) {
 		return NULL;
 	}
 

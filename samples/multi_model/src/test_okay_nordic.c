@@ -18,6 +18,9 @@
 
 #if defined(CONFIG_MODEL_OTA_AXON)
 #include <model_ota/model_image.h>
+#include <model_ota/axon/okay_nordic.h>
+
+extern const uint32_t MODEL_OTA_AXON_OKAY_NORDIC_KEEP_LABEL[];
 #else
 #include "generated/nrf_axon_model_okay_nordic.h"
 #endif
@@ -68,9 +71,16 @@ void run_okay_nordic_tests(void)
 	int err;
 
 #if defined(CONFIG_MODEL_OTA_AXON)
+	const struct model_image_axon_expect expect = {
+		.contract_hash = MODEL_OTA_AXON_OKAY_NORDIC_CONTRACT_HASH,
+		.persistent_vars_cap = MODEL_OTA_AXON_OKAY_NORDIC_PERSISTENT_VARS_CAP,
+		.packed_output_cap = MODEL_OTA_AXON_OKAY_NORDIC_PACKED_OUTPUT_BYTES,
+		.binding_table = MODEL_OTA_AXON_OKAY_NORDIC_KEEP_LABEL,
+	};
+
 	if (model_image_load_axon(PARTITION_ID(model_okay_nordic_storage),
 				  (const uint8_t *)PARTITION_ADDRESS(model_okay_nordic_storage),
-				  &model) != MODEL_IMAGE_OK ||
+				  &expect, &model) != MODEL_IMAGE_OK ||
 	    model == NULL) {
 		LOG_WRN("No valid okay_nordic model image in model_okay_nordic_storage - skipping "
 			"(flash okay_nordic_model_partition.hex)");

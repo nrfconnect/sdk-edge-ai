@@ -48,6 +48,14 @@ extern char __model_image_end[];
 #define MODEL_IMAGE_VERSION_U32 0x00010000u
 #endif
 
+#ifndef MODEL_OTA_NEUTON_NEURONS_CAP
+#define MODEL_OTA_NEUTON_NEURONS_CAP MODEL_NEURONS_NUM
+#endif
+
+#ifndef MODEL_OTA_NEUTON_CONTRACT_HASH
+#error "MODEL_OTA_NEUTON_CONTRACT_HASH must be set by model_ota_neuton_image()"
+#endif
+
 __attribute__((section(".rodata.model_image_decoded_output"), used))
 static const nrf_edgeai_decoded_output_t model_image_decoded_output_ = {NN_DECODED_OUTPUT_INIT};
 
@@ -61,9 +69,10 @@ const struct model_image_header nrf_edgeai_model_image_hdr = {
 	.params_type = MODEL_IMAGE_PARAMS_TYPE_NUM,
 	._reserved = 0,
 	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)NRF_MODEL_PARTITION_ADDR),
+	.model_version = MODEL_IMAGE_VERSION_U32,
+	.contract_hash = MODEL_OTA_NEUTON_CONTRACT_HASH,
 	.crc32 = 0,
 	.name = model_image_name_,
-	.model_version = MODEL_IMAGE_VERSION_U32,
 	.neuton = {
 		.model = &model_instance_,
 		.task = MODEL_TASK,

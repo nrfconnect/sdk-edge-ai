@@ -83,6 +83,8 @@ class InspectOutputTests(unittest.TestCase):
             )
             self.assertIn("\tX(driver_call) \\", private_text)
             self.assertIn("\tX(axon_model_demo_persistent_vars) \\", private_text)
+            self.assertIn("#define MODEL_OTA_AXON_KEEP_SYMBOL_COUNT 3", private_text)
+            self.assertIn("#define MODEL_OTA_AXON_SYM_HASH_driver_call", private_text)
             self.assertNotIn("__model_image_end", private_text)
             # Default (no --allocate-packed-output): packed_output_buf is never
             # referenced by the linked OTA image (its packed_output_buf field is
@@ -95,6 +97,8 @@ class InspectOutputTests(unittest.TestCase):
                 "#define MODEL_OTA_AXON_DOOR_BELL_V2_PACKED_OUTPUT_BYTES 20",
                 public.read_text(),
             )
+            self.assertIn("#define MODEL_OTA_AXON_DOOR_BELL_V2_CONTRACT_HASH", public.read_text())
+            self.assertIn("#define MODEL_OTA_AXON_DOOR_BELL_V2_KEEP_LABEL", public.read_text())
 
     def test_inspect_allocate_packed_output_wires_app_storage(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

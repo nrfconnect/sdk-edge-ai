@@ -27,7 +27,10 @@
 
 include_guard(GLOBAL)
 
+get_filename_component(EDGE_AI_MODULE_ROOT ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSOLUTE)
 get_filename_component(MODEL_OTA_ROOT ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
+
+include(${CMAKE_CURRENT_LIST_DIR}/model_ota_context.cmake)
 
 set(MODEL_OTA_NEUTON_PAYLOAD_SECTIONS
     .rodata.MODEL_WEIGHTS
@@ -75,6 +78,11 @@ endfunction()
 function(model_ota_neuton_wire)
   cmake_parse_arguments(MO "" "SOLUTION_ID;MODEL_SRC;LIB_NAME;MAX_NEURONS" "" ${ARGN})
 
+  model_ota_using_released_fw(_using_released_fw)
+  if(_using_released_fw)
+    return()
+  endif()
+
   if(NOT MO_MODEL_SRC)
     message(FATAL_ERROR "model_ota_neuton_wire: MODEL_SRC is required")
   endif()
@@ -100,6 +108,13 @@ function(model_ota_neuton_wire)
   set(SOLUTION_ID ${MO_SOLUTION_ID})
   set(MAX_NEURONS ${MO_MAX_NEURONS})
   set(MODEL_SRC_BASENAME ${model_basename})
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} -c
+            "import sys; from pathlib import Path; sys.path.insert(0, r'${EDGE_AI_MODULE_ROOT}/tools/model_ota'); from model_contract import neuton_contract_from_model_c; print(f'{neuton_contract_from_model_c(Path(r'${MO_MODEL_SRC}'), int(${MO_MAX_NEURONS}))}')"
+    OUTPUT_VARIABLE NEUTON_CONTRACT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY
+  )
   configure_file(${wired_tpl} ${wired_src} @ONLY)
 
   add_library(${MO_LIB_NAME} STATIC ${wired_src})

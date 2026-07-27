@@ -84,6 +84,17 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 		return rc;
 	}
 
+	if (expect == NULL) {
+		LOG_ERR("Neuton expect contract is required");
+		return MODEL_IMAGE_ERR_CONTRACT_MISMATCH;
+	}
+
+	if (hdr.contract_hash != expect->contract_hash) {
+		LOG_ERR("Contract hash mismatch (image 0x%08x, expected 0x%08x)", hdr.contract_hash,
+			expect->contract_hash);
+		return MODEL_IMAGE_ERR_CONTRACT_MISMATCH;
+	}
+
 	rc = model_image_neuton_params_elem_size(hdr.params_type, NULL);
 	if (rc != MODEL_IMAGE_OK) {
 		LOG_ERR("Unsupported Neuton params_type %u", hdr.params_type);
@@ -95,16 +106,14 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	 * fixes the neuron-buffer element size, so a mismatch here would otherwise corrupt memory
 	 * when p_neurons is patched below.
 	 */
-	if (expect != NULL) {
-		if (hdr.neuton.task != expect->task) {
-			LOG_ERR("Image task %u != expected %u", hdr.neuton.task, expect->task);
-			return MODEL_IMAGE_ERR_TASK_MISMATCH;
-		}
-		if (hdr.params_type != expect->params_type) {
-			LOG_ERR("Image params_type %u != expected %u", hdr.params_type,
-				expect->params_type);
-			return MODEL_IMAGE_ERR_PARAMS_TYPE_MISMATCH;
-		}
+	if (hdr.neuton.task != expect->task) {
+		LOG_ERR("Image task %u != expected %u", hdr.neuton.task, expect->task);
+		return MODEL_IMAGE_ERR_TASK_MISMATCH;
+	}
+	if (hdr.params_type != expect->params_type) {
+		LOG_ERR("Image params_type %u != expected %u", hdr.params_type,
+			expect->params_type);
+		return MODEL_IMAGE_ERR_PARAMS_TYPE_MISMATCH;
 	}
 
 	/* The baked descriptor is addressed by an absolute flash pointer (the image was linked at
@@ -133,16 +142,18 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	outputs_num = img_model->meta.outputs_num;
 	weights_num = img_model->meta.weights_num;
 
+	if (neurons_num > expect->neurons_cap) {
+		LOG_ERR("Model needs %u neurons, app cap is %u", neurons_num, expect->neurons_cap);
+		return MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL;
+	}
+
 	if (neurons_num > neurons_buf_cap) {
 		LOG_ERR("Model needs %u neurons, only %u provided", neurons_num,
 			(unsigned)neurons_buf_cap);
 		return MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL;
 	}
 
-	/* The app's output buffers (decoded output, probabilities, model_outputs_) are compile-time
-	 * sized; an image with more outputs than the app can hold would overflow them downstream.
-	 */
-	if (expect != NULL && outputs_num > expect->outputs_cap) {
+	if (outputs_num > expect->outputs_cap) {
 		LOG_ERR("Model has %u outputs, app buffers hold %u", outputs_num,
 			expect->outputs_cap);
 		return MODEL_IMAGE_ERR_OUTPUTS_TOO_MANY;
