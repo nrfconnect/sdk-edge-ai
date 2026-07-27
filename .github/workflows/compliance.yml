@@ -45,6 +45,10 @@ jobs:
           [[ "$(git rev-list --merges --count origin/${BASE_REF}..)" == "0" ]] || \
             (echo "::error ::Merge commits not allowed, rebase instead";false)
 
+      - name: Apply patches
+        working-directory: ncs
+        run: west patch --src-module edge-ai apply
+
       - name: Run Compliance Tests
         continue-on-error: true
         id: compliance
