@@ -6,11 +6,27 @@
 
 #include "model_image_common.h"
 
+#include <stddef.h>
+
 #include <zephyr/logging/log.h>
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/crc.h>
+#include <zephyr/sys/util.h>
 
 LOG_MODULE_REGISTER(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
+
+BUILD_ASSERT(sizeof(struct model_image_header) == 36,
+	     "model_image_header size must match host layout tools");
+BUILD_ASSERT(offsetof(struct model_image_header, crc32) == MODEL_IMAGE_CRC32_OFFSET,
+	     "crc32 offset must match patch_image_crc.py");
+BUILD_ASSERT(offsetof(struct model_image_header, name) % sizeof(uint32_t) == 0,
+	     "name must be word-aligned");
+BUILD_ASSERT(offsetof(struct model_image_header, neuton.model) % sizeof(uint32_t) == 0,
+	     "neuton.model must be word-aligned");
+BUILD_ASSERT(offsetof(struct model_image_header, neuton.decoded_output) % sizeof(uint32_t) == 0,
+	     "neuton.decoded_output must be word-aligned");
+BUILD_ASSERT(offsetof(struct model_image_header, axon.model) % sizeof(uint32_t) == 0,
+	     "axon.model must be word-aligned");
 
 static bool magic_is_valid(const struct model_image_header *hdr)
 {
@@ -82,6 +98,29 @@ int model_image_read_and_validate(uint8_t fa_id, const uint8_t *partition_addr,
 
 	*hdr_out = hdr;
 	return MODEL_IMAGE_OK;
+}
+
+bool model_image_name_in_image(const char *name, const uint8_t *base, const uint8_t *end)
+{
+	const uint8_t *s;
+
+	if (name == NULL) {
+		return false;
+	}
+
+	s = (const uint8_t *)name;
+	if (s < base || s >= end) {
+		return false;
+	}
+
+	while (s < end) {
+		if (*s == '\0') {
+			return true;
+		}
+		s++;
+	}
+
+	return false;
 }
 
 bool model_image_span_in_image(const void *p, size_t nbytes, const uint8_t *base,

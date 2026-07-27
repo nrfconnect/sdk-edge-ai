@@ -51,17 +51,22 @@ extern char __model_image_end[];
 __attribute__((section(".rodata.model_image_decoded_output"), used))
 static const nrf_edgeai_decoded_output_t model_image_decoded_output_ = {NN_DECODED_OUTPUT_INIT};
 
+__attribute__((section(".rodata.model_image_name"), used))
+static const char model_image_name_[] = MODEL_IMAGE_NAME_STR;
+
 __attribute__((section(".model_image.header"), used))
 const struct model_image_header nrf_edgeai_model_image_hdr = {
 	.magic = {MODEL_IMAGE_MAGIC0, MODEL_IMAGE_MAGIC1, MODEL_IMAGE_MAGIC2, MODEL_IMAGE_MAGIC3},
 	.format_version = MODEL_IMAGE_FORMAT_VERSION,
 	.params_type = MODEL_IMAGE_PARAMS_TYPE_NUM,
-	.task = MODEL_TASK,
+	._reserved = 0,
 	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)NRF_MODEL_PARTITION_ADDR),
 	.crc32 = 0,
-	.model.neuton = &model_instance_,
-	.decoded_output = &model_image_decoded_output_,
-	.name = MODEL_IMAGE_NAME_STR,
+	.name = model_image_name_,
 	.model_version = MODEL_IMAGE_VERSION_U32,
-	.axon_packed_output_bytes = 0,
+	.neuton = {
+		.model = &model_instance_,
+		.task = MODEL_TASK,
+		.decoded_output = &model_image_decoded_output_,
+	},
 };

@@ -38,33 +38,32 @@ int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 	}
 
 	image_end = partition_addr + hdr.image_size;
-	model_bytes = (const uint8_t *)hdr.model.axon;
+
+	if (!model_image_name_in_image(hdr.name, partition_addr, image_end)) {
+		LOG_ERR("Header name pointer %p outside image or not NUL-terminated",
+			(void *)hdr.name);
+		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
+	}
+
+	model_bytes = (const uint8_t *)hdr.axon.model;
 
 	if (model_bytes < partition_addr ||
 	    model_bytes + sizeof(nrf_axon_nn_compiled_model_s) > image_end) {
-		LOG_ERR("Header model pointer %p outside image [%p, %p)", (void *)hdr.model.axon,
+		LOG_ERR("Header model pointer %p outside image [%p, %p)", (void *)hdr.axon.model,
 			(const void *)partition_addr, (const void *)image_end);
 		return MODEL_IMAGE_ERR_MODEL_PTR_OUT_OF_RANGE;
 	}
 
-	if (hdr.decoded_output != NULL) {
-		LOG_ERR("Axon image must have NULL decoded_output, got %p",
-			(void *)hdr.decoded_output);
-		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
-	}
-
-	model = hdr.model.axon;
+	model = hdr.axon.model;
 
 	if (nrf_axon_nn_model_validate(model) != NRF_AXON_RESULT_SUCCESS) {
-		LOG_ERR("Axon model validate failed for image '%.*s'", MODEL_IMAGE_NAME_LEN,
-			hdr.name);
+		LOG_ERR("Axon model validate failed for image '%s'", hdr.name);
 		return MODEL_IMAGE_ERR_AXON_VALIDATE;
 	}
 
 	*out_model = model;
 
-	LOG_INF("Loaded Axon model image '%.*s' v0x%08x", MODEL_IMAGE_NAME_LEN, hdr.name,
-		hdr.model_version);
+	LOG_INF("Loaded Axon model image '%s' v0x%08x", hdr.name, hdr.model_version);
 
 	return MODEL_IMAGE_OK;
 }

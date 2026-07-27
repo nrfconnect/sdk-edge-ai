@@ -33,10 +33,30 @@ MAGIC = b"NEI\x00"
 PARAMS_AXON = 3
 
 # struct model_image_header (see include/model_ota/model_image.h), little-endian, __packed:
-#   magic[4] version:H params_type:B task:B image_size:I crc32:I model:I decoded_output:I
-#   name[16] model_version:I axon_packed_output_bytes:I
-HEADER_FMT = "<4sHBBIIII16sII"
+#   magic[4] version:H params_type:B reserved:B image_size:I model_version:I crc32:I
+#   name:I backend[12]
+# backend Neuton: model:I task:B pad[3]:BBB decoded_output:I
+# backend Axon:   model:I axon_packed_output_bytes:I pad:I
+HEADER_FMT = "<4sHBBIIII12s"
 HEADER_SIZE = struct.calcsize(HEADER_FMT)
+BACKEND_NEUTON_FMT = "<IBBBBI"
+BACKEND_AXON_FMT = "<III"
+CRC32_OFFSET = 16
+
+
+def name_in_image(name_ptr, image_bytes, start, end):
+    if name_ptr < start or name_ptr >= end:
+        return None
+    off = name_ptr - start
+    if off < 0 or off >= len(image_bytes):
+        return None
+    chars = bytearray()
+    for i in range(off, len(image_bytes)):
+        byte = image_bytes[i]
+        if byte == 0:
+            return bytes(chars).decode("ascii", "replace")
+        chars.append(byte)
+    return None
 
 
 def symbol(elf, name):
@@ -133,15 +153,40 @@ def main(argv=None):
         print("image binary shorter than header", file=sys.stderr)
         sys.exit(1)
 
-    (magic, version, params_type, task, image_size, crc32, model_ptr, decoded_output_ptr,
-     name, model_version, axon_packed_output_bytes) = struct.unpack(HEADER_FMT, header_bytes)
+    image_bytes = args.bin.read_bytes()
+
+    (magic, version, params_type, _reserved, image_size, model_version, crc32, name_ptr,
+     backend_bytes) = struct.unpack(HEADER_FMT, header_bytes)
 
     if magic != MAGIC:
         errors.append("magic %r != %r" % (magic, MAGIC))
     if version != expected_version:
         errors.append("format_version %d != expected %d" % (version, expected_version))
+    if _reserved != 0:
+        errors.append("reserved byte %d != 0" % _reserved)
     if image_size != linker_size:
         errors.append("header image_size 0x%x != linker extent 0x%x" % (image_size, linker_size))
+
+    name_str = name_in_image(name_ptr, image_bytes, start, end)
+    if name_str is None:
+        errors.append("name pointer 0x%x outside image or not NUL-terminated before end"
+                      % name_ptr)
+
+    if params_type == PARAMS_AXON:
+        model_ptr, axon_packed_output_bytes, backend_pad = struct.unpack(
+            BACKEND_AXON_FMT, backend_bytes
+        )
+        if backend_pad != 0:
+            errors.append("Axon backend pad must be 0, got 0x%x" % backend_pad)
+    else:
+        model_ptr, task, pad0, pad1, pad2, decoded_output_ptr = struct.unpack(
+            BACKEND_NEUTON_FMT, backend_bytes
+        )
+        if (pad0, pad1, pad2) != (0, 0, 0):
+            errors.append("Neuton backend pad must be 0, got %d,%d,%d" % (pad0, pad1, pad2))
+        if decoded_output_ptr < start or decoded_output_ptr >= end:
+            errors.append("decoded_output pointer 0x%x outside image [0x%x, 0x%x)"
+                          % (decoded_output_ptr, start, end))
 
     bin_size = args.bin.stat().st_size
     if bin_size != linker_size:
@@ -168,18 +213,11 @@ def main(argv=None):
             "params_type %d != expected %d" % (params_type, args.params_type)
         )
 
-    if params_type == PARAMS_AXON:
-        if decoded_output_ptr != 0:
-            errors.append("Axon image decoded_output must be NULL, got 0x%x" % decoded_output_ptr)
-    elif decoded_output_ptr < start or decoded_output_ptr >= end:
-        errors.append("decoded_output pointer 0x%x outside image [0x%x, 0x%x)"
-                      % (decoded_output_ptr, start, end))
-
     if crc32 == 0:
         errors.append("crc32 is 0 (patch_image_crc.py did not run)")
     else:
-        crc_data = bytearray(args.bin.read_bytes())
-        struct.pack_into("<I", crc_data, 12, 0)
+        crc_data = bytearray(image_bytes)
+        struct.pack_into("<I", crc_data, CRC32_OFFSET, 0)
         computed_crc = zlib.crc32(crc_data) & 0xFFFFFFFF
         if crc32 != computed_crc:
             errors.append(
@@ -188,7 +226,9 @@ def main(argv=None):
 
     if configured_packed is not None:
         expected_packed = int(configured_packed, 0)
-        if axon_packed_output_bytes != expected_packed:
+        if params_type != PARAMS_AXON:
+            errors.append("packed output config given for non-Axon image")
+        elif axon_packed_output_bytes != expected_packed:
             errors.append(
                 "Axon packed output %d != expected %d"
                 % (axon_packed_output_bytes, expected_packed)
@@ -199,11 +239,14 @@ def main(argv=None):
             print("layout validation failed: %s" % e, file=sys.stderr)
         sys.exit(1)
 
-    name_str = name.split(b"\x00", 1)[0].decode("ascii", "replace")
+    if params_type == PARAMS_AXON:
+        task_field = 0
+    else:
+        task_field = struct.unpack(BACKEND_NEUTON_FMT, backend_bytes)[1]
     print("model image layout ok: base 0x%x, size 0x%x, model 0x%x (&%s), "
           "params_type %d, task %d, crc32 0x%08x, name '%s' v0x%08x"
-          % (start, image_size, model_ptr, args.model_symbol, params_type, task, crc32,
-             name_str, model_version))
+          % (start, image_size, model_ptr, args.model_symbol, params_type, task_field, crc32,
+             name_str if name_str is not None else "?", model_version))
     return 0
 
 

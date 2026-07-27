@@ -37,6 +37,11 @@ bool model_image_span_in_image(const void *p, size_t nbytes, const uint8_t *base
 			       const uint8_t *end);
 
 /**
+ * @brief True iff @p name points at a NUL-terminated string wholly inside [base, end).
+ */
+bool model_image_name_in_image(const char *name, const uint8_t *base, const uint8_t *end);
+
+/**
  * @brief Weight/neuron element size for a Neuton @ref model_image_params_type.
  *
  * @param[in]  params_type   One of MODEL_IMAGE_PARAMS_F32/Q16/Q8.

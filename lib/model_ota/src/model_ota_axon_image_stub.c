@@ -60,21 +60,21 @@ extern char __model_image_end[];
 #define MODEL_IMAGE_VERSION_U32 0x00010000u
 #endif
 
-static const union model_image_model_ptr model_image_model = {
-	.axon = &MODEL_OTA_AXON_MODEL_SYM,
-};
+__attribute__((section(".rodata.model_image_name"), used))
+static const char model_image_name_[] = MODEL_IMAGE_NAME_STR;
 
 __attribute__((section(".model_image.header"), used))
 const struct model_image_header model_image_hdr = {
 	.magic = {MODEL_IMAGE_MAGIC0, MODEL_IMAGE_MAGIC1, MODEL_IMAGE_MAGIC2, MODEL_IMAGE_MAGIC3},
 	.format_version = MODEL_IMAGE_FORMAT_VERSION,
 	.params_type = MODEL_IMAGE_PARAMS_AXON,
-	.task = 0,
+	._reserved = 0,
 	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)NRF_MODEL_PARTITION_ADDR),
 	.crc32 = 0,
-	.model = model_image_model,
-	.decoded_output = NULL,
-	.name = MODEL_IMAGE_NAME_STR,
+	.name = model_image_name_,
 	.model_version = MODEL_IMAGE_VERSION_U32,
-	.axon_packed_output_bytes = MODEL_OTA_AXON_PACKED_OUTPUT_BYTES,
+	.axon = {
+		.model = &MODEL_OTA_AXON_MODEL_SYM,
+		.axon_packed_output_bytes = MODEL_OTA_AXON_PACKED_OUTPUT_BYTES,
+	},
 };

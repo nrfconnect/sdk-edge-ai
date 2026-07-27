@@ -22,8 +22,8 @@
  *     base+offset arithmetic is ever needed.
  *
  *   - The partition header (@ref model_image_header) therefore stores a DIRECT POINTER to the
- *     baked descriptor (@ref model_image_header.model), not a model_offset. The loader validates
- *     the header and hands that pointer straight back.
+ *     baked descriptor (@ref model_image_neuton_backend.model / @ref model_image_axon_backend.model),
+ *     not a model_offset. The loader validates the header and hands that pointer straight back.
  *
  * The one field that cannot be a partition-flash address is
  * nrf_edgeai_model_neuton_t.params.*.p_neurons: it must point at the application's neuron-
@@ -56,10 +56,7 @@ extern "C" {
 #endif
 
 /** Image format version (independent of the model's own version). */
-#define MODEL_IMAGE_FORMAT_VERSION 3
-
-/** Length of the @ref model_image_header.name field, not necessarily NUL-terminated. */
-#define MODEL_IMAGE_NAME_LEN 16
+#define MODEL_IMAGE_FORMAT_VERSION 4
 
 /* Magic {'N','E','I','\0'} = Neuton Edge-ai Image (version is @ref format_version only). */
 #define MODEL_IMAGE_MAGIC0 'N'
@@ -76,19 +73,8 @@ enum model_image_params_type {
 	MODEL_IMAGE_PARAMS_F32 = 0,
 	MODEL_IMAGE_PARAMS_Q16 = 1,
 	MODEL_IMAGE_PARAMS_Q8 = 2,
-	/** Pure Axon compiled model (nrf_axon_nn_compiled_model_s); @ref decoded_output is NULL. */
+	/** Pure Axon compiled model (nrf_axon_nn_compiled_model_s); use @ref axon. */
 	MODEL_IMAGE_PARAMS_AXON = 3,
-};
-
-/**
- * Shared storage for @ref model_image_header.model.
- *
- * Neuton images store @ref neuton; Axon images store the compiled model pointer in @ref axon
- * (same bit width as @ref neuton on the target).
- */
-union model_image_model_ptr {
-	const nrf_edgeai_model_neuton_t *neuton;
-	const nrf_axon_nn_compiled_model_s *axon;
 };
 
 /**
@@ -103,39 +89,62 @@ union model_image_model_ptr {
 #define MODEL_IMAGE_PARAMS_TYPE_OF_q16    MODEL_IMAGE_PARAMS_Q16
 #define MODEL_IMAGE_PARAMS_TYPE_OF_q8     MODEL_IMAGE_PARAMS_Q8
 
+/** Byte offset of @ref model_image_header.crc32; used by the host CRC patcher. */
+#define MODEL_IMAGE_CRC32_OFFSET 16
+
+/**
+ * Neuton backend fields (@ref params_type != @ref MODEL_IMAGE_PARAMS_AXON).
+ */
+struct model_image_neuton_backend {
+	/** DIRECT absolute-flash pointer to the baked nrf_edgeai_model_neuton_t (NOT an offset). */
+	const nrf_edgeai_model_neuton_t *model;
+	uint8_t task; /**< nrf_edgeai_model_task_t of the baked model */
+	uint8_t _pad[3];
+	/** DIRECT pointer to the baked decode-output init (NN_DECODED_OUTPUT_INIT). */
+	const nrf_edgeai_decoded_output_t *decoded_output;
+};
+
+/**
+ * Axon backend fields (@ref params_type == @ref MODEL_IMAGE_PARAMS_AXON).
+ */
+struct model_image_axon_backend {
+	/** DIRECT absolute-flash pointer to the baked compiled Axon model (NOT an offset). */
+	const nrf_axon_nn_compiled_model_s *model;
+	/** Packed-output bytes required by the baked model (0 when unused). */
+	uint32_t axon_packed_output_bytes;
+	uint32_t _pad;
+};
+
 /**
  * On-flash model partition image header, placed at offset 0 of the image (== the partition base
  * address) in section ".model_image.header".
  *
- * All pointer fields are absolute flash addresses baked by the linker (the image is linked at
- * the partition base). @ref model and @ref decoded_output therefore point *into this same image*;
- * the loader range-checks them against [base, base + image_size).
+ * Layout: shared envelope and metadata first, then a 12-byte anonymous backend union holding all
+ * backend-specific fields including the baked model pointer. @ref name points at a
+ * NUL-terminated string stored elsewhere in the image (typically .rodata). All pointer fields are
+ * absolute flash addresses baked by the linker (the image is linked at the partition base).
  *
- * Field offsets are fixed (every field is 4-byte, pointers are 32-bit on the target) so the
- * host-side CRC patcher (tools/model_ota/patch_image_crc.py) and layout validator can locate
- * @ref crc32 at a constant offset without parsing the struct.
+ * Field offsets are fixed (pointers are 32-bit on the target) so the host-side CRC patcher
+ * (tools/model_ota/patch_image_crc.py) and layout validator can locate @ref crc32 at a constant
+ * offset without parsing the struct. @ref __packed is required to forbid compiler padding inside
+ * the backend union so the on-flash layout matches the host tools byte-for-byte. Compile-time
+ * layout checks live in model_image_common.c.
  */
 struct model_image_header {
 	uint8_t magic[4];        /**< off 0:  {'N','E','I','\0'} */
 	uint16_t format_version; /**< off 4:  MODEL_IMAGE_FORMAT_VERSION */
 	uint8_t params_type;     /**< off 6:  enum model_image_params_type */
-	uint8_t task;            /**< off 7:  nrf_edgeai_model_task_t of the baked model */
-	uint32_t image_size;     /**< off 8:  bytes from base to __model_image_end (whole image) */
-	uint32_t crc32;          /**< off 12: CRC32/IEEE over the image with this field zeroed */
-	/** off 16: DIRECT absolute-flash pointer to the baked model (NOT an offset). */
-	union model_image_model_ptr model;
-	/** off 20: DIRECT pointer to the baked decode-output init (NN_DECODED_OUTPUT_INIT).
-	 *  NULL for pure Axon images (@ref params_type == @ref MODEL_IMAGE_PARAMS_AXON).
-	 */
-	const nrf_edgeai_decoded_output_t *decoded_output;
-	char name[MODEL_IMAGE_NAME_LEN]; /**< off 24: free-form, not necessarily NUL-terminated */
-	uint32_t model_version;          /**< off 40: free-form major.minor.patch */
-	/** off 44: Axon packed-output bytes required by the baked model; 0 for Neuton images. */
-	uint32_t axon_packed_output_bytes;
+	uint8_t _reserved;       /**< off 7:  0 */
+	uint32_t image_size;     /**< off 8:  bytes from base to __model_image_end */
+	uint32_t model_version;  /**< off 12: free-form major.minor.patch */
+	uint32_t crc32;          /**< off 16: CRC32/IEEE over the image with this field zeroed */
+	/** off 20: DIRECT pointer to a NUL-terminated name stored elsewhere in the image. */
+	const char *name;
+	union {
+		struct model_image_neuton_backend neuton; /**< off 24 */
+		struct model_image_axon_backend axon;
+	};
 } __packed;
-
-/** Byte offset of @ref model_image_header.crc32; used by the host CRC patcher. */
-#define MODEL_IMAGE_CRC32_OFFSET 12
 
 /** Return codes for @ref model_image_load_neuton. */
 enum model_image_result {

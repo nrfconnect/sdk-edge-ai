@@ -20,36 +20,39 @@ from axon_elf import ElfSymbol
 class LayoutValidationTests(unittest.TestCase):
     BASE = 0x100000
     MODEL_SIZE = 16
+    NAME = b"test\0"
 
     def _files(self, directory: Path) -> tuple[Path, Path, Path]:
-        image_size = validator.HEADER_SIZE + self.MODEL_SIZE
+        model_off = validator.HEADER_SIZE
+        name_off = model_off + self.MODEL_SIZE
+        image_size = name_off + len(self.NAME)
+        name_ptr = self.BASE + name_off
+        model_ptr = self.BASE + model_off
         header = struct.pack(
             validator.HEADER_FMT,
             validator.MAGIC,
-            3,
+            4,
             validator.PARAMS_AXON,
             0,
             image_size,
-            0,
-            self.BASE + validator.HEADER_SIZE,
-            0,
-            b"test\0" + b"\0" * 11,
             0x10000,
-            4,
+            0,
+            name_ptr,
+            struct.pack(validator.BACKEND_AXON_FMT, model_ptr, 4, 0),
         )
-        data = bytearray(header + b"\0" * self.MODEL_SIZE)
-        struct.pack_into("<I", data, 12, zlib.crc32(data) & 0xFFFFFFFF)
+        data = bytearray(header + b"\0" * self.MODEL_SIZE + self.NAME)
+        struct.pack_into("<I", data, validator.CRC32_OFFSET, zlib.crc32(data) & 0xFFFFFFFF)
 
         elf = directory / "image.elf"
         binary = directory / "image.bin"
         defs = directory / "model_image.h"
         elf.write_bytes(b"ELF fixture is mocked")
         binary.write_bytes(data)
-        defs.write_text("#define MODEL_IMAGE_FORMAT_VERSION 3\n", encoding="ascii")
+        defs.write_text("#define MODEL_IMAGE_FORMAT_VERSION 4\n", encoding="ascii")
         return elf, binary, defs
 
     def _symbol(self, name: str) -> ElfSymbol | None:
-        image_size = validator.HEADER_SIZE + self.MODEL_SIZE
+        image_size = validator.HEADER_SIZE + self.MODEL_SIZE + len(self.NAME)
         entries = {
             "__model_image_start": ElfSymbol(name, self.BASE, 0, "GLOBAL", "NOTYPE", 1),
             "__model_image_end": ElfSymbol(

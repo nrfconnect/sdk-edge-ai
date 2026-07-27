@@ -96,8 +96,8 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	 * when p_neurons is patched below.
 	 */
 	if (expect != NULL) {
-		if (hdr.task != expect->task) {
-			LOG_ERR("Image task %u != expected %u", hdr.task, expect->task);
+		if (hdr.neuton.task != expect->task) {
+			LOG_ERR("Image task %u != expected %u", hdr.neuton.task, expect->task);
 			return MODEL_IMAGE_ERR_TASK_MISMATCH;
 		}
 		if (hdr.params_type != expect->params_type) {
@@ -112,16 +112,23 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	 * dereference it.
 	 */
 	image_end = partition_addr + hdr.image_size;
-	model_bytes = (const uint8_t *)hdr.model.neuton;
+
+	if (!model_image_name_in_image(hdr.name, partition_addr, image_end)) {
+		LOG_ERR("Header name pointer %p outside image or not NUL-terminated",
+			(void *)hdr.name);
+		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
+	}
+
+	model_bytes = (const uint8_t *)hdr.neuton.model;
 
 	if (model_bytes < partition_addr ||
 	    model_bytes + sizeof(nrf_edgeai_model_neuton_t) > image_end) {
-		LOG_ERR("Header model pointer %p outside image [%p, %p)", (void *)hdr.model.neuton,
+		LOG_ERR("Header model pointer %p outside image [%p, %p)", (void *)hdr.neuton.model,
 			(const void *)partition_addr, (const void *)image_end);
 		return MODEL_IMAGE_ERR_MODEL_PTR_OUT_OF_RANGE;
 	}
 
-	img_model = hdr.model.neuton;
+	img_model = hdr.neuton.model;
 	neurons_num = img_model->meta.neurons_num;
 	outputs_num = img_model->meta.outputs_num;
 	weights_num = img_model->meta.weights_num;
@@ -172,17 +179,18 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	/* Baked NN_DECODED_OUTPUT_INIT lives in the image; confirm the struct and any flash-resident
 	 * meta pointers it references lie inside [base, image_end).
 	 */
-	if (!model_image_span_in_image(hdr.decoded_output, sizeof(nrf_edgeai_decoded_output_t),
-				       partition_addr, image_end)) {
+	if (!model_image_span_in_image(hdr.neuton.decoded_output,
+				       sizeof(nrf_edgeai_decoded_output_t), partition_addr,
+				       image_end)) {
 		LOG_ERR("Header decoded_output pointer %p outside image [%p, %p)",
-			(void *)hdr.decoded_output, (const void *)partition_addr,
+			(void *)hdr.neuton.decoded_output, (const void *)partition_addr,
 			(const void *)image_end);
 		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 	}
 
-	img_decoded = hdr.decoded_output;
+	img_decoded = hdr.neuton.decoded_output;
 
-	switch (hdr.task) {
+	switch (hdr.neuton.task) {
 	case NRF_EDGEAI_TASK_ANOMALY_DETECTION:
 		if (!model_image_span_in_image(img_decoded->anomaly.meta.p_scale_min,
 					       (size_t)outputs_num * sizeof(float), partition_addr,
@@ -227,7 +235,7 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 
 	memcpy(out_model, &built, sizeof(built));
 
-	switch (hdr.task) {
+	switch (hdr.neuton.task) {
 	case NRF_EDGEAI_TASK_ANOMALY_DETECTION:
 		edgeai->decoded_output.anomaly = img_decoded->anomaly;
 		break;
@@ -242,9 +250,9 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 		break;
 	}
 
-	LOG_INF("Loaded Neuton model image '%.*s' v0x%08x (%u neurons, %u weights, %u outputs)",
-		MODEL_IMAGE_NAME_LEN, hdr.name, hdr.model_version, neurons_num,
-		img_model->meta.weights_num, img_model->meta.outputs_num);
+	LOG_INF("Loaded Neuton model image '%s' v0x%08x (%u neurons, %u weights, %u outputs)",
+		hdr.name, hdr.model_version, neurons_num, img_model->meta.weights_num,
+		img_model->meta.outputs_num);
 
 	return MODEL_IMAGE_OK;
 }
