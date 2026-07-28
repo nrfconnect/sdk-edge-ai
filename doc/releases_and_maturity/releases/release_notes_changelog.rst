@@ -19,6 +19,10 @@ For the list of potential issues, see the :ref:`known_issues` page.
 Changelog
 *********
 
+* Added:
+
+  * Support for the ``nrf7120dk/nrf7120e/cpuapp`` board target in the :ref:`WW KWS <app_ww_kws>`, :ref:`Person detection <app_person_detection>`, and :ref:`Gesture recognition <app_gesture_recognition>` applications, running inference on the Axon NPU.
+
 * Updated:
 
   * ``edge-impulse-sdk-zephyr`` in the west manifest to v1.95.28.

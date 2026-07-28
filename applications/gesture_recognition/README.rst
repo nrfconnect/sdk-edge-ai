@@ -80,6 +80,29 @@ Development kits
            - .. figure:: images/nrf54l15tag_bottom.jpeg
                 :alt: nRF54L15 TAG bottom view
 
+   .. tab:: nRF7120 DK
+
+      The nRF7120 DK is supported with the nRF7120E SoC variant (``nrf7120dk/nrf7120e/cpuapp``), which runs inference on the Axon NPU.
+      Bluetooth LE and MCUboot are enabled, like on the other kits, so the kit acts as a Bluetooth LE HID device and supports firmware updates.
+      All build types listed in :ref:`gesture_recognition_build_types` are provided for this kit.
+
+      The kit requires the Sensor Evaluation Board (PCA63568), connected through the **Expansion Board Header** on the nRF7120 DK.
+      The BMI270 sensor is accessed over SPI22 on the following pins:
+
+      .. list-table::
+         :header-rows: 1
+
+         * - Signal
+           - nRF7120 DK pin
+         * - SPI Clock
+           - ``P3.4``
+         * - SPI MOSI
+           - ``P3.9``
+         * - SPI MISO
+           - ``P3.10``
+         * - Chip select
+           - ``P3.1``
+
 Sensor BMI270
 =============
 
@@ -131,6 +154,12 @@ The following table explains the LED indications for control modes and Bluetooth
 
        .. figure:: images/device-led-ble-connect-music-mode_nrf54lm20.gif
           :alt: nRF54LM20 DK LED1, music mode
+
+   * - nRF7120 DK
+     - Press the **BUTTON 0** to switch between Presentation Control and Music Control modes.
+     - * **LED0** glows.
+     - * **LED2** glows.
+     - * **LED1** glows.
 
    * - nRF54L15 TAG
      - Press the **BTN1** to switch between Presentation Control and Music Control modes.
@@ -188,6 +217,8 @@ In Bluetooth HID mode, the pairing behavior is controlled by the ``CONFIG_BLE_MI
 
 This option is relevant only when the ``CONFIG_BLE_MODE_HID`` option is enabled.
 By default, it is enabled in :file:`prj.conf` and disabled in :file:`prj_release.conf`.
+
+.. _gesture_recognition_build_types:
 
 Build types
 ===========

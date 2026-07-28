@@ -59,16 +59,20 @@ tests:
     platform_allow:
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
   applications.gesture_recognition.nus.zdebug.uart:
     platform_allow:
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     extra_args:
       - CONFIG_DATA_COLLECTION_MODE=y
       - CONFIG_BLE_MODE_NUS=y
@@ -76,18 +80,22 @@ tests:
     platform_allow:
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     extra_args:
       - CONFIG_BLE_MODE_GATT_CUSTOM=y
   applications.gesture_recognition.none.zdebug.uart:
     platform_allow:
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     extra_args:
       - CONFIG_BLE_MODE_NONE=y
     harness: console
@@ -109,10 +117,12 @@ tests:
       - nrf54l15tag/nrf54l15/cpuapp
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54l15tag/nrf54l15/cpuapp
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     extra_args:
       - FILE_SUFFIX=release
   applications.gesture_recognition.nus.zrelease:
@@ -122,10 +132,12 @@ tests:
       - nrf54l15tag/nrf54l15/cpuapp
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54l15tag/nrf54l15/cpuapp
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     extra_args:
       - FILE_SUFFIX=release
       - CONFIG_DATA_COLLECTION_MODE=y
@@ -137,10 +149,12 @@ tests:
       - nrf54l15tag/nrf54l15/cpuapp
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54l15tag/nrf54l15/cpuapp
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     extra_args:
       - FILE_SUFFIX=release
       - CONFIG_BLE_MODE_GATT_CUSTOM=y
@@ -151,10 +165,12 @@ tests:
       - nrf54l15tag/nrf54l15/cpuapp
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54l15tag/nrf54l15/cpuapp
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
     extra_args:
       - FILE_SUFFIX=release_no_ble
   applications.gesture_recognition.none.power_consumption_test:
