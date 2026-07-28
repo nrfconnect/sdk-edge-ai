@@ -300,16 +300,21 @@ A low margin flags ambiguous predictions even when the dominant probability is h
 Class streak distribution
 -------------------------
 
-The class streak distribution builds a per-class histogram of *streak lengths*: how many consecutive inferences the dominant class (argmax of the probability vector) stays the same.
-The result is a ``num_classes × bin_num`` matrix of ``uint32_t`` counters, where row *i* is the class and each column is a streak-length bin.
+The class streak distribution builds a per-class histogram of *streak lengths*.
+A streak length is the number of consecutive inferences for which the dominant class - the argmax of the probability vector - stays the same.
+The result is a ``num_classes × bin_num`` matrix of ``uint32_t`` counters, where row *i* corresponds to class *i* and each column is a streak-length bin.
 
 A streak is recorded only when it ends.
-Up to ``CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOLERANCE`` consecutive mismatching inferences are bridged without ending the streak (flicker tolerance) and are not counted into its length; a longer run of mismatches ends it.
+Up to ``CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOLERANCE`` consecutive mismatching inferences are bridged without ending the streak (flicker tolerance).
+These bridged inferences are not counted toward the streak's length.
+A longer run of mismatches ends the streak.
 Streak lengths are binned uniformly over ``[1, TOP]``, with lengths of ``CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOP`` or longer saturating the top bin.
-A tolerance of ``0`` reduces the metric to strict "N in a row" runs.
+Setting the tolerance to ``0`` reduces the metric to strict "N in a row" runs.
 
-Because each streak contributes a single count only when it completes, the rows do **not** sum to the inference count; they total the number of finished streaks per class.
-This metric separates stable, sustained detections (streaks reaching the mid or top bins) from single-frame flicker (streaks pinned in the lowest bin), which the per-inference probability metrics cannot distinguish.
+Because each streak contributes a single count only when it completes, the rows do not sum to the inference count.
+Instead, each row totals the number of finished streaks per class.
+This metric separates stable, sustained detections (streaks reaching the mid or top bins) from single-frame flicker (streaks pinned in the lowest bin).
+The per-inference probability metrics cannot make this distinction.
 
 Input-feature metrics
 ----------------------

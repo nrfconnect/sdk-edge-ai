@@ -142,7 +142,7 @@ config NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOP
 	default 20
 	range 2 255
 	help
-	  Streak lengths >= this value fall into the last bin; bins span [1, TOP]
+	  Streak lengths >= this value falls into the last bin; bins span [1, TOP]
 	  uniformly, so a length of 1 lands in bin 0 and TOP (or longer) in the top
 	  bin. Set it around the longest streak worth resolving.
 
