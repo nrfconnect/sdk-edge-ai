@@ -54,6 +54,8 @@ Replacing models
 
 You can replace the bundled models using the `Text to Wake Word Detection <Nordic Edge AI Lab Wake Word Detection_>`_ feature of the `Nordic Edge AI Lab`_ or one of `ready-to-use models <Nordic Edge AI Lab ready-to-use models_>`_.
 
+With ``CONFIG_APP_MODEL_OTA`` enabled (via :file:`sysbuild_model_ota.conf` - see "Model-only OTA update" below), replacing a model at runtime can be a matter of flashing a new model image to the relevant partition; the steps below (replacing the generated header and rebuilding) are only needed to change which model the application *builds partition images from* in the first place, or to restore compiled-in models (build without :file:`sysbuild_model_ota.conf`).
+
 .. tabs::
 
    .. group-tab:: Wakeword detection model
@@ -74,6 +76,128 @@ You can replace the bundled models using the `Text to Wake Word Detection <Nordi
       #. Update the ``keyword_detection_ctxs`` array in the :file:`src/kws/kws.c` file with keyword labels from :file:`src/kws/nrf_edgeai_generated/nrf_edgeai_user_model_labels.h` file and thresholds for keyword spotting.
       #. When using the observability feature, set the ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` Kconfig option to number of keywords spotted plus 2 for auxiliary classes.
       #. Adjust the Kconfig options to tune keyword spotting postprocessing to selected model.
+
+.. _app_ww_kws_model_ota:
+
+Model-only OTA update
+======================
+
+On nRF54LM20 DK, this application uses MCUboot with three updateable images:
+
+* **Image 0 (firmware):** dual-slot swap-using-move over ``slot0_partition`` / ``slot1_partition``.
+* **Image 1 (wakeword model):** single-slot layout in ``model_storage_ww`` (``slot2_partition`` / ``slot3_partition`` alias the same region).
+* **Image 2 (keyword-spotting model):** single-slot layout in ``model_storage_kws`` (``slot4_partition`` / ``slot5_partition`` alias the same region).
+
+The devicetree fragments live under :file:`dts/` (included from the application overlay and :file:`sysbuild/mcuboot/boards/`).
+
+At **build time**, ``model_ota_axon_edgeai_wire()`` (see :file:`lib/model_ota/cmake/model_ota_axon_edgeai.cmake`) builds the partition images and generates wired loaders such as ``nrf_edgeai_load_user_model_36711()`` / ``nrf_edgeai_load_user_model_36712()``.
+At **boot**, :c:func:`ww_init` and :c:func:`kws_init` call those loaders, which map each model from flash via :c:func:`model_image_load_axon()` and validate the partition contents via :c:func:`model_image_read_and_validate()`.
+With the default single-slot model layout, inference is paused during SMP uploads to the corresponding model image and a **reset** is required before running against a newly uploaded model.
+
+Making model OTA optional
+--------------------------
+
+:file:`prj.conf` always enables MCUboot and UART SMP DFU (firmware updates).
+Partition-resident models are optional via ``SB_CONFIG_APP_MODEL_OTA`` (set in :file:`sysbuild_model_ota.conf`).
+
+``SB_CONFIG_APP_MODEL_OTA`` propagates to ``CONFIG_APP_MODEL_OTA`` on the ww_kws image.
+  Models are loaded from ``model_storage_ww`` / ``model_storage_kws`` at boot instead of being compiled into the app.
+  Also builds MCUboot-signed model images and enables SMP model upload (with inference paused during upload).
+  Applies the model devicetree overlay and :file:`model_ota.conf` from :file:`sysbuild.cmake`.
+
+Build combinations:
+
+* **Compiled-in models, firmware SMP DFU** (default ~968 KiB app slot; sysbuild from :file:`sysbuild.conf`):
+
+  .. code-block:: console
+
+     west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp applications/ww_kws
+
+* **Partition-resident models + model SMP DFU:**
+
+  .. code-block:: console
+
+     west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
+       -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf
+
+Packaging and first-time provisioning
+--------------------------------------
+
+Model partition images are built when ``SB_CONFIG_APP_MODEL_OTA`` is enabled.
+Pass :file:`sysbuild_model_ota.conf` as ``SB_EXTRA_CONF_FILE`` (:file:`model_ota.conf` is applied
+to the ww_kws image automatically):
+
+.. code-block:: console
+
+   west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
+     -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf
+
+This produces:
+
+* ``build/ww_kws/ww_model_mcuboot.signed.{bin,hex}`` - wakeword model (MCUboot image 1)
+* ``build/ww_kws/kws_model_mcuboot.signed.{bin,hex}`` - keyword-spotting model (MCUboot image 2)
+* ``build/ww_kws/zephyr/zephyr.signed.{bin,hex}`` - application firmware (MCUboot image 0)
+* ``build/ww_kws_provision.hex`` - merged bootloader, application, and both signed models
+
+First-time provisioning must flash the **full sysbuild image chain**, not the application ``zephyr.hex`` alone.
+
+.. code-block:: console
+
+   west flash -d build --recover --no-rebuild
+
+Or with ``nrfutil`` using the build-generated merged image:
+
+.. code-block:: console
+
+   nrfutil device program --firmware build/ww_kws_provision.hex --core Application \
+     --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
+
+Flash only the MCUboot-signed model images (``ww_model_mcuboot.signed.hex`` and ``kws_model_mcuboot.signed.hex``): each ``model_storage_*`` partition must contain a valid MCUboot header at boot.
+
+MCUboot and DFU
+----------------
+
+Both assets follow the normal MCUboot + MCUmgr path: upload a signed image, then test/reset so MCUboot applies the update.
+
++----------------------+--------------+-----------------------------------+
+| Asset                | Image index  | After reboot                      |
++======================+==============+===================================+
+| Firmware             | 0            | MCUboot swaps image 0             |
++----------------------+--------------+-----------------------------------+
+| Wakeword model       | 1            | In-place overwrite of             |
+|                      |              | ``model_storage_ww``              |
++----------------------+--------------+-----------------------------------+
+| Keyword-spotting     | 2            | In-place overwrite of             |
+| model                |              | ``model_storage_kws``             |
++----------------------+--------------+-----------------------------------+
+
+Model OTA over SMP (UART)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+SMP uses the application UART (``uart20`` on nRF54LM20 DK). Close any serial monitor on that port, then:
+
+.. code-block:: console
+
+   mcumgr -c acm1 image upload -e -n 1 build/ww_kws/ww_model_mcuboot.signed.bin
+   mcumgr -c acm1 image test <ww_model_hash>
+   mcumgr -c acm1 reset
+
+   mcumgr -c acm1 image upload -e -n 2 build/ww_kws/kws_model_mcuboot.signed.bin
+   mcumgr -c acm1 image test <kws_model_hash>
+   mcumgr -c acm1 reset
+
+Inference is paused while the corresponding model image is uploaded because SMP writes to the same flash region the model executes from.
+After upload completes, reset the device before validating the new model.
+
+Firmware-only OTA uses image index 0 and ``build/ww_kws/zephyr/zephyr.signed.bin``:
+
+.. code-block:: console
+
+   mcumgr -c acm1 image upload -e build/ww_kws/zephyr/zephyr.signed.bin
+   mcumgr -c acm1 image test <firmware_hash>
+   mcumgr -c acm1 reset
+
+Each image can be updated independently.
 
 Requirements
 ************

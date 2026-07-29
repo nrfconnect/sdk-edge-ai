@@ -75,7 +75,7 @@ const static struct {
 
 extern const int8_t axonpro_int8_packing_filter[4];
 
-int32_t axon_model_axon_user_instance_36712_persistent_vars[6648];
+NRF_AXON_MODEL_APP_STORAGE int32_t axon_model_axon_user_instance_36712_persistent_vars[6648];
 
 extern nrf_axon_result_e nrf_axon_nn_op_extension_softmax(void* , uint16_t , void* );
 

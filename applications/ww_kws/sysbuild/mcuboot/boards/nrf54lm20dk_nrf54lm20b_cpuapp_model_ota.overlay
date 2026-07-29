@@ -1,0 +1,16 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * Three-image MCUboot layout (FW + WW/KWS model partitions). Applied from sysbuild.cmake
+ * when SB_CONFIG_APP_MODEL_OTA is enabled.
+ */
+
+#include "../../../dts/nrf54lm20dk_mcuboot_model_ota.dtsi"
+
+/ {
+	chosen {
+		zephyr,code-partition = &boot_partition;
+	};
+};

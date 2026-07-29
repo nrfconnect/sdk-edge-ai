@@ -1,0 +1,56 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * Flash partition map for ww_kws model OTA on nRF54LM20 DK.
+ * Single-slot model layout: one physical region per model, aliased as consecutive MCUboot
+ * slot pairs (image 1 = WW, image 2 = KWS). Image 0 keeps dual-slot swap.
+ */
+
+/delete-node/ &boot_partition;
+/delete-node/ &slot0_partition;
+/delete-node/ &slot1_partition;
+/delete-node/ &storage_partition;
+
+&cpuapp_rram {
+	partitions {
+		boot_partition: partition@0 {
+			compatible = "zephyr,mapped-partition";
+			label = "mcuboot";
+			reg = <0x0 DT_SIZE_K(68)>;
+		};
+
+		/* Image 0: firmware - equal sizes required for swap-using-move */
+		slot0_partition: partition@11000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-0";
+			reg = <0x11000 DT_SIZE_K(460)>;
+		};
+		slot1_partition: partition@84000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-1";
+			reg = <0x84000 DT_SIZE_K(460)>;
+		};
+
+		/* Image 1: wakeword model - slot2/slot3 alias the same region */
+		slot2_partition: slot3_partition: model_storage_ww: partition@f7000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_storage_ww";
+			reg = <0xf7000 DT_SIZE_K(64)>;
+		};
+
+		/* Image 2: keyword-spotting model - slot4/slot5 alias the same region */
+		slot4_partition: slot5_partition: model_storage_kws: partition@107000 {
+			compatible = "zephyr,mapped-partition";
+			label = "model_storage_kws";
+			reg = <0x107000 DT_SIZE_K(512)>;
+		};
+
+		storage_partition: partition@187000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x187000 DT_SIZE_K(64)>;
+		};
+	};
+};

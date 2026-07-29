@@ -16,8 +16,17 @@
 
 #include "../dmic.h"
 #include "../model_utils.h"
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+#include "../model_update.h"
+#endif
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "wakeword.h"
+
+#if defined(CONFIG_APP_MODEL_OTA)
+#include <model_ota/model_ota_edgeai.h>
+
+MODEL_OTA_EDGEAI_LOAD_DECL(36711);
+#endif
 
 LOG_MODULE_REGISTER(ww);
 
@@ -68,8 +77,23 @@ static int ww_obsv_init(nrf_edgeai_t *model)
 
 int ww_init(void)
 {
+#if defined(CONFIG_APP_MODEL_OTA)
+	enum model_image_result load_rc;
+
+	load_rc = nrf_edgeai_load_user_model_36711(&ww_model);
+	if (load_rc != MODEL_IMAGE_OK || ww_model == NULL) {
+		LOG_ERR("No usable WW model - see model_storage_ww flashing instructions in README.rst");
+		return -ENOENT;
+	}
+#else
 	ww_model = nrf_edgeai_user_model_36711();
-	__ASSERT_NO_MSG(ww_model);
+
+	__ASSERT_NO_MSG(ww_model != NULL);
+#endif
+	if (ww_model == NULL) {
+		LOG_ERR("No usable WW model - see model_storage_ww flashing instructions in README.rst");
+		return -ENOENT;
+	}
 	__ASSERT_NO_MSG(ww_model->input.window_size == DMIC_SAMPLES_IN_BLOCK);
 
 	nrf_edgeai_err_t err = nrf_edgeai_init(ww_model);
@@ -129,6 +153,8 @@ int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *co
 	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
 		/* Skip inference, not enough data. */
 		return -EBUSY;
+	} else if (err == NRF_EDGEAI_ERR_UNAVAILABLE) {
+		return -EBUSY;
 	} else if (err) {
 		LOG_ERR("Failed to feed inputs (err %d)", err);
 		return -EPERM;
@@ -137,6 +163,8 @@ int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *co
 	err = nrf_edgeai_run_inference(ww_model);
 	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
 		/* Skip output extraction, not enough data. */
+		return -EBUSY;
+	} else if (err == NRF_EDGEAI_ERR_UNAVAILABLE) {
 		return -EBUSY;
 	} else if (err) {
 		LOG_ERR("Failed to run inference (err %d)", err);

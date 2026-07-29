@@ -13,6 +13,7 @@ LOG_MODULE_REGISTER(leds);
 
 static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 static const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
+static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios);
 
 static void led_timer_expiry(struct k_timer *timer);
 static K_TIMER_DEFINE(led_timer, led_timer_expiry, NULL);
@@ -50,6 +51,11 @@ int leds_init(void)
 		return err;
 	}
 
+	err = led_init(&led2);
+	if (err) {
+		return err;
+	}
+
 	return 0;
 }
 
@@ -82,4 +88,24 @@ void leds_on_led0(void)
 void leds_off_led0(void)
 {
 	gpio_pin_set_dt(&led0, 0);
+}
+
+void leds_on_led1(void)
+{
+	gpio_pin_set_dt(&led1, 1);
+}
+
+void leds_off_led1(void)
+{
+	gpio_pin_set_dt(&led1, 0);
+}
+
+void leds_on_led2(void)
+{
+	gpio_pin_set_dt(&led2, 1);
+}
+
+void leds_off_led2(void)
+{
+	gpio_pin_set_dt(&led2, 0);
 }

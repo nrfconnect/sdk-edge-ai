@@ -16,9 +16,18 @@
 
 #include "../dmic.h"
 #include "../model_utils.h"
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+#include "../model_update.h"
+#endif
 #include "kws.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model_labels.h"
+
+#if defined(CONFIG_APP_MODEL_OTA)
+#include <model_ota/model_ota_edgeai.h>
+
+MODEL_OTA_EDGEAI_LOAD_DECL(36712);
+#endif
 
 LOG_MODULE_REGISTER(kws);
 
@@ -104,8 +113,23 @@ static int kws_obsv_init(nrf_edgeai_t *model)
 
 int kws_init(void)
 {
+#if defined(CONFIG_APP_MODEL_OTA)
+	enum model_image_result load_rc;
+
+	load_rc = nrf_edgeai_load_user_model_36712(&kws_model);
+	if (load_rc != MODEL_IMAGE_OK || kws_model == NULL) {
+		LOG_ERR("No usable KWS model - see model_storage_kws flashing instructions in README.rst");
+		return -ENOENT;
+	}
+#else
 	kws_model = nrf_edgeai_user_model_36712();
-	__ASSERT_NO_MSG(kws_model);
+
+	__ASSERT_NO_MSG(kws_model != NULL);
+#endif
+	if (kws_model == NULL) {
+		LOG_ERR("No usable KWS model - see model_storage_kws flashing instructions in README.rst");
+		return -ENOENT;
+	}
 	__ASSERT_NO_MSG(nrf_edgeai_model_outputs_num(kws_model) == KEYWORDS_COUNT);
 	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(kws_model) == DMIC_SAMPLES_IN_BLOCK);
 
@@ -191,6 +215,8 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
 		/* Skip inference, not enough data. */
 		return -EBUSY;
+	} else if (err == NRF_EDGEAI_ERR_UNAVAILABLE) {
+		return -EBUSY;
 	} else if (err) {
 		LOG_ERR("Failed to feed inputs (err %d)", err);
 		return -EPERM;
@@ -199,6 +225,8 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 	err = nrf_edgeai_run_inference(kws_model);
 	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
 		/* Skip output extraction, not enough data. */
+		return -EBUSY;
+	} else if (err == NRF_EDGEAI_ERR_UNAVAILABLE) {
 		return -EBUSY;
 	} else if (err) {
 		LOG_ERR("Failed to run inference (err %d)", err);

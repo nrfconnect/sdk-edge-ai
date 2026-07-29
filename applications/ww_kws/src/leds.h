@@ -44,6 +44,26 @@ void leds_on_led0(void);
  */
 void leds_off_led0(void);
 
+/**
+ * @brief Turn on LED1.
+ */
+void leds_on_led1(void);
+
+/**
+ * @brief Turn off LED1.
+ */
+void leds_off_led1(void);
+
+/**
+ * @brief Turn on LED2.
+ */
+void leds_on_led2(void);
+
+/**
+ * @brief Turn off LED2.
+ */
+void leds_off_led2(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
