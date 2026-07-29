@@ -127,6 +127,7 @@ static const nrf_user_output_t MODEL_OUTPUT_SCALE_MIN[] = {0.2000000};
 
 static const nrf_user_output_t MODEL_OUTPUT_SCALE_MAX[] = {63.7000008};
 
+#ifndef NN_DECODED_OUTPUT_INIT
 #define NN_DECODED_OUTPUT_INIT                                                                     \
 	.regression = {                                                                            \
 		.meta =                                                                            \
@@ -135,11 +136,19 @@ static const nrf_user_output_t MODEL_OUTPUT_SCALE_MAX[] = {63.7000008};
 				.p_scale_max = MODEL_OUTPUT_SCALE_MAX,                             \
 			},                                                                         \
 	}
+#endif
+
+#ifndef MODEL_OTA_NEUTON_NEURONS_CAP
+#define MODEL_OTA_NEUTON_NEURONS_CAP MODEL_NEURONS_NUM
+#endif
 
 /** Model neurons activations buffer */
-static nrf_user_neuron_t model_neurons_[MODEL_NEURONS_NUM];
+static nrf_user_neuron_t model_neurons_[MODEL_OTA_NEUTON_NEURONS_CAP];
 
 /** Neuton model instance */
+#ifdef MODEL_OTA_NEUTON_RUNTIME_WIRED
+static nrf_edgeai_model_neuton_t model_instance_;
+#else
 static const nrf_edgeai_model_neuton_t model_instance_ = {
 	///
 	.meta.p_neuron_internal_links_num = MODEL_NEURON_INTERNAL_LINKS_NUM,
@@ -158,6 +167,7 @@ static const nrf_edgeai_model_neuton_t model_instance_ = {
 			.p_neurons = model_neurons_,
 		},
 };
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 #define NN_INPUT_INIT_INTERFACE	       nrf_edgeai_input_init_no_window

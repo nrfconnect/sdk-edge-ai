@@ -50,7 +50,7 @@ const static struct
 
 extern const int8_t axonpro_int8_packing_filter[4];
 
-int32_t axon_model_okay_nordic_persistent_vars[1160];
+NRF_AXON_MODEL_APP_STORAGE int32_t axon_model_okay_nordic_persistent_vars[1160];
 
 extern nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(void*, uint16_t, void*);
 
@@ -2548,7 +2548,7 @@ const nrf_axon_nn_model_persistent_var_s axon_model_okay_nordic_persistent_var_l
 #define NRF_AXON_MODEL_OKAY_NORDIC_PACKED_OUTPUT_SIZE 4
 
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-uint32_t axon_model_okay_nordic_packed_output_buf[NRF_AXON_MODEL_OKAY_NORDIC_PACKED_OUTPUT_SIZE /
+NRF_AXON_MODEL_APP_STORAGE uint32_t axon_model_okay_nordic_packed_output_buf[NRF_AXON_MODEL_OKAY_NORDIC_PACKED_OUTPUT_SIZE /
                                                   sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_axon_user_instance_wakeword = {

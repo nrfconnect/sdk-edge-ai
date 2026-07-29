@@ -74,8 +74,18 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 #if MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON
 #include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
+#ifdef MODEL_OTA_AXON_RUNTIME_WIRED
+/*
+ * model_ota: OTA-wired build (see lib/model_ota/src/model_ota_axon_edgeai_wired.c.in). The
+ * compiled Axon model (weights, cmd buffer, ...) lives in a separate flash partition image
+ * instead of this translation unit; model.instance.p_void is patched at runtime once the image
+ * is loaded (model_image_load_axon()), so the huge generated header is not included here.
+ */
+#define P_MODEL_INSTANCE NULL
+#else
 #include "nrf_edgeai_user_model_axon.h"
 #define P_MODEL_INSTANCE &model_axon_user_instance_36711
+#endif
 #else  // MODEL_TYPE == __NRF_EDGEAI_MODEL_NEUTON
 #define P_MODEL_INSTANCE &model_neuton_user_instance_
 #endif
@@ -276,6 +286,11 @@ uint32_t nrf_edgeai_user_model_size_36711(void)
 #endif
 
 #elif MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON
+#ifdef MODEL_OTA_AXON_RUNTIME_WIRED
+    /* model_ota: the compiled model lives in a flash partition image loaded at runtime; its
+     * size is not known at compile time (see model_ota_axon_edgeai_wired.c.in). */
+    model_size = 0;
+#else
     const nrf_axon_nn_compiled_model_s* p_axon_model = P_MODEL_INSTANCE;
 
     model_size += sizeof(*p_axon_model);
@@ -287,6 +302,7 @@ uint32_t nrf_edgeai_user_model_size_36711(void)
         model_size +=
             sizeof(nrf_axon_nn_model_persistent_var_s) * p_axon_model->persistent_vars.count;
     }
+#endif
 
 #endif
 

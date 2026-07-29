@@ -45,7 +45,14 @@ const static struct {
 
 extern const int8_t axonpro_int8_packing_filter[4];
 
-int32_t axon_model_axon_user_instance_36711_persistent_vars[1160];
+/*
+ * model_ota: app-owned RAM storage (persistent vars are runtime feedback state and must never
+ * live in flash). NRF_AXON_MODEL_APP_STORAGE expands to "extern" when this header is compiled
+ * as part of an OTA-wired model (see lib/model_ota/src/model_ota_axon_app_stub.c and
+ * model_ota_axon_image_stub.c); it is empty otherwise (see nrf_axon_driver.h), matching the
+ * plain, non-OTA build of this generated model.
+ */
+NRF_AXON_MODEL_APP_STORAGE int32_t axon_model_axon_user_instance_36711_persistent_vars[1160];
 
 extern nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_v2(void* , uint16_t , void* );
 
@@ -840,7 +847,7 @@ const nrf_axon_nn_model_persistent_var_s axon_model_axon_user_instance_36711_per
 #define NRF_AXON_MODEL_AXON_USER_INSTANCE_36711_PACKED_OUTPUT_SIZE 4
 
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-  uint32_t axon_model_axon_user_instance_36711_packed_output_buf[NRF_AXON_MODEL_AXON_USER_INSTANCE_36711_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
+NRF_AXON_MODEL_APP_STORAGE uint32_t axon_model_axon_user_instance_36711_packed_output_buf[NRF_AXON_MODEL_AXON_USER_INSTANCE_36711_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_axon_user_instance_36711 = {
     .compiler_version = 0x00010300,
