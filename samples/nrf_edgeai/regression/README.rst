@@ -55,6 +55,80 @@ See board-specific configuration and overlays in the :file:`samples/nrf_edgeai/r
 When using the Axon backend, the generated model saves its buffer requirements in the :file:`prj_example.conf` file as the ``CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE`` and ``CONFIG_NRF_AXON_PSUM_BUFFER_SIZE`` Kconfig options.
 You must manually include these values in your :file:`prj.conf` file before building.
 
+Build types
+===========
+
+The sample supports the following build types:
+
+.. list-table:: Regression sample build types
+   :widths: auto
+   :header-rows: 1
+
+   * - Build type
+     - File name
+     - Description
+   * - Default
+     - :file:`prj.conf`
+     - Compiled-in model.
+   * - Model OTA
+     - :file:`model_ota.conf`
+     - Partition-resident model with MCUboot and model SMP DFU on nRF54LM20 DK (Neuton on lm20a, Axon on lm20b).
+
+See `Custom build types`_ and `Providing CMake options`_ for more information.
+
+.. _runtime_regression_sample_model_ota:
+
+Model-only OTA update
+=====================
+
+On nRF54LM20 DK, this sample can use MCUboot with two updateable images:
+
+* **Image 0 (firmware):** dual-slot swap-using-move over ``slot0_partition`` / ``slot1_partition``.
+* **Image 1 (regression model):** single-slot layout in ``model_storage`` (``slot2_partition`` / ``slot3_partition`` alias the same region).
+
+The devicetree fragments live under :file:`dts/` (included from the application overlay and :file:`sysbuild/mcuboot/boards/`).
+
+At **build time**, the sample builds a partition-resident model image and a wired loader:
+
+* Neuton (``nrf54lm20a``): ``model_ota_neuton_wire()`` / ``nrf_edgeai_load_user_model_90508()``
+* Axon (``nrf54lm20b``): ``model_ota_axon_edgeai_wire()`` / ``nrf_edgeai_load_user_model_36025()``
+
+At **boot**, the sample calls the matching loader, validates the partition image, and runs inference.
+Inference is paused during SMP uploads to the model image and a **reset** is required before running against a newly uploaded model.
+
+:file:`prj.conf` enables the compiled-in model.
+Partition-resident models and MCUboot/SMP DFU are optional via ``CONFIG_APP_MODEL_OTA`` (set in :file:`model_ota.conf`).
+
+Build combinations:
+
+* **Compiled-in model** (default):
+
+  .. code-block:: console
+
+     west build -p -b nrf54lm20dk/nrf54lm20a/cpuapp samples/nrf_edgeai/regression
+     west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp samples/nrf_edgeai/regression
+
+* **Partition-resident model + model SMP DFU:**
+
+  .. code-block:: console
+
+     west build -p -b nrf54lm20dk/nrf54lm20a/cpuapp -d build samples/nrf_edgeai/regression \
+       -- -DEXTRA_CONF_FILE=model_ota.conf
+     west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build samples/nrf_edgeai/regression \
+       -- -DEXTRA_CONF_FILE=model_ota.conf
+
+This produces:
+
+* ``build/regression/regression_model_mcuboot.signed.{bin,hex}`` - regression model (MCUboot image 1)
+* ``build/regression/zephyr/zephyr.signed.{bin,hex}`` - application firmware (MCUboot image 0)
+* ``build/regression_provision.hex`` - merged bootloader, application, and signed model
+
+First-time provisioning must flash the **full sysbuild image chain**, not the application ``zephyr.hex`` alone:
+
+.. code-block:: console
+
+   west flash -d build --recover --no-rebuild
+
 Configuration options
 =====================
 

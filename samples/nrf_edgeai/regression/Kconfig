@@ -28,6 +28,32 @@ config NRF_EDGEAI_REGRESSION_MODEL_AXON
 
 endchoice
 
+config APP_MODEL_OTA
+	bool "Load regression model from a separate flash partition (model-only OTA)"
+	select FLASH
+	select FLASH_MAP
+	select CRC
+	select MODEL_OTA
+	select MODEL_OTA_SMP
+	help
+	  When enabled, this sample does not ship a compiled-in regression model.
+	  At boot, the model is loaded and validated from the model_storage flash
+	  partition instead - independently of the application image.
+
+if APP_MODEL_OTA
+
+config APP_MODEL_OTA_NEUTON
+	def_bool y
+	depends on NRF_EDGEAI_REGRESSION_MODEL_NEUTON
+	select MODEL_OTA_NEUTON
+
+config APP_MODEL_OTA_AXON
+	def_bool y
+	depends on NRF_EDGEAI_REGRESSION_MODEL_AXON
+	select MODEL_OTA_AXON
+
+endif # APP_MODEL_OTA
+
 endmenu
 
 source "Kconfig.zephyr"
