@@ -64,6 +64,20 @@ config KWS_EMA_ALPHA
 	  Coefficient for new entries in exponential moving average calculation for average class
 	  probability. The value is expressed in units of 1/1000.
 
+config APP_MODEL_OTA
+	bool "Load wakeword/keyword-spotting models from separate flash partitions (model-only OTA)"
+	select FLASH
+	select FLASH_MAP
+	select CRC
+	select MODEL_OTA
+	select MODEL_OTA_AXON
+	select MODEL_OTA_SMP
+	help
+	  When enabled, this application does not ship compiled-in wakeword and
+	  keyword-spotting models. At boot, each is loaded and validated from its own dedicated
+	  flash partition instead - model_storage_ww and model_storage_kws respectively,
+	  independently of the application image.
+
 config MODELS_OBSERVABILITY
 	bool "Edge AI observability metrics"
 	depends on NRF_EDGEAI_OBSV

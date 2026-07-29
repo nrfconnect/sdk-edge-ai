@@ -1,0 +1,11 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ *
+ * nRF54LM20 DK MCUboot layout for ww_kws model OTA (three images, single-slot model profile).
+ * Included from the model OTA application and sysbuild/mcuboot board overlays.
+ */
+
+#include "nrf54lm20dk_mcuboot_model_ota_partitions.dtsi"
+#include "nrf54lm20dk_mcuboot_model_ota_bootchain.dtsi"

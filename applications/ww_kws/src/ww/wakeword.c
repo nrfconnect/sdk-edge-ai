@@ -16,8 +16,21 @@
 
 #include "../dmic.h"
 #include "../model_utils.h"
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+#include "../model_update.h"
+#endif
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "wakeword.h"
+
+#if defined(CONFIG_APP_MODEL_OTA)
+#include <model_ota/model_ota_axon_edgeai.h>
+#include <zephyr/storage/flash_map.h>
+
+MODEL_OTA_AXON_EDGEAI_LOAD_DECL(36711);
+
+BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_storage_ww),
+	     "board devicetree is missing the model_storage_ww node - see boards/*.overlay");
+#endif
 
 LOG_MODULE_REGISTER(ww);
 
@@ -68,8 +81,17 @@ static int ww_obsv_init(nrf_edgeai_t *model)
 
 int ww_init(void)
 {
+#if defined(CONFIG_APP_MODEL_OTA)
+	ww_model = nrf_edgeai_load_user_model_36711(PARTITION_ID(model_storage_ww),
+						    (const uint8_t *)PARTITION_ADDRESS(
+							    model_storage_ww));
+#else
 	ww_model = nrf_edgeai_user_model_36711();
-	__ASSERT_NO_MSG(ww_model);
+#endif
+	if (ww_model == NULL) {
+		LOG_ERR("No usable WW model - see model_storage_ww flashing instructions in README.rst");
+		return -ENOENT;
+	}
 	__ASSERT_NO_MSG(ww_model->input.window_size == DMIC_SAMPLES_IN_BLOCK);
 
 	nrf_edgeai_err_t err = nrf_edgeai_init(ww_model);
@@ -117,6 +139,13 @@ static bool ww_postprocess(void)
 
 int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *const ww_detected)
 {
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+	if (model_update_blocks_ww_inference()) {
+		free_dmic_buffer(audio_buffer);
+		return -EBUSY;
+	}
+#endif
+
 	__ASSERT_NO_MSG(audio_buffer);
 	__ASSERT_NO_MSG(num_samples == nrf_edgeai_input_window_size(ww_model));
 	__ASSERT_NO_MSG(ww_detected);

@@ -16,9 +16,22 @@
 
 #include "../dmic.h"
 #include "../model_utils.h"
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+#include "../model_update.h"
+#endif
 #include "kws.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model_labels.h"
+
+#if defined(CONFIG_APP_MODEL_OTA)
+#include <model_ota/model_ota_axon_edgeai.h>
+#include <zephyr/storage/flash_map.h>
+
+MODEL_OTA_AXON_EDGEAI_LOAD_DECL(36712);
+
+BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_storage_kws),
+	     "board devicetree is missing the model_storage_kws node - see boards/*.overlay");
+#endif
 
 LOG_MODULE_REGISTER(kws);
 
@@ -104,8 +117,17 @@ static int kws_obsv_init(nrf_edgeai_t *model)
 
 int kws_init(void)
 {
+#if defined(CONFIG_APP_MODEL_OTA)
+	kws_model = nrf_edgeai_load_user_model_36712(PARTITION_ID(model_storage_kws),
+						    (const uint8_t *)PARTITION_ADDRESS(
+							    model_storage_kws));
+#else
 	kws_model = nrf_edgeai_user_model_36712();
-	__ASSERT_NO_MSG(kws_model);
+#endif
+	if (kws_model == NULL) {
+		LOG_ERR("No usable KWS model - see model_storage_kws flashing instructions in README.rst");
+		return -ENOENT;
+	}
 	__ASSERT_NO_MSG(nrf_edgeai_model_outputs_num(kws_model) == KEYWORDS_COUNT);
 	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(kws_model) == DMIC_SAMPLES_IN_BLOCK);
 
@@ -179,6 +201,13 @@ static void kws_postprocess(struct kws_prediction *const prediction)
 int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 		struct kws_prediction *const prediction)
 {
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+	if (model_update_blocks_kws_inference()) {
+		free_dmic_buffer(audio_buffer);
+		return -EBUSY;
+	}
+#endif
+
 	__ASSERT_NO_MSG(audio_buffer);
 	__ASSERT_NO_MSG(num_samples == nrf_edgeai_input_window_size(kws_model));
 	__ASSERT_NO_MSG(prediction);
