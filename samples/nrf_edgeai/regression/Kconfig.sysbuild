@@ -7,4 +7,13 @@
 config PARTITION_MANAGER
 	default n
 
+config APP_MODEL_OTA
+	bool "Load regression model from a separate flash partition (model-only OTA)"
+	default n
+	depends on BOOTLOADER_MCUBOOT
+	help
+	  When enabled, the sample loads the regression model from model_storage at boot
+	  instead of using a compiled-in model. Propagated to the regression image as
+	  CONFIG_APP_MODEL_OTA.
+
 source "share/sysbuild/Kconfig"

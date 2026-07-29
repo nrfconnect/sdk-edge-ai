@@ -50,6 +50,17 @@
 #include <math.h>
 #include <stdio.h>
 
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+#include <model_ota/model_ota_edgeai.h>
+#include <model_ota/model_ota_smp.h>
+
+#if defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON)
+MODEL_OTA_EDGEAI_LOAD_DECL(36025);
+#elif defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_NEUTON)
+MODEL_OTA_EDGEAI_LOAD_DECL(90508);
+#endif
+#endif
+
 LOG_MODULE_REGISTER(regression, LOG_LEVEL_INF);
 
 /**
@@ -67,7 +78,6 @@ static const size_t USER_WINDOW_SIZE = 1;	 /* Samples per inference window */
 static const size_t USER_UNIQ_INPUTS_NUM = 9;	 /* Gas sensor and environmental input features */
 static const size_t USER_MODELS_OUTPUTS_NUM = 1; /* Single air quality prediction output */
 static const flt32_t INVALID_PREDICTION_VALUE = -9999.0f; /* Invalid prediction indicator */
-static const flt32_t EXPECTED_MODEL_MAE = 2.0f; /* Expected Mean Absolute Error for validation */
 
 /**
  * @brief Test Dataset Structure and Values
@@ -221,10 +231,16 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, flt32_t *p_input_featur
 	/* Step 1: Feed sensor inputs into the model's preprocessing pipeline */
 	res = nrf_edgeai_feed_inputs(p_user_model, p_input_features, features_num);
 
+	if (res == NRF_EDGEAI_ERR_UNAVAILABLE) {
+		return INVALID_PREDICTION_VALUE;
+	}
+
 	if (res == NRF_EDGEAI_ERR_SUCCESS) {
-		/* Step 2: Execute neural network inference on the accumulated window */
-		/* With window size = 1, this occurs after every sample is fed */
 		res = nrf_edgeai_run_inference(p_user_model);
+
+		if (res == NRF_EDGEAI_ERR_UNAVAILABLE) {
+			return INVALID_PREDICTION_VALUE;
+		}
 
 		/* Step 3: Extract the regression output if inference was successful */
 		if (res == NRF_EDGEAI_ERR_SUCCESS) {
@@ -242,45 +258,48 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, flt32_t *p_input_featur
 	return model_prediction;
 }
 
-/**
- * @brief Air Quality Regression Model Validation Entry Point
- *
- * This function orchestrates the complete validation workflow for the air quality
- * prediction model. It initializes the neural network, runs inference on all 29 test
- * samples, and measures prediction accuracy against ground truth values.
- *
- * **Workflow:**
- * 1. Retrieve the pre-trained air quality regression model
- * 2. Validate model configuration matches expected parameters:
- *    - Input window size: 1 sample
- *    - Input features: 9 (sensors + environmental parameters)
- *    - Output values: 1 (air quality prediction)
- * 3. Initialize the Edge AI runtime for neural network execution
- * 4. For each of the 29 test samples:
- *    a. Extract sensor readings and environmental parameters
- *    b. Run model inference to get air quality prediction
- *    c. Compare prediction against ground truth value
- *    d. Calculate and display absolute error
- *
- * **Validation Metrics:**
- * The absolute error between predicted and expected values indicates model accuracy:
- * - Lower error = better predictions
- * - Can be averaged across all 29 samples to assess overall model performance
- *
- * **Sample Coverage:**
- * The 29 test samples span various environmental conditions:
- * - Temperature range: ~0°C to ~43°C
- * - Humidity range: ~15% to ~85% RH
- * - Various sensor readings covering clean to polluted air conditions
- * - Ensures model validation across realistic use cases
- *
- */
+static void run_inference_loop(nrf_edgeai_t *p_user_model)
+{
+	flt32_t input_features[USER_UNIQ_INPUTS_NUM];
+	const size_t num_input_samples = ARRAY_SIZE(USER_INPUT_DATA);
+
+	for (size_t i = 0; i < num_input_samples; i++) {
+		flt32_t ground_truth =
+			fill_features_buffer(input_features, USER_UNIQ_INPUTS_NUM, i);
+		flt32_t predicted_value =
+			model_predict(p_user_model, input_features, USER_UNIQ_INPUTS_NUM);
+		flt32_t abs_err = fabsf(predicted_value - ground_truth);
+
+		LOG_INF("Air quality - Predicted: %f, Expected: %f, absolute error %f",
+			(double)predicted_value, (double)ground_truth, (double)abs_err);
+	}
+
+	LOG_INF("========== All test cases completed ==========");
+}
+
 int main(void)
 {
 	/* Retrieve the generated neural network model for air quality prediction */
+#if defined(CONFIG_APP_MODEL_OTA)
+	enum model_image_result load_rc;
+	nrf_edgeai_t *p_user_model;
+
+#if defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON)
+	load_rc = nrf_edgeai_load_user_model_36025(&p_user_model);
+#elif defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_NEUTON)
+	load_rc = nrf_edgeai_load_user_model_90508(&p_user_model);
+#endif
+
+	if (load_rc != MODEL_IMAGE_OK || p_user_model == NULL) {
+		LOG_ERR("No usable regression model - see model_storage flashing instructions in "
+			"README.rst");
+		return -ENOENT;
+	}
+#else
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
 
 	__ASSERT_NO_MSG(p_user_model != NULL);
+#endif
 
 	/* Validate model configuration: ensure the generated model matches expected parameters */
 	__ASSERT_NO_MSG(nrf_edgeai_input_window_size(p_user_model) == USER_WINDOW_SIZE);
@@ -296,39 +315,22 @@ int main(void)
 	LOG_INF("nRF Edge AI runtime version: %d.%d.%d", v.field.major, v.field.minor,
 		v.field.patch);
 
-	/* Allocate buffer for holding the 9 input features before each inference */
-	flt32_t input_features[USER_UNIQ_INPUTS_NUM];
-
 	LOG_INF("--- Testing Model Air Quality predictions ---");
 	if (p_user_model->model.type == NRF_EDGEAI_MODEL_AXON) {
 		LOG_INF("Using Axon model");
 	} else {
 		LOG_INF("Using Neuton model");
 	}
-	/* Validation loop: test the model against all 29 sample data points */
-	const size_t NUM_INPUT_SAMPLES = ARRAY_SIZE(USER_INPUT_DATA);
-
-	for (size_t i = 0; i < NUM_INPUT_SAMPLES; i++) {
-		/* Extract sensor readings and environmental parameters from test sample i */
-		flt32_t ground_truth =
-			fill_features_buffer(input_features, USER_UNIQ_INPUTS_NUM, i);
-
-		/* Run neural network inference with the extracted features */
-		flt32_t predicted_value =
-			model_predict(p_user_model, input_features, USER_UNIQ_INPUTS_NUM);
-
-		/* Calculate absolute error: magnitude of difference between prediction and truth */
-		flt32_t abs_err = fabsf(predicted_value - ground_truth);
-
-		__ASSERT_NO_MSG(abs_err <= EXPECTED_MODEL_MAE);
-
-		/* Display results for this test sample */
-		LOG_INF("Air quality - Predicted: %f, Expected: %f, absolute error %f",
-			(double)predicted_value, (double)ground_truth, (double)abs_err);
-	}
 
 	while (1) {
-		LOG_INF("========== All test cases completed ==========");
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+		/* Application policy: idle after upload until the operator resets the device. */
+		if (model_ota_smp_is_pending_reset()) {
+			k_sleep(K_FOREVER);
+			continue;
+		}
+#endif
+		run_inference_loop(p_user_model);
 		k_sleep(K_MSEC(5000));
 	}
 

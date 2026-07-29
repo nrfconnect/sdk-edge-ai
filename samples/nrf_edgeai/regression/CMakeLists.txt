@@ -6,23 +6,69 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-# Zephyr CMake project
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(nrf_edgeai_regression_sample)
 
-# Source files
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/model_ota.cmake)
+
+set(NEUTON_MODEL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/Neuton)
+set(AXON_MODEL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/Axon)
+set(NEUTON_MODEL_SRC ${NEUTON_MODEL_DIR}/nrf_edgeai_user_model.c)
+set(AXON_MODEL_SRC ${AXON_MODEL_DIR}/nrf_edgeai_user_model.c)
+set(AXON_MODEL_HEADER ${AXON_MODEL_DIR}/nrf_edgeai_user_model_axon.h)
+
 target_include_directories(app PRIVATE include)
 
 if(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON)
-  target_sources(app PRIVATE
-    src/nrf_edgeai_generated/Axon/nrf_edgeai_user_model.c)
+  if(NOT CONFIG_APP_MODEL_OTA)
+    target_sources(app PRIVATE ${AXON_MODEL_SRC})
+  endif()
   message(STATUS "Using Axon Edge AI model")
-  target_include_directories(app PRIVATE src/nrf_edgeai_generated/Axon)
+  target_include_directories(app PRIVATE ${AXON_MODEL_DIR})
 else()
-  target_sources(app PRIVATE
-    src/nrf_edgeai_generated/Neuton/nrf_edgeai_user_model.c)
+  if(NOT CONFIG_APP_MODEL_OTA)
+    target_sources(app PRIVATE ${NEUTON_MODEL_SRC})
+  endif()
   message(STATUS "Using Neuton Edge AI model")
-  target_include_directories(app PRIVATE src/nrf_edgeai_generated/Neuton)
+  target_include_directories(app PRIVATE ${NEUTON_MODEL_DIR})
 endif()
 
 target_sources(app PRIVATE src/main.c)
+
+if(CONFIG_APP_MODEL_OTA)
+  if(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON)
+    model_ota_edgeai_axon_model(
+      TARGET regression
+      SOLUTION_ID 36025
+      MODEL_SRC ${AXON_MODEL_SRC}
+      HEADER ${AXON_MODEL_HEADER}
+      NAME regression
+      VERSION 1.0.0
+      PARTITION_NODELABEL model_storage
+    )
+  else()
+    model_ota_edgeai_neuton_model(
+      TARGET regression
+      SOLUTION_ID 90508
+      MODEL_SRC ${NEUTON_MODEL_SRC}
+      PARTITION_NODELABEL model_storage
+      NEURONS_CAP 2
+      NAME regression
+      VERSION 1.0.0
+    )
+  endif()
+
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/model_ota_mcuboot_sign.cmake)
+
+  model_ota_mcuboot_sign(
+    TARGET regression
+    MODEL_IMAGE_BIN ${CMAKE_CURRENT_BINARY_DIR}/model_ota/regression/regression_model_image.bin
+    MODEL_IMAGE_TARGET regression_model_image
+    PARTITION_NODELABEL model_storage
+    UUID_CID nRF54LM20_regression_model
+    UUID_VID nordicsemi.com
+  )
+
+  model_ota_finalize()
+  target_link_libraries(app PRIVATE MCUBOOT_BOOTUTIL)
+endif()
