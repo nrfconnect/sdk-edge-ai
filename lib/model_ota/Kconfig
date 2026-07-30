@@ -48,4 +48,36 @@ config MODEL_OTA_LOG_LEVEL
 	help
 	  0 = off, 1 = err, 2 = wrn, 3 = inf, 4 = dbg.
 
+config MODEL_OTA_SMP
+	bool "Coordinate inference with MCUboot SMP model uploads"
+	depends on BOOTLOADER_MCUBOOT
+	depends on MCUMGR
+	depends on MCUMGR_MGMT_NOTIFICATION_HOOKS
+	depends on MCUMGR_GRP_IMG
+	depends on MCUMGR_GRP_IMG_UPLOAD_CHECK_HOOK
+	depends on MCUMGR_GRP_IMG_STATUS_HOOKS
+	help
+	  Register MCUMGR image-upload hooks that pause inference while a registered
+	  MCUboot updateable model image is uploaded over SMP. After upload completes,
+	  inference stays blocked until the device resets and reloads the new model.
+
+if MODEL_OTA_SMP
+
+config MODEL_OTA_SMP_MAX_SLOTS
+	int "Maximum number of MCUboot model image slots"
+	default 4
+	range 1 16
+	help
+	  Upper bound on entries passed to model_ota_smp_init().
+
+config MODEL_OTA_SMP_UPLOAD_LOCK_TIMEOUT_MS
+	int "Timeout to wait for inference before rejecting model SMP upload (ms)"
+	default 60000
+	range 1000 300000
+	help
+	  When a model image upload starts, the library waits this long for in-flight
+	  inference to finish before rejecting the upload with MGMT_ERR_EBUSY.
+
+endif # MODEL_OTA_SMP
+
 endif # MODEL_OTA
