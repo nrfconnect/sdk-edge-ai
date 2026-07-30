@@ -48,10 +48,6 @@ extern char __model_image_end[];
 #define MODEL_IMAGE_VERSION_U32 0x00010000u
 #endif
 
-#ifndef MODEL_OTA_NEUTON_NEURONS_CAP
-#define MODEL_OTA_NEUTON_NEURONS_CAP MODEL_NEURONS_NUM
-#endif
-
 #ifndef MODEL_OTA_NEUTON_CONTRACT_HASH
 #error "MODEL_OTA_NEUTON_CONTRACT_HASH must be set by model_ota_neuton_image()"
 #endif
