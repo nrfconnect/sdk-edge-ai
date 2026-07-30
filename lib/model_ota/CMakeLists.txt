@@ -9,3 +9,5 @@ zephyr_library()
 zephyr_library_sources(model_image_common.c)
 zephyr_library_sources_ifdef(CONFIG_MODEL_OTA_NEUTON model_image_neuton.c)
 zephyr_library_sources_ifdef(CONFIG_MODEL_OTA_AXON model_image_axon.c)
+
+zephyr_library_link_libraries_ifdef(CONFIG_MCUBOOT_BOOTUTIL_LIB MCUBOOT_BOOTUTIL)

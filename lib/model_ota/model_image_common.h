@@ -21,11 +21,16 @@
  *
  * @param[in]  fa_id           Flash area ID of the partition.
  * @param[in]  partition_addr  Memory-mapped base address of that partition.
- * @param[out] hdr_out         Validated header copy on success.
+ * @param[out] hdr_out            Validated header copy on success.
+ * @param[out] content_offset_out On success, byte offset from the partition base to the model
+ *                                image header (0 for a raw partition image, or
+ *                                @ref IMAGE_HEADER_SIZE when an MCUboot image
+ *                                header precedes the model image). May be NULL.
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
 int model_image_read_and_validate(uint8_t fa_id, const uint8_t *partition_addr,
-				  struct model_image_header *hdr_out);
+				  struct model_image_header *hdr_out,
+				  size_t *content_offset_out);
 
 /**
  * @brief True iff [p, p + nbytes) lies fully inside [base, end).

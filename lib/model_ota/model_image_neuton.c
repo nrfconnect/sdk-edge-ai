@@ -67,8 +67,10 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 			    const struct model_image_neuton_expect *expect)
 {
 	struct model_image_header hdr;
+	const uint8_t *image_base;
 	const uint8_t *image_end;
 	const uint8_t *model_bytes;
+	size_t content_offset;
 	const nrf_edgeai_model_neuton_t *img_model;
 	const nrf_edgeai_decoded_output_t *img_decoded;
 	nrf_edgeai_model_neuton_t *out_model =
@@ -79,10 +81,12 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	uint32_t weights_num;
 	int rc;
 
-	rc = model_image_read_and_validate(fa_id, partition_addr, &hdr);
+	rc = model_image_read_and_validate(fa_id, partition_addr, &hdr, &content_offset);
 	if (rc != MODEL_IMAGE_OK) {
 		return rc;
 	}
+
+	image_base = partition_addr + content_offset;
 
 	if (expect == NULL) {
 		LOG_ERR("Neuton expect contract is required");
@@ -120,9 +124,9 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	 * the partition base). Confirm it lies fully inside [base, base + image_size) before we
 	 * dereference it.
 	 */
-	image_end = partition_addr + hdr.image_size;
+	image_end = image_base + hdr.image_size;
 
-	if (!model_image_name_in_image(hdr.name, partition_addr, image_end)) {
+	if (!model_image_name_in_image(hdr.name, image_base, image_end)) {
 		LOG_ERR("Header name pointer %p outside image or not NUL-terminated",
 			(void *)hdr.name);
 		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
@@ -130,10 +134,10 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 
 	model_bytes = (const uint8_t *)hdr.neuton.model;
 
-	if (model_bytes < partition_addr ||
+	if (model_bytes < image_base ||
 	    model_bytes + sizeof(nrf_edgeai_model_neuton_t) > image_end) {
 		LOG_ERR("Header model pointer %p outside image [%p, %p)", (void *)hdr.neuton.model,
-			(const void *)partition_addr, (const void *)image_end);
+			(const void *)image_base, (const void *)image_end);
 		return MODEL_IMAGE_ERR_MODEL_PTR_OUT_OF_RANGE;
 	}
 
@@ -170,20 +174,20 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	const nrf_nn_neuton_model_meta_t *m = &img_model->meta;
 
 	if (!model_image_span_in_image(m->p_neuron_internal_links_num,
-				       (size_t)neurons_num * sizeof(uint16_t), partition_addr,
+				       (size_t)neurons_num * sizeof(uint16_t), image_base,
 				       image_end) ||
 	    !model_image_span_in_image(m->p_neuron_external_links_num,
-				       (size_t)neurons_num * sizeof(uint16_t), partition_addr,
+				       (size_t)neurons_num * sizeof(uint16_t), image_base,
 				       image_end) ||
 	    !model_image_span_in_image(m->p_output_neurons_indices,
-				       (size_t)outputs_num * sizeof(uint16_t), partition_addr,
+				       (size_t)outputs_num * sizeof(uint16_t), image_base,
 				       image_end) ||
-	    !model_image_span_in_image(m->p_neuron_links, 1, partition_addr, image_end) ||
-	    !model_image_span_in_image(m->p_neuron_act_type_mask, 1, partition_addr, image_end) ||
-	    !neuton_weight_spans_ok(img_model, hdr.params_type, weights_num, partition_addr,
+	    !model_image_span_in_image(m->p_neuron_links, 1, image_base, image_end) ||
+	    !model_image_span_in_image(m->p_neuron_act_type_mask, 1, image_base, image_end) ||
+	    !neuton_weight_spans_ok(img_model, hdr.params_type, weights_num, image_base,
 				    image_end)) {
 		LOG_ERR("Baked descriptor pointer outside image [%p, %p)",
-			(const void *)partition_addr, (const void *)image_end);
+			(const void *)image_base, (const void *)image_end);
 		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 	}
 
@@ -191,10 +195,10 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	 * meta pointers it references lie inside [base, image_end).
 	 */
 	if (!model_image_span_in_image(hdr.neuton.decoded_output,
-				       sizeof(nrf_edgeai_decoded_output_t), partition_addr,
+				       sizeof(nrf_edgeai_decoded_output_t), image_base,
 				       image_end)) {
 		LOG_ERR("Header decoded_output pointer %p outside image [%p, %p)",
-			(void *)hdr.neuton.decoded_output, (const void *)partition_addr,
+			(void *)hdr.neuton.decoded_output, (const void *)image_base,
 			(const void *)image_end);
 		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 	}
@@ -204,28 +208,28 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	switch (hdr.neuton.task) {
 	case NRF_EDGEAI_TASK_ANOMALY_DETECTION:
 		if (!model_image_span_in_image(img_decoded->anomaly.meta.p_scale_min,
-					       (size_t)outputs_num * sizeof(float), partition_addr,
+					       (size_t)outputs_num * sizeof(float), image_base,
 					       image_end) ||
 		    !model_image_span_in_image(img_decoded->anomaly.meta.p_scale_max,
-					       (size_t)outputs_num * sizeof(float), partition_addr,
+					       (size_t)outputs_num * sizeof(float), image_base,
 					       image_end) ||
 		    !model_image_span_in_image(img_decoded->anomaly.meta.p_average_embedding,
-					       (size_t)outputs_num * sizeof(float), partition_addr,
+					       (size_t)outputs_num * sizeof(float), image_base,
 					       image_end)) {
 			LOG_ERR("Baked anomaly decode meta pointer outside image [%p, %p)",
-				(const void *)partition_addr, (const void *)image_end);
+				(const void *)image_base, (const void *)image_end);
 			return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 		}
 		break;
 	case NRF_EDGEAI_TASK_REGRESSION:
 		if (!model_image_span_in_image(img_decoded->regression.meta.p_scale_min,
-					       (size_t)outputs_num * sizeof(float), partition_addr,
+					       (size_t)outputs_num * sizeof(float), image_base,
 					       image_end) ||
 		    !model_image_span_in_image(img_decoded->regression.meta.p_scale_max,
-					       (size_t)outputs_num * sizeof(float), partition_addr,
+					       (size_t)outputs_num * sizeof(float), image_base,
 					       image_end)) {
 			LOG_ERR("Baked regression decode meta pointer outside image [%p, %p)",
-				(const void *)partition_addr, (const void *)image_end);
+				(const void *)image_base, (const void *)image_end);
 			return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 		}
 		break;

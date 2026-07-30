@@ -80,9 +80,11 @@ int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 			  const nrf_axon_nn_compiled_model_s **out_model)
 {
 	struct model_image_header hdr;
+	const uint8_t *image_base;
 	const uint8_t *image_end;
 	const uint8_t *model_bytes;
 	const nrf_axon_nn_compiled_model_s *model;
+	size_t content_offset;
 	int rc;
 
 	if (out_model == NULL || expect == NULL) {
@@ -91,10 +93,12 @@ int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 
 	*out_model = NULL;
 
-	rc = model_image_read_and_validate(fa_id, partition_addr, &hdr);
+	rc = model_image_read_and_validate(fa_id, partition_addr, &hdr, &content_offset);
 	if (rc != MODEL_IMAGE_OK) {
 		return rc;
 	}
+
+	image_base = partition_addr + content_offset;
 
 	if (hdr.params_type != MODEL_IMAGE_PARAMS_AXON) {
 		LOG_ERR("Image is not an Axon model (params_type %u)", hdr.params_type);
@@ -119,15 +123,15 @@ int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 		return MODEL_IMAGE_ERR_PACKED_OUTPUT_TOO_LARGE;
 	}
 
-	image_end = partition_addr + hdr.image_size;
+	image_end = image_base + hdr.image_size;
 
-	if (!model_image_name_in_image(hdr.name, partition_addr, image_end)) {
+	if (!model_image_name_in_image(hdr.name, image_base, image_end)) {
 		LOG_ERR("Header name pointer %p outside image or not NUL-terminated",
 			(void *)hdr.name);
 		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 	}
 
-	rc = model_image_verify_axon_binding(&hdr, partition_addr, image_end,
+	rc = model_image_verify_axon_binding(&hdr, image_base, image_end,
 					     expect->binding_table);
 	if (rc != MODEL_IMAGE_OK) {
 		return rc;
@@ -135,10 +139,10 @@ int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 
 	model_bytes = (const uint8_t *)hdr.axon.model;
 
-	if (model_bytes < partition_addr ||
+	if (model_bytes < image_base ||
 	    model_bytes + sizeof(nrf_axon_nn_compiled_model_s) > image_end) {
 		LOG_ERR("Header model pointer %p outside image [%p, %p)",
-			(void *)hdr.axon.model, (const void *)partition_addr,
+			(void *)hdr.axon.model, (const void *)image_base,
 			(const void *)image_end);
 		return MODEL_IMAGE_ERR_MODEL_PTR_OUT_OF_RANGE;
 	}
