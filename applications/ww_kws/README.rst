@@ -54,7 +54,7 @@ Replacing models
 
 You can replace the bundled models using the `Text to Wake Word Detection <Nordic Edge AI Lab Wake Word Detection_>`_ feature of the `Nordic Edge AI Lab`_ or one of `ready-to-use models <Nordic Edge AI Lab ready-to-use models_>`_.
 
-With ``CONFIG_APP_MODEL_OTA`` enabled (via :file:`model_ota.conf` - see "Model-only OTA update" below), replacing a model at runtime can be a matter of flashing a new model image to the relevant partition; the steps below (replacing the generated header and rebuilding) are only needed to change which model the application *builds partition images from* in the first place, or to restore compiled-in models (build without :file:`model_ota.conf`).
+With ``CONFIG_APP_MODEL_OTA`` enabled (via :file:`sysbuild_model_ota.conf` - see "Model-only OTA update" below), replacing a model at runtime can be a matter of flashing a new model image to the relevant partition; the steps below (replacing the generated header and rebuilding) are only needed to change which model the application *builds partition images from* in the first place, or to restore compiled-in models (build without :file:`sysbuild_model_ota.conf`).
 
 .. tabs::
 
@@ -98,16 +98,12 @@ Making model OTA optional
 --------------------------
 
 :file:`prj.conf` always enables MCUboot and UART SMP DFU (firmware updates).
-Partition-resident models are optional via ``CONFIG_APP_MODEL_OTA`` (set in :file:`model_ota.conf`).
+Partition-resident models are optional via ``SB_CONFIG_APP_MODEL_OTA`` (set in :file:`sysbuild_model_ota.conf`).
 
-``CONFIG_APP_MODEL_OTA`` (default ``n``; set ``y`` in :file:`model_ota.conf`)
+``SB_CONFIG_APP_MODEL_OTA`` propagates to ``CONFIG_APP_MODEL_OTA`` on the ww_kws image.
   Models are loaded from ``model_storage_ww`` / ``model_storage_kws`` at boot instead of being compiled into the app.
   Also builds MCUboot-signed model images and enables SMP model upload (with inference paused during upload).
-  Requires the model OTA devicetree overlay; CMakeLists.txt applies
-  :file:`boards/nrf54lm20dk_nrf54lm20b_cpuapp_model_ota.overlay` automatically when this
-  option is enabled (via :file:`model_ota.conf` or ``-DCONFIG_APP_MODEL_OTA=y``).
-  The three-image partition layout leaves only a ~460 KiB app slot, which is **too small
-  for both compiled-in models**.
+  Applies the model devicetree overlay and :file:`model_ota.conf` from :file:`sysbuild.cmake`.
 
 Build combinations:
 
@@ -122,18 +118,19 @@ Build combinations:
   .. code-block:: console
 
      west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
-       -- -DEXTRA_CONF_FILE=model_ota.conf
+       -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf
 
 Packaging and first-time provisioning
 --------------------------------------
 
-Model partition images are built when ``CONFIG_APP_MODEL_OTA`` is enabled.
-Use :file:`model_ota.conf` (CMake also applies :file:`sysbuild_model_ota.conf` and the model devicetree overlays):
+Model partition images are built when ``SB_CONFIG_APP_MODEL_OTA`` is enabled.
+Pass :file:`sysbuild_model_ota.conf` as ``SB_EXTRA_CONF_FILE`` (:file:`model_ota.conf` is applied
+to the ww_kws image automatically):
 
 .. code-block:: console
 
    west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
-     -- -DEXTRA_CONF_FILE=model_ota.conf
+     -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf
 
 This produces:
 

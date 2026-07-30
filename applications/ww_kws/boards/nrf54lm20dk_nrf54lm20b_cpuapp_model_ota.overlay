@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  *
  * Three-image MCUboot layout (FW + WW/KWS model partitions).
- * Use together with model_ota.conf.
+ * Applied from sysbuild.cmake when SB_CONFIG_APP_MODEL_OTA is enabled.
  */
 
 #include "../dts/nrf54lm20dk_mcuboot_model_ota.dtsi"

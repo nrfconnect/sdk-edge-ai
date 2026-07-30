@@ -7,4 +7,13 @@
 config PARTITION_MANAGER
 	default n
 
+config APP_MODEL_OTA
+	bool "Load wakeword/keyword-spotting models from separate flash partitions (model-only OTA)"
+	default n
+	depends on BOOTLOADER_MCUBOOT
+	help
+	  When enabled, the application loads wakeword and keyword-spotting models from
+	  dedicated flash partitions (model-only OTA). Propagated to the ww_kws image as
+	  CONFIG_APP_MODEL_OTA.
+
 source "share/sysbuild/Kconfig"
