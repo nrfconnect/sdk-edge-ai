@@ -10,6 +10,8 @@ include_guard(GLOBAL)
 get_filename_component(MODEL_OTA_ROOT ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
 get_filename_component(EDGE_AI_MODULE_ROOT ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSOLUTE)
 
+include(${CMAKE_CURRENT_LIST_DIR}/model_ota_common.cmake)
+
 set(MODEL_OTA_CONTEXT_EXPORT ${EDGE_AI_MODULE_ROOT}/tools/model_ota/export_model_ota_context.py)
 
 # Released firmware artifacts for out-of-tree model partition builds (see tools/model_ota/README.md):
@@ -88,6 +90,11 @@ function(model_ota_context_register_slot)
     "\"partition_addr\": ${_addr_dec}"
     "\"partition_size\": ${_size_dec}"
   )
+  if(CONFIG_BOOTLOADER_MCUBOOT)
+    list(APPEND _fields "\"model_image_offset\": ${MODEL_IMAGE_OFFSET_MCUBOOT}")
+  else()
+    list(APPEND _fields "\"model_image_offset\": 0")
+  endif()
   if(S_CONTRACT_HASH)
     list(APPEND _fields "\"contract_hash\": ${S_CONTRACT_HASH}")
   endif()
