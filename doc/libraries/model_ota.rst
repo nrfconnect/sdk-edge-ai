@@ -141,4 +141,9 @@ Kconfig
 
 See also ``tools/model_ota/README.md`` and ``samples/multi_model/overlay-ota.conf``.
 
-When MCUboot wraps a partition, the model header starts at ``partition_base + 32``. Partition images are linked at that payload address (``model_ota_image_link_addr()`` in :file:`lib/model_ota/cmake/model_ota_common.cmake`).
+When MCUboot wraps a partition, the model header starts at ``partition_base + 32``. Partition images are linked at that payload address (``model_ota_image_link_addr()`` in :file:`lib/model_ota/cmake/model_ota_common.cmake`). Do not flash the unsigned ``*_model_partition.hex`` into a model slot; use the signed ``*_model_mcuboot.signed.hex`` output from ``model_ota_mcuboot_sign()``.
+
+MCUboot helpers:
+
+- ``model_ota_mcuboot_sign()`` (:file:`lib/model_ota/cmake/model_ota_mcuboot_sign.cmake`) — signs a raw ``*_model_image.bin`` with ``imgtool`` (``--pad-header``, ``--rom-fixed`` at the partition base)
+- ``model_ota_register_provision_hex()`` / ``model_ota_create_provision_hex()`` (:file:`lib/model_ota/cmake/model_ota_sysbuild.cmake`) — register signed model hex files as sysbuild flash domains and merge bootloader, app, and models into ``*_provision.hex``

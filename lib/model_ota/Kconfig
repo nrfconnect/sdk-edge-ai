@@ -4,18 +4,32 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
+config MODEL_OTA_TESTING
+	bool "Model OTA testing mode (empty header pad, no MCUboot)"
+	depends on FLASH && CRC && XIP
+	depends on !BOOTLOADER_MCUBOOT
+	help
+	  Development and sample use only. Model partitions reserve a 32-byte header
+	  slot at the partition base (zeroed, not MCUboot-signed) and link the model
+	  payload at partition_base + 32, matching the production layout without
+	  requiring MCUboot or imgtool signing. Flash the emitted *_model_partition.hex
+	  files directly (for example multi_model with overlay-ota.conf).
+
 menuconfig MODEL_OTA
 	bool "Model-only OTA update (linked partition images)"
+	depends on BOOTLOADER_MCUBOOT || MODEL_OTA_TESTING
 	depends on FLASH && CRC && XIP
+	select MCUBOOT_BOOTUTIL_LIB if BOOTLOADER_MCUBOOT
 	help
-	  Proof-of-concept library that loads and validates NN models from dedicated flash
-	  partitions at runtime, independently of the application image, and without relying on
-	  MCUboot for integrity checking or transport. Neuton and Axon models are built as
-	  self-contained, linked partition images (descriptor and data linked AT the partition
-	  base, with a header holding a DIRECT pointer to the model). Model pointers are used
-	  directly in zephyr,mapped-partition storage (XIP) - there is no RAM-copy loading mode
-	  and no flash_area API usage. Enable CONFIG_FLASH and CONFIG_CRC in the application's
-	  prj.conf.
+	  Library that loads and validates NN models from dedicated flash partitions at
+	  runtime, independently of the application image. Each model partition reserves
+	  a 32-byte header slot at the partition base; the linked model payload follows
+	  at partition_base + 32. With MCUboot, imgtool signs the payload as a separate
+	  updateable image. In testing mode the header slot is left empty (zeroed).
+	  Neuton and Axon models are built as self-contained partition images with a
+	  header holding a DIRECT pointer to the model. Model pointers are used directly
+	  in zephyr,mapped-partition storage (XIP). Enable CONFIG_FLASH and CONFIG_CRC
+	  in the application's prj.conf.
 
 if MODEL_OTA
 
@@ -49,5 +63,7 @@ config MODEL_OTA_LOG_LEVEL
 	range 0 4
 	help
 	  0 = off, 1 = err, 2 = wrn, 3 = inf, 4 = dbg.
+
+
 
 endif # MODEL_OTA
