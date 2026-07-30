@@ -11,7 +11,8 @@
  * Neuton partition image (model_ota_neuton_image):
  *   lib/model_ota/src/model_ota_neuton_image_stub.c
  *   MODEL_OTA_NEUTON_MODEL_SRC   - basename of nrf_edgeai_user_model.c
- *   NRF_MODEL_PARTITION_ADDR     - flash base from devicetree
+ *   MODEL_IMAGE_LINK_ADDR        - absolute flash address for .model_image (partition base
+ *                                  + MCUboot header)
  *   MODEL_IMAGE_NAME_STR         - optional (default: EDGEAI_LAB_SOLUTION_ID_STR)
  *   MODEL_IMAGE_VERSION_U32      - optional (default: 0x00010000)
  *

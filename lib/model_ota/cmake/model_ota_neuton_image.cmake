@@ -62,6 +62,8 @@ function(model_ota_neuton_image)
   dt_nodelabel(partition_node NODELABEL ${MI_PARTITION_NODELABEL} REQUIRED)
   dt_reg_addr(partition_addr PATH ${partition_node})
   dt_reg_size(partition_size PATH ${partition_node})
+  model_ota_image_link_addr(${partition_addr} image_link_addr)
+  model_ota_model_image_offset(image_model_offset)
 
   get_filename_component(model_dir ${MI_MODEL_SRC} DIRECTORY)
   get_filename_component(model_basename ${MI_MODEL_SRC} NAME)
@@ -118,7 +120,7 @@ function(model_ota_neuton_image)
 
   target_compile_definitions(${stub} PRIVATE
                              MODEL_OTA_NEUTON_MODEL_SRC=${model_basename}
-                             NRF_MODEL_PARTITION_ADDR=${partition_addr}
+                             MODEL_IMAGE_LINK_ADDR=${image_link_addr}
                              MODEL_IMAGE_NAME_STR=\"${MI_NAME}\"
                              MODEL_IMAGE_VERSION_U32=${ver_u32}u
                              MODEL_OTA_NEUTON_CONTRACT_HASH=${MI_NEUTON_CONTRACT_HASH}u)
@@ -133,7 +135,7 @@ function(model_ota_neuton_image)
     COMMAND ${CMAKE_C_COMPILER}
             -nostdlib -nostartfiles
             -Wl,--gc-sections
-            -Wl,--defsym=NRF_MODEL_PARTITION_ADDR=${partition_addr}
+            -Wl,--defsym=MODEL_IMAGE_LINK_ADDR=${image_link_addr}
             -T ${linker_script}
             -o ${image_elf}
             $<TARGET_OBJECTS:${stub}>
@@ -144,20 +146,21 @@ function(model_ota_neuton_image)
     # 4. Fail the build if the on-flash header disagrees with the linked layout.
     COMMAND ${PYTHON_EXECUTABLE} ${validate_tool}
             --elf ${image_elf} --bin ${image_bin}
-            --partition-addr ${partition_addr} --partition-size ${partition_size}
+            --image-link-addr ${image_link_addr} --partition-size ${partition_size}
+            --model-image-offset ${image_model_offset}
             --defs-header ${defs_header}
     # 5. Addressed hex for flashing the model into its partition, INDEPENDENTLY of the app.
     #    This is a separate, standalone artifact; it is deliberately NOT merged into zephyr.hex,
     #    since model-only OTA means the app image and each model partition are flashed/updated
     #    on their own.
-    COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex --change-addresses=${partition_addr}
+    COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex --change-addresses=${image_link_addr}
             ${image_bin} ${image_hex}
     COMMAND ${PYTHON_EXECUTABLE} ${_compat_tool}
             --context ${_compat_context} --image ${image_bin} --slot ${MI_TARGET}
             --report-only
     DEPENDS $<TARGET_OBJECTS:${stub}> ${linker_script} ${crc_tool} ${validate_tool}
             ${_compat_context} ${_compat_tool}
-    COMMENT "Building Neuton model partition image '${MI_NAME}' at ${partition_addr}"
+    COMMENT "Building Neuton model partition image '${MI_NAME}' at ${image_link_addr}"
     COMMAND_EXPAND_LISTS
     VERBATIM)
 

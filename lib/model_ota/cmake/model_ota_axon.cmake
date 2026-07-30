@@ -99,6 +99,8 @@ function(model_ota_axon_model)
   dt_nodelabel(_partition_node NODELABEL ${MI_PARTITION_NODELABEL} REQUIRED)
   dt_reg_addr(_partition_addr PATH ${_partition_node})
   dt_reg_size(_partition_size PATH ${_partition_node})
+  model_ota_image_link_addr(${_partition_addr} _image_link_addr)
+  model_ota_model_image_offset(_image_model_offset)
 
   get_filename_component(_header_dir ${MI_HEADER} DIRECTORY)
   get_filename_component(_header_name ${MI_HEADER} NAME)
@@ -197,7 +199,7 @@ function(model_ota_axon_model)
                              ${EDGE_AI_MODULE_ROOT}/include)
   target_compile_options(${_image_obj} PRIVATE "SHELL:-include \"${_private_h}\"")
   target_compile_definitions(${_image_obj} PRIVATE
-    NRF_MODEL_PARTITION_ADDR=${_partition_addr}
+    MODEL_IMAGE_LINK_ADDR=${_image_link_addr}
     MODEL_IMAGE_NAME_STR=\"${MI_NAME}\"
     MODEL_IMAGE_VERSION_U32=${_version_u32}u
     NRF_AXON_INTERLAYER_BUFFER_SIZE=${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE})
@@ -251,7 +253,7 @@ function(model_ota_axon_model)
     COMMAND ${CMAKE_C_COMPILER}
             -nostdlib -nostartfiles
             -Wl,--gc-sections
-            -Wl,--defsym=NRF_MODEL_PARTITION_ADDR=${_partition_addr}
+            -Wl,--defsym=MODEL_IMAGE_LINK_ADDR=${_image_link_addr}
             -T ${MODEL_OTA_AXON_LINKER_SCRIPT}
             -T ${_model_syms_ld}
             -o ${_image_elf}
@@ -261,11 +263,12 @@ function(model_ota_axon_model)
             --bin ${_image_raw} -o ${_image_bin}
     COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_VALIDATE_TOOL}
             --elf ${_image_elf} --bin ${_image_bin}
-            --partition-addr ${_partition_addr} --partition-size ${_partition_size}
+            --image-link-addr ${_image_link_addr} --partition-size ${_partition_size}
+            --model-image-offset ${_image_model_offset}
             --defs-header ${MODEL_OTA_IMAGE_DEFS}
             --params-type 3 --config-header ${_private_h}
     COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex
-            --change-addresses=${_partition_addr} ${_image_bin} ${_image_hex}
+            --change-addresses=${_image_link_addr} ${_image_bin} ${_image_hex}
     COMMAND ${PYTHON_EXECUTABLE} ${_compat_tool}
             --context ${_compat_context} --image ${_image_bin} --slot ${MI_TARGET}
             --elf ${_symbol_elf} --report-only
@@ -274,7 +277,7 @@ function(model_ota_axon_model)
             ${MODEL_OTA_AXON_LINKER_SCRIPT} ${MODEL_OTA_AXON_CRC_TOOL}
             ${MODEL_OTA_AXON_VALIDATE_TOOL} ${_compat_tool}
     COMMAND_EXPAND_LISTS
-    COMMENT "Building Axon model partition image '${MI_NAME}' at ${_partition_addr}"
+    COMMENT "Building Axon model partition image '${MI_NAME}' at ${_image_link_addr}"
     VERBATIM)
 
   if(_using_released_fw AND NOT MODEL_OTA_FW_ELF)

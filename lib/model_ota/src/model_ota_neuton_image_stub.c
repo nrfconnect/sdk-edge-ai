@@ -5,7 +5,7 @@
  *
  * Neuton model partition-image stub (one translation unit, compiled once per model image).
  *
- * model_ota_neuton_image() sets MODEL_OTA_NEUTON_MODEL_SRC and NRF_MODEL_PARTITION_ADDR,
+ * model_ota_neuton_image() sets MODEL_OTA_NEUTON_MODEL_SRC and MODEL_IMAGE_LINK_ADDR,
  * then compiles this file as an OBJECT library. MODEL_OTA_NEUTON_WIRED is not set, so the
  * included nrf_edgeai_user_model.c emits the compile-time model_instance_ descriptor and
  * payload arrays; this stub then emits the partition header that roots the gc-sections link.
@@ -13,8 +13,8 @@
 
 #include "model_ota_stub_macros.h"
 
-#ifndef NRF_MODEL_PARTITION_ADDR
-#error "NRF_MODEL_PARTITION_ADDR must be defined when compiling the Neuton model image stub"
+#ifndef MODEL_IMAGE_LINK_ADDR
+#error "MODEL_IMAGE_LINK_ADDR must be defined when compiling the Neuton model image stub"
 #endif
 
 #ifndef MODEL_OTA_NEUTON_MODEL_SRC
@@ -27,8 +27,8 @@
  * Partition-image emission (included model must expose file-static model_instance_ and data).
  *
  * We emit a single @ref model_image_header into section ".model_image.header". model_image.ld
- * links it first, at the partition base, followed by all reachable .rodata (the descriptor,
- * decode-output init and data). Because the image is linked at the partition base,
+ * links it first at MODEL_IMAGE_LINK_ADDR, followed by all reachable .rodata (the descriptor,
+ * decode-output init and data). Because the image is linked at that fixed address,
  * &model_instance_, &model_image_decoded_output_ and the scale arrays are already correct
  * absolute flash addresses, so they are stored directly in the header. --gc-sections drops
  * everything the header does not (transitively) reference. image_size is a link-time constant
@@ -68,7 +68,7 @@ const struct model_image_header nrf_edgeai_model_image_hdr = {
 	.format_version = MODEL_IMAGE_FORMAT_VERSION,
 	.params_type = MODEL_IMAGE_PARAMS_TYPE_NUM,
 	._reserved = 0,
-	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)NRF_MODEL_PARTITION_ADDR),
+	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)MODEL_IMAGE_LINK_ADDR),
 	.model_version = MODEL_IMAGE_VERSION_U32,
 	.contract_hash = MODEL_OTA_NEUTON_CONTRACT_HASH,
 	.crc32 = 0,

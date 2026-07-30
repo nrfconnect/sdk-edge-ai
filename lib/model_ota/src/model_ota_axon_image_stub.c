@@ -6,7 +6,7 @@
  * Axon model partition-image stub (one translation unit, compiled once per model image).
  *
  * model_ota_axon_model() compiles this file with probe-derived configuration,
- * then links the result at the partition base. App-owned pointer fields are
+ * then links the result at MODEL_IMAGE_LINK_ADDR. App-owned pointer fields are
  * resolved from zephyr.elf via a generated PROVIDE() linker fragment.
  */
 
@@ -28,8 +28,8 @@
 #error "Unsupported or missing Axon OTA configuration"
 #endif
 
-#ifndef NRF_MODEL_PARTITION_ADDR
-#error "NRF_MODEL_PARTITION_ADDR must be defined when linking the Axon model image"
+#ifndef MODEL_IMAGE_LINK_ADDR
+#error "MODEL_IMAGE_LINK_ADDR must be defined when linking the Axon model image"
 #endif
 
 #ifndef MODEL_OTA_AXON_HEADER
@@ -84,7 +84,7 @@ const struct model_image_header model_image_hdr = {
 	.format_version = MODEL_IMAGE_FORMAT_VERSION,
 	.params_type = MODEL_IMAGE_PARAMS_AXON,
 	._reserved = 0,
-	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)NRF_MODEL_PARTITION_ADDR),
+	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)MODEL_IMAGE_LINK_ADDR),
 	.model_version = MODEL_IMAGE_VERSION_U32,
 	.contract_hash = MODEL_OTA_AXON_CONTRACT_HASH,
 	.crc32 = 0,

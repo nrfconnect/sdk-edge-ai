@@ -97,8 +97,29 @@ def find_slot(context: dict, slot_name: str | None) -> dict:
     return slots[0]
 
 
-def neuton_neurons_num(hdr: dict, partition_addr: int) -> int | None:
-    offset = hdr["model_ptr"] - partition_addr
+def validate_slot(slot: dict) -> int:
+    if slot.get("partition_addr") is None:
+        print("context missing partition_addr", file=sys.stderr)
+        return EXIT_INCOMPATIBLE
+    if "model_image_offset" not in slot:
+        print("context missing model_image_offset", file=sys.stderr)
+        return EXIT_INCOMPATIBLE
+    return EXIT_OK
+
+
+def image_link_addr(slot: dict) -> int:
+    return slot["partition_addr"] + slot["model_image_offset"]
+
+
+def max_model_image_size(slot: dict) -> int | None:
+    partition_size = slot.get("partition_size")
+    if partition_size is None:
+        return None
+    return partition_size - slot["model_image_offset"]
+
+
+def neuton_neurons_num(hdr: dict, link_addr: int) -> int | None:
+    offset = hdr["model_ptr"] - link_addr
     end = offset + NEUTON_META_NEURONS_NUM_OFFSET + 2
     if offset < 0 or end > len(hdr["raw"]):
         return None
@@ -118,18 +139,32 @@ def check_neuton(slot: dict, hdr: dict, image_path: Path) -> int:
         )
         return EXIT_INCOMPATIBLE
 
-    partition_size = slot.get("partition_size")
-    if partition_size is not None and hdr["image_size"] > partition_size:
+    payload_cap = max_model_image_size(slot)
+    if payload_cap is not None and payload_cap < 0:
         print(
-            "image size 0x%x exceeds partition 0x%x" % (hdr["image_size"], partition_size),
+            "model_image_offset 0x%x exceeds partition 0x%x"
+            % (slot["model_image_offset"], slot["partition_size"]),
+            file=sys.stderr,
+        )
+        return EXIT_INCOMPATIBLE
+    if payload_cap is not None and hdr["image_size"] > payload_cap:
+        print(
+            "image size 0x%x exceeds partition payload cap 0x%x "
+            "(partition 0x%x - model_image_offset 0x%x)"
+            % (
+                hdr["image_size"],
+                payload_cap,
+                slot["partition_size"],
+                slot["model_image_offset"],
+            ),
             file=sys.stderr,
         )
         return EXIT_INCOMPATIBLE
 
     neurons_cap = slot.get("neurons_cap")
     if neurons_cap is not None:
-        partition_addr = slot.get("partition_addr", 0)
-        model_neurons = neuton_neurons_num(hdr, partition_addr)
+        link_addr = image_link_addr(slot)
+        model_neurons = neuton_neurons_num(hdr, link_addr)
         if model_neurons is None:
             print("cannot read neuron count from image model meta", file=sys.stderr)
             return EXIT_INCOMPATIBLE
@@ -158,10 +193,24 @@ def check_axon(slot: dict, hdr: dict, image_path: Path, elf_path: Path | None) -
         )
         return EXIT_INCOMPATIBLE
 
-    partition_size = slot.get("partition_size")
-    if partition_size is not None and hdr["image_size"] > partition_size:
+    payload_cap = max_model_image_size(slot)
+    if payload_cap is not None and payload_cap < 0:
         print(
-            "image size 0x%x exceeds partition 0x%x" % (hdr["image_size"], partition_size),
+            "model_image_offset 0x%x exceeds partition 0x%x"
+            % (slot["model_image_offset"], slot["partition_size"]),
+            file=sys.stderr,
+        )
+        return EXIT_INCOMPATIBLE
+    if payload_cap is not None and hdr["image_size"] > payload_cap:
+        print(
+            "image size 0x%x exceeds partition payload cap 0x%x "
+            "(partition 0x%x - model_image_offset 0x%x)"
+            % (
+                hdr["image_size"],
+                payload_cap,
+                slot["partition_size"],
+                slot["model_image_offset"],
+            ),
             file=sys.stderr,
         )
         return EXIT_INCOMPATIBLE
@@ -186,7 +235,7 @@ def check_axon(slot: dict, hdr: dict, image_path: Path, elf_path: Path | None) -
 
     if elf_path is not None and hdr["binding_count"]:
         index = load_symbol_index(elf_path)
-        base = slot.get("partition_addr", 0)
+        base = image_link_addr(slot)
         data = hdr["raw"]
         binding_ptr = hdr["binding_ptr"]
         for i in range(hdr["binding_count"]):
@@ -258,6 +307,10 @@ def main(argv=None) -> int:
         return EXIT_INCOMPATIBLE
 
     slot = find_slot(context, args.slot)
+    rc = validate_slot(slot)
+    if rc != EXIT_OK:
+        return rc
+
     backend = slot.get("backend", "neuton")
     if backend == "axon" or hdr["params_type"] == PARAMS_AXON:
         rc = check_axon(slot, hdr, args.image, args.elf)

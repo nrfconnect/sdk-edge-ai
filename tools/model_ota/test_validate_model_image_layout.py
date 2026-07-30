@@ -84,7 +84,7 @@ class LayoutValidationTests(unittest.TestCase):
                     str(elf),
                     "--bin",
                     str(binary),
-                    "--partition-addr",
+                    "--image-link-addr",
                     hex(self.BASE),
                     "--partition-size",
                     "0x1000",
@@ -110,10 +110,64 @@ class LayoutValidationTests(unittest.TestCase):
                         str(elf),
                         "--bin",
                         str(binary),
-                        "--partition-addr",
+                        "--image-link-addr",
                         hex(self.BASE),
                         "--partition-size",
                         str(validator.HEADER_SIZE),
+                        "--defs-header",
+                        str(defs),
+                        "--params-type",
+                        str(validator.PARAMS_AXON),
+                        "--model-symbol",
+                        "model_test",
+                    ]
+                )
+
+
+    def test_mcuboot_offset_reduces_payload_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.object(
+            validator, "lookup_symbol", side_effect=lambda _elf, name: self._symbol(name)
+        ):
+            elf, binary, defs = self._files(Path(tmp))
+            image_size = validator.HEADER_SIZE + self.MODEL_SIZE + len(self.NAME)
+            # Exact fit without wrapper offset.
+            self.assertEqual(
+                validator.main(
+                    [
+                        "--elf",
+                        str(elf),
+                        "--bin",
+                        str(binary),
+                        "--image-link-addr",
+                        hex(self.BASE),
+                        "--partition-size",
+                        str(image_size),
+                        "--model-image-offset",
+                        "0",
+                        "--defs-header",
+                        str(defs),
+                        "--params-type",
+                        str(validator.PARAMS_AXON),
+                        "--model-symbol",
+                        "model_test",
+                    ]
+                ),
+                0,
+            )
+            # Same partition, but 32 bytes reserved for a wrapper at the base.
+            with self.assertRaises(SystemExit):
+                validator.main(
+                    [
+                        "--elf",
+                        str(elf),
+                        "--bin",
+                        str(binary),
+                        "--image-link-addr",
+                        hex(self.BASE),
+                        "--partition-size",
+                        str(image_size),
+                        "--model-image-offset",
+                        "32",
                         "--defs-header",
                         str(defs),
                         "--params-type",
