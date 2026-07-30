@@ -28,6 +28,9 @@ function(model_ota_add_image)
             "PARTITION_SIZE and NAME")
   endif()
 
+  model_ota_image_link_addr(${IMG_PARTITION_ADDR} _image_link_addr)
+  model_ota_model_image_offset(_image_model_offset)
+
   model_ota_using_released_fw(_using_released_fw)
 
   set(_image_elf ${IMG_WORK_DIR}/${IMG_TARGET}_model_image.elf)
@@ -64,7 +67,7 @@ function(model_ota_add_image)
     COMMAND ${CMAKE_C_COMPILER}
             -nostdlib -nostartfiles
             -Wl,--gc-sections
-            -Wl,--defsym=MODEL_OTA_IMAGE_LINK_BASE=${IMG_PARTITION_ADDR}
+            -Wl,--defsym=MODEL_IMAGE_LINK_ADDR=${_image_link_addr}
             -T ${MODEL_OTA_LINKER_SCRIPT}
             ${_link_scripts}
             -o ${_image_elf}
@@ -74,11 +77,12 @@ function(model_ota_add_image)
             --bin ${_image_raw} -o ${_image_bin}
     COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_VALIDATE_TOOL}
             --elf ${_image_elf} --bin ${_image_bin}
-            --partition-addr ${IMG_PARTITION_ADDR} --partition-size ${IMG_PARTITION_SIZE}
+            --image-link-addr ${_image_link_addr} --partition-size ${IMG_PARTITION_SIZE}
+            --model-image-offset ${_image_model_offset}
             --defs-header ${MODEL_OTA_IMAGE_DEFS}
             ${_validate_extra}
     COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex
-            --change-addresses=${IMG_PARTITION_ADDR} ${_image_bin} ${_image_hex}
+            --change-addresses=${_image_link_addr} ${_image_bin} ${_image_hex}
     COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_COMPAT_TOOL}
             --context ${_compat_context} --image ${_image_bin} --slot ${IMG_TARGET}
             --report-only
@@ -87,7 +91,7 @@ function(model_ota_add_image)
             ${MODEL_OTA_CRC_TOOL} ${MODEL_OTA_VALIDATE_TOOL} ${_compat_context}
             ${MODEL_OTA_COMPAT_TOOL} ${IMG_DEPENDS}
     COMMAND_EXPAND_LISTS
-    COMMENT "Building model partition image '${IMG_NAME}' at ${IMG_PARTITION_ADDR}"
+    COMMENT "Building model partition image '${IMG_NAME}' at ${_image_link_addr}"
     VERBATIM)
 
   if(IMG_EXCLUDE_FROM_ALL)

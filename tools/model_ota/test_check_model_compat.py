@@ -20,15 +20,18 @@ from model_contract import MODEL_IMAGE_FORMAT_VERSION
 # Any value works: the checker compares the image header against the context, and neither side
 # recomputes the contract hash any more (it is the compiler's, read out of the slot's probe).
 CONTRACT_HASH = 0x5F3A21C4
+MODEL_IMAGE_OFFSET = 32
+PARTITION_ADDR = 0x102000
 
 
 class CompatCheckerTests(unittest.TestCase):
     def _neuton_image(self, directory: Path, contract_hash: int, neurons_num: int = 10) -> Path:
+        link_base = PARTITION_ADDR + MODEL_IMAGE_OFFSET
         model_off = layout.HEADER_SIZE
         name_off = model_off + 28
         image_size = name_off + 5
-        name_ptr = 0x102000 + name_off
-        model_ptr = 0x102000 + model_off
+        name_ptr = link_base + name_off
+        model_ptr = link_base + model_off
         meta = bytearray(28)
         struct.pack_into("<H", meta, 20, 1)
         struct.pack_into("<H", meta, 22, neurons_num)
@@ -64,7 +67,8 @@ class CompatCheckerTests(unittest.TestCase):
                     {
                         "target": "gear_anomaly",
                         "backend": "neuton",
-                        "partition_addr": 0x102000,
+                        "partition_addr": PARTITION_ADDR,
+                        "model_image_offset": MODEL_IMAGE_OFFSET,
                         "partition_size": 32768,
                         "contract_hash": fw_hash,
                         "neurons_cap": 20,
@@ -88,7 +92,8 @@ class CompatCheckerTests(unittest.TestCase):
                     {
                         "target": "gear_anomaly",
                         "backend": "neuton",
-                        "partition_addr": 0x102000,
+                        "partition_addr": PARTITION_ADDR,
+                        "model_image_offset": MODEL_IMAGE_OFFSET,
                         "contract_hash": 1,
                         "neurons_cap": 20,
                     }
@@ -126,7 +131,8 @@ class CompatCheckerTests(unittest.TestCase):
                     {
                         "target": "gear_anomaly",
                         "backend": "neuton",
-                        "partition_addr": 0x102000,
+                        "partition_addr": PARTITION_ADDR,
+                        "model_image_offset": MODEL_IMAGE_OFFSET,
                         "contract_hash": 1,
                         "neurons_cap": 20,
                     }

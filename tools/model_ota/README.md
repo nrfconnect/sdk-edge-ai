@@ -5,12 +5,13 @@
 
 ## Summary
 
-A Neuton or Axon model is shipped as a self-contained, **linked partition image**. The model
-descriptor and data are linked at the model partition's flash base, with an 84-byte header (format
-version 12, see `include/model_ota/model_image.h`) holding a direct pointer to the descriptor,
-a firmware **contract hash** (offset 16), CRC-32/IEEE (offset 20), and the model's `nrf_edgeai_t`
-parameter block (offset 48): its feature scaling factors and decoded-output init. That block is
-shared by both backends; only a pure Axon model, having no `nrf_edgeai_t`, leaves it zeroed.
+A Neuton or Axon model is shipped as a self-contained, **MCUboot-wrapped linked partition image**.
+`imgtool` prepends a 32-byte MCUboot header at the partition base; the model descriptor and data
+are linked at `partition_base + 32`, with an 84-byte header (format version 12, see
+`include/model_ota/model_image.h`) holding a direct pointer to the descriptor, a firmware
+**contract hash** (offset 16), CRC-32/IEEE (offset 20), and the model's `nrf_edgeai_t` parameter
+block (offset 48): its feature scaling factors and decoded-output init. That block is shared by
+both backends; only a pure Axon model, having no `nrf_edgeai_t`, leaves it zeroed.
 
 Almost all of the image is produced by the compiler/linker. These host scripts perform the work
 that cannot be expressed directly in the toolchain:
@@ -19,7 +20,7 @@ that cannot be expressed directly in the toolchain:
   `crc32` field at offset 20 held at 0) and writes it back. These 4 bytes are the only
   host-written bytes in the image; the loader recomputes the CRC exactly the same way.
 - `validate_model_image_layout.py` - a post-link check that fails the build if the on-flash
-  header disagrees with the link: image linked at the partition base, header first, correct
+  header disagrees with the link: image linked at `partition_base + 32`, header first, correct
   magic/format-version, image and partition sizes, model pointers, and CRC.
 - `check_model_compat.py` - compares a model image against a `model_ota_context.json` (exit 0
   compatible, 1 incompatible, 2 requires firmware update). Also the build's gate on the contract
@@ -46,10 +47,11 @@ that cannot be expressed directly in the toolchain:
 
 ## In the build
 
-The tools are wired into the OTA build; there is no manual step. Building the `multi_model`
-sample with the OTA overlay produces a standalone addressed `<name>_model_partition.hex` per
-model at the build directory root, plus the OTA payload `<name>_model_image.bin` under
-`model_ota/<name>/`:
+Production builds use MCUboot signing (see :ref:`WW KWS model OTA <app_ww_kws_model_ota>`).
+
+For development, enable ``CONFIG_MODEL_OTA_TESTING`` (``samples/multi_model/overlay-ota.conf``):
+models are linked at ``partition_base + 32`` and ``*_model_partition.hex`` is addressed at that
+payload offset via ``objcopy`` (no MCUboot signing).
 
 ```bash
 cd edge-ai/samples/multi_model
@@ -57,8 +59,6 @@ nrfutil toolchain-manager launch --ncs-version v3.4.0 -- \
   west build -p always -b nrf54lm20dk/nrf54lm20b/cpuapp -d build . \
   -- -DEXTRA_CONF_FILE=overlay-ota.conf
 ls build/multi_model/*_model_partition.hex
-ls build/multi_model/model_ota/*/*_model_image.bin
-ls build/multi_model/model_ota_context.json
 ```
 
 The build also emits **`model_ota_context.json`** — archive this alongside `zephyr.hex` and
@@ -69,7 +69,8 @@ The build also emits **`model_ota_context.json`** — archive this alongside `ze
 Only the release artifacts stay at the build directory root; everything else the OTA build
 generates lives under `model_ota/`:
 
-- `<name>_model_partition.hex` - addressed hex, flashed into the model's partition.
+- `<name>_model_mcuboot.signed.{bin,hex}` - MCUboot-wrapped model image for SMP upload or
+  provisioning.
 - `model_ota_context.json` - firmware context, archived at release.
 - `model_ota/<name>/` - one subfolder per model: the OTA payload `<name>_model_image.bin`, the
   linked `.elf`, the raw pre-CRC `.bin`, probes, generated headers, `context_slot.json`, and the
@@ -82,11 +83,10 @@ Configure first, then build one partition target explicitly:
 
 ```bash
 west build -p always -b nrf54lm20dk/nrf54lm20b/cpuapp -d build . --cmake-only \
-  -- -DEXTRA_CONF_FILE=overlay-ota.conf \
-     -DMODEL_OTA_FW_ELF=/path/to/released/zephyr.elf \
+  -- -DMODEL_OTA_FW_ELF=/path/to/released/zephyr.elf \
      -DMODEL_OTA_FW_CONTEXT=/path/to/released/model_ota_context.json
 
-cmake --build build/multi_model --target gesture_class_model_image
+cmake --build build/ww_kws --target ww_model_image
 ```
 
 | Variable | File | Used for |
@@ -99,7 +99,7 @@ in-tree context export). **Axon** models require **both** variables when buildin
 
 When either variable is set, CMake skips `model_ota_context` export and omits app partition-loader
 wiring. The application build (`app`, `zephyr.elf`) is deliberately blocked and prints how to
-build a partition image instead. Use `cmake --build build/multi_model --target <name>_model_image`
+build a partition image instead. Use `cmake --build <build-dir> --target <name>_model_image`
 — a plain `west build` or default `cmake --build` without `--target` fails on that block.
 Axon `*_model_image` targets are excluded from the default build unless `MODEL_OTA_FW_ELF` is set
 (because `axon_elf.py provide` has no symbol source without a released ELF).
@@ -108,7 +108,7 @@ Axon `*_model_image` targets are excluded from the default build unless `MODEL_O
 `model_ota_edgeai_axon_model()` and `model_ota_axon_model()` in
 `lib/model_ota/cmake/model_ota_axon.cmake`. All three share `model_ota_add_image()` from
 `lib/model_ota/cmake/model_ota_image.cmake`
-(compile a model stub, link at the partition base with `lib/model_ota/linker/model_image.ld`,
+(compile a model stub, link at `partition_base + 32` with `lib/model_ota/linker/model_image.ld`,
 `objcopy` the `.model_image` section, patch CRC, validate, emit the addressed hex).
 
 Contract hashing and ``image_size`` use ``MODEL_OTA_IMAGE_LINK_BASE`` (``dt_reg_addr()`` from CMake).
@@ -116,12 +116,10 @@ Wired loaders hash the same literal and cross-check it against ``MODEL_OTA_PARTI
 from the slot nodelabel before loading. See ``lib/model_ota/src/model_ota_stub_macros.h``.
 
 Edge AI Lab solutions with an Axon backend use `model_ota_edgeai_axon_model()` in
-`lib/model_ota/cmake/model_ota_axon.cmake`. The compiled Axon model is partition-loaded like a raw
-Axon model, and the image additionally carries the solution's `nrf_edgeai_t` parameters. The
-wrapper itself stays compiled into the app; its `model.instance.p_void` and its parameters are
-patched at runtime by `nrf_edgeai_load_user_model_<id>()` from
-`lib/model_ota/src/model_ota_edgeai_axon_wired.c` (the `multi_model` sample's `wakeword`,
-`classif_axon`, and `regress_axon` declarations exercise this path).
+`lib/model_ota/cmake/model_ota_axon.cmake`. The compiled Axon model is partition-loaded, and the
+image additionally carries the solution's `nrf_edgeai_t` parameters. The wrapper itself stays
+compiled into the app; its `model.instance.p_void` and its parameters are patched at runtime by
+`nrf_edgeai_load_user_model_<id>()` from `lib/model_ota/src/model_ota_edgeai_axon_wired.c`.
 
 Per-slot app-facing constants live in generated `model_ota/slots/<target>.h` headers
 (for example `NRF_AXON_MODEL_<NAME>_PACKED_OUTPUT_SIZE`). The device-wide binding table
@@ -131,18 +129,17 @@ header is `model_ota/axon_binding_table.h`; both sit under the shared build incl
 Raw Axon per-image build steps wire app-owned RAM via `axon_elf.py provide` from `zephyr.elf`.
 By default the linked image's optional `packed_output_buf` field is NULL; pass
 `ALLOCATE_PACKED_OUTPUT` to allocate app-owned storage and wire it into the image for models that
-require a dedicated packing buffer (the `multi_model` sample's `person_det` declaration uses this
-option).
+require a dedicated packing buffer.
 
 ## Pre-flight compatibility check
 
-Before flashing a model built against a released firmware:
+Before uploading a model built against a released firmware:
 
 ```bash
 python3 tools/model_ota/check_model_compat.py \
   --context /path/to/model_ota_context.json \
-  --image build/multi_model/model_ota/gear_anomaly/gear_anomaly_model_image.bin \
-  --slot gear_anomaly
+  --image build/ww_kws/model_ota/ww/ww_model_image.bin \
+  --slot ww
 ```
 
 For Axon models, also pass `--elf` pointing at the firmware ELF used when the context was

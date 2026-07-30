@@ -12,6 +12,8 @@
  *   lib/model_ota/src/model_ota_edgeai_neuton_image_stub.c
  *   MODEL_OTA_EDGEAI_NEUTON_MODEL_SRC - basename of nrf_edgeai_user_model.c
  *   MODEL_OTA_IMAGE_LINK_BASE       - partition flash base from dt_reg_addr()
+ *   MODEL_IMAGE_LINK_ADDR           - absolute flash address for .model_image (partition base
+ *                                     + MCUboot header offset)
  *   MODEL_IMAGE_NAME_STR            - optional (default: EDGEAI_LAB_SOLUTION_ID_STR)
  *   MODEL_IMAGE_VERSION_U32         - optional (default: 0x00010000)
  *
@@ -55,7 +57,7 @@
  * Wired loaders also take MODEL_OTA_PARTITION_NODELABEL for the runtime mapped partition pointer
  * and cross-check it against MODEL_OTA_IMAGE_LINK_BASE.
  *
- * Partition-image link (model_ota_add_image): MODEL_OTA_IMAGE_LINK_BASE is also the linker anchor
+ * Partition-image link (model_ota_add_image): MODEL_IMAGE_LINK_ADDR is the linker anchor
  * via --defsym; see lib/model_ota/linker/model_image.ld.
  *
  * Every stub that has a generated solution source in scope #includes model_ota_scale_select.h

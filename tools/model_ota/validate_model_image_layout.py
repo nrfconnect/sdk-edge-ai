@@ -12,7 +12,7 @@ Confirms, after linking:
   - the header sits first, at the base,
   - header magic / format_version are correct,
   - header.image_size equals the linker extent (__model_image_end - __model_image_start) and the
-    binary size, and fits within the partition,
+    binary size, and fits within the partition payload area (partition_size - model_image_offset),
   - the header's DIRECT model pointer equals &<model symbol> and lies inside the image,
   - the feature-scaling block is self-consistent and its pointers lie inside the image, and
   - the crc32 field is non-zero and matches a recomputed CRC (i.e. patch_image_crc.py ran).
@@ -156,13 +156,22 @@ def config_define(path, name):
     return match.group(1) if match is not None else None
 
 
+def max_payload_size(partition_size: int | None, model_image_offset: int) -> int | None:
+    if partition_size is None:
+        return None
+    return partition_size - model_image_offset
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--elf", type=Path, required=True)
     parser.add_argument("--bin", type=Path, required=True)
-    parser.add_argument("--partition-addr", type=lambda x: int(x, 0), required=True)
+    parser.add_argument("--image-link-addr", type=lambda x: int(x, 0), required=True,
+                        help="Flash address where the model image is linked")
     parser.add_argument("--partition-size", type=lambda x: int(x, 0))
+    parser.add_argument("--model-image-offset", type=lambda x: int(x, 0), default=32,
+                        help="Bytes from partition base to the linked model image")
     parser.add_argument("--params-type", type=lambda x: int(x, 0))
     parser.add_argument("--model-symbol", default="model_instance_",
                         help="Expected baked model symbol (Axon: e.g. model_person_det)")
@@ -219,9 +228,9 @@ def main(argv=None):
     end = end_sym.address
     errors = []
 
-    if start != args.partition_addr:
-        errors.append("partition base mismatch: linker start 0x%x != 0x%x"
-                      % (start, args.partition_addr))
+    if start != args.image_link_addr:
+        errors.append("image link addr mismatch: linker start 0x%x != 0x%x"
+                      % (start, args.image_link_addr))
     if hdr_sym is None:
         errors.append("missing model image header symbol")
     elif hdr_sym.address != start:
@@ -280,10 +289,17 @@ def main(argv=None):
     bin_size = args.bin.stat().st_size
     if bin_size != linker_size:
         errors.append("binary size 0x%x != linker extent 0x%x" % (bin_size, linker_size))
-    if args.partition_size is not None and image_size > args.partition_size:
+    payload_cap = max_payload_size(args.partition_size, args.model_image_offset)
+    if payload_cap is not None and payload_cap < 0:
         errors.append(
-            "image size 0x%x exceeds partition size 0x%x"
-            % (image_size, args.partition_size)
+            "model_image_offset 0x%x exceeds partition size 0x%x"
+            % (args.model_image_offset, args.partition_size)
+        )
+    elif payload_cap is not None and image_size > payload_cap:
+        errors.append(
+            "image size 0x%x exceeds partition payload cap 0x%x "
+            "(partition 0x%x - model_image_offset 0x%x)"
+            % (image_size, payload_cap, args.partition_size, args.model_image_offset)
         )
 
     model_extent = model_sym.size if model_sym is not None and model_sym.size > 0 else 1

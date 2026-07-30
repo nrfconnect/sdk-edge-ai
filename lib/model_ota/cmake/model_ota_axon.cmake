@@ -103,6 +103,8 @@ function(_model_ota_axon_slot)
   dt_nodelabel(_partition_node NODELABEL ${MI_PARTITION_NODELABEL} REQUIRED)
   dt_reg_addr(_partition_addr PATH ${_partition_node})
   dt_reg_size(_partition_size PATH ${_partition_node})
+  model_ota_image_link_addr(${_partition_addr} _image_link_addr)
+  model_ota_model_image_offset(_image_model_offset)
 
   get_filename_component(_header_dir ${MI_HEADER} DIRECTORY)
   get_filename_component(_header_name ${MI_HEADER} NAME)
@@ -199,6 +201,7 @@ function(_model_ota_axon_slot)
         MODEL_OTA_EDGEAI_AXON_MODEL_SRC=${_model_basename}
         MODEL_OTA_PARTITION_NODELABEL=${MI_PARTITION_NODELABEL}
         MODEL_OTA_IMAGE_LINK_BASE=${_partition_addr}
+        MODEL_OTA_SMP_SLOT_NAME=\"${MI_NAME}\"
         MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u
       INCLUDES ${_work_dir} ${_model_dir}
       DEPENDS ${_meta_target})
@@ -250,6 +253,7 @@ function(_model_ota_axon_slot)
   target_compile_options(${_image_obj} PRIVATE "SHELL:-include \"${_private_h}\"")
   target_compile_definitions(${_image_obj} PRIVATE
     MODEL_OTA_IMAGE_LINK_BASE=${_partition_addr}
+    MODEL_IMAGE_LINK_ADDR=${_image_link_addr}
     MODEL_IMAGE_NAME_STR=\"${MI_NAME}\"
     MODEL_IMAGE_VERSION_U32=${_version_u32}u
     NRF_AXON_INTERLAYER_BUFFER_SIZE=${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE})

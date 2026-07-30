@@ -140,3 +140,5 @@ Kconfig
 - ``CONFIG_MODEL_OTA_NEUTON`` / ``CONFIG_MODEL_OTA_AXON`` — backends
 
 See also ``tools/model_ota/README.md`` and ``samples/multi_model/overlay-ota.conf``.
+
+When MCUboot wraps a partition, the model header starts at ``partition_base + 32``. Partition images are linked at that payload address (``model_ota_image_link_addr()`` in :file:`lib/model_ota/cmake/model_ota_common.cmake`).

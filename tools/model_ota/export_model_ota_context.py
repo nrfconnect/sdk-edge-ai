@@ -28,6 +28,7 @@ SLOT_COMMON = (
     "partition_nodelabel",
     "partition_addr",
     "partition_size",
+    "model_image_offset",
     "contract_hash",
 )
 SLOT_NEUTON = SLOT_COMMON + ("neurons_cap",)

@@ -24,8 +24,8 @@
 #error "Unsupported or missing Axon OTA configuration"
 #endif
 
-#ifndef MODEL_OTA_IMAGE_LINK_BASE
-#error "MODEL_OTA_IMAGE_LINK_BASE must be defined when linking the Axon model image"
+#ifndef MODEL_IMAGE_LINK_ADDR
+#error "MODEL_IMAGE_LINK_ADDR must be defined when linking the Axon model image"
 #endif
 
 #ifndef MODEL_OTA_AXON_HEADER
@@ -95,7 +95,7 @@ const struct model_image_header model_image_hdr = {
 	.format_version = MODEL_IMAGE_FORMAT_VERSION,
 	.params_type = MODEL_IMAGE_PARAMS_AXON,
 	._reserved = 0,
-	.image_size = (uint32_t)((uintptr_t)&__model_image_end - MODEL_OTA_IMAGE_LINK_BASE),
+	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)MODEL_IMAGE_LINK_ADDR),
 	.model_version = MODEL_IMAGE_VERSION_U32,
 	.contract_hash = MODEL_OTA_IMAGE_CONTRACT_HASH,
 	.crc32 = 0,

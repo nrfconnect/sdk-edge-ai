@@ -16,6 +16,21 @@ set(MODEL_OTA_LIB_DIR ${_model_ota_lib} CACHE INTERNAL "edge-ai model_ota librar
 get_filename_component(_model_ota_module ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSOLUTE)
 set(MODEL_OTA_MODULE_DIR ${_model_ota_module} CACHE INTERNAL "edge-ai module root")
 
+# Offset from partition base to the linked model image payload. Must match bootutil
+# IMAGE_HEADER_SIZE (see include/model_ota/model_image.h).
+set(MODEL_IMAGE_OFFSET_MCUBOOT 32)
+
+function(model_ota_model_image_offset out_var)
+  set(${out_var} ${MODEL_IMAGE_OFFSET_MCUBOOT} PARENT_SCOPE)
+endfunction()
+
+# Link address for a model partition image. Absolute pointers are linked for
+# partition_base + model_image_offset because the MCUboot header sits at the base.
+function(model_ota_image_link_addr partition_addr out_var)
+  math(EXPR link_addr "${partition_addr} + ${MODEL_IMAGE_OFFSET_MCUBOOT}")
+  set(${out_var} ${link_addr} PARENT_SCOPE)
+endfunction()
+
 # Shared partition-image inputs (used by model_ota_add_image()).
 set(MODEL_OTA_LINKER_SCRIPT ${MODEL_OTA_LIB_DIR}/linker/model_image.ld)
 set(MODEL_OTA_CRC_TOOL ${MODEL_OTA_TOOLS_DIR}/patch_image_crc.py)

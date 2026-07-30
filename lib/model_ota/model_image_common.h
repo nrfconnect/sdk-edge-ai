@@ -12,15 +12,23 @@
 #include <stdint.h>
 
 /**
+ * @brief Byte offset from a model partition base to the linked model image.
+ *
+ * Each partition reserves an MCUboot image-header slot at its base; the model payload is
+ * linked immediately after that slot (@c IMAGE_HEADER_SIZE bytes).
+ */
+size_t model_image_partition_payload_offset(void);
+
+/**
  * @brief Read the partition header and run checks shared by all backends.
  *
  * Reads @ref model_image_header directly from the memory-mapped (XIP) partition,
  * validates magic, @ref model_image_header.format_version, and image size against
  * @p partition_size, then verifies CRC32/IEEE over the whole mapped image.
  *
- * @param[in]  partition_addr  Memory-mapped base address of a zephyr,mapped-partition node.
- * @param[in]  partition_size  Size of that partition, in bytes.
- * @param[out] hdr_out         Validated header copy on success.
+ * @param[in]  partition_addr      Memory-mapped base address of a zephyr,mapped-partition node.
+ * @param[in]  partition_size      Size of that partition, in bytes.
+ * @param[out] hdr_out             Validated header copy on success.
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
 int model_image_read_and_validate(const uint8_t *partition_addr, size_t partition_size,

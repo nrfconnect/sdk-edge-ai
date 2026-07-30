@@ -56,6 +56,8 @@ function(model_ota_edgeai_neuton_model)
   dt_nodelabel(_partition_node NODELABEL ${MI_PARTITION_NODELABEL} REQUIRED)
   dt_reg_addr(_partition_addr PATH ${_partition_node})
   dt_reg_size(_partition_size PATH ${_partition_node})
+  model_ota_image_link_addr(${_partition_addr} _image_link_addr)
+  model_ota_model_image_offset(_image_model_offset)
 
   get_filename_component(_model_dir ${MI_MODEL_SRC} DIRECTORY)
   get_filename_component(_model_basename ${MI_MODEL_SRC} NAME)
@@ -102,6 +104,7 @@ function(model_ota_edgeai_neuton_model)
         MODEL_OTA_PARTITION_NODELABEL=${MI_PARTITION_NODELABEL}
         MODEL_OTA_NEUTON_NEURONS_CAP=${MI_NEURONS_CAP}
         MODEL_OTA_IMAGE_LINK_BASE=${_partition_addr}
+        MODEL_OTA_SMP_SLOT_NAME=\"${MI_NAME}\"
         MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u
       INCLUDES ${_model_dir})
   endif()
@@ -115,6 +118,7 @@ function(model_ota_edgeai_neuton_model)
   target_compile_definitions(${_image_obj} PRIVATE
                              MODEL_OTA_EDGEAI_NEUTON_MODEL_SRC=${_model_basename}
                              MODEL_OTA_IMAGE_LINK_BASE=${_partition_addr}
+                             MODEL_IMAGE_LINK_ADDR=${_image_link_addr}
                              MODEL_IMAGE_NAME_STR=\"${MI_NAME}\"
                              MODEL_IMAGE_VERSION_U32=${_version_u32}u
                              MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u)

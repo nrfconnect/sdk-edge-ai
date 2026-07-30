@@ -89,6 +89,7 @@ function(model_ota_context_register_slot)
     "\"partition_addr\": ${_addr_dec}"
     "\"partition_size\": ${_size_dec}"
   )
+  list(APPEND _fields "\"model_image_offset\": ${MODEL_IMAGE_OFFSET_MCUBOOT}")
   if(S_NEURONS_CAP)
     list(APPEND _fields "\"neurons_cap\": ${S_NEURONS_CAP}")
   endif()

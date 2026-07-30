@@ -12,6 +12,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/crc.h>
 #include <zephyr/sys/util.h>
+#include <bootutil/image.h>
 
 LOG_MODULE_REGISTER(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
 
@@ -40,6 +41,11 @@ BUILD_ASSERT(sizeof(struct model_image_edgeai_params) == 36,
 BUILD_ASSERT(offsetof(struct model_image_edgeai_params, p_extraction_mask) % sizeof(uint32_t) == 0,
 	     "p_extraction_mask must be word-aligned");
 
+size_t model_image_partition_payload_offset(void)
+{
+	return IMAGE_HEADER_SIZE;
+}
+
 static bool magic_is_valid(const struct model_image_header *hdr)
 {
 	return hdr->magic[0] == MODEL_IMAGE_MAGIC0 && hdr->magic[1] == MODEL_IMAGE_MAGIC1 &&
@@ -50,13 +56,14 @@ int model_image_read_and_validate(const uint8_t *partition_addr, size_t partitio
 				  struct model_image_header *hdr_out)
 {
 	struct model_image_header hdr;
+	const size_t payload_offset = model_image_partition_payload_offset();
 
 	if (partition_addr == NULL) {
 		LOG_ERR("partition_addr is NULL");
 		return MODEL_IMAGE_ERR_NO_PARTITION;
 	}
 
-	memcpy(&hdr, partition_addr, sizeof(hdr));
+	memcpy(&hdr, partition_addr + payload_offset, sizeof(hdr));
 
 	if (!magic_is_valid(&hdr)) {
 		LOG_WRN("No valid model image in partition (bad magic)");
@@ -68,7 +75,8 @@ int model_image_read_and_validate(const uint8_t *partition_addr, size_t partitio
 		return MODEL_IMAGE_ERR_BAD_FORMAT_VERSION;
 	}
 
-	if (hdr.image_size < sizeof(hdr) || hdr.image_size > partition_size) {
+	if (hdr.image_size < sizeof(hdr) ||
+	    payload_offset + hdr.image_size > partition_size) {
 		LOG_ERR("Image size %u B does not fit partition (%zu B)", hdr.image_size,
 			partition_size);
 		return MODEL_IMAGE_ERR_TOO_LARGE;
@@ -81,12 +89,13 @@ int model_image_read_and_validate(const uint8_t *partition_addr, size_t partitio
 	 */
 	uint32_t stored_crc = hdr.crc32;
 	struct model_image_header hdr_for_crc = hdr;
+	const uint8_t *image_base = partition_addr + payload_offset;
 
 	hdr_for_crc.crc32 = 0;
 	uint32_t computed_crc =
 		crc32_ieee_update(0, (const uint8_t *)&hdr_for_crc, sizeof(hdr_for_crc));
 
-	computed_crc = crc32_ieee_update(computed_crc, partition_addr + sizeof(hdr),
+	computed_crc = crc32_ieee_update(computed_crc, image_base + sizeof(hdr),
 					 hdr.image_size - sizeof(hdr));
 
 	if (computed_crc != stored_crc) {
