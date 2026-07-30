@@ -40,6 +40,8 @@ config APP_MODEL_OTA
 	  At boot, the model is loaded and validated from the model_storage flash
 	  partition instead - independently of the application image.
 
+	  Set via sysbuild as SB_CONFIG_APP_MODEL_OTA (see sysbuild_model_ota.conf).
+
 if APP_MODEL_OTA
 
 config APP_MODEL_OTA_NEUTON

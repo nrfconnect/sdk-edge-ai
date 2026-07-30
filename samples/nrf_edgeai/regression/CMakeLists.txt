@@ -6,15 +6,6 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/regression_model_ota.cmake)
-
-regression_model_ota_enabled(REGRESSION_MODEL_OTA)
-if(REGRESSION_MODEL_OTA)
-  regression_model_ota_board_overlay(_regression_model_ota_overlay)
-  list(APPEND EXTRA_DTC_OVERLAY_FILE
-    ${CMAKE_CURRENT_SOURCE_DIR}/boards/${_regression_model_ota_overlay})
-endif()
-
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(nrf_edgeai_regression_sample)
 

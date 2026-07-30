@@ -71,7 +71,7 @@ The sample supports the following build types:
      - :file:`prj.conf`
      - Compiled-in model.
    * - Model OTA
-     - :file:`model_ota.conf`
+     - :file:`sysbuild_model_ota.conf`
      - Partition-resident model with MCUboot and model SMP DFU on nRF54LM20 DK (Neuton on lm20a, Axon on lm20b).
 
 See `Custom build types`_ and `Providing CMake options`_ for more information.
@@ -97,7 +97,7 @@ At **boot**, the sample calls the matching loader, validates the partition image
 Inference is paused during SMP uploads to the model image and a **reset** is required before running against a newly uploaded model.
 
 :file:`prj.conf` enables the compiled-in model.
-Partition-resident models and MCUboot/SMP DFU are optional via ``CONFIG_APP_MODEL_OTA`` (set in :file:`model_ota.conf`).
+Partition-resident models and MCUboot/SMP DFU are optional via ``SB_CONFIG_APP_MODEL_OTA`` (set in :file:`sysbuild_model_ota.conf`).
 
 Build combinations:
 
@@ -113,9 +113,9 @@ Build combinations:
   .. code-block:: console
 
      west build -p -b nrf54lm20dk/nrf54lm20a/cpuapp -d build samples/nrf_edgeai/regression \
-       -- -DEXTRA_CONF_FILE=model_ota.conf
+       -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf
      west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build samples/nrf_edgeai/regression \
-       -- -DEXTRA_CONF_FILE=model_ota.conf
+       -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf
 
 This produces:
 
