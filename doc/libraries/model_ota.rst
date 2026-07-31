@@ -43,6 +43,11 @@ Production update flow (MCUboot SMP)
 4. Upload over SMP (MCUmgr ``image upload`` with the model image index), test, and reset. The application pauses inference on that model during upload.
 5. On boot, ``model_image_load_neuton()`` / ``model_image_load_axon()`` re-validate contract hash, caps, and (Axon) address bindings.
 
+Model images on layouts where primary and secondary slots alias the same partition (in-place
+overwrite) cannot use a normal MCUboot swap. ``model_ota_smp`` clears the MCUboot image trailer
+after upload and on boot so SMP clients do not leave images stuck in pending **test** or **perm**
+state.
+
 Image header (format v5, 48 bytes)
 **********************************
 

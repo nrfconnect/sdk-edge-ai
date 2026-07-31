@@ -9,12 +9,15 @@
 #include <errno.h>
 #include <string.h>
 
+#include <sysflash/sysflash.h>
+#include <zephyr/dfu/mcuboot.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/mgmt/mcumgr/mgmt/callbacks.h>
 #include <zephyr/mgmt/mcumgr/grp/img_mgmt/img_mgmt.h>
 #include <zephyr/mgmt/mcumgr/grp/img_mgmt/img_mgmt_callbacks.h>
 #include <zephyr/mgmt/mcumgr/mgmt/mgmt.h>
+#include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/atomic.h>
 
 LOG_MODULE_REGISTER(model_ota_smp, CONFIG_MODEL_OTA_LOG_LEVEL);
@@ -85,6 +88,72 @@ static struct model_ota_smp_slot_state *active_upload_slot(void)
 	}
 
 	return NULL;
+}
+
+static int clear_inplace_model_trailer(uint8_t image_index)
+{
+	const struct flash_area *fa;
+	ssize_t trailer_off;
+	size_t erase_size;
+	int rc;
+
+	rc = flash_area_open(FLASH_AREA_IMAGE_PRIMARY(image_index), &fa);
+	if (rc != 0) {
+		return rc;
+	}
+
+	trailer_off = boot_get_trailer_status_offset(fa->fa_size);
+	if (trailer_off < 0) {
+		flash_area_close(fa);
+		return (int)trailer_off;
+	}
+
+	erase_size = fa->fa_size - (size_t)trailer_off;
+	rc = flash_area_flatten(fa, (off_t)trailer_off, erase_size);
+	flash_area_close(fa);
+
+	return rc;
+}
+
+static void finalize_inplace_model_update(struct model_ota_smp_slot_state *slot)
+{
+	int swap_type_before;
+	int swap_type_after;
+	int rc;
+
+	if (slot == NULL) {
+		return;
+	}
+
+	swap_type_before = mcuboot_swap_type_multi(slot->image_index);
+	if (swap_type_before == BOOT_SWAP_TYPE_NONE) {
+		return;
+	}
+
+	rc = clear_inplace_model_trailer(slot->image_index);
+	if (rc != 0) {
+		if (slot->name != NULL) {
+			LOG_WRN("%s model image %u trailer clear failed (err %d)", slot->name,
+				slot->image_index, rc);
+		} else {
+			LOG_WRN("Model image %u trailer clear failed (err %d)", slot->image_index,
+				rc);
+		}
+		return;
+	}
+
+	swap_type_after = mcuboot_swap_type_multi(slot->image_index);
+	if (slot->name != NULL) {
+		LOG_INF("%s model image %u finalized in place (swap %d -> %d)", slot->name,
+			slot->image_index, swap_type_before, swap_type_after);
+	}
+}
+
+static void finalize_all_inplace_model_updates(void)
+{
+	for (size_t i = 0; i < registered_slot_count; i++) {
+		finalize_inplace_model_update(&registered_slots[i]);
+	}
 }
 
 static void finish_model_upload(bool pending_reset)
@@ -159,6 +228,7 @@ static enum mgmt_cb_return model_ota_smp_callback(uint32_t event, enum mgmt_cb_r
 	}
 
 	case MGMT_EVT_OP_IMG_MGMT_DFU_PENDING:
+		finalize_all_inplace_model_updates();
 		finish_model_upload(true);
 		break;
 
@@ -214,6 +284,7 @@ int model_ota_smp_init(const struct model_ota_smp_slot *slots, size_t slot_count
 
 	mgmt_callback_register(&model_ota_smp_mgmt_cb);
 	smp_initialized = true;
+	finalize_all_inplace_model_updates();
 
 	return 0;
 }

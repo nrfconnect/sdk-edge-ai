@@ -120,6 +120,22 @@ Build combinations:
      west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
        -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf
 
+* **Partition-resident models + BLE SMP DFU** (nRF Connect Device Manager):
+
+  .. code-block:: console
+
+     west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
+       -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf \
+          -DEXTRA_CONF_FILE=ble_mcumgr.conf
+
+* **Model OTA + BLE DFU + observability** (Memfault MDS over the same BLE link):
+
+  .. code-block:: console
+
+     west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
+       -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf \
+          -DEXTRA_CONF_FILE="ble_mcumgr.conf;observability.conf"
+
 Packaging and first-time provisioning
 --------------------------------------
 
@@ -199,6 +215,46 @@ Firmware-only OTA uses image index 0 and ``build/ww_kws/zephyr/zephyr.signed.bin
    mcumgr -c acm1 reset
 
 Each image can be updated independently.
+
+Model and firmware OTA over BLE (Device Manager)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pass :file:`ble_mcumgr.conf` as ``EXTRA_CONF_FILE`` to enable SMP over Bluetooth.
+The device advertises as ``WW KWS`` (or ``WW KWS Obsv`` when :file:`observability.conf`
+is also used) and exposes the standard MCUmgr SMP GATT service used by
+`nRF Connect Device Manager <nRF Connect Device Manager_>`_.
+
+After building with :file:`sysbuild_model_ota.conf`, upload ``build/dfu_application.zip``
+from the Device Manager mobile app (Image tab → select zip). The manifest lists the
+application (image 0) and both models (images 1 and 2). When the upload finishes,
+reset the device so MCUboot applies the update.
+
+UART SMP remains available when :file:`ble_mcumgr.conf` is not used, or alongside BLE
+when it is enabled.
+
+If Device Manager shows SMP as **Initializing** and the upload stays on **Validating**,
+rebuild with a pristine build after enabling :file:`ble_mcumgr.conf` and reflash
+``*_provision.hex``. The most common cause is SMP GATT requiring bonding
+(``CONFIG_MCUMGR_TRANSPORT_BT_PERM_RW_AUTHEN``); :file:`ble_mcumgr.conf` sets
+``CONFIG_MCUMGR_TRANSPORT_BT_PERM_RW=y`` so pairing is not required for DFU.
+
+If the DK **resets in a loop** after a multi-image zip upload, check the boot log for
+``Swap type: test`` or ``Swap type: perm`` on image indices 1 and 2. Model partitions use
+a **single-slot, in-place** layout (``slot2``/``slot3`` and ``slot4``/``slot5`` alias the same
+flash region). MCUboot cannot swap those images like the application image; pending **test**
+or **perm** trailer flags make Device Manager keep issuing resets. Use **Confirm only**
+(no revert) in the Device Manager advanced settings for multi-image updates. After rebuilding
+with the current tree, ``model_ota_smp`` erases the MCUboot trailer on model partitions after
+upload and on boot so swap type returns to **none**. If the loop persists, recover with
+``west flash -d build --recover --no-rebuild`` or ``*_provision.hex``, then retry the zip
+with **Confirm only**.
+
+If Device Manager reports **Confirmation denied (32)** during a multi-image zip, the
+firmware rejected MCUmgr confirm on model images 1 or 2. That happens because in-place model
+uploads write to the **primary** slot while the running application is still image 0; default
+MCUmgr policy blocks confirming a non-active image's primary slot. :file:`model_ota.conf` sets
+``CONFIG_MCUMGR_GRP_IMG_ALLOW_CONFIRM_NON_ACTIVE_IMAGE_ANY=y`` so Device Manager can confirm
+all three images in the zip. Rebuild with a pristine build after pulling that change.
 
 Requirements
 ************

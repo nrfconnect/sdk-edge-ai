@@ -42,7 +42,7 @@ target_include_directories(app PRIVATE
   ${KWS_MODEL_DIR}
 )
 
-target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_MDS app PRIVATE src/ble/ble_mds.c)
+target_sources_ifdef(CONFIG_BT app PRIVATE src/ble/ble_app.c)
 
 if(CONFIG_APP_MODEL_OTA)
   include(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/model_ota/cmake/model_ota_axon_edgeai.cmake)

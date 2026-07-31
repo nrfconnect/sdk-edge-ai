@@ -13,7 +13,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-#include "ble/ble_mds.h"
+#include "ble/ble_app.h"
 #include "control_output.h"
 #include "dmic.h"
 #include "kws/kws.h"
@@ -156,17 +156,17 @@ int main(void)
 		}
 	}
 
-	err = init_app_ble();
-	if (err) {
-		return err;
-	}
-
 #if IS_ENABLED(CONFIG_APP_MODEL_OTA)
 	err = model_update_init();
 	if (err) {
 		return err;
 	}
 #endif
+
+	err = init_app_ble();
+	if (err) {
+		return err;
+	}
 
 	LOG_INF("Initialization completed, check output on VCOM0");
 

@@ -51,6 +51,7 @@ config MODEL_OTA_LOG_LEVEL
 config MODEL_OTA_SMP
 	bool "Coordinate inference with MCUboot SMP model uploads"
 	depends on BOOTLOADER_MCUBOOT
+	depends on MCUBOOT_BOOTUTIL_LIB
 	depends on MCUMGR
 	depends on MCUMGR_MGMT_NOTIFICATION_HOOKS
 	depends on MCUMGR_GRP_IMG
