@@ -7,7 +7,8 @@
 
 function(model_ota_mcuboot_sign)
 	cmake_parse_arguments(ARG ""
-		"TARGET;MODEL_IMAGE_BIN;MODEL_IMAGE_TARGET;PARTITION_NODELABEL;UUID_CID;UUID_VID" "" ${ARGN})
+		"TARGET;MODEL_IMAGE_BIN;MODEL_IMAGE_TARGET;PARTITION_NODELABEL;UUID_CID;UUID_VID;SIGN_VERSION"
+		"" ${ARGN})
 
 	if(NOT ARG_TARGET OR NOT ARG_MODEL_IMAGE_BIN OR NOT ARG_PARTITION_NODELABEL)
 		message(FATAL_ERROR
@@ -56,8 +57,14 @@ function(model_ota_mcuboot_sign)
 		list(APPEND imgtool_uuid_args --cid "${ARG_UUID_CID}")
 	endif()
 
+	if(ARG_SIGN_VERSION)
+		set(sign_version "${ARG_SIGN_VERSION}")
+	else()
+		set(sign_version "${CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION}")
+	endif()
+
 	set(imgtool_sign_base ${PYTHON_EXECUTABLE} ${IMGTOOL} sign
-		--version ${CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION}
+		--version ${sign_version}
 		--header-size 32
 		--pad-header
 		--pad

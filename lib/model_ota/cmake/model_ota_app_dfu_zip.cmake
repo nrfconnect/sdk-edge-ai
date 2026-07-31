@@ -21,7 +21,7 @@ function(model_ota_mcuboot_image_number_to_slot result image secondary)
 endfunction()
 
 function(model_ota_create_dfu_application_zip)
-	cmake_parse_arguments(ARG "" "" "MODEL;IMAGE_INDEX" ${ARGN})
+	cmake_parse_arguments(ARG "" "" "MODEL;IMAGE_INDEX;MODEL_SIGN_VERSION" ${ARGN})
 
 	if(NOT CONFIG_APP_MODEL_OTA)
 		return()
@@ -36,6 +36,13 @@ function(model_ota_create_dfu_application_zip)
 	if(NOT model_count EQUAL index_count)
 		message(FATAL_ERROR
 			"${CMAKE_CURRENT_FUNCTION}(): MODEL and IMAGE_INDEX must have the same length")
+	endif()
+	if(ARG_MODEL_SIGN_VERSION)
+		list(LENGTH ARG_MODEL_SIGN_VERSION sign_version_count)
+		if(NOT sign_version_count EQUAL model_count)
+			message(FATAL_ERROR
+				"${CMAKE_CURRENT_FUNCTION}(): MODEL_SIGN_VERSION must match MODEL length")
+		endif()
 	endif()
 
 	set(sysbuild_dir ${CMAKE_BINARY_DIR}/..)
@@ -84,6 +91,13 @@ function(model_ota_create_dfu_application_zip)
 			"${zip_name}slot_index_primary=${model_slot_primary}"
 			"${zip_name}slot_index_secondary=${model_slot_secondary}"
 		)
+		if(ARG_MODEL_SIGN_VERSION)
+			list(GET ARG_MODEL_SIGN_VERSION ${model_idx} model_sign_version)
+			list(APPEND script_params
+				"${zip_name}version_MCUBOOT=${model_sign_version}"
+				"${zip_name}app_version_compat=${CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION}"
+			)
+		endif()
 		list(APPEND bin_files ${model_bin})
 		list(APPEND zip_names ${zip_name})
 		list(APPEND deps ${model}_model_mcuboot_signed)
