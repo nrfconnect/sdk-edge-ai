@@ -6,14 +6,6 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ww_kws_model_ota.cmake)
-
-ww_kws_model_ota_enabled(WW_KWS_MODEL_OTA)
-if(WW_KWS_MODEL_OTA)
-  list(APPEND EXTRA_DTC_OVERLAY_FILE
-    ${CMAKE_CURRENT_SOURCE_DIR}/boards/nrf54lm20dk_nrf54lm20b_cpuapp_model_ota.overlay)
-endif()
-
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(ww_kws)
 
@@ -91,6 +83,12 @@ if(CONFIG_APP_MODEL_OTA)
     PARTITION_NODELABEL model_storage_kws
     UUID_CID ww_kws_model_kws
     UUID_VID nordicsemi.com
+  )
+
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/model_ota/cmake/model_ota_app_dfu_zip.cmake)
+  model_ota_create_dfu_application_zip(
+    MODEL ww;kws
+    IMAGE_INDEX 1;2
   )
 endif()
 

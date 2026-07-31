@@ -137,6 +137,7 @@ This produces:
 * ``build/ww_kws/ww_model_mcuboot.signed.{bin,hex}`` - wakeword model (MCUboot image 1)
 * ``build/ww_kws/kws_model_mcuboot.signed.{bin,hex}`` - keyword-spotting model (MCUboot image 2)
 * ``build/ww_kws/zephyr/zephyr.signed.{bin,hex}`` - application firmware (MCUboot image 0)
+* ``build/dfu_application.zip`` - app + both models for nRF Connect Device Manager manual upload
 * ``build/ww_kws_provision.hex`` - merged bootloader, application, and both signed models
 
 First-time provisioning must flash the **full sysbuild image chain**, not the application ``zephyr.hex`` alone.
