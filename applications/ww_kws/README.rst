@@ -136,6 +136,21 @@ Build combinations:
        -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf \
           -DEXTRA_CONF_FILE="ble_mcumgr.conf;observability.conf"
 
+* **Model OTA + Memfault app FOTA + observability** (Device Manager FOTA tab):
+
+  .. code-block:: console
+
+     west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
+       -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf \
+          -DEXTRA_CONF_FILE="memfault_fota.conf;observability.conf;memfault_user.conf"
+
+  Copy :file:`memfault_user.conf.example` to :file:`memfault_user.conf` and set your project key
+  (quoted string). Pass :file:`memfault_user.conf` **last** in ``EXTRA_CONF_FILE`` so it is not
+  overridden by :file:`observability.conf`.
+  Bump :file:`VERSION` before each Memfault release upload so the signed MCUboot version
+  matches the release in Memfault cloud. When observability is also enabled, the advertised
+  name remains ``WW KWS Obsv`` from :file:`observability.conf`.
+
 Packaging and first-time provisioning
 --------------------------------------
 
@@ -255,6 +270,47 @@ uploads write to the **primary** slot while the running application is still ima
 MCUmgr policy blocks confirming a non-active image's primary slot. :file:`model_ota.conf` sets
 ``CONFIG_MCUMGR_GRP_IMG_ALLOW_CONFIRM_NON_ACTIVE_IMAGE_ANY=y`` so Device Manager can confirm
 all three images in the zip. Rebuild with a pristine build after pulling that change.
+
+Memfault-managed FOTA (Device Manager)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pass :file:`memfault_fota.conf` instead of :file:`ble_mcumgr.conf` when firmware should be
+delivered through `Memfault`_ release management and the **FOTA** tab in
+`nRF Connect Device Manager <nRF Connect Device Manager_>`_.
+
+**Multi-image zip (app + models):** upload ``build/dfu_application.zip`` to Memfault. When the
+Device Manager **FOTA** tab downloads that release, it parses the zip manifest and can update
+all listed MCUboot images (0, 1, and 2). Use **Confirm only** in advanced settings for
+multi-image updates (same as manual **Image** tab upload).
+
+**Single-image payload:** uploading only ``build/ww_kws/zephyr/zephyr.signed.bin`` updates
+MCUboot image 0 (application) only.
+
+Device identity for Memfault FOTA is aligned across three places:
+
++----------------------+------------------------------------------+
+| Field                | Source                                   |
++======================+==========================================+
+| Firmware version     | :file:`VERSION` → MCUboot sign version   |
+| Software type        | ``CONFIG_MEMFAULT_NCS_FW_TYPE`` (``app``)|
+| Hardware version     | ``CONFIG_MEMFAULT_NCS_HW_VERSION``       |
+| Device serial        | SoC HW ID → Bluetooth DIS serial         |
++----------------------+------------------------------------------+
+
+Workflow (full app + model release):
+
+#. Build with :file:`memfault_fota.conf` (and :file:`observability.conf` when MDS metrics are
+   required). Set ``CONFIG_MEMFAULT_NCS_PROJECT_KEY`` in :file:`memfault_user.conf`.
+#. Bump :file:`VERSION`, rebuild, and upload ``build/dfu_application.zip`` to Memfault release
+   management (hardware version must match ``CONFIG_MEMFAULT_NCS_HW_VERSION``).
+#. Deploy the release to the device cohort.
+#. Flash ``build/ww_kws_provision.hex`` on first provision (or ``west flash --recover``).
+#. In Device Manager, connect to ``WW KWS Obsv``, open the **FOTA** tab, and check for updates.
+
+For an application-only release, upload ``zephyr.signed.bin`` instead of the zip.
+
+MDS observability (CDR drain) and Memfault FOTA share the same BLE link; they use separate
+GATT services (MDS and SMP).
 
 Requirements
 ************

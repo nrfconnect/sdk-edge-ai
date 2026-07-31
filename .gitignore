@@ -31,6 +31,8 @@ map.yml
 hardware-map.yaml*
 coverage.info
 
+applications/ww_kws/memfault_user.conf
+
 doc/_build
 doc/_src
 doc/*_warnings.txt

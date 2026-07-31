@@ -20,35 +20,47 @@
 #include <bluetooth/services/mds.h>
 #endif
 
+#include "../memfault_fota.h"
+
 LOG_MODULE_REGISTER(ble_app);
 
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
 #if IS_ENABLED(CONFIG_MCUMGR_TRANSPORT_BT) && IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
+/* SMP + MDS do not fit in one 31-byte AD payload; SMP stays in AD for DFU discovery. */
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-	BT_DATA_BYTES(BT_DATA_UUID128_SOME, SMP_BT_SVC_UUID_VAL, BT_UUID_MDS_VAL),
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, SMP_BT_SVC_UUID_VAL),
+};
+static const struct bt_data sd[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_MDS_VAL),
 };
 #elif IS_ENABLED(CONFIG_MCUMGR_TRANSPORT_BT)
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID128_ALL, SMP_BT_SVC_UUID_VAL),
 };
+static const struct bt_data sd[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+};
 #elif IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_MDS_VAL),
 };
+static const struct bt_data sd[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+};
 #else
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 };
-#endif
-
 static const struct bt_data sd[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
 };
+#endif
 
 static struct k_work adv_work;
 
@@ -168,6 +180,11 @@ int init_app_ble(void)
 			LOG_ERR("Failed to load settings (err %d)", err);
 			return err;
 		}
+	}
+
+	err = memfault_fota_init();
+	if (err != 0) {
+		return err;
 	}
 
 	k_work_init(&adv_work, adv_work_handler);

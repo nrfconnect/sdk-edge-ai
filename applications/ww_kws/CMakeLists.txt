@@ -43,16 +43,30 @@ target_include_directories(app PRIVATE
 )
 
 target_sources_ifdef(CONFIG_BT app PRIVATE src/ble/ble_app.c)
+target_sources_ifdef(CONFIG_WW_KWS_MEMFAULT_FOTA app PRIVATE src/memfault_fota.c)
 
 if(CONFIG_APP_MODEL_OTA)
   include(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/model_ota/cmake/model_ota_axon_edgeai.cmake)
+
+  model_ota_read_version_file(${CMAKE_CURRENT_SOURCE_DIR}/VERSION.ww
+    WW_VERSION_STRING WITHOUT_TWEAK WW_MODEL_VERSION
+    MAJOR WW_MODEL_MAJOR MINOR WW_MODEL_MINOR PATCH WW_MODEL_PATCH)
+  model_ota_read_version_file(${CMAKE_CURRENT_SOURCE_DIR}/VERSION.kws
+    KWS_VERSION_STRING WITHOUT_TWEAK KWS_MODEL_VERSION
+    MAJOR KWS_MODEL_MAJOR MINOR KWS_MODEL_MINOR PATCH KWS_MODEL_PATCH)
+
+  model_ota_pack_app_imgtool_build(APP_IMGTOOL_BUILD)
+  model_ota_mcuboot_sign_version(${WW_MODEL_MAJOR} ${WW_MODEL_MINOR} ${WW_MODEL_PATCH}
+    ${APP_IMGTOOL_BUILD} WW_MCUBOOT_SIGN_VERSION)
+  model_ota_mcuboot_sign_version(${KWS_MODEL_MAJOR} ${KWS_MODEL_MINOR} ${KWS_MODEL_PATCH}
+    ${APP_IMGTOOL_BUILD} KWS_MCUBOOT_SIGN_VERSION)
 
   model_ota_axon_edgeai_wire(
     SOLUTION_ID 36711
     MODEL_SRC ${WW_MODEL_SRC}
     HEADER ${WW_MODEL_HEADER}
     NAME ww
-    VERSION 1.0.0
+    VERSION ${WW_MODEL_VERSION}
     PARTITION_NODELABEL model_storage_ww
     PERSISTENT_VARS_CAP 1160
   )
@@ -61,7 +75,7 @@ if(CONFIG_APP_MODEL_OTA)
     MODEL_SRC ${KWS_MODEL_SRC}
     HEADER ${KWS_MODEL_HEADER}
     NAME kws
-    VERSION 1.0.0
+    VERSION ${KWS_MODEL_VERSION}
     PARTITION_NODELABEL model_storage_kws
     PERSISTENT_VARS_CAP 6648
   )
@@ -75,6 +89,7 @@ if(CONFIG_APP_MODEL_OTA)
     PARTITION_NODELABEL model_storage_ww
     UUID_CID ww_kws_model_ww
     UUID_VID nordicsemi.com
+    SIGN_VERSION ${WW_MCUBOOT_SIGN_VERSION}
   )
   model_ota_mcuboot_sign(
     TARGET kws
@@ -83,12 +98,14 @@ if(CONFIG_APP_MODEL_OTA)
     PARTITION_NODELABEL model_storage_kws
     UUID_CID ww_kws_model_kws
     UUID_VID nordicsemi.com
+    SIGN_VERSION ${KWS_MCUBOOT_SIGN_VERSION}
   )
 
   include(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/model_ota/cmake/model_ota_app_dfu_zip.cmake)
   model_ota_create_dfu_application_zip(
     MODEL ww;kws
     IMAGE_INDEX 1;2
+    MODEL_SIGN_VERSION ${WW_MCUBOOT_SIGN_VERSION};${KWS_MCUBOOT_SIGN_VERSION}
   )
 endif()
 
