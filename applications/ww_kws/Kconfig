@@ -64,26 +64,40 @@ config KWS_EMA_ALPHA
 	  Coefficient for new entries in exponential moving average calculation for average class
 	  probability. The value is expressed in units of 1/1000.
 
-config MODELS_OBSERVABILITY
-	bool "Edge AI observability metrics"
+config MODELS_OBSERVABILITY_WW
+	bool "Edge AI observability for the wakeword model"
 	depends on NRF_EDGEAI_OBSV
 	depends on NRF_EDGEAI_OBSV_MEMFAULT
-	depends on NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION
-	depends on NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX || APP_MODE_WW_ONLY
-	depends on NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS >= 2 || !APP_MODE_WW_GATED_KWS
+	depends on APP_MODE_WW_GATED_KWS || APP_MODE_WW_ONLY
 	help
-	  Wire observability into the bundled models. Each model file owns its observability context
-	  and Memfault transport binding.
+	  Collect observability metrics for the wakeword model. Its single output is expanded into
+	  a synthetic 2-class [1 - p, p] distribution so the probability metrics apply to it.
 
-if MODELS_OBSERVABILITY
+config MODELS_OBSERVABILITY_KWS
+	bool "Edge AI observability for the keyword spotting model"
+	depends on NRF_EDGEAI_OBSV
+	depends on NRF_EDGEAI_OBSV_MEMFAULT
+	depends on APP_MODE_WW_GATED_KWS || APP_MODE_KWS_ONLY
+	depends on NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS >= 2 || !MODELS_OBSERVABILITY_WW
+	help
+	  Collect observability metrics for the keyword spotting model. Enabling it together with
+	  MODELS_OBSERVABILITY_WW (wakeword-gated mode runs both models) registers two Memfault
+	  contexts, so NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS must be >= 2.
+
+config MODELS_OBSERVABILITY
+	def_bool MODELS_OBSERVABILITY_WW || MODELS_OBSERVABILITY_KWS
+	help
+	  Auto-selected umbrella: set when observability is enabled for at least one model. Gates the
+	  shared model_obsv module (create/register all enabled built-in metrics + Memfault binding).
+	  The wakeword and keyword spotting model files guard their own wiring with
+	  MODELS_OBSERVABILITY_WW and MODELS_OBSERVABILITY_KWS respectively.
 
 config MODELS_OBSERVABILITY_MDS
 	def_bool y
+	depends on MODELS_OBSERVABILITY
 	depends on BT_MDS
 	depends on BT_SMP
 	depends on NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
-
-endif # MODELS_OBSERVABILITY
 
 endmenu
 

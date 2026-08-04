@@ -12,7 +12,7 @@
 //////////////////////////////////////////////////////////////////////////////
 /* Nordic EdgeAI Lab Solution ID and Runtime Version */
 #define EDGEAI_LAB_SOLUTION_ID_STR      "36712"
-#define EDGEAI_RUNTIME_VERSION_COMBINED 0x00000202
+#define EDGEAI_RUNTIME_VERSION_COMBINED 0x00000003
 
 //////////////////////////////////////////////////////////////////////////////
 #define INPUT_TYPE                         i16
@@ -192,7 +192,8 @@ static nrf_edgeai_dsp_pipeline_t dsp_pipeline_ = {
 //////////////////////////////////////////////////////////////////////////////
 #define NN_INPUT_INIT_INTERFACE        nrf_edgeai_input_init_discrete_window
 #define NN_INPUT_FEED_INTERFACE        nrf_edgeai_input_feed_discrete_window_i16
-#define NN_PROCESS_FEATURES_INTERFACE  nrf_edgeai_process_features_dsp_i16_noscale
+#define NN_PROCESS_FEATURES_INTERFACE  nrf_edgeai_process_features_dsp_i16
+#define NN_SCALE_FEATURES_INTERFACE    nrf_edgeai_scale_features_empty
 #define NN_INIT_INFERENCE_INTERFACE    nrf_edgeai_init_inference_axon
 #define NN_RUN_INFERENCE_INTERFACE     nrf_edgeai_run_inference_axon_audiomels
 #define NN_PROPAGATE_OUTPUTS_INTERFACE nrf_edgeai_output_dequantize_axon_q8_f32
@@ -238,6 +239,7 @@ static nrf_edgeai_t nrf_edgeai_ = {
     .interfaces.input_init          = NN_INPUT_INIT_INTERFACE,
     .interfaces.feed_inputs         = NN_INPUT_FEED_INTERFACE,
     .interfaces.process_features    = NN_PROCESS_FEATURES_INTERFACE,
+    .interfaces.scale_features      = NN_SCALE_FEATURES_INTERFACE,
     .interfaces.init_inference      = NN_INIT_INFERENCE_INTERFACE,
     .interfaces.run_inference       = NN_RUN_INFERENCE_INTERFACE,
     .interfaces.propagate_outputs   = NN_PROPAGATE_OUTPUTS_INTERFACE,

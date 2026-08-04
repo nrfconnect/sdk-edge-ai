@@ -9,13 +9,14 @@
 
 #include <zephyr/logging/log.h>
 #include <nrf_edgeai/nrf_edgeai.h>
+#include <nrf_edgeai/rt/nrf_edgeai_runtime.h>
 #include <nrf_edgeai/rt/nrf_edgeai_runtime_aux.h>
-#include <nrf_edgeai_obsv/nrf_edgeai_obsv.h>
-#include <nrf_edgeai_obsv/nrf_edgeai_obsv_memfault.h>
-#include <nrf_edgeai_obsv/nrf_edgeai_obsv_metrics.h>
 
 #include "../dmic.h"
 #include "../model_utils.h"
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
+#include "../obsv/model_obsv.h"
+#endif
 #include "kws.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model_labels.h"
@@ -49,17 +50,20 @@ static const struct keyword_detection_ctx keyword_detection_ctxs[] = {
 
 static nrf_edgeai_t *kws_model;
 
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
 
-static nrf_edgeai_obsv_ctx_t kws_ctx;
+/* Mel feature vector length produced by the model DSP front end. Sizes the
+ * FEATURES-stream metric storage; validated at runtime against
+ * nrf_edgeai_dsp_features_ctx()->overall_num.
+ */
+#define KWS_NUM_FEATURES 40
 
-static uint32_t kws_pd_buf[NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(KEYWORDS_COUNT) / sizeof(uint32_t)];
-static uint32_t kws_tm_buf[NRF_EDGEAI_OBSV_TM_STORAGE_BYTES(KEYWORDS_COUNT) / sizeof(uint32_t)];
-static nrf_edgeai_obsv_metric_t kws_pd;
-static nrf_edgeai_obsv_metric_t kws_tm;
+static struct model_obsv kws_obsv;
 
 BUILD_ASSERT(CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES >= KEYWORDS_COUNT,
 	     "Observability will not fit all keyword spotting classes");
+BUILD_ASSERT(KWS_NUM_FEATURES <= MODEL_OBSV_MAX_FEATURES,
+	     "MODEL_OBSV_MAX_FEATURES must be >= KWS_NUM_FEATURES");
 
 static int kws_obsv_init(nrf_edgeai_t *model)
 {
@@ -71,36 +75,10 @@ static int kws_obsv_init(nrf_edgeai_t *model)
 		return err;
 	}
 
-	err = nrf_edgeai_obsv_init(&kws_ctx, &info);
-	if (err) {
-		LOG_ERR("Observability init failed (err %d)", err);
-		return err;
-	}
-
-	nrf_edgeai_obsv_metric_pd_create(&kws_pd, kws_pd_buf, KEYWORDS_COUNT);
-	nrf_edgeai_obsv_metric_tm_create(&kws_tm, kws_tm_buf, KEYWORDS_COUNT);
-	err = nrf_edgeai_obsv_register(&kws_ctx, &kws_pd, NULL);
-	if (err) {
-		LOG_ERR("PD metric registration failed (err %d)", err);
-		return err;
-	}
-
-	err = nrf_edgeai_obsv_register(&kws_ctx, &kws_tm, NULL);
-	if (err) {
-		LOG_ERR("TM metric registration failed (err %d)", err);
-		return err;
-	}
-
-	err = nrf_edgeai_obsv_memfault_init(&kws_ctx);
-	if (err) {
-		LOG_ERR("Memfault transport init failed (err %d)", err);
-		return err;
-	}
-
-	return 0;
+	return model_obsv_init(&kws_obsv, &info, KWS_NUM_FEATURES);
 }
 
-#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY) */
+#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
 
 int kws_init(void)
 {
@@ -116,9 +94,9 @@ int kws_init(void)
 		return -ENOENT;
 	}
 
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
 	return kws_obsv_init(kws_model);
-#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY) */
+#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
 
 	return 0;
 }
@@ -196,6 +174,27 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 		return -EPERM;
 	}
 
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
+	/* Extract the mel feature vector before inference and feed it to the
+	 * FEATURES-stream metrics (mel energy / spectral descriptors). run_inference
+	 * reuses these features, so the explicit call adds no extra DSP work.
+	 */
+	err = nrf_edgeai_process_features(kws_model);
+	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
+		/* Feature window not complete yet. */
+		return -EBUSY;
+	} else if (err) {
+		LOG_ERR("Failed to process features (err %d)", err);
+		return -EPERM;
+	}
+
+	const nrf_edgeai_dsp_feature_extraction_t *feats = nrf_edgeai_dsp_features_ctx(kws_model);
+
+	if (feats != NULL) {
+		model_obsv_update_features(&kws_obsv, feats->buffer.p_f32, feats->overall_num);
+	}
+#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
+
 	err = nrf_edgeai_run_inference(kws_model);
 	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
 		/* Skip output extraction, not enough data. */
@@ -207,13 +206,9 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 
 	kws_postprocess(prediction);
 
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
-	err = nrf_edgeai_obsv_update_probs(&kws_ctx,
-					   kws_model->decoded_output.classif.probabilities.p_f32);
-	if (err) {
-		LOG_ERR("Failed to update obsv (err %d)", err);
-	}
-#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY) */
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
+	model_obsv_update_probs(&kws_obsv, kws_model->decoded_output.classif.probabilities.p_f32);
+#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
 
 	return 0;
 }
