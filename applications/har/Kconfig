@@ -1,0 +1,66 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+config HAR_INFERENCE_POSTPROCESSING
+	bool "Apply inference postprocessing before publishing"
+	default n
+	help
+	  When enabled, classification output is stabilized by requiring a
+	  per-class number of consecutive identical predictions before being
+	  logged, shown on the LED, and sent over BLE.
+
+	  When disabled, every raw model prediction is logged and published.
+
+config HAR_POSTPROCESSING_PUBLISH_TIMEOUT_MS
+	int "Maximum time without a published classification [ms]"
+	depends on HAR_INFERENCE_POSTPROCESSING
+	range 1000 60000
+	default 8000
+	help
+	  While the activity changes, the raw prediction may keep alternating so
+	  that no class ever reaches its repeat count and nothing is published.
+	  Once this time has passed without any output, the class predicted most
+	  often since the last published result is published instead.
+
+	  The gap is bounded by this value plus one inference period, because the
+	  timeout is only evaluated when a new raw prediction arrives.
+
+	  Lower values shorten the worst-case gap but force a guess while the
+	  model is still undecided, which costs accuracy. Replaying the captured
+	  test logs gives 81.2% at 3 s, 87.6% at 5 s, 89.9% at 8 s and 90.9% with
+	  the fallback disabled entirely, the last at the price of a 17.9 s gap.
+
+config HAR_LOG_RAW_PREDICTIONS
+	bool "Also report every raw prediction, before post-processing"
+	depends on HAR_INFERENCE_POSTPROCESSING
+	help
+	  When enabled, every model output is reported with a "RAW," prefix in
+	  addition to the results that postprocessing decides to publish. Both
+	  line types carry the same fields, so a recording can be analysed as a
+	  raw prediction stream, as a published stream, or as both.
+
+	  Postprocessing publishes only once a class repeats, which correlates
+	  with the model being right, so a recording that contains published
+	  results alone gives an optimistic view of the model and no way to
+	  reconstruct what it actually predicted. Reporting the raw stream as
+	  well makes model accuracy and published accuracy measurable from the
+	  same recording, and lets different repeat counts be evaluated by
+	  replaying the recording offline.
+
+	  Costs one extra log line and BLE message per inference period.
+
+config BLE_NUS_OUTPUT
+	bool "Send classification results over BLE NUS"
+	depends on BT
+	select BT_NUS
+	select BT_DIS
+	select BT_DIS_PNP
+	select BT_BAS
+	help
+	  When enabled, recognized activity class and probability are sent as
+	  text over the Nordic UART Service whenever the classification changes.
+
+source "Kconfig.zephyr"
