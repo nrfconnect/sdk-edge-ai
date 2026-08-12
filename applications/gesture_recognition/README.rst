@@ -32,6 +32,7 @@ Based on accelerometer and gyroscope data, the nRF Edge AI model recognizes eigh
 
 The neural network model is trained using the `Nordic Edge AI Lab`_.
 The whole process how to capture data and train the model is described in the `Nordic Edge AI Lab documentation`_.
+Alternatively, you can collect training data using the :ref:`data_forwarder_sample` sample together with the :ref:`data_forwarder_host_tool`.
 You can also see `Gesture recognition use-case demo video`_.
 
 Requirements
@@ -269,6 +270,13 @@ Building firmware for data collection
 It is possible to create a build that outputs raw data from the accelerometer and gyro sensors on the serial port.
 No inference is performed in this mode.
 This allows to capture data for training new models and to test and implement new use cases.
+
+.. note::
+
+   As an alternative to the built-in data collection mode, use the :ref:`data_forwarder_sample` sample with the :ref:`data_forwarder_host_tool` to stream sensor data to your host for `Nordic Edge AI Lab`_ workflows.
+   The data forwarder sample is a dedicated firmware for collecting training data.
+   It supports additional sensors and exports data in a format compatible with Edge AI Lab data collection.
+
 The output consists of 16-bit integers separated by a comma, in the following order:
 
 .. code-block::
