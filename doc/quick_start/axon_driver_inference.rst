@@ -31,14 +31,21 @@ Software requirements
 
 To start working with the Axon NPU, complete the setup based on your use case:
 
-* If you want to deploy models on the device, you just need to complete :ref:`setup_sdk` to install |NCS| and toolchain.
-* If you want to prepare models for deployment, you only need to set up a Python environment to run the :ref:`axon_npu_tflite_compiler`.
-  Follow instructions in :ref:`axon_setup_compiler` to set up the environment.
+* If you want to deploy models on the device, complete :ref:`setup_sdk` to install |NCS| and toolchain.
+* If you want to prepare models for deployment, choose one of the following:
+
+  * Compile a TensorFlow Lite model in `Nordic Edge AI Lab`_ using the `Nordic Edge AI Lab Compile your own model`_ feature.
+    See :ref:`axon_compile_model`.
+  * Set up a local Python environment to run the :ref:`axon_npu_tflite_compiler`.
+    Follow instructions in :ref:`axon_setup_compiler`.
 
 .. _axon_setup_compiler:
 
 Setting up Axon TFlite Compiler
 ===============================
+
+The following setup applies when you compile models locally with the :ref:`axon_npu_tflite_compiler`.
+If you use `Nordic Edge AI Lab`_ instead, go to :ref:`axon_compile_model` section.
 
 Before you can run the :ref:`axon_npu_tflite_compiler`, you need to set up a Python environment with the required dependencies.
 The executor of the compiler is compatible with Python ``3.11``.
@@ -118,9 +125,10 @@ You can set up the Python environment using one of the methods below.
 Model compilation
 *****************
 
-With the compiler environment ready, you can transform your TensorFlow Lite model into Axon-optimized code and verify that inference produces correct results.
+With the Axon compiler, you can transform your TensorFlow Lite model into Axon-optimized code and verify that inference produces correct results.
 
 .. rst-class:: numbered-step
+.. _axon_compile_model:
 
 Compile your model
 ==================
@@ -128,7 +136,28 @@ Compile your model
 The Axon compiler analyzes your model's operations, maps them to hardware accelerators, and generates efficient code for the NPU.
 Whether you're using a pre-trained model or one you have trained yourself, you will need to run it through this compilation process.
 
-Follow the :ref:`axon_npu_tflite_compiler_setup_executor` instructions to transform your TFLite model into an Axon-optimized model.
+You can compile your TensorFlow Lite model in `Nordic Edge AI Lab`_ or with the local :ref:`axon_npu_tflite_compiler`.
+For context on how these options differ, see the :ref:`axon_compile_model_options` section.
+
+.. tabs::
+
+   .. group-tab:: Nordic Edge AI Lab
+
+      Use `Nordic Edge AI Lab`_ when you want to compile a model without installing the local compiler toolchain.
+
+      #. Create a `Nordic Edge AI Lab`_ account if you do not already have one.
+      #. Follow the `Nordic Edge AI Lab Compile your own model`_ guide to upload your int8-quantized ``.tflite`` or ``.lite`` model and compile it for Axon.
+      #. Download the compiled model package when compilation completes.
+
+         The package contains Axon header files (for example, :file:`nrf_axon_model_<model_name>_.h`) that you can integrate into your application using the Axon driver API.
+
+      .. note::
+
+         Use this option when you already have a TensorFlow Lite model and want a quick path to Axon-optimized headers.
+
+   .. group-tab:: Local Axon NPU TFlite compiler
+
+      Follow the :ref:`axon_npu_tflite_compiler_setup_executor` instructions to transform your TFLite model into an Axon-optimized model.
 
 .. rst-class:: numbered-step
 

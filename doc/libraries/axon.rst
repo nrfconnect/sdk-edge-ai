@@ -19,8 +19,10 @@ You can create applications that target the SoC (running zephyr) or a software s
 Neural Net Workflow
 *******************
 
-The neural net compiler for Axon NPU is provided in :file:`compiler/scripts`.
-It has two components; an executor script and a compiler shared object/dll.
+You can compile TensorFlow Lite models for Axon in `Nordic Edge AI Lab`_ using the `Nordic Edge AI Lab Compile your own model`_ feature, or locally with the neural net compiler provided in :file:`compiler/scripts`.
+See :ref:`axon_compile_model_options` for a comparison of both options.
+
+The local compiler has two components; an executor script and a compiler shared object/dll.
 The compiler can work with a .tflite file (bare minimum) or the complete Keras model.
 The complete model with a test data set is needed if the user wants to measure quantization loss.
 The user is responsible for populating a configuration .yml file with various parameters.
