@@ -8,6 +8,7 @@
 #define __INFERENCE_POSTPROCESSING_H__
 
 #include <stdint.h>
+#include <zephyr/sys/util.h>
 
 typedef enum {
 	CLASS_LABEL_WALKING = 0,
@@ -25,7 +26,9 @@ typedef struct prediction_ctx_s {
 	float probability;
 } prediction_ctx_t;
 
+#if IS_ENABLED(CONFIG_HAR_INFERENCE_POSTPROCESSING)
 prediction_ctx_t inference_postprocess(uint16_t predicted_target, float probability);
+#endif
 
 const char *inference_get_class_name(class_label_t class_label);
 

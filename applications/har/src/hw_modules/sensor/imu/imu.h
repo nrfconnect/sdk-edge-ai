@@ -62,15 +62,12 @@ typedef struct imu_config_s {
 typedef struct imu_data_s {
 	/** Accelerometer data */
 	struct {
-		int16_t raw;
 		float m_s2;
 		float g;
 	} accel[ACCEL_AXIS_NUM];
 	/** Gyroscope data */
 	struct {
-		int16_t raw;
 		float rad_s;
-		float dps;
 	} gyro[GYRO_AXIS_NUM];
 } imu_data_t;
 

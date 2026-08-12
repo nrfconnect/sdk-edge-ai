@@ -40,93 +40,13 @@ typedef struct accel_window_s {
 	int count;
 } accel_window_t;
 
-static void execute_inference(flt32_t *input_data);
-static void hw_modules_init(void);
-static void handle_inference_result(nrf_edgeai_t *model);
-static void publish_classification(class_label_t class_label, float probability);
-static void report_raw_prediction(uint16_t predicted_target, float probability);
-static void on_button_click(button_click_t click);
-static void accel_window_reset(void);
-static void accel_window_push(float x_g, float y_g, float z_g);
-static void accel_window_get_average(float *x_g, float *y_g, float *z_g);
-
 static struct k_sem imu_data_ready_sem;
 static accel_window_t accel_window;
 static nrf_edgeai_t *p_model;
 
-int main(void)
-{
-	hw_modules_init();
-
-	p_model = nrf_edgeai_user_model();
-	__ASSERT_NO_MSG(p_model != NULL);
-	__ASSERT_NO_MSG(nrf_edgeai_is_runtime_compatible(p_model));
-
-	__maybe_unused nrf_edgeai_err_t res = nrf_edgeai_init(p_model);
-
-	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
-	__ASSERT_NO_MSG(p_model->input.window_size == HAR_INPUT_WINDOW_SAMPLES);
-
-	nrf_edgeai_rt_version_t version = nrf_edgeai_runtime_version();
-
-	LOG_INF("nRF Edge AI Human Activity Recognition Demo");
-	LOG_INF("nRF Edge AI Runtime Version: %d.%d.%d", version.field.major, version.field.minor,
-		version.field.patch);
-	LOG_INF("nRF Edge AI Lab Solution id: %s", nrf_edgeai_solution_id_str(p_model));
-
-	imu_data_t imu_data = {0};
-	flt32_t input_data[NRF_EDGEAI_INPUT_DATA_LEN];
-
-	for (;;) {
-		k_sem_take(&imu_data_ready_sem, K_FOREVER);
-
-		if (imu_read(&imu_data) != STATUS_SUCCESS) {
-			continue;
-		}
-
-		accel_window_push(imu_data.accel[0].g, imu_data.accel[1].g, imu_data.accel[2].g);
-
-		/* Model expects accelerometer in g and gyroscope in rad/s. */
-		input_data[0] = (flt32_t)(imu_data.accel[0].g);
-		input_data[1] = (flt32_t)(imu_data.accel[1].g);
-		input_data[2] = (flt32_t)(imu_data.accel[2].g);
-		input_data[3] = (flt32_t)imu_data.gyro[0].rad_s;
-		input_data[4] = (flt32_t)imu_data.gyro[1].rad_s;
-		input_data[5] = (flt32_t)imu_data.gyro[2].rad_s;
-
-		LOG_DBG("Accelerometer [G]: %f, %f, %f",
-			(double)input_data[0], (double)input_data[1], (double)input_data[2]);
-		LOG_DBG("Gyroscope [rad/s]: %f, %f, %f",
-			(double)input_data[3], (double)input_data[4], (double)input_data[5]);
-
-		execute_inference(input_data);
-	}
-
-	return 0;
-}
-
 static void imu_data_ready_cb(void)
 {
 	k_sem_give(&imu_data_ready_sem);
-}
-
-static void on_button_click(button_click_t click)
-{
-	int err;
-
-	if (click != BUTTON_CLICK_SHORT) {
-		return;
-	}
-
-	LOG_INF("Next phase");
-	accel_window_reset();
-
-#if IS_ENABLED(CONFIG_BLE_NUS_OUTPUT)
-	err = ble_nus_send_message("Next phase");
-	if (err != 0 && err != -ENOTCONN) {
-		LOG_WRN("Failed to send phase marker over NUS (err %d)", err);
-	}
-#endif
 }
 
 static void accel_window_reset(void)
@@ -156,11 +76,31 @@ static void accel_window_push(float x_g, float y_g, float z_g)
 
 static void accel_window_get_average(float *x_g, float *y_g, float *z_g)
 {
+	__ASSERT_NO_MSG(accel_window.count > 0);
+
 	float inv_count = 1.0f / (float)accel_window.count;
 
 	*x_g = accel_window.sum_g[0] * inv_count;
 	*y_g = accel_window.sum_g[1] * inv_count;
 	*z_g = accel_window.sum_g[2] * inv_count;
+}
+
+static void on_button_click(button_click_t click)
+{
+	if (click != BUTTON_CLICK_SHORT) {
+		return;
+	}
+
+	LOG_INF("next");
+	accel_window_reset();
+
+#if IS_ENABLED(CONFIG_BLE_NUS_OUTPUT)
+	int err = ble_nus_send_message("next");
+
+	if (err != 0) {
+		LOG_WRN("Failed to send phase marker over NUS (err %d)", err);
+	}
+#endif
 }
 
 static void hw_modules_init(void)
@@ -202,25 +142,6 @@ static void hw_modules_init(void)
 #endif
 }
 
-static void execute_inference(flt32_t *input_data)
-{
-	nrf_edgeai_err_t res;
-
-	res = nrf_edgeai_feed_inputs(p_model, (void *)input_data, NRF_EDGEAI_INPUT_DATA_LEN);
-
-	if (res == NRF_EDGEAI_ERR_SUCCESS) {
-		res = nrf_edgeai_run_inference(p_model);
-
-		if (res == NRF_EDGEAI_ERR_SUCCESS) {
-			handle_inference_result(p_model);
-		} else {
-			LOG_WRN("Failed to run inference, error = %d", (int)res);
-		}
-	} else if (res != NRF_EDGEAI_ERR_INPROGRESS) {
-		LOG_WRN("Failed to feed inputs, error = %d", (int)res);
-	}
-}
-
 static void publish_classification(class_label_t class_label, float probability)
 {
 	const char *class_name = inference_get_class_name(class_label);
@@ -247,9 +168,9 @@ static void publish_classification(class_label_t class_label, float probability)
 #endif
 }
 
+#if IS_ENABLED(CONFIG_HAR_LOG_RAW_PREDICTIONS)
 static void report_raw_prediction(uint16_t predicted_target, float probability)
 {
-#if IS_ENABLED(CONFIG_HAR_LOG_RAW_PREDICTIONS)
 	const char *class_name = inference_get_class_name((class_label_t)predicted_target);
 	int probability_pct = (int)(100.0f * probability);
 	float accel_x_g;
@@ -271,11 +192,8 @@ static void report_raw_prediction(uint16_t predicted_target, float probability)
 		}
 	}
 #endif
-#else
-	ARG_UNUSED(predicted_target);
-	ARG_UNUSED(probability);
-#endif
 }
+#endif
 
 static void handle_inference_result(nrf_edgeai_t *model)
 {
@@ -313,4 +231,67 @@ static void handle_inference_result(nrf_edgeai_t *model)
 #endif
 
 	publish_classification(class_label, probability);
+}
+
+static void execute_inference(flt32_t *input_data)
+{
+	nrf_edgeai_err_t res;
+
+	res = nrf_edgeai_feed_inputs(p_model, (void *)input_data, NRF_EDGEAI_INPUT_DATA_LEN);
+
+	if (res == NRF_EDGEAI_ERR_SUCCESS) {
+		res = nrf_edgeai_run_inference(p_model);
+
+		if (res == NRF_EDGEAI_ERR_SUCCESS) {
+			handle_inference_result(p_model);
+		} else {
+			LOG_WRN("Failed to run inference, error = %d", (int)res);
+		}
+	} else if (res != NRF_EDGEAI_ERR_INPROGRESS) {
+		LOG_WRN("Failed to feed inputs, error = %d", (int)res);
+	}
+}
+
+int main(void)
+{
+	hw_modules_init();
+
+	p_model = nrf_edgeai_user_model();
+	__ASSERT_NO_MSG(p_model != NULL);
+	__ASSERT_NO_MSG(nrf_edgeai_is_runtime_compatible(p_model));
+
+	__maybe_unused nrf_edgeai_err_t res = nrf_edgeai_init(p_model);
+
+	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
+	__ASSERT_NO_MSG(p_model->input.window_size == HAR_INPUT_WINDOW_SAMPLES);
+
+	imu_data_t imu_data = {0};
+	flt32_t input_data[NRF_EDGEAI_INPUT_DATA_LEN];
+
+	for (;;) {
+		k_sem_take(&imu_data_ready_sem, K_FOREVER);
+
+		if (imu_read(&imu_data) != STATUS_SUCCESS) {
+			continue;
+		}
+
+		accel_window_push(imu_data.accel[0].g, imu_data.accel[1].g, imu_data.accel[2].g);
+
+		/* Model expects accelerometer in g and gyroscope in rad/s. */
+		input_data[0] = (flt32_t)(imu_data.accel[0].g);
+		input_data[1] = (flt32_t)(imu_data.accel[1].g);
+		input_data[2] = (flt32_t)(imu_data.accel[2].g);
+		input_data[3] = (flt32_t)imu_data.gyro[0].rad_s;
+		input_data[4] = (flt32_t)imu_data.gyro[1].rad_s;
+		input_data[5] = (flt32_t)imu_data.gyro[2].rad_s;
+
+		LOG_DBG("Accelerometer [G]: %f, %f, %f",
+			(double)input_data[0], (double)input_data[1], (double)input_data[2]);
+		LOG_DBG("Gyroscope [rad/s]: %f, %f, %f",
+			(double)input_data[3], (double)input_data[4], (double)input_data[5]);
+
+		execute_inference(input_data);
+	}
+
+	return 0;
 }

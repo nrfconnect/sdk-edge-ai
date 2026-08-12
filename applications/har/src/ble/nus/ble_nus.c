@@ -23,7 +23,6 @@
 
 LOG_MODULE_REGISTER(ble_nus, LOG_LEVEL_INF);
 
-static struct bt_conn *nus_conn;
 static bool nus_send_enabled;
 
 static const struct bt_data nus_ad[] = {
@@ -37,21 +36,13 @@ static const struct bt_data nus_sd[] = {
 
 static int nus_send_string(const char *msg)
 {
-	size_t len;
-	uint32_t mtu;
 	int err;
 
-	if (!nus_conn || !nus_send_enabled || (msg == NULL)) {
+	if (!nus_send_enabled || (msg == NULL)) {
 		return -ENOTCONN;
 	}
 
-	len = strlen(msg);
-	mtu = bt_nus_get_mtu(nus_conn);
-	if (len > mtu) {
-		return -EMSGSIZE;
-	}
-
-	err = bt_nus_send(nus_conn, (const uint8_t *)msg, (uint16_t)len);
+	err = bt_nus_send(NULL, (const uint8_t *)msg, (uint16_t)strlen(msg));
 	if (err == 0) {
 		activity_led_nus_tx_pulse();
 	}
@@ -80,10 +71,6 @@ static void nus_connected(struct bt_conn *conn, uint8_t err)
 		return;
 	}
 
-	if (!nus_conn) {
-		nus_conn = bt_conn_ref(conn);
-	}
-
 	ble_common_set_connected(true);
 	activity_led_set_ble_connected(true);
 	LOG_INF("NUS connected %s", addr);
@@ -96,11 +83,6 @@ static void nus_disconnected(struct bt_conn *conn, uint8_t reason)
 
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 	LOG_INF("NUS disconnected from %s (reason 0x%02x)", addr, reason);
-
-	if (nus_conn == conn) {
-		bt_conn_unref(nus_conn);
-		nus_conn = NULL;
-	}
 
 	nus_send_enabled = false;
 	ble_common_set_connected(false);
@@ -117,7 +99,7 @@ static struct bt_nus_cb nus_cb = {
 	.send_enabled = nus_send_enabled_cb,
 };
 
-static struct bt_conn_cb nus_conn_callbacks = {
+BT_CONN_CB_DEFINE(nus_conn_callbacks) = {
 	.connected = nus_connected,
 	.disconnected = nus_disconnected,
 };
@@ -135,7 +117,11 @@ int ble_nus_init(void)
 	LOG_INF("Bluetooth initialized");
 
 	if (IS_ENABLED(CONFIG_SETTINGS)) {
-		settings_load();
+		int ret = settings_load();
+
+		if (ret) {
+			LOG_WRN("Failed to load settings (err %d)", ret);
+		}
 	}
 
 	err = bt_nus_init(&nus_cb);
@@ -143,8 +129,6 @@ int ble_nus_init(void)
 		LOG_ERR("NUS init failed (err %d)", err);
 		return err;
 	}
-
-	bt_conn_cb_register(&nus_conn_callbacks);
 
 	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, nus_ad, ARRAY_SIZE(nus_ad), nus_sd,
 			      ARRAY_SIZE(nus_sd));
