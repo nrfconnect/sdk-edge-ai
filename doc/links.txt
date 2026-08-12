@@ -32,6 +32,7 @@
 .. _`Nordic Edge AI Lab Analytics Tools`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/analytics_tools.html
 .. _`Nordic Edge AI Lab Anomaly detection`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/anomaly_detection.html
 .. _`Nordic Edge AI Lab Wake Word Detection`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/wake_word.html
+.. _`Nordic Edge AI Lab Compile your own model`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/compile_model.html
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model_creating_pipeline/signal_processing.html
 

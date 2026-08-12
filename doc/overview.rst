@@ -45,7 +45,7 @@ If you are unsure which solution fits your use case, refer to the table below fo
      - High-level API
      - Broad device compatibility with ultra-low memory footprint
    * - :ref:`Axon driver inference <solution_axon_driver_inference>`
-     - :ref:`Axon NPU TFLite compiler <axon_npu_tflite_compiler>`
+     - :ref:`Axon NPU TFLite compiler <axon_npu_tflite_compiler>` or `Nordic Edge AI Lab`_
      - Axon NPU
      - Low-level driver API
      - Custom inference pipelines, direct NPU control, and advanced optimization
@@ -152,13 +152,13 @@ Axon driver inference
 =====================
 
 This solution gives you direct access to the Axon NPU through the Axon driver API for running compiled neural network models.
-You compile TensorFlow Lite models with the :ref:`Axon NPU TFLite compiler <axon_npu_tflite_compiler>` and implement custom inference pipelines using the driver's synchronous or asynchronous execution modes.
+You can compile TensorFlow Lite models using the :ref:`Axon NPU TFLite compiler <axon_npu_tflite_compiler>` or the `Nordic Edge AI Lab Compile your own model`_ feature and implement custom inference pipelines using the driver's synchronous or asynchronous execution modes.
 
 Use this solution when you need maximum control over inference scheduling, memory management, and NPU resource utilization, or when your application requires custom pre- and post-processing that goes beyond what higher-level APIs provide.
 
 Key characteristics:
 
-* Models are compiled from TensorFlow Lite format using the :ref:`Axon NPU TFLite compiler <axon_npu_tflite_compiler>`.
+* Models are compiled from TensorFlow Lite format using the :ref:`Axon NPU TFLite compiler <axon_npu_tflite_compiler>` or `Nordic Edge AI Lab`_.
 * The driver supports both synchronous (blocking) and asynchronous (callback-based) inference.
 * Memory is managed through a shared interlayer buffer, sized to the largest model in the system.
 * Provides a host-based software simulator for development and testing without hardware.
