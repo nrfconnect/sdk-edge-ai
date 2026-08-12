@@ -99,8 +99,6 @@ status_t imu_init(const imu_config_t *p_config,
 
 	imu_ctx.data_ready_cb = data_ready_cb;
 	data_ready_timer_period = MAX(1U, (uint32_t)(1000U / p_config->data_rate_hz));
-	k_timer_start(&data_ready_timer, K_MSEC(data_ready_timer_period),
-		      K_MSEC(data_ready_timer_period));
 
 	/* Set sampling frequency last as this also sets the appropriate
 	 * power mode. If already sampling, change sampling frequency to
@@ -109,6 +107,11 @@ status_t imu_init(const imu_config_t *p_config,
 	res = sensor_attr_set(imu_ctx.dev, SENSOR_CHAN_GYRO_XYZ,
 			      SENSOR_ATTR_SAMPLING_FREQUENCY, &sampling_freq);
 	HW_RETURN_IF(res != 0, STATUS_HARDWARE_ERROR);
+
+	imu_ctx.initialized = true;
+
+	k_timer_start(&data_ready_timer, K_MSEC(data_ready_timer_period),
+		      K_MSEC(data_ready_timer_period));
 
 	return STATUS_SUCCESS;
 }

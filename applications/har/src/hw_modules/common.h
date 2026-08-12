@@ -5,8 +5,8 @@
  */
 
 /**
- * @defgroup hw_modules HW modules for GR
- * @ingroup app_gr
+ * @defgroup hw_modules HW modules for HAR
+ * @ingroup app_har
  */
 
 /**

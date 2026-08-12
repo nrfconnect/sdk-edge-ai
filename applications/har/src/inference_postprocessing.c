@@ -10,6 +10,28 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
 
+static const char *get_name_by_target(uint8_t predicted_target)
+{
+	static const char *const LABEL_VS_NAME[] = {
+		[CLASS_LABEL_WALKING] = "WALKING",
+		[CLASS_LABEL_WALKING_UPSTAIRS] = "WALKING_UPSTAIRS",
+		[CLASS_LABEL_WALKING_DOWNSTAIRS] = "WALKING_DOWNSTAIRS",
+		[CLASS_LABEL_SITTING] = "SITTING",
+		[CLASS_LABEL_STANDING] = "STANDING",
+		[CLASS_LABEL_LYING] = "LYING",
+	};
+
+	BUILD_ASSERT(ARRAY_SIZE(LABEL_VS_NAME) == CLASS_LABEL_COUNT);
+
+	if (predicted_target >= CLASS_LABEL_COUNT) {
+		return "UNKNOWN";
+	}
+
+	return LABEL_VS_NAME[predicted_target];
+}
+
+#if IS_ENABLED(CONFIG_HAR_INFERENCE_POSTPROCESSING)
+
 /* Consecutive identical raw predictions required before a class is published.
  *
  * The counts are asymmetric on purpose. A class the model often predicts by
@@ -53,26 +75,6 @@ static prediction_run_t prediction_run = {
 };
 
 static prediction_history_t prediction_history;
-
-static const char *get_name_by_target(uint8_t predicted_target)
-{
-	static const char *const LABEL_VS_NAME[] = {
-		[CLASS_LABEL_WALKING] = "WALKING",
-		[CLASS_LABEL_WALKING_UPSTAIRS] = "WALKING_UPSTAIRS",
-		[CLASS_LABEL_WALKING_DOWNSTAIRS] = "WALKING_DOWNSTAIRS",
-		[CLASS_LABEL_SITTING] = "SITTING",
-		[CLASS_LABEL_STANDING] = "STANDING",
-		[CLASS_LABEL_LYING] = "LYING",
-	};
-
-	BUILD_ASSERT(ARRAY_SIZE(LABEL_VS_NAME) == CLASS_LABEL_COUNT);
-
-	if (predicted_target >= CLASS_LABEL_COUNT) {
-		return "UNKNOWN";
-	}
-
-	return LABEL_VS_NAME[predicted_target];
-}
 
 static void reset_run(uint16_t target)
 {
@@ -164,6 +166,8 @@ prediction_ctx_t inference_postprocess(uint16_t target, float probability)
 	reset_history();
 	return result;
 }
+
+#endif /* IS_ENABLED(CONFIG_HAR_INFERENCE_POSTPROCESSING) */
 
 const char *inference_get_class_name(class_label_t class_label)
 {
