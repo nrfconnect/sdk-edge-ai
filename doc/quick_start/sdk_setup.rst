@@ -14,6 +14,7 @@ Get the nRF Edge AI Add-on code
 
 The |EAI| is distributed as a Git repository, and is managed through its own west manifest.
 The compatible |NCS| version is specified in the :file:`west.yml` file.
+Follow the `Edge AI Add-on GitHub repository`_ link to browse the codebase.
 To get the |EAI| code, you can either:
 
 * Use the `nRF Connect for Visual Studio Code`_ extension, which provides a convenient way to clone the Add-on and compatible |NCS| version.
