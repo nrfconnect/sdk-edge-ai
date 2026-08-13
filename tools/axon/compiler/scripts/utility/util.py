@@ -661,8 +661,9 @@ def excel_floor(x, s):
 
 
 def get_array_from_tensor(input_tensor, transpose_flag=True, op_code=None):
-    if op_code : #checks if the op code of the tensor is in the 'no transpose list' and disable the transpose
-        transpose_flag = transpose_flag and (op_code not in NO_TRANSPOSE_TFLITE_OPERATORS)
+    if op_code:  # checks if the op code of the tensor is in the 'no transpose list' and disable the transpose
+        transpose_flag = transpose_flag and (
+            op_code not in NO_TRANSPOSE_TFLITE_OPERATORS)
     if transpose_flag:
         if (len(input_tensor.shape) == 4):
             input_tensor = input_tensor.transpose(0, 3, 1, 2)
@@ -1664,9 +1665,6 @@ def get_unit_test_model_name(test_op_info_dict):
     model_name = ""
     OP_TYPE = test_op_info_dict['OP_TYPE']
 
-    if 'TEST_VECTOR_COUNT' not in test_op_info_dict:
-        test_op_info_dict['TEST_VECTOR_COUNT'] = 4  # default count of vectors
-
     if OP_TYPE == "UserModelInput":
         # the user is providing a model, extract the model name from the tflite file name
         if 'MODEL_NAME' in test_op_info_dict:
@@ -1722,6 +1720,11 @@ def get_unit_test_model_name(test_op_info_dict):
         model_name = model_name + \
             f"_activation_{test_op_info_dict['ACTIVATION']}"
         # model_name = model_name + f"_actv_{test_op_info_dict['ACTIVATION']}"
+
+    disable_fc_chan_q = test_op_info_dict.get("DISABLE_FC_CHAN_Q", False)
+    if disable_fc_chan_q:
+        model_name = model_name + \
+            "_fc_per_chan_q_disabled"
 
     if OP_TYPE == "Pad":
         if 'H_PAD' in test_op_info_dict:
@@ -1915,4 +1918,6 @@ def print_with_borders(text, border="=", get_text=False):
     print(text)
     print(f"{border_text}")
 
-NO_TRANSPOSE_TFLITE_OPERATORS = [tflite.BuiltinOperator.UNIDIRECTIONAL_SEQUENCE_LSTM]
+
+NO_TRANSPOSE_TFLITE_OPERATORS = [
+    tflite.BuiltinOperator.UNIDIRECTIONAL_SEQUENCE_LSTM]

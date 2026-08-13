@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_vww
- * Axon Neural Network Compiler Version: 1.4.0
+ * Axon Neural Network Compiler Version: 1.5.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -490,7 +490,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_0_0[1252] =
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_0_0 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -569,7 +569,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_1_1[60] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_1_1 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -729,7 +729,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_2_2[301] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_2_2 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -813,7 +813,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_3_3[84] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_3_3 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -948,7 +948,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_4_4[235] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_4_4 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1048,7 +1048,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_5_5[132] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_5_5 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1253,7 +1253,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_6_6[439] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_6_6 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1353,7 +1353,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_7_7[132] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_7_7 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1485,7 +1485,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_8_8[227] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_8_8 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1617,7 +1617,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_9_9[228] = 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_9_9 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1816,7 +1816,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_10_10[427] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_10_10 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -1948,7 +1948,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_11_11[228] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_11_11 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -2144,7 +2144,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_12_12[419] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_12_12 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -2340,7 +2340,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_13_13[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_13_13 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -2667,7 +2667,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_14_14[811] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_14_14 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -2863,7 +2863,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_15_15[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_15_15 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -3190,7 +3190,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_16_16[811] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_16_16 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -3386,7 +3386,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_17_17[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_17_17 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -3713,7 +3713,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_18_18[811] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_18_18 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -3909,7 +3909,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_19_19[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_19_19 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -4236,7 +4236,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_20_20[811] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_20_20 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -4432,7 +4432,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_21_21[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_21_21 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -4759,7 +4759,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_22_22[811] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_22_22 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -4955,7 +4955,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_23_23[420] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_23_23 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -5279,7 +5279,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_24_24[803] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_24_24 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -5603,7 +5603,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_25_25[804] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_25_25 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -5927,7 +5927,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_26_26[803] 
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_26_26 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -5997,7 +5997,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_27_27[36] =
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_27_27 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -6070,7 +6070,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_28_28[61] =
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_28_28 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {
@@ -6133,7 +6133,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww_29_29[10] =
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_vww_29_29 = {
   .base = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {

@@ -186,6 +186,27 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
 /**
+ * @brief radix of 16bit input to sigmoid and tanh
+ */
+#define NRF_AXON_SIG_TANH_INPUT16_RADIX  12
+
+/**
+ * @brief radix of 16bit output to sigmoid and tanh
+ */
+#define NRF_AXON_SIG_TANH_OUTPUT16_RADIX  14
+/**
+ * @brief adjusts dequantization  multiplier and scaler to produce a q3.12
+ *
+ * The input dequantization need to be multplied by 2^12. This function
+ * will massage the original values to perform the additional multiply
+ * by some combination of increasing the multiplier or decreasing the shift.
+ *
+ * @param[in][out] multiplier input values are 1st multplied by this.
+ * @param[in][out] shift input values are then rounded by this many bits.
+ */
+void nrf_axon_compiler_sig_tanh_dequant_consts(int32_t *multiplier, uint8_t *shift);
+
+/**
  * @brief Structure compiled into the command buffer then passed to some CPU op extension functions
  *
  * @note To maintain compatibility with simulator builds, the parameters are in elements of
@@ -252,7 +273,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_v2(
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_sig_tanh_args_s)/
  *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
- * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
+ * @param[in] args up-casted nrf_axon_nn_op_extension_sig_tanh_args_s, with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_dequantize_input(uint16_t argc,
 	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
@@ -292,7 +313,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh_v2(
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_sig_tanh_args_s)/
  *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
- * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
+ * @param[in] args up-casted nrf_axon_nn_op_extension_sig_tanh_args_s, with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_tanh_dequantize_input(uint16_t argc,
 	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);

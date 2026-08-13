@@ -20,6 +20,12 @@ extern "C" {
 /**
  * NRF_AXON_VERSION applies to the entire axon software tool chain.
  * version history
+ * 1.5.0 08/14/2026
+ * - Fixes bug in multiply operation with width > 512.
+ * - Optimized tanh/sigmoid nn operators use look-up tables and interpolation
+ *   rather than exp() and division. Execute 60x faster.
+ * - Supports fused, rolled LSTM.
+ * - Supports unfused, unrolled LSTM.
  * 1.4.0 07/16/2026
  * - fixes bug in fully-connected operator compilation; incorrectly
  *   calculated dimensions if channel count > 1.
@@ -71,8 +77,9 @@ extern "C" {
  * 0.1.0  12/11/2025 :
  * - 1st versioned release
  */
-#define NRF_AXON_GENERATE_VERSION(major,minor,patch) ( ((major) << 16) | ((minor) << 8) | (patch))
-#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(1, 4, 0)
+#define NRF_AXON_GENERATE_VERSION(major, minor, patch) \
+	(((major) << 16) | ((minor) << 8) | (patch))
+#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(1, 5, 0)
 
 
 #if !defined(AXON_FORCE_32BIT_ADDR) && ((defined(__SIZEOF_POINTER__) && (__SIZEOF_POINTER__==8)) || defined(_WIN64))
@@ -90,7 +97,7 @@ typedef int32_t NRF_AXON_PLATFORM_BITWIDTH_SIGNED_TYPE;
  * boundary, so the distance between row starts is the width of
  * the output times its bitwidth, rounded to the next 32bit boundary.
  */
-#define NRF_AXON_CEIL_BITS(x,y) ((((((x)+(1<<(y))-1)))>>(y))<<(y))
+#define NRF_AXON_CEIL_BITS(x, y) ((((((x)+(1<<(y))-1)))>>(y))<<(y))
 #define NRF_AXON_NPU_OUTPUT_STRIDE(width, byte_width) NRF_AXON_CEIL_BITS((width)*(byte_width), 2)
 
 /**
@@ -100,6 +107,8 @@ typedef int32_t NRF_AXON_PLATFORM_BITWIDTH_SIGNED_TYPE;
  * or a negative error code.
  */
 typedef enum {
+	/* too many intrinsics using intrinsics  */
+	NRF_AXON_RESULT_TOO_MANY_NESTED_SYNC_CMDS     = -204,
 	/**< Unable to acquire the mutex to access the axonpro */
 	NRF_AXON_RESULT_MUTEX_FAILED                  = -203,
 	/**< problem with the model structure. */

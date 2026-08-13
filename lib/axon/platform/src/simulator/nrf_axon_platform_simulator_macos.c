@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <unistd.h>
 
-extern bool simulator_in_threadless_mode;
 extern void host_irq_handler(void * data);
 /**
  * Structure of global variables pertaining to simulator
@@ -47,7 +46,7 @@ static sSIMULATOR_STATE simulator_state;
  * Axon write to register (executes in the application thread only)
  */
 void axon_dsp_simulator_write_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* addr, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE value){
-  if (simulator_in_threadless_mode) {
+  if (nrf_axon_simulator_in_threadless_mode_get()) {
     int dsp_simulator_err, dsp_o_wdog_cmd, dsp_o_wdog_finish;
     switch(axon_dsp_simulator_write_reg_prim(addr, value)) {
       case 0: break;
@@ -82,7 +81,7 @@ void axon_dsp_simulator_write_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_T
  * Axon read from register (executes in the application thread only)
  */
 NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE axon_dsp_simulator_read_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE* addr) {
-  if (simulator_in_threadless_mode) {
+  if (nrf_axon_simulator_in_threadless_mode_get()) {
     // read value from application register set
     NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE return_value =  axon_dsp_simulator_read_reg_prim(addr);
     return return_value;
@@ -180,7 +179,7 @@ static int start_simulator_axon_dsp() {
   // initialize register values
   axon_dsp_initialize_registers();
 
-  if (!simulator_in_threadless_mode) {
+  if (!nrf_axon_simulator_in_threadless_mode_get()) {
     simulator_state.axon_dsp.terminate_thread = false;
 
     int ret=0;
@@ -232,7 +231,7 @@ static int start_simulator_axon_dsp() {
 }
 
 void exit_simulator_axon_dsp() {  
-  if (!simulator_in_threadless_mode) {
+  if (!nrf_axon_simulator_in_threadless_mode_get()) {
     simulator_state.axon_dsp.terminate_thread = true;
     int wait_result =  pthread_join(simulator_state.axon_dsp.hw_thread_handle, NULL);
     if(wait_result!=0){
@@ -258,7 +257,7 @@ void exit_simulator_axon_dsp() {
  * Axon NN write to register (executes in the application thread only)
  */
 void axon_nn_simulator_write_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *addr, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE value) {
-  if (simulator_in_threadless_mode) {
+  if (nrf_axon_simulator_in_threadless_mode_get()) {
     int nn_simulator_err, nn_o_wdog_cmd, nn_o_wdog_finish;
     switch(axon_nn_simulator_write_reg_prim(addr, value)) {
       case 0: break;
@@ -292,7 +291,7 @@ void axon_nn_simulator_write_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TY
  * Axon NN read from register (executes in the application thread only)
  */
 NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE axon_nn_simulator_read_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *addr) {
-  if (simulator_in_threadless_mode) {
+  if (nrf_axon_simulator_in_threadless_mode_get()) {
     // read value from application register set
     NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE return_value = axon_nn_simulator_read_reg_prim(addr);
     return return_value;
@@ -387,7 +386,7 @@ static void* start_simulator_axon_nn() {
   // initialize register values, returns the base address
   void * axon_base_addr = axon_nn_initialize_registers();
 
-  if (!simulator_in_threadless_mode) {
+  if (!nrf_axon_simulator_in_threadless_mode_get()) {
     simulator_state.axon_nn.terminate_thread = false;
 
     // create mutex
@@ -439,7 +438,7 @@ static void* start_simulator_axon_nn() {
 }
 
 void exit_simulator_axon_nn() {
-  if (!simulator_in_threadless_mode) {
+  if (!nrf_axon_simulator_in_threadless_mode_get()) {
     simulator_state.axon_nn.terminate_thread = true;
     int wait_result =  pthread_join(simulator_state.axon_nn.hw_thread_handle, NULL);
     if(wait_result!=0){

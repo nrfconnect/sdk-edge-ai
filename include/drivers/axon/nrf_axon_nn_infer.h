@@ -13,7 +13,15 @@ extern "C" {
 #include <stdint.h>
 #include "nrf_axon_driver.h"
 
-
+/**
+* model_ota: app-owned RAM storage (persistent vars are runtime feedback state and must never
+* live in flash). NRF_AXON_MODEL_APP_STORAGE expands to "extern" when this header is compiled
+* as part of an OTA-wired model (see lib/model_ota/src/model_ota_axon_app_stub.c and
+* model_ota_axon_image_stub.c); it is empty otherwise , matching the non-OTA build of this generated model.
+*/
+#ifndef NRF_AXON_MODEL_APP_STORAGE
+# define NRF_AXON_MODEL_APP_STORAGE
+#endif
 /**
  * describes the dimensions of an input or output of the model.
  */

@@ -503,9 +503,9 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             ops_ip_shape = ops.TensorShape(
                 np.array(options.GetOperatorInputShape()))
             if op_name == "CPU_RESHAPE" and SWAP_INPUT_TO_NEXT_RESHAPE:
-                #the previous OP due to the presence of a MAXPOOL+RESHAPE combo has the height an width swapped, swap accordingly
+                # the previous OP due to the presence of a MAXPOOL+RESHAPE combo has the height an width swapped, swap accordingly
                 ops_ip_shape.height, ops_ip_shape.width = ops_ip_shape.width, ops_ip_shape.height
-                SWAP_INPUT_TO_NEXT_RESHAPE=False
+                SWAP_INPUT_TO_NEXT_RESHAPE = False
             ops_kernel_shape = ops.TensorShape(np.array(kernel_shape))
             ops_op_shape = ops.TensorShape(np.array(op_shape))
 
@@ -542,9 +542,17 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             ops_padding_details = options.GetOperationPaddings()
             dilation_x, dilation_y = options.GetOperationDilation()
 
-            # fill up the weight/filter tensor if present
-            model_const_bin, filter_offset = options.WriteTensorToBinFile(
-                model_const_bin, filter_tensor)
+            if new_op['reuse_filters_flag']:
+                # we have filters which can be reused, use the value of that filter and do not fill the filter in the bin file
+                filter_offset = operators_detail_graph[new_op['reuse_filters_flag']
+                                                       ]['operator_options'].GetBinFileFilterOffset()
+            else:
+                # fill up the weight/filter tensor if present
+                model_const_bin, filter_offset = options.WriteTensorToBinFile(
+                    model_const_bin, filter_tensor)
+            # record the filter offset in the bin file
+            options.SetBinFileFilterOffset(filter_offset)
+
             # fill up the bias tensor if present
             model_const_bin, b_prime_offset = options.WriteTensorToBinFile(
                 model_const_bin, b_prime)
@@ -623,6 +631,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                             input_idx].axis = operators_detail_graph[input_operator_index]['axon_ip_axis_offset'][0]
                         model_descriptor_layer_struct[0].input_split_offsets[
                             input_idx].offset = operators_detail_graph[input_operator_index]['axon_ip_axis_offset'][1]
+                        model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_ip_axis = {model_descriptor_layer_struct[0].input_split_offsets[input_idx].axis}, "
+                        model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_ip_offset = {model_descriptor_layer_struct[0].input_split_offsets[input_idx].axis}, "
                     else:
                         model_descriptor_layer_struct[0].input_split_offsets[input_idx].axis = 0
                         model_descriptor_layer_struct[0].input_split_offsets[input_idx].offset = 0
@@ -643,6 +653,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 if new_op['axon_ip_axis_offset'] is not None:
                     model_descriptor_layer_struct[0].input_split_offsets[0].axis = new_op['axon_ip_axis_offset'][0]
                     model_descriptor_layer_struct[0].input_split_offsets[0].offset = new_op['axon_ip_axis_offset'][1]
+                    model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0_ip_axis = {model_descriptor_layer_struct[0].input_split_offsets[0].axis}, "
+                    model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0_ip_offset = {model_descriptor_layer_struct[0].input_split_offsets[0].offset}, "
                 else:
                     model_descriptor_layer_struct[0].input_split_offsets[0].axis = 0
                     model_descriptor_layer_struct[0].input_split_offsets[0].offset = 0
@@ -706,7 +718,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             layer_output_radix = options.GetLayerOutputRadix()
             layer_op_scale, layer_op_zeropoint = layer_op_q['scales'], layer_op_q['zero_points']
             layer_op_scaleshift = util.optimized_ip_scaling_shift(
-                layer_op_scale, 8,30, 31, op_zp=layer_op_zeropoint)[1]
+                layer_op_scale, 8, 30, 31, op_zp=layer_op_zeropoint)[1]
             layer_op_multiplier = int(
                 np.round((layer_op_scale)*(2**layer_op_scaleshift)))
             if layer_output_radix > 0 and layer_output_radix < layer_op_scaleshift:
@@ -1036,7 +1048,7 @@ def run_c_compiler_lib(compiler_types_hdr_path, axon_compiler_lib, arguments_str
                 os.remove(compiler_stdout_filepath)
         else:
             """
-            for windows the stdout redirection is not working and is not populating the temp file descriptor, 
+            for windows the stdout redirection is not working and is not populating the temp file descriptor,
             piping the output to a seperate log file from the command line seems like the best way to get the compiler lib stdouts for windows
             """
             # single call for compiling and running inference
@@ -1057,17 +1069,17 @@ def run_c_compiler_lib(compiler_types_hdr_path, axon_compiler_lib, arguments_str
                         "not running inference as test vectors are not provided")
 
             """
-            code that should work for windows as well but doesn't work 
+            code that should work for windows as well but doesn't work
             due to some differences in how the visual studio and mingw GCC compiles handles the stdouts
 
             with open(COMPILER_STDOUT_FILE_NAME, 'w') as f:
-                with util.stdout_redirector(f):   
-                compiler_return_code = axon_compiler_lib.CompilerLibMain(len(ip_ptr),pointer(test_array), compiler_return_struct_ptr)               
+                with util.stdout_redirector(f):
+                compiler_return_code = axon_compiler_lib.CompilerLibMain(len(ip_ptr),pointer(test_array), compiler_return_struct_ptr)
             #reading the temp file generated to put the compiler lib stdout into the log file
-            with open(COMPILER_STDOUT_FILE_NAME, 'r') as f: 
+            with open(COMPILER_STDOUT_FILE_NAME, 'r') as f:
                 for line in f:
                 logger.info(line.strip())
-            if REMOVE_COMPILER_LIB_STDOUT_FILE:          
+            if REMOVE_COMPILER_LIB_STDOUT_FILE:
                 os.remove(COMPILER_STDOUT_FILE_NAME)
             """
         compiler_return_dict = compiler_return_object.get_compiler_return_dict()
@@ -1103,6 +1115,7 @@ def run_compiler_library(test_vectors_flag,
                          csv_test_vectors_file_name,
                          csv_last_layer_labels_file_name,
                          csv_per_layer_results_file_name,
+                         passlist_candidate_mode,
                          axons_compiler_lib=None,
                          COMPILER_VERBOSE=True):
     """
@@ -1140,6 +1153,8 @@ def run_compiler_library(test_vectors_flag,
                 "-p" + relative_compiler_outputs_dir + "/"+file_name_prefix+"_layers")
             command_string_array.append(
                 "-l" + relative_compiler_outputs_dir + "/"+csv_last_layer_labels_file_name)
+            command_string_array.append(
+                "-a" + str(passlist_candidate_mode))
             print(f"executing compiler object at {AXON_COMPILER_OBJECT}")
             if COMPILER_VERBOSE:
                 subprocess_return_code, compiler_return_dict, compiler_return_codetext = run_c_compiler_lib_x64(

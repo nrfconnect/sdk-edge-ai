@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_vww
- * Axon Neural Network Compiler Version: 1.4.0
+ * Axon Neural Network Compiler Version: 1.5.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -4423,10 +4423,10 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww[12836] = {
 #define NRF_AXON_MODEL_TINYML_VWW_PACKED_OUTPUT_SIZE 8
 
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-  uint32_t axon_model_tinyml_vww_packed_output_buf[NRF_AXON_MODEL_TINYML_VWW_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
+NRF_AXON_MODEL_APP_STORAGE uint32_t axon_model_tinyml_vww_packed_output_buf[NRF_AXON_MODEL_TINYML_VWW_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_nn_compiled_model_s model_tinyml_vww = {
-    .compiler_version = 0x00010400,
+    .compiler_version = 0x00010500,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
     .inputs = {

@@ -225,6 +225,7 @@ class OperatorOptions:
     max_single_error_layer_name = ""
     layer_output_radix = 0
     scaleshift_max_range = 31
+    binfile_filter_offset = None
     default_tensor_constraints = {
         "H": 1024,
         "W": 1024,
@@ -305,6 +306,7 @@ class OperatorOptions:
         self.max_single_error_layer_name = ""
         self.layer_output_radix = 0
         self.scaleshift_max_range = 31
+        self.binfile_filter_offset = None
 
     def dilate_tensor_if_needed(self, tensor):
         dilate_y = self.dilation_y
@@ -352,7 +354,7 @@ class OperatorOptions:
         """
         returns
         next_op_graph_index - list of indices of the next ops
-        next_op_is_cpu - bool indicating if the next operator have a cpu op        
+        next_op_is_cpu - bool indicating if the next operator have a cpu op
         next_op_is_not_last_op - bool indicating if the next operator is not the last operator
         next_
         """
@@ -640,7 +642,7 @@ class OperatorOptions:
             #     # set the activation function to be custom function
             #     if (not self.SetCustomActivationFunctionType("CustomPrepareSoftmax")):
             #         raise KeyError(-902)
-            #     # we have to calulate the maximum possible bitlimit we can shift to, so that we avoid overflow
+            #     # we have to calculate the maximum possible bitlimit we can shift to, so that we avoid overflow
             #     # the maximum output value we expect is
             #     op_max = np.ceil(self.op_q['scales']
             #                     [0] * (127 - self.op_q_zeropoint[0]))
@@ -783,6 +785,9 @@ class OperatorOptions:
 
     def GetOutputShape(self):
         return self.op_shape.get_shape()
+
+    def SetOutputShape(self, output_shape):
+        self.op_shape = TensorShape(output_shape)
 
     def CalculateBPrime(self):
         """
@@ -1027,7 +1032,7 @@ class OperatorOptions:
     def GetMultiplierandScaleshift(self):
         if not self.custom_cpu_op:
             next_op_graph_index, next_op_is_cpu_op, next_op_is_not_last_op, next_op_is_variable = self.get_next_ops_info()
-            if any(next_op_is_cpu_op) and not any(next_op_is_variable):
+            if np.all(next_op_is_cpu_op) and not any(next_op_is_variable) and next_op_is_not_last_op:
                 # check if any of the next ops are persistent variables and if that is the case,
                 # do not call for any handling of the scaling attributes for the CPU Op
                 self.handle_scaling_attributes_before_cpu_op(
@@ -1158,6 +1163,13 @@ class OperatorOptions:
     def GetScaleShiftMaxRange(self):
         return self.scaleshift_max_range
 
+    def GetBinFileFilterOffset(self):
+        return self.binfile_filter_offset
+
+    def SetBinFileFilterOffset(self, filter_offset):
+        self.binfile_filter_offset = filter_offset
+
+
 class ConvolutionOptions(OperatorOptions):
 
     conv1d_filter_constraints = {
@@ -1224,7 +1236,8 @@ class ConvolutionOptions(OperatorOptions):
         return self.previous_pad
 
     def check_for_pad_before_convolution(self, operator_graph, operator_graph_info, current_op_ndx):
-        previous_op_index = SupportedOperators.get_index_from_tf_index(
+        # FIXME
+        previous_op_index = SupportedOperators.get_tf_graph_index_from_tf_op_index(
             operator_graph, operator_graph_info['index']-1)
         previous_valid_axon_op_ndx = self.get_previous_valid_axon_operator_index(
             operator_graph, current_op_ndx)
@@ -1634,11 +1647,11 @@ class FullyConnectedOperatorOptions(OperatorOptions):
         self.operand_str = "filters"
         self.option = tflite.FullyConnectedOptions()
         self.option.Init(self.bytes, self.pos)
-        #check here if the input to the FC is shape size 3 and adjust the width and channel for it.
+        # check here if the input to the FC is shape size 3 and adjust the width and channel for it.
         if self.ip_shape.shape_size > 2:
-            #we need to make sure that the outermost dimension is 1 so that the width and channel can be swapped to height and width
+            # we need to make sure that the outermost dimension is 1 so that the width and channel can be swapped to height and width
             if self.ip_shape.height == 1:
-                self.ip_shape.height, self.ip_shape.width, self.ip_shape.depth  = self.ip_shape.width, self.ip_shape.depth, self.ip_shape.height
+                self.ip_shape.height, self.ip_shape.width, self.ip_shape.depth = self.ip_shape.width, self.ip_shape.depth, self.ip_shape.height
             else:
                 raise KeyError(-925)
 
@@ -1648,8 +1661,8 @@ class FullyConnectedOperatorOptions(OperatorOptions):
         current_op_index = operation_detail['index']
         # get the previous op from the index
         if operator_graph is not None and (current_op_index-1) >= 0:
-            previous_op_index = SupportedOperators.get_index_from_tf_index(
-                operator_graph, current_op_index-1)
+            previous_op_index = SupportedOperators.get_tf_graph_index_from_tf_op_index(
+                operator_graph, operation_detail['inputs'][0])
             if (operator_graph[previous_op_index]["op_name"] == "RESHAPE"):
                 # print("previous op is reshape")
                 # get the input shape of the reshape operation
@@ -2134,8 +2147,13 @@ class AddOptions(OperatorOptions):
                 # get the filter here as well
                 self.filter_tensor = tflite_interpreter.get_tensor(
                     operator_graph_info['ip_tensors'][1])
+                if len(self.filter_tensor.shape) != self.ip_shape.shape_size:
+                    const_shape = [1] * (len(self.ip_shape.shape) - len(
+                        self.filter_tensor.shape)) + list(self.filter_tensor.shape)
+                else:
+                    const_shape = self.filter_tensor.shape
                 self.kernel_shape = TensorShape(
-                    self.filter_tensor.shape, shape_rank=self.ip_shape.shape_size)
+                    const_shape, shape_rank=self.ip_shape.shape_size)
                 self.add_with_constant = True
                 # get the input zero point of the constant tensor here.
                 self.ip_q = copy.deepcopy(
@@ -2533,7 +2551,7 @@ class StridedSliceOptions(OperatorOptions):
     stride_slice_filter_tensor = None
 
     def mask_for_transpose(self, mask):
-        perm = (1,2,0)
+        perm = (1, 2, 0)
         width = len(perm)
         new_mask = 0
         for new_axis, old_axis in enumerate(perm):
@@ -2614,19 +2632,24 @@ class StridedSliceOptions(OperatorOptions):
         self.end = tflite_interpreter.get_tensor(self.ip_ndxs[2])
         self.stride = tflite_interpreter.get_tensor(self.ip_ndxs[3])
         self.MAX_NUM_AXIS = len(self.begin)
-        if self.MAX_NUM_AXIS == 3 and operator_graph[operation_detail['index']-1]['op_name'] == 'UNIDIRECTIONAL_SEQUENCE_LSTM':#FIXME Need a better way to look at the previous operator
-            #determine here if the previous op is an LSTM and adjust the input shapes accordingly
-            new_ip_shape = [self.ip_shape.shape[1], self.ip_shape.shape[2], self.ip_shape.shape[0]]
+        # FIXME Need a better way to look at the previous operator
+        if self.MAX_NUM_AXIS == 3 and operator_graph[operation_detail['index']-1]['op_name'] == 'UNIDIRECTIONAL_SEQUENCE_LSTM':
+            # determine here if the previous op is an LSTM and adjust the input shapes accordingly
+            new_ip_shape = [self.ip_shape.shape[1],
+                            self.ip_shape.shape[2], self.ip_shape.shape[0]]
             self.ip_shape = TensorShape(new_ip_shape)
-            self.begin = np.array([self.begin[1], self.begin[2], self.begin[0]])
+            self.begin = np.array(
+                [self.begin[1], self.begin[2], self.begin[0]])
             self.end = np.array([self.end[1], self.end[2], self.end[0]])
-            self.stride = np.array([self.stride[1], self.stride[2], self.stride[0]])
+            self.stride = np.array(
+                [self.stride[1], self.stride[2], self.stride[0]])
 
-            self.begin_mask = self.mask_for_transpose(self.begin_mask)            
+            self.begin_mask = self.mask_for_transpose(self.begin_mask)
             self.end_mask = self.mask_for_transpose(self.end_mask)
             self.ellipsis_mask = self.mask_for_transpose(self.ellipsis_mask)
             self.new_axis_mask = self.mask_for_transpose(self.new_axis_mask)
-            self.shrink_axis_mask = self.mask_for_transpose(self.shrink_axis_mask)
+            self.shrink_axis_mask = self.mask_for_transpose(
+                self.shrink_axis_mask)
 
         self.convert_mask_to_shape_info(self.begin_mask, self.begin, "begin")
         self.convert_mask_to_shape_info(self.end_mask, self.end, "end")
@@ -2842,7 +2865,12 @@ class MultiplyOptions(OperatorOptions):
                 # populate the filter tensor with the constant value
                 self.filter_tensor = tflite_interpreter.get_tensor(
                     operator_graph_info['ip_tensors'][1])
-                self.kernel_shape = TensorShape(self.filter_tensor.shape)
+                if len(self.filter_tensor.shape) != self.ip_shape.shape_size:
+                    const_shape = [1] * (len(self.ip_shape.shape) - len(
+                        self.filter_tensor.shape)) + list(self.filter_tensor.shape)
+                else:
+                    const_shape = self.filter_tensor.shape
+                self.kernel_shape = TensorShape(const_shape)
                 # get the input zero point of the constant tensor here.
                 self.constant_ip_q = copy.deepcopy(
                     tensor_details[operator_graph_info['ip_tensors'][1]]['quantization_parameters'])
@@ -3006,11 +3034,9 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
     attributes = {
         'asymmetric_quantize_inputs': bool,
         'cell_clip': np.float32,
-        'cell_clip_quantized': np.int32,
         'diagonal_recurrent_tensors': bool,
         'fused_activation_function': np.int8,
         'proj_clip': np.float32,
-        'proj_clip_quantized': np.int32,
         'time_major': bool,
     }
     inputs_and_outputs = {}
@@ -3029,6 +3055,16 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
         self.attributes['fused_activation_function'] = self.option.FusedActivationFunction()
         self.attributes['proj_clip'] = self.option.ProjClip()
         self.attributes['time_major'] = self.option.TimeMajor()
+
+        # Save LSTM attributes to cpu_op_additional_attrib_list
+        self.FillAdditionalCpuAttributes([
+            self.attributes['asymmetric_quantize_inputs'],
+            self.attributes['cell_clip'],
+            self.attributes['diagonal_recurrent_tensors'],
+            self.attributes['fused_activation_function'],
+            self.attributes['proj_clip'],
+            self.attributes['time_major'],
+        ])
 
         self.GetInputsAndOutputsInfo(self.ip_ndxs, LSTM_INPUT_SLOTS_LIST)
         self.GetInputsAndOutputsInfo(self.op_ndxs, LSTM_OUTPUT_SLOTS_LIST)
@@ -3089,37 +3125,6 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
             self.inputs_and_outputs['FORGET_GATE_BIAS']['zp'],
             self.inputs_and_outputs['CELL_GATE_BIAS']['zp'],
             self.inputs_and_outputs['OUTPUT_GATE_BIAS']['zp'],
-        ])
-
-        # Save LSTM attributes to cpu_op_additional_attrib_list
-        cell_state_scale = self.inputs_and_outputs['CELL_STATE_IN']['scale']
-        # Usually 0
-        cell_state_zero_point = self.inputs_and_outputs['CELL_STATE_IN']['zp']
-        cell_clip_float = self.attributes['cell_clip']
-        cell_clip_quantized = np.round(
-            cell_clip_float / cell_state_scale) + cell_state_zero_point
-        cell_clip_int32 = np.int32(cell_clip_quantized)
-        self.attributes['cell_clip_quantized'] = cell_clip_int32
-
-        output_state_scale = self.inputs_and_outputs['OUTPUT_STATE_IN']['scale']
-        output_state_zero_point = self.inputs_and_outputs['OUTPUT_STATE_IN']['zp']
-        proj_clip_float = self.attributes['proj_clip']
-        # (If proj_clip_float is 0, it means projection clipping is disabled)
-        if proj_clip_float == 0:
-            proj_clip_int32 = np.int32(0)
-        else:
-            proj_clip_quantized = np.round(
-                proj_clip_float / output_state_scale) + output_state_zero_point
-            proj_clip_int32 = np.int32(proj_clip_quantized)
-        self.attributes['proj_clip_quantized'] = proj_clip_int32
-
-        self.FillAdditionalCpuAttributes([
-            self.attributes['asymmetric_quantize_inputs'],
-            self.attributes['cell_clip_quantized'],
-            self.attributes['diagonal_recurrent_tensors'],
-            self.attributes['fused_activation_function'],
-            self.attributes['proj_clip_quantized'],
-            self.attributes['time_major'],
         ])
 
         self.input_count = 1
@@ -3204,41 +3209,60 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
         else:
             self.b_prime_tensor = np.array([])
 
+    def SetNormalizedScaleshiftsFlag(self, normalize_scaleshift):
+        self.normalize_scaleshifts = False
+
     def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
-        max_scale = 23  # 31-8
         op_q_scales = np.array([2**-12], dtype=np.float32)
         op_q_zeropoint = np.array([0], dtype=np.int32)
         # input
         scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
-            self.ip_q['scales'], op_q_scales, self.w_q['scales'][0:4], op_q_zeropoint, max_scale)
+            self.ip_q['scales'], op_q_scales, self.w_q['scales'][0:4], op_q_zeropoint, max_scale=23)
         self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
         self.scale_multipliers = np.append(
             self.scale_multipliers, scale_multipliers)
         # recurrent input
         op_q_zeropoint = np.array([0], dtype=np.int32)
         scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
-            self.op_q['scales'], op_q_scales, self.w_q['scales'][4:8], op_q_zeropoint, max_scale)
+            self.op_q['scales'], op_q_scales, self.w_q['scales'][4:8], op_q_zeropoint, max_scale=23)
         self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
         self.scale_multipliers = np.append(
             self.scale_multipliers, scale_multipliers)
-        # output_state_in: inv_multipiler for quantization
+        # output_state_in: inv_multiplier for quantization
+        # This needs to scale 2 inputs that are q.14, and it doesn't have a zero point,
+        # so maximize the shift amount.
         ip_q_scales = np.array([1], dtype=np.float32)
-        op_q_scales = np.array([2**12], dtype=np.float32)
+        op_q_scales = np.array([2**28], dtype=np.float32)
         output_state_in_scale = np.array(
             [self.inputs_and_outputs['OUTPUT_STATE_IN']['scale']], dtype=np.float32)
         scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
-            ip_q_scales, op_q_scales, 1/output_state_in_scale, op_q_zeropoint, max_scale)
+            ip_q_scales, op_q_scales, 1/output_state_in_scale, op_q_zeropoint, max_scale=27)
         self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
         self.scale_multipliers = np.append(
             self.scale_multipliers, scale_multipliers)
-        # cell_state_in: inv_multipiler for quantization
-        cell_state_in_scale = np.array(
-            [self.inputs_and_outputs['CELL_STATE_IN']['scale']], dtype=np.float32)
+        # cell_state_in: scale for input add
+        ip_q_scales = np.array([2**-14], dtype=np.float32)
+        cell_state_output_scale = np.array(
+            [self.attributes['cell_clip']/(2**15)], dtype=np.float32)
+        w_q_scales = np.array([1], dtype=np.float32)
         scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
-            ip_q_scales, op_q_scales, 1/cell_state_in_scale, op_q_zeropoint, max_scale)
+            ip_q_scales, cell_state_output_scale, w_q_scales, op_q_zeropoint, bit_limit=15, max_scale=15)
         self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
         self.scale_multipliers = np.append(
             self.scale_multipliers, scale_multipliers)
+        # cell_state_in: scale for tanh dequant
+        ip_q_scales = np.array(
+            [self.attributes['cell_clip']], dtype=np.float32)
+        op_q_scale = np.array([2**15], dtype=np.float32)
+        w_q_scales = np.array([1], dtype=np.float32)
+        scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+            ip_q_scales, op_q_scale, w_q_scales, op_q_zeropoint, max_scale=23)
+        self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
+        self.scale_multipliers = np.append(
+            self.scale_multipliers, scale_multipliers)
+
+        self.scale_multipliers = self.scale_multipliers.astype(np.int32)
+        self.scale_shifts = self.scale_shifts.astype(np.int8)
 
     def PrintAttributes(self):
         self.meta_data = (
@@ -3303,7 +3327,7 @@ class CpuOperatorOptions(OperatorOptions):
             operator_code)
         if self.cpu_extension_object is None:
             raise KeyError(-922)
-        if self.cpu_extension_object.HandleOperatorOptions(self) < 0:
+        if self.cpu_extension_object.HandleOperatorOptions(self, operator_graph) < 0:
             raise KeyError(-923)
         self.axons_operation_enum = self.cpu_extension_object.GetAxonsCpuExtensionOpEnumName()
 
@@ -3388,26 +3412,30 @@ class SplitOptions(OperatorOptions):
     axis = None
     axon_axis = None
     axon_offset = None
+    # create a map here to go from NHWC to NCHW
+    tf_to_axon_axis_map = {'NRF_AXON_NN_AXIS_CHANNEL': 0,
+                           'NRF_AXON_NN_AXIS_HEIGHT': 1,
+                           'NRF_AXON_NN_AXIS_WIDTH': 2,
+                           'NRF_AXON_NN_AXIS_COUNT': 3}
 
     @classmethod
-    def get_split_and_axon_axis(cls, tflite_interpreter, op_graph_info):
-
-        no_of_splits = no_of_splits = len(op_graph_info['op_tensors'])
+    def get_axis_split_no_ip_shape(cls, tflite_interpreter, op_graph_info, op_graph):
+        no_of_splits = len(op_graph_info['op_tensors'])
         axis = tflite_interpreter.get_tensor(op_graph_info['ip_tensors'][0])
         ip_shape = TensorShape(
             tflite_interpreter.get_tensor_details()[op_graph_info['ip_tensors'][1]]['shape'])
+        return axis, no_of_splits, ip_shape
+
+    @classmethod
+    def get_axon_axis_and_split_by(cls, axis, no_of_splits, ip_shape):
         if axis < 0:
             axis += ip_shape.shape_size
         if ip_shape.shape_size == 4:
             axis_channel_name = mw.TFLITE_RANK4_AXON_AXIS_ENUM_MAP[axis]
         else:
             axis_channel_name = mw.TFLITE_RANK3_AXON_AXIS_ENUM_MAP[axis]
-        # create a map here to go from NHWC to NCHW
-        tf_to_axon_axis_map = {'NRF_AXON_NN_AXIS_CHANNEL': 0,
-                               'NRF_AXON_NN_AXIS_HEIGHT': 1,
-                               'NRF_AXON_NN_AXIS_WIDTH': 2,
-                               'NRF_AXON_NN_AXIS_COUNT': 3}
-        axon_axis = tf_to_axon_axis_map.get(axis_channel_name)
+
+        axon_axis = cls.tf_to_axon_axis_map.get(axis_channel_name)
         axon_offset_by = ip_shape.shape[axis] // no_of_splits
         return axon_axis, axon_offset_by
 
@@ -3437,7 +3465,329 @@ class SplitOptions(OperatorOptions):
     #         operator_graph_info['operator_support'] = OperatorSupportEnum.CONVERTED_PASSTHROUGH
 
 
-class SupportedOperators():
+class UnfusedLSTMOptions(OperatorOptions):
+
+    @classmethod
+    def _upstream(cls, graph, idx):
+        ins = graph[idx].get("inputs", graph[idx].get("axon_ip_ops", []))
+        if hasattr(ins, "tolist"):
+            ins = ins.tolist()
+        return [i for i in ins if isinstance(i, int) and i >= 0]
+
+    @classmethod
+    def _trace_backward(cls, graph, idx, visited=None, op_name="FULLY_CONNECTED"):
+        """
+        Returns a plain dict:
+        {
+            'index': idx,
+            'op_name': ...,
+            'prev': None | dict | [dict, dict, ...]
+        }
+        """
+        if visited is None:
+            visited = set()
+        if idx in visited:
+            raise ValueError(f"Cycle at op {idx}")
+        visited.add(idx)
+        node = graph[idx]
+        link = {
+            "index": idx,
+            "op_name": node["op_name"],
+            "prev": None,
+        }
+        if node["op_name"] == op_name:
+            return link
+        ups = cls._upstream(graph, idx)
+        if not ups:
+            raise ValueError(
+                f"Op {idx} ({node['op_name']}) has no upstream and is not FC")
+        if len(ups) == 1:
+            link["prev"] = cls._trace_backward(graph, ups[0], visited, op_name)
+            return link
+        branches = [cls._trace_backward(
+            graph, up, visited.copy(), op_name) for up in ups]
+        link["prev"] = branches if len(branches) > 1 else branches[0]
+        return link
+
+    @classmethod
+    def _collect_fc_roots(cls, link):
+        """Return list of FC root dicts from a backward trace."""
+        if link["prev"] is None:
+            return [link] if link["op_name"] == "FULLY_CONNECTED" else []
+        if isinstance(link["prev"], list):
+            roots = []
+            for branch in link["prev"]:
+                roots.extend(cls._collect_fc_roots(branch))
+            return roots
+        return cls._collect_fc_roots(link["prev"])
+
+    @classmethod
+    def _collect_op_name_roots(cls, link, op_name):
+        if link["prev"] is None:
+            return [link] if link['op_name'] == op_name else []
+        if isinstance(link["prev"], list):
+            roots = []
+            for branch in link["prev"]:
+                roots.extend(cls._collect_op_name_roots(branch, op_name))
+            return roots
+        return cls._collect_op_name_roots(link["prev"], op_name)
+
+    @classmethod
+    def build_split_backward_trace(cls, graph, split_idx):
+        """
+        Walk backward from SPLIT until both paths hit FC.
+        Returns:
+        {
+            'split_index': split_idx,
+            'backward_trace': {...},   # your linked-list dict
+            'fc_roots': [ {...}, {...} ],
+            'valid_lstm_precursor': bool,
+        }
+        """
+        backward_trace = cls._trace_backward(graph, split_idx)
+        fc_roots = cls._collect_fc_roots(backward_trace)
+        unique = {n["index"]: n for n in fc_roots}
+        fc_roots = list(unique.values())
+        return {
+            "split_index": split_idx,
+            "backward_trace": backward_trace,
+            "fc_roots": fc_roots,
+            "valid_lstm_precursor": len(fc_roots) == 2,
+        }
+
+    @classmethod
+    def build_backward_trace_from_split(cls, graph, split_idx):
+        trace = cls.build_split_backward_trace(graph, split_idx)
+        return trace
+
+    @classmethod
+    def detect_lstm_blocks_from_split(cls, graph, split_idx, logistic_op, tanh_op, back_trace):
+        forget_block = {}
+        lstm_cell_block = {}
+        input_block = {}
+        output_block = {}
+
+        lstm_cell_tanh_ndx = tanh_op[0]['index']
+
+        for sigmoid_node in logistic_op:
+            sigmoid_idx = sigmoid_node['index']
+            mul_op_index = graph[sigmoid_idx]['outputs'][0]
+            if graph[mul_op_index]['op_name'] == "MUL":
+                # check from where is the other input of the MUL operator coming and assign those ops in the respective blocks
+                other_mul_input_idx = [
+                    i for i in graph[mul_op_index]['inputs'] if i != sigmoid_idx][0]
+                # if the other input idx is the lstm_cell_tanh_ndx, this is the lstm_cell
+                if other_mul_input_idx == lstm_cell_tanh_ndx:
+                    # this is part of the lstm cell block
+                    lstm_cell_block['sigmoid_op'] = sigmoid_node
+                    lstm_cell_block['tanh_op'] = graph[lstm_cell_tanh_ndx]
+                    lstm_cell_block['mul_op'] = graph[mul_op_index]
+                    # now determine the ADD and the forget input and the cell output
+                    add_op_index = graph[mul_op_index]['outputs'][0]
+                    if graph[add_op_index]['op_name'] == "ADD":
+                        lstm_cell_block['add_op'] = graph[add_op_index]
+                        other_add_input_idx = [
+                            # this is the f(t)
+                            i for i in graph[add_op_index]['inputs'] if i != mul_op_index][0]
+                        add_output_idx = graph[add_op_index]['outputs'][0]
+                        lstm_cell_block['op_tensors'] = {}
+                        lstm_cell_block['ip_tensors'] = {}
+                        # 1 output, the c(t)
+                        lstm_cell_block['op_tensors']['c_t'] = graph[add_output_idx]['op_tensors'][0]
+                        lstm_cell_block['ip_tensors']['f_t'] = graph[other_add_input_idx]['op_tensors'][0]
+                        lstm_cell_block['ip_tensors']['split_sigmoid'] = graph[sigmoid_idx]['ip_tensors'][0]
+                        lstm_cell_block['ip_tensors']['split_tanh'] = graph[lstm_cell_tanh_ndx]['ip_tensors'][0]
+                elif graph[other_mul_input_idx]['op_name'] == "TANH":
+                    # this is the part of the output cell block
+                    output_block['sigmoid_op'] = sigmoid_node
+                    output_block['mul_op'] = graph[mul_op_index]
+                    output_block['tanh_op'] = graph[other_mul_input_idx]
+                    output_block['op_tensors'] = {}
+                    output_block['ip_tensors'] = {}
+                    output_block['op_tensors']['h_t'] = graph[mul_op_index]['op_tensors'][0]
+                    output_block['ip_tensors']['c_t'] = graph[other_mul_input_idx]['ip_tensors'][0]
+                    output_block['ip_tensors']['h_t'] = graph[sigmoid_idx]['ip_tensors'][0]
+                # this has to be the forget block, for which the input to the mul is the c(t-1)
+                else:
+                    forget_block['sigmoid_op'] = sigmoid_node
+                    forget_block['mul_op'] = graph[mul_op_index]
+                    c_t_minus_1_op_index = [
+                        i for i in graph[mul_op_index]['inputs'] if graph[i]['op_name'] != "LOGISTIC"][0]
+                    forget_block['c_t-1_op'] = graph[c_t_minus_1_op_index]
+                    forget_block['op_tensors'] = {}
+                    forget_block['ip_tensors'] = {}
+                    forget_block['op_tensors']['f_t'] = graph[mul_op_index]['op_tensors'][0]
+                    forget_block['ip_tensors']['c_t-1'] = graph[other_mul_input_idx]['op_tensors'][0]
+
+        # detect the input block from the back_trace
+        bias_add_op = graph[back_trace['backward_trace']['prev']['index']]
+        input_add_op = graph[back_trace['backward_trace']
+                             ['prev']['prev']['index']]
+
+        for fc_op in back_trace['fc_roots']:
+            fc_input_op_index = graph[fc_op['index']]['inputs'][0]
+            if graph[fc_input_op_index]['op_name'] == "UNPACK":
+                # this is the input fc or the x(t) as they all originate from the UNPACK op
+                xt_fc = graph[fc_op['index']]
+            else:
+                ht_fc = graph[fc_op['index']]
+
+        input_block['bias_add_op'] = bias_add_op
+        input_block['input_add_op'] = input_add_op
+        input_block['input_fc_op'] = xt_fc
+        input_block['recurrent_fc_op'] = ht_fc
+        input_block['op_tensors'] = {}
+        input_block['ip_tensors'] = {}
+        input_block['op_tensors']['split_ip'] = bias_add_op['op_tensors'][0]
+        input_block['ip_tensors']['h_t-1'] = ht_fc['ip_tensors'][0]
+        input_block['ip_tensors']['x_t'] = xt_fc['ip_tensors'][0]
+
+        return {'lstm_block': lstm_cell_block,
+                'output_block': output_block,
+                'forget_block': forget_block,
+                'input_block': input_block,  # get this from the trace
+                }
+
+    @classmethod
+    def fuse_lstm_in_one_layer(cls, graph, tflite_interpreter, lstm_blocks):
+        lstm_layer = {}
+        # verify if the length of the lstm_block is equal to the unpack dimension
+        first_lstm_block = lstm_blocks[0]
+        last_lstm_block = lstm_blocks[-1]
+
+        input_fc = first_lstm_block['input_block']['input_fc_op']
+        fc_input_op_index = graph[input_fc['index']]['inputs'][0]
+        # get the input to the fc
+        unpack_operator = graph[fc_input_op_index]
+        if unpack_operator['op_name'] == "UNPACK":
+            ip_tensor_idx = unpack_operator['ip_tensors'][0]
+            ip_timestep = tflite_interpreter.get_tensor_details()[
+                ip_tensor_idx]['shape'][0]
+            assert ip_timestep == len(
+                lstm_blocks), "UNPACK ip shape does not match the number of LSTM Blocks detected"
+
+        pack_operator_idx = [o for o in last_lstm_block['output_block']
+                             ['mul_op']['outputs'] if graph[o]['op_name'] == "PACK"][0]
+        pack_operator = graph[pack_operator_idx]
+
+        # get the state variables
+        hidden_state_input_op_index = first_lstm_block['input_block']['recurrent_fc_op']['inputs'][0]
+        cell_state_input_op_index = first_lstm_block['forget_block']['c_t-1_op']['inputs'][0]
+        hidden_state_back_trace = cls._trace_backward(
+            graph, hidden_state_input_op_index, op_name='VAR_HANDLE')
+        cell_state_back_trace = cls._trace_backward(
+            graph, cell_state_input_op_index, op_name='VAR_HANDLE')
+        hidden_state_var_index = cls._collect_op_name_roots(
+            hidden_state_back_trace, "VAR_HANDLE")[0]['index']
+        cell_state_var_index = cls._collect_op_name_roots(
+            cell_state_back_trace, "VAR_HANDLE")[0]['index']
+
+        # Now that we have detected that the unpack and the LSTMs cells match,
+        lstm_layer['index'] = unpack_operator['index']
+        lstm_layer['op_name'] = 'UNFUSED_LSTM'
+        lstm_layer['inputs'] = unpack_operator['inputs']
+        lstm_layer['lstm_inputs'] = unpack_operator['outputs']
+        lstm_layer['lstm_outputs'] = pack_operator['inputs']
+        lstm_layer['outputs'] = pack_operator['outputs']
+        lstm_layer['operand_types'] = unpack_operator['operand_types']
+        lstm_layer['result_types'] = pack_operator['result_types']
+        lstm_layer['op_code'] = unpack_operator['op_code'] * \
+            100 + pack_operator['op_code']  # 8883
+        lstm_layer['tflite_operator'] = None
+        lstm_layer['custom_activation_output'] = None
+        lstm_layer['options_initialized'] = False
+        lstm_layer['operator_constraints'] = unpack_operator['operator_constraints']
+        lstm_layer['operator_support'] = OperatorSupportEnum.SUPPORTED
+        lstm_layer['operator_options'] = unpack_operator['operator_options']
+        lstm_layer['ip_tensors'] = unpack_operator['ip_tensors']
+        lstm_layer['lstm_ip_tensors'] = unpack_operator['op_tensors']
+        lstm_layer['lstm_op_tensors'] = pack_operator['ip_tensors']
+        lstm_layer['op_tensors'] = pack_operator['op_tensors']
+        lstm_layer['axon_ip_ops'] = unpack_operator['axon_ip_ops']
+        lstm_layer['lstm_axon_ip_ops'] = unpack_operator['axon_op_ops']
+        lstm_layer['lstm_axon_op_ops'] = pack_operator['axon_ip_ops']
+        lstm_layer['axon_op_ops'] = pack_operator['axon_op_ops']
+        lstm_layer['axon_ip_axis_offset'] = unpack_operator['axon_ip_axis_offset']
+        lstm_layer['lstm_blocks'] = lstm_blocks
+        # this needs to be a persistent variable
+        lstm_layer['hidden_state_variable'] = graph[hidden_state_var_index]
+        # this needs to be a persistent variable
+        lstm_layer['cell_state_variable'] = graph[cell_state_var_index]
+        return lstm_layer
+
+
+class PackOptions(OperatorOptions):
+    ip_axon_layer_pack_filter = None
+
+    def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
+        self.InitOperatorOption(operator_code, operator, operation_detail,
+                                tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper)
+        self.ip_axon_layer_pack_filter = []
+        self.axons_operation_enum = "NRF_AXON_NN_OP_PACK"
+        if operator_graph is not None:
+            operator_graph_info = operator_graph[operation_detail['index']]
+            self.ip_axon_layer_pack_filter = operator_graph_info['axon_ip_ops']
+            visited_layer_num = set()
+            for ndx, ip_tensor in enumerate(operator_graph_info['ip_tensors']):
+                # find the ip_tensor in the input ops
+                for ip_op in operator_graph_info['inputs']:
+                    if ip_op in visited_layer_num:
+                        continue
+                    if ip_tensor == operator_graph[ip_op]['op_tensors'][0]:
+                        # FIXME might have to handle if the axon layer num is -1, but that should not be the case in an LSTM
+                        self.ip_axon_layer_pack_filter[ndx] = operator_graph[ip_op]['axon_layer_num']
+                        visited_layer_num.add(ip_op)
+                        break
+            # update the axon ip ops to reflect the last layer
+            operator_graph_info['axon_ip_ops'] = [
+                operator_graph_info['axon_ip_ops'][-1]]
+
+        # update the kernel shape, and the filter tensor
+        self.filter_tensor = np.asarray(
+            self.ip_axon_layer_pack_filter, dtype=np.int32)
+        self.kernel_shape = TensorShape(
+            np.array(self.filter_tensor.shape), shape_rank=2)
+
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
+        scale_q = self.ip_q['scales']/self.op_q['scales']
+        # result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        result = util.optimized_ip_scaling_shift(
+            (scale_q), 8, self.scaleshift_max_range, 25)
+        # error = result[0]
+        scaleshift = result[1]
+        self.scale_multipliers = np.array(
+            [abs(int(np.round((scale_q)*2**scaleshift)))])
+        self.scale_shifts = np.array([scaleshift])
+
+
+class UnpackOptions(SplitOptions):
+    # def __init__():
+    #     super.__init__()
+
+    @classmethod
+    def get_axis_split_no_ip_shape(cls, tflite_interpreter, op_graph_info, op_graph):
+        no_of_splits = len(op_graph_info['op_tensors'])
+        axis = 0
+        ip_shape = TensorShape(
+            tflite_interpreter.get_tensor_details()[op_graph_info['ip_tensors'][0]]['shape'])
+        # the input to the UNPACK will most probably be a reshape, irrespective of what it is figure out what is the input shape to it and adjust the input and output offsets accordingly
+        previous_op_index = SupportedOperators.get_tf_graph_index_from_tf_op_index(
+            op_graph, op_graph_info['inputs'][0])
+        if previous_op_index >= 0:
+            previous_op_info = op_graph[previous_op_index]
+            assert previous_op_info['op_name'] == "RESHAPE", "Input to UNPACK is not a RESHAPE operator."
+            if previous_op_info['operator_support'] == OperatorSupportEnum.PASSTHROUGH:
+                # we need to pick up the previous op input shape as the input shape of the UNPACK,
+                prev_ip_shape = TensorShape(
+                    tflite_interpreter.get_tensor_details()[previous_op_info['ip_tensors'][0]]['shape'])
+                if prev_ip_shape.shape_size == 2:
+                    axis = 1
+                    ip_shape = prev_ip_shape
+
+        return axis, no_of_splits, ip_shape
+
+
+class SupportedOperators:
     supported_operators = {}
     variable_operators = {}
     nodes_info = {}
@@ -3452,10 +3802,13 @@ class SupportedOperators():
     model_output_info = None
     tflite_interpreter = None
     transposed_model = None
-    equal_split_passthrough_ops_present = None
+    equal_splits_axis_offset_ops_present = None
+    unfused_lstm_cell_block = None
+    unfused_lstm_fc_roots_per_timestep = None
+    new_ops_inserted = None
 
     @classmethod
-    def get_index_from_tf_index(cls, op_graph, tf_index):
+    def get_tf_graph_index_from_tf_op_index(cls, op_graph, tf_index):
         if tf_index >= 0:
             for ndx, n in enumerate(op_graph):
                 if tf_index == n['index']:
@@ -3503,14 +3856,14 @@ class SupportedOperators():
                                     tflite.BuiltinOperator.BATCH_TO_SPACE_ND: BatchToSpaceNDOptions,
                                     tflite.BuiltinOperator.SPACE_TO_BATCH_ND: SpaceToBatchNDOptions,
                                     tflite.BuiltinOperator.UNIDIRECTIONAL_SEQUENCE_LSTM: UnidirectionalSequenceLSTMOptions,
+                                    tflite.BuiltinOperator.UNPACK: UnpackOptions,
+                                    tflite.BuiltinOperator.PACK: PackOptions,
                                     }
         self.pass_through_operators = [
             tflite.BuiltinOperator.QUANTIZE,
             tflite.BuiltinOperator.DEQUANTIZE,
             tflite.BuiltinOperator.CALL_ONCE,
             tflite.BuiltinOperator.TRANSPOSE,
-            tflite.BuiltinOperator.UNPACK,
-            tflite.BuiltinOperator.PACK,
             #  tflite.BuiltinOperator.PAD,
             # add more operators as needed
         ]
@@ -3524,11 +3877,15 @@ class SupportedOperators():
         self.nodes_info = {}
         self.variable_ops_present = False
         self.split_ops_present = False
-        self.equal_split_passthrough_ops_present = False
+        self.equal_splits_axis_offset_ops_present = False
         self.model_input_tensor_indices = []
         self.model_output_tensor_indices = []
         self.model_input_info = None
         self.model_output_info = None
+        self.unfused_lstm_cell_block = []
+        self.unfused_lstm_fc_roots_per_timestep = []
+        self.new_ops_inserted = False
+
         if tflite_interpreter is not None:
             self.tflite_interpreter = tflite_interpreter
             self.model_input_info = tflite_interpreter.get_input_details()
@@ -3632,10 +3989,10 @@ class SupportedOperators():
                 #     if ReshapeOptions.determine_reshape_is_passthrough(ip_to_reshape, op_of_reshape, shape,operation_list, i):
                 #         self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
                 #         self.pass_through_ops_present = True
-                elif self.operators_detail_graph[i]['op_name'] == "SPLIT":
+                elif self.operators_detail_graph[i]['op_name'] == "SPLIT" or self.operators_detail_graph[i]['op_name'] == "UNPACK":
                     self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
                     self.pass_through_ops_present = True
-                    self.equal_split_passthrough_ops_present = True
+                    self.equal_splits_axis_offset_ops_present = True
                 if self.operators_detail_graph[i]["operator_options"] == CpuOperatorOptions:
                     # by default all the CPU operations are supported
                     # but certain operations might be determined to be passthroughs
@@ -3741,36 +4098,35 @@ class SupportedOperators():
                         ip_nodes[operations['index']] = [ops_ndx]
 
         """ DO NOT NEED TO FIND OUT THE SPLIT AND MERGE NODES RIGHT NOW THUS COMMENTING OUT    
-    # max_track_count=-1
-    # branches=0
-    # for ops_ndx in op_nodes.keys():
-    #   if(len(op_nodes[ops_ndx])>1):
-    #     branches+=1
-    #     for ops in op_nodes[ops_ndx]:
-    #       try:
-    #         split_nodes[ops_ndx].append(ops)
-    #       except KeyError:
-    #         split_nodes[ops_ndx] = [ops] 
-    #   ops_connects = [(str(operation_details[ops_ndx]['op_name'])+"_"+str(ops_ndx)) for ops_ndx in op_nodes[ops_ndx]]
-    #   logger.debug(f"{operation_details[ops_ndx]['op_name']}_{ops_ndx} connects to {ops_connects}")
+        # max_track_count=-1
+        # branches=0
+        # for ops_ndx in op_nodes.keys():
+        #   if(len(op_nodes[ops_ndx])>1):
+        #     branches+=1
+        #     for ops in op_nodes[ops_ndx]:
+        #       try:
+        #         split_nodes[ops_ndx].append(ops)
+        #       except KeyError:
+        #         split_nodes[ops_ndx] = [ops] 
+        #   ops_connects = [(str(operation_details[ops_ndx]['op_name'])+"_"+str(ops_ndx)) for ops_ndx in op_nodes[ops_ndx]]
+        #   logger.debug(f"{operation_details[ops_ndx]['op_name']}_{ops_ndx} connects to {ops_connects}")
 
-    # for ops_ndx in ip_nodes.keys():
-    #   if (len(ip_nodes[ops_ndx])>1):
-    #     merges = [(str(operation_details[ops_ndx]['op_name'])+"_"+str(ops_ndx)) for ops_ndx in ip_nodes[ops_ndx]]
-    #     logger.debug(f"{operation_details[ops_ndx]['op_name']}_{ops_ndx} merges {merges}")
-    #     for ops in ip_nodes[ops_ndx]:
-    #       try:
-    #         merge_nodes[ops_ndx].append(ops)
-    #       except KeyError:
-    #         merge_nodes[ops_ndx] = [ops]
-    """
+        # for ops_ndx in ip_nodes.keys():
+        #   if (len(ip_nodes[ops_ndx])>1):
+        #     merges = [(str(operation_details[ops_ndx]['op_name'])+"_"+str(ops_ndx)) for ops_ndx in ip_nodes[ops_ndx]]
+        #     logger.debug(f"{operation_details[ops_ndx]['op_name']}_{ops_ndx} merges {merges}")
+        #     for ops in ip_nodes[ops_ndx]:
+        #       try:
+        #         merge_nodes[ops_ndx].append(ops)
+        #       except KeyError:
+        #         merge_nodes[ops_ndx] = [ops]
+        """
 
         """
-    new logic for getting a full node based input and output node graph using the graph and ip_nodes alone
-    making a deepcopy as operators are referenced and we need to modify them as part of generating the new graph"
-    """
-        ops_graph = self.operators_detail_graph  # copy.deepcopy(operation_details)
-        # new_graph_ndx=0
+        new logic for getting a full node based input and output node graph using the graph and ip_nodes alone
+        making a deepcopy as operators are referenced and we need to modify them as part of generating the new graph"
+        """
+        ops_graph = self.operators_detail_graph
         for ndx, operations in enumerate(ops_graph):
             new_graph.append(operations)
             try:
@@ -3788,6 +4144,7 @@ class SupportedOperators():
                 new_graph[ndx]['outputs'] = op_nodes[operations['index']]
             except KeyError:
                 new_graph[ndx]['outputs'] = []
+
             if operations['op_name'] == "CONCATENATION":
                 new_op_order = []
                 for i, input_tensor in enumerate(operations['ip_tensors']):
@@ -3803,6 +4160,7 @@ class SupportedOperators():
             new_graph[ndx]['axon_op_ops'] = copy.deepcopy(
                 new_graph[ndx]['outputs'])
             new_graph[ndx]['axon_ip_axis_offset'] = None
+            new_graph[ndx]['reuse_filters_flag'] = None
             """end of for loop for creating new graph"""
 
         # Add code here to figure out and combine the variable operators together and make them a persistent variable instead
@@ -3910,35 +4268,25 @@ class SupportedOperators():
                         new_split_op['axon_op_ops'] = [
                             split_op['axon_op_ops'][connecting_op_index]]
                         new_graph.insert(ndx+i, new_split_op)
+                        self.new_ops_inserted = True
 
             new_graph = self.update_graph_connections_after_node_insert(
                 new_graph)
-        if self.equal_split_passthrough_ops_present:
+
+        if self.equal_splits_axis_offset_ops_present:
             for ndx, ops in enumerate(new_graph):
-                if ops['op_name'] == "SPLIT":
+                if ops['op_name'] == "SPLIT" or ops['op_name'] == "UNPACK":
                     # need to update the input of the splits with offsets
                     # get the ops connected to this SPLIT operation
                     # sort the ops based on tensor indices
                     # calculate the offset
                     # update the offset value for each of the ops of the split outputs
                     ops['op_name'] = ops['op_name'] + "_PASSTHROUGH"
-                    # ip_shape = self.tflite_interpreter.get_tensor_details()[ops['ip_tensors'][1]]['shape']
-                    # no_of_splits = len(ops['op_tensors'])
-                    # axis = self.tflite_interpreter.get_tensor(ops['ip_tensors'][0])
-                    # if axis < 0:
-                    #     axis += len(ip_shape)
-                    # #get_axon_axis and not tflite axis
-                    # # get the CHANNEL NAME from the AXIS
-                    # if len(ip_shape) == 4:
-                    #     axis_channel_name = mw.TFLITE_RANK4_AXON_AXIS_ENUM_MAP[axis]
-                    # else:
-                    #     axis_channel_name = mw.TFLITE_RANK3_AXON_AXIS_ENUM_MAP[axis]
-                    # if self.tflite_axon_enum_wrapper is not None:
-                    #     axons_axis_dict = self.tflite_axon_enum_wrapper.GetAxonAxisEnumDict()
-                    #     self.axon_axis = axons_axis_dict[axis_channel_name]
-                    # split_by = ip_shape[axis] // no_of_splits
-                    axon_axis, split_by = SplitOptions.get_split_and_axon_axis(
-                        self.tflite_interpreter, ops)
+                    operator_options = ops["operator_options"]
+                    axis, no_of_splits, ip_shape = operator_options.get_axis_split_no_ip_shape(
+                        self.tflite_interpreter, ops, new_graph)
+                    axon_axis, split_by = operator_options.get_axon_axis_and_split_by(
+                        axis, no_of_splits, ip_shape)
                     offsets = 0
                     seen_ops = set()
                     for tensor_ndx in ops['op_tensors']:
@@ -3953,6 +4301,48 @@ class SupportedOperators():
                                 offsets += split_by
                                 seen_ops.add(op_ndx)
                                 break
+                    # look for three logistics and one tanh in the seen ops list.
+                    # if there are logisitics and tanh, look for the two fc layers being added together and declare the presence of an lstm cell
+                    if len(seen_ops) == 4 and "SPLIT" in ops['op_name']:
+                        logistics_op = []
+                        tanh_op = []
+                        for split_output_ndx in seen_ops:
+                            if new_graph[split_output_ndx]['op_name'] == "LOGISTIC":
+                                logistics_op.append(
+                                    new_graph[split_output_ndx])
+                            elif new_graph[split_output_ndx]['op_name'] == "TANH":
+                                tanh_op.append(new_graph[split_output_ndx])
+                        # check here if there were three logisitcs and 1 tanh
+                        if len(logistics_op) == 3 and len(tanh_op) == 1:
+                            # determine if the input to the split op comes from a FC1 + FC2 -> ADD -> ADD -> SPLIT
+                            back_trace = UnfusedLSTMOptions.build_backward_trace_from_split(
+                                new_graph, ndx)
+                            if back_trace['valid_lstm_precursor']:
+                                #     lstm_block = UnfusedLSTMOptions.detect_lstm_blocks_from_split(new_graph, ndx, logistics_op, tanh_op, back_trace)
+                                #     self.unfused_lstm_cell_block.append(lstm_block)
+                                # now from the backtrace get the two FC layers and flag them to be ops that use the same weight vectors as part of the LSTM
+                                self.unfused_lstm_fc_roots_per_timestep.append(
+                                    back_trace['fc_roots'])
+
+        if self.unfused_lstm_cell_block:
+            fused_lstm_layer = UnfusedLSTMOptions.fuse_lstm_in_one_layer(
+                new_graph, self.tflite_interpreter, self.unfused_lstm_cell_block)
+
+        if self.unfused_lstm_fc_roots_per_timestep:
+            # for all the FCs after the first one mark them to use the filter of the first FC
+            first_fc_ops = self.unfused_lstm_fc_roots_per_timestep[0]
+            fc_filters = []
+            for ndx, per_timestep in enumerate(self.unfused_lstm_fc_roots_per_timestep):
+                for fc in per_timestep:
+                    filter_index = new_graph[fc['index']]['ip_tensors'][1]
+                    if ndx:
+                        if filter_index in fc_filters:
+                            new_graph[fc['index']]['reuse_filters_flag'] = first_fc_ops[fc_filters.index(
+                                filter_index)]['index']
+                    else:
+                        fc_filters.append(filter_index)
+                        # indicates the op whose offsets have to be copied
+                        new_graph[fc['index']]['reuse_filters_flag'] = 0
 
         # get the axon layer nums at this point, and update the graph with ops that are not being supported on axon currently
         axon_layer_num = -1
@@ -4012,7 +4402,7 @@ class SupportedOperators():
 
     def get_connected_operation_output_tensor_index(self, op_index, split_op_num, op_graph):
         split_op = op_graph[split_op_num]
-        op_o = self.get_index_from_tf_index(
+        op_o = self.get_tf_graph_index_from_tf_op_index(
             op_graph, split_op['outputs'][op_index])
         for j, op_t in enumerate(split_op['op_tensors']):
             if op_t in op_graph[op_o]['ip_tensors']:
@@ -4045,14 +4435,49 @@ class SupportedOperators():
                 return self.get_index_for_graph_index(next_node['index'])
 
     def get_axon_layer_num_of_output_operator(self):
-        if len(self.nodes_info['op_graph']) == 1:
+        op_graph = self.nodes_info['op_graph']
+        if len(op_graph) == 1:
             return [0], [0]
         axon_layer_num = []
         layer_ndx = []
-        for ndx, node in enumerate(self.nodes_info['op_graph']):
-            if node['axon_op_ops'] == [] and node['axon_layer_num'] >= 0:
-                axon_layer_num.append(node['axon_layer_num'])
-                layer_ndx.append(ndx)
+        seen = set()
+        if ( not self.new_ops_inserted ): #this is added as indexing op graphs is incorrect if new ops have been added
+            for output_tensor in self.model_output_tensor_indices:
+                # all the
+                producer_indices = [ndx for ndx, node in enumerate(
+                    op_graph) if output_tensor in node['op_tensors']]
+
+                if not producer_indices:
+                    continue
+
+                for prod_ndx in producer_indices:
+                    prod_node = op_graph[prod_ndx]
+                    if prod_node['axon_layer_num'] >= 0:
+                        output_index = prod_ndx
+                    else:
+                        # need to walk back to figure out the actual axon supported layer which produces this node
+                        output_index = self.walk_back_to_axon_producer(
+                            op_graph, prod_ndx)
+                    if output_index is None:
+                        continue
+
+                    output_node = op_graph[output_index]
+                    output_axon_layer_num = output_node['axon_layer_num']
+                    if output_axon_layer_num in seen:
+                        continue
+                    seen.add(output_axon_layer_num)
+                    axon_layer_num.append(output_axon_layer_num)
+                    layer_ndx.append(output_index)
+
+            axon_layer_num.sort()
+            layer_ndx.sort()
+
+        if not axon_layer_num:
+            for ndx, node in enumerate(op_graph):
+                if node['axon_op_ops'] == [] and node['axon_layer_num'] >= 0:
+                    axon_layer_num.append(node['axon_layer_num'])
+                    layer_ndx.append(ndx)
+
         return axon_layer_num, layer_ndx
 
     def get_axon_layer_num_of_input_operator(self):
@@ -4192,6 +4617,28 @@ class SupportedOperators():
             node.pop('orig_ip_op', None)
             node.pop('orig_op_op', None)
         return graph
+
+    def walk_back_to_axon_producer(self, op_graph, start_ndx):
+        visited = set()
+        stack = [start_ndx]
+        while stack:
+            ndx = stack.pop()
+            if ndx in visited:
+                continue
+            visited.add(ndx)
+            node = op_graph[ndx]
+            if node.get('axon_layer_num', -1) >= 0:
+                return ndx
+            for ip_ndx in node.get('inputs', []):
+                if isinstance(ip_ndx, int) and ip_ndx >= 0:
+                    stack.append(ip_ndx)
+        return None
+
+    def get_op_index_from_ip_tensor_index(self, ip_tensor_index):
+        for ndx, op_node in enumerate(self.operator_graph_info):
+            if ip_tensor_index in op_node['ip_tensors']:
+                return ndx
+        return -1
 
 
 class TfLiteAxonGraph(SupportedOperators):
@@ -4353,13 +4800,18 @@ class TfLiteAxonGraph(SupportedOperators):
 
     def get_axon_output_op_graph_details(self):
         op_graph = self.get_axon_operator_graph_info()
-        if len(op_graph) == 1:
-            return [op_graph[0]]
+        # if len(op_graph) == 1:
+        #     return [op_graph[0]]
+        # axon_output_graph_details = []
+        # for ndx, node in enumerate(op_graph):
+        #     if node['axon_op_ops'] == [] and node['axon_layer_num'] >= 0:
+        #         # map the tflite output to the axon graph detail
+        #         axon_output_graph_details.append(node)
+        # return axon_output_graph_details
+        _, tflite_output_layer_ndx = self.get_axon_layer_num_of_output_operator()
         axon_output_graph_details = []
-        for ndx, node in enumerate(op_graph):
-            if node['axon_op_ops'] == [] and node['axon_layer_num'] >= 0:
-                # map the tflite output to the axon graph detail
-                axon_output_graph_details.append(node)
+        for tflite_ndx in tflite_output_layer_ndx:
+            axon_output_graph_details.append(op_graph[tflite_ndx])
         return axon_output_graph_details
 
     def get_tflite_axon_output_details_mapping(self):
@@ -4384,3 +4836,6 @@ class TfLiteAxonGraph(SupportedOperators):
                 order += 1
 
         return tflite_output_mapping
+
+    def get_tflite_op_index_from_input_tensor_index(self, input_tensor_index):
+        return self.get_op_index_from_ip_tensor_index(input_tensor_index)
