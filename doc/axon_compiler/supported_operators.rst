@@ -181,11 +181,11 @@ Activation functions
      - Axon NPU
      - 1.0.0
    * - Sigmoid
-     - Executed on the CPU
+     - Executed on the CPU. Performance optimized LUT implementation.
      - CPU
      - 1.0.0
    * - Tanh
-     - Executed on the CPU
+     - Executed on the CPU. Performance optimized LUT implementation.
      - CPU
      - 1.0.0
    * - Softmax
@@ -248,6 +248,37 @@ Tensor manipulation operators
      - Supports dilation for convolution and depthwise convolution.
      - CPU
      - 1.3.0
+   * - Pack/Unpack
+     - Supports multi-time step LSTM.
+     - Axon NPU
+     - 1.5.0
+
+Recurrent operators
+=====================
+
+.. list-table::
+   :header-rows: 1
+
+   * - Operator
+     - Notes / limitations
+     - Target
+     - Compiler version
+   * - Fused LSTM
+     - | Maps to TFLite Unidirectional Sequental LSTM. Not supported in Keras v3 (must use Keras v2).
+       | Implementation is "rolled-up", meaning the cell is defined once, and reused for each time-step.
+       | Combination of Axon NPU (dense, multiply, add) and CPU (sigmoid, Tanh) operators.
+       | Max input width: 1024
+       | Max recurrent width: 1024
+     - Axon NPU, CPU
+     - 1.5.0
+   * - Unfused LSTM
+     - | Maps to TFlite LSTM cell. Each discrete operation internal to the LSTM is explicitly declared as part of the graph.
+       | "Unrolled" only. Each time-step is explicitly programmed.
+       | Combination of Axon NPU (dense, multiply, add) and CPU (sigmoid, Tanh) operators.
+       | Max input width: 1024
+       | Max recurrent width: 1024
+     - Axon NPU, CPU
+     - 1.5.0
 
 Model design recommendations
 ****************************

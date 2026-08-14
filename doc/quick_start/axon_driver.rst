@@ -138,8 +138,12 @@ Verify compilation
 
 Test your compiled model to ensure it works correctly before integrating it into your application.
 
-Run :ref:`test_nn_inference` to confirm your compiled model produces correct results.
+Run :ref:`test_nn_inference` on target to confirm your compiled model produces correct results, and to measure the true inference time (the compiler provides an estimate based on the simulator).
 This validation step checks for compilation issues early in the development process.
+
+.. note::
+   Successfully running this sample means that your model is behaving exactly on-target as it does in the simulator/compiler.
+   Accuracy issues in your application are likely due to input and output data access, ie, failure to transpose the width and channel axis on the input (width is innermost dimension on Axon).
 
 .. _quick_start_axon_driver_app_development:
 

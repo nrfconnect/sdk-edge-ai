@@ -44,11 +44,16 @@ If you are unsure which solution fits your use case, refer to the table below fo
      - CPU
      - High-level API
      - Broad device compatibility with ultra-low memory footprint
-   * - :ref:`Axon driver <solution_axon_driver>`
+   * - :ref:`Axon driver inference <solution_axon_driver_inference>`
      - :ref:`Axon NPU TFLite compiler <axon_npu_tflite_compiler>`
      - Axon NPU
      - Low-level driver API
      - Custom inference pipelines, direct NPU control, and advanced optimization
+   * - :ref:`Axon driver DSP inrinsics <solution_axon_driver_intrinsics>`
+     - N/A
+     - Axon NPU
+     - Low-level driver API
+     - Accelerating DSP-like algorithms in fixed point arithmetic
    * - :ref:`Edge Impulse <solution_edge_impulse>`
      - `Edge Impulse studio`_
      - CPU or Axon NPU
@@ -140,12 +145,12 @@ Advanced solutions
 Use the following advanced solutions when you need lower-level control, custom inference pipelines, or direct access to hardware acceleration features.
 These workflows require more manual configuration but offer finer control over performance and resource usage.
 
-.. _solution_axon_driver:
+.. _solution_axon_driver_inference:
 
-Axon driver
-===========
+Axon driver inference
+=====================
 
-This solution gives you direct access to the Axon NPU through the Axon driver API.
+This solution gives you direct access to the Axon NPU through the Axon driver API for compiled model inference.
 You compile TensorFlow Lite models with the :ref:`Axon NPU TFLite compiler <axon_npu_tflite_compiler>` and implement custom inference pipelines using the driver's synchronous or asynchronous execution modes.
 
 Use this solution when you need maximum control over inference scheduling, memory management, and NPU resource utilization, or when your application requires custom pre- and post-processing that goes beyond what higher-level APIs provide.
@@ -159,3 +164,23 @@ Key characteristics:
 * Requires a device with `Axon NPU`_ hardware for on-target deployment.
 
 See :ref:`quick_start_axon_driver` to get started.
+
+Axon driver DSP intrinsics
+==========================
+
+This solution gives you direct access to the Axon NPU through the Axon DSP intrinsics. These can be helpful for accelerating algorithms using fixed point arithmetic vector operations.
+
+Note that the use of Axon NPU intrinsics does not preclude the use of it for inference as well. Access to the Axon NPU is arbitrated between different users by the driver.
+
+The typical development flow is to do initial algorithm development and verification in C using the Axon NPU simulator (which is delivered as part of the Edge AI add-on), then running the code directly on target.
+
+Key characteristics:
+
+* Axon DSP intrinsics accelerate fixed point, vector operations.
+* Intrinsics are have a synchronous (blocking) interface. 
+* A variety of bit-widths for input and output are supported, but not uniformly across all intrinsics.
+* Memory is managed entirely by the user.
+* Provides a host-based software simulator for development and testing without hardware.
+* Requires a device with `Axon NPU`_ hardware for on-target deployment.
+
+See :ref:`quick_start_axon_driver_dsp_intrinsics` to get started.

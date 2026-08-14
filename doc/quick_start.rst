@@ -58,3 +58,11 @@ These workflows require more manual configuration but allow finer control over p
    :hidden:
 
    quick_start/axon_driver
+
+* :ref:`quick_start_axon_dsp_intrinsics` - Use Axon NPU to accelerate DSP-like, vector operations.
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   quick_start/axon_dsp_intrinsics

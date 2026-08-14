@@ -104,8 +104,7 @@ Follow these steps to initialize the Axon driver:
 
       nrf_axon_platform_init()
 
-   This function is platform-specific, but you must provide the Axon base address (``nrf_axon_driver_init(base_address``).
-   You can obtain ``base_address`` from the device tree on Zephyr.
+   This function is platform-specific (zephyr vs simulator). On zephyr, it will obtain the ``base_address`` from the device tree.
 
    During initialization, the driver powers on Axon by calling the ``nrf_axon_platform_vote_for_power()`` function.
    The driver then verifies that Axon NPU exists at the specified base address.
