@@ -114,15 +114,12 @@ Follow these steps to initialize the Axon driver:
       Do not create or manage a driver handle.
       Axon is implemented as a singleton, and the driver serializes access internally.
 
-#. Before starting a new inference session on a streaming-style model (where intermediate results are fed forward), initialize the model’s persistent variables:
-
-   .. code-block:: console
-
-      nrf_axon_nn_model_init_vars(&my_model_wrapper);
-
-   This sets all persistent variables to their quantized zero-point values.
-
 #. Refer to further instructions on :ref:`integrating the driver into your application <ug_axon_integration>`.
+
+.. note::
+
+   If Axon NPU is to be used for DSP intrinsics only, no further steps are required. The following instructions apply to inferencing models.
+
 
 .. _axon_integration_init_model:
 
@@ -172,6 +169,15 @@ The same high‑level flow applies to both synchronous and asynchronous inferenc
 Follow these steps to execute inference with a compiled Axon model:
 
 #. Ensure the Axon driver has been initialized and the model has been initialized for the selected execution mode.
+
+#. At the start of a new session, models that maintain internal state (ie streaming-style models and recurrent models), initialize the model’s persistent variables:
+
+   .. code-block:: console
+
+      nrf_axon_nn_model_init_vars(&my_model_wrapper);
+
+   This sets all persistent variables to their quantized zero-point values.
+
 
 #. Prepare the input data in packed format::
 
