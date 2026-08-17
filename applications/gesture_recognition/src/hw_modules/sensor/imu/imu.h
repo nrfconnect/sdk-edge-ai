@@ -23,17 +23,21 @@ extern "C" {
 #endif /* __cplusplus */
 
 /** Accelerometer full scale variants */
-#define IMU_ACCEL_SCALE_2G      (2)
-#define IMU_ACCEL_SCALE_4G      (4)
-#define IMU_ACCEL_SCALE_8G      (8)
-#define IMU_ACCEL_SCALE_16G     (16)
+typedef enum imu_accel_scale {
+	IMU_ACCEL_SCALE_2G = 2,
+	IMU_ACCEL_SCALE_4G = 4,
+	IMU_ACCEL_SCALE_8G = 8,
+	IMU_ACCEL_SCALE_16G = 16,
+} imu_accel_scale_t;
 
 /** Gyroscope full scale variants */
-#define IMU_GYRO_SCALE_125DPS  (125)
-#define IMU_GYRO_SCALE_250DPS  (250)
-#define IMU_GYRO_SCALE_500DPS  (500)
-#define IMU_GYRO_SCALE_1000DPS (1000)
-#define IMU_GYRO_SCALE_2000DPS (2000)
+typedef enum imu_gyro_scale {
+	IMU_GYRO_SCALE_125DPS = 125,
+	IMU_GYRO_SCALE_250DPS = 250,
+	IMU_GYRO_SCALE_500DPS = 500,
+	IMU_GYRO_SCALE_1000DPS = 1000,
+	IMU_GYRO_SCALE_2000DPS = 2000,
+} imu_gyro_scale_t;
 
 /** Number of axes */
 #define IMU_NUM_AXES (3U)
@@ -49,13 +53,19 @@ extern "C" {
  */
 typedef struct imu_config_s {
 	/** Accelerometer full scale in G */
-	int32_t accel_fs_g;
+	imu_accel_scale_t accel_fs;
 
 	/** Gyroscope full scale in DPS */
-	int32_t gyro_fs_dps;
+	imu_gyro_scale_t gyro_fs;
 
 	/** IMU data rate in Hz */
 	int32_t data_rate_hz;
+
+	/** Accelerometer enabled */
+	bool accel_enabled;
+
+	/** Gyroscope enabled */
+	bool gyro_enabled;
 } imu_config_t;
 
 /** Inertial sensor data */

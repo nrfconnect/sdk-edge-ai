@@ -4,7 +4,33 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-config HAR_INFERENCE_POSTPROCESSING
+choice SBM_MODEL_CHOICE
+	prompt "Choose the model to use"
+	default SBM_HAR_MODEL
+
+	config SBM_HAR_MODEL
+		bool "Use the HAR model"
+		help
+		  Use the HAR (Human Activity Recognition) model recognizing
+		  the following activities:
+		  - Walking
+		  - Walking upstairs
+		  - Walking downstairs
+		  - Sitting
+		  - Standing
+		  - Lying
+
+	config SBM_CAPTURE_24_MODEL
+		bool "Use the Capture-24 model"
+		help
+		  Use the Capture-24 model recognizing the following activities:
+		  - Bicycling
+		  - Sleep
+		  - Vehicle
+		  - Waling
+endchoice
+
+config SBM_INFERENCE_POSTPROCESSING
 	bool "Apply inference postprocessing before publishing"
 	help
 	  When enabled, classification output is stabilized by requiring a
@@ -13,9 +39,9 @@ config HAR_INFERENCE_POSTPROCESSING
 
 	  When disabled, every raw model prediction is logged and published.
 
-config HAR_POSTPROCESSING_PUBLISH_TIMEOUT_MS
+config SBM_POSTPROCESSING_PUBLISH_TIMEOUT_MS
 	int "Maximum time without a published classification [ms]"
-	depends on HAR_INFERENCE_POSTPROCESSING
+	depends on SBM_INFERENCE_POSTPROCESSING
 	range 1000 60000
 	default 8000
 	help
@@ -27,9 +53,9 @@ config HAR_POSTPROCESSING_PUBLISH_TIMEOUT_MS
 	  The gap is bounded by this value plus one inference period, because the
 	  timeout is only evaluated when a new raw prediction arrives.
 
-config HAR_LOG_RAW_PREDICTIONS
+config SBM_LOG_RAW_PREDICTIONS
 	bool "Report every raw prediction, before post-processing"
-	depends on HAR_INFERENCE_POSTPROCESSING
+	depends on SBM_INFERENCE_POSTPROCESSING
 	help
 	  When enabled, every model output is reported with a "RAW," prefix in
 	  addition to the results that postprocessing decides to publish. Both

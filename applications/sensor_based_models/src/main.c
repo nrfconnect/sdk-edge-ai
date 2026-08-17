@@ -27,15 +27,26 @@
 
 LOG_MODULE_REGISTER(main);
 
+#if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
 #define NRF_EDGEAI_INPUT_DATA_LEN (ACCEL_AXIS_NUM + GYRO_AXIS_NUM)
-#define IMU_SAMPLE_RATE_HZ (50)
-#define HAR_INPUT_WINDOW_SAMPLES (128)
+#elif IS_ENABLED(CONFIG_SBM_CAPTURE_24_MODEL)
+#define NRF_EDGEAI_INPUT_DATA_LEN (ACCEL_AXIS_NUM)
+#endif
 
-BUILD_ASSERT(HAR_INPUT_WINDOW_SAMPLES > 0);
+#define HAR_SAMPLE_RATE_HZ (50)
+#define CAPTURE_24_SAMPLE_RATE_HZ (100)
+
+#if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
+#define INPUT_WINDOW_SAMPLES (128)
+#elif IS_ENABLED(CONFIG_SBM_CAPTURE_24_MODEL)
+#define INPUT_WINDOW_SAMPLES (200)
+#endif
+
+BUILD_ASSERT(INPUT_WINDOW_SAMPLES > 0);
 
 typedef struct accel_window_s {
 	float sum_g[ACCEL_AXIS_NUM];
-	float samples_g[HAR_INPUT_WINDOW_SAMPLES][ACCEL_AXIS_NUM];
+	float samples_g[INPUT_WINDOW_SAMPLES][ACCEL_AXIS_NUM];
 	int index;
 	int count;
 } accel_window_t;
@@ -58,7 +69,7 @@ static void accel_window_push(float x_g, float y_g, float z_g)
 {
 	const float sample_g[ACCEL_AXIS_NUM] = {x_g, y_g, z_g};
 
-	if (accel_window.count == HAR_INPUT_WINDOW_SAMPLES) {
+	if (accel_window.count == INPUT_WINDOW_SAMPLES) {
 		for (int axis = 0; axis < ACCEL_AXIS_NUM; axis++) {
 			accel_window.sum_g[axis] -= accel_window.samples_g[accel_window.index][axis];
 		}
@@ -71,7 +82,7 @@ static void accel_window_push(float x_g, float y_g, float z_g)
 		accel_window.sum_g[axis] += sample_g[axis];
 	}
 
-	accel_window.index = (accel_window.index + 1) % HAR_INPUT_WINDOW_SAMPLES;
+	accel_window.index = (accel_window.index + 1) % INPUT_WINDOW_SAMPLES;
 }
 
 static void accel_window_get_average(float *x_g, float *y_g, float *z_g)
@@ -106,10 +117,22 @@ static void on_button_click(button_click_t click)
 static void hw_modules_init(void)
 {
 	int ret;
-	imu_config_t imu_config = {
-		.accel_fs_g = IMU_ACCEL_SCALE_2G,
-		.gyro_fs_dps = IMU_GYRO_SCALE_1000DPS,
-		.data_rate_hz = IMU_SAMPLE_RATE_HZ,
+	imu_config_t imu_configs[] =
+	{
+		[0] = {
+			.accel_fs_g = IMU_ACCEL_SCALE_2G,
+			.gyro_fs_dps = IMU_GYRO_SCALE_1000DPS,
+			.data_rate_hz = HAR_SAMPLE_RATE_HZ,
+			.accel_enabled = true,
+			.gyro_enabled = true,
+		},
+		[1] = {
+			.accel_fs_g = IMU_ACCEL_SCALE_8G,
+			.gyro_fs_dps = IMU_GYRO_SCALE_UNDEFINED,
+			.data_rate_hz = CAPTURE_24_SAMPLE_RATE_HZ,
+			.accel_enabled = true,
+			.gyro_enabled = false,
+		},
 	};
 
 	ret = activity_led_init();
@@ -122,10 +145,10 @@ static void hw_modules_init(void)
 		LOG_ERR("Failed to initialize button module (err %d)", ret);
 	}
 
-	status_t status = imu_init(&imu_config, imu_data_ready_cb);
+	int imu_ret = imu_init(&imu_configs[1], imu_data_ready_cb);
 
-	if (status != STATUS_SUCCESS) {
-		LOG_ERR("Failed to initialize IMU sensor, error = %d", (int)status);
+	if (imu_ret != 0) {
+		LOG_ERR("Failed to initialize IMU sensor, error = %d", imu_ret);
 		__ASSERT_NO_MSG(false);
 	}
 
@@ -168,7 +191,7 @@ static void publish_classification(class_label_t class_label, float probability)
 #endif
 }
 
-#if IS_ENABLED(CONFIG_HAR_LOG_RAW_PREDICTIONS)
+#if IS_ENABLED(CONFIG_SBM_LOG_RAW_PREDICTIONS)
 static void report_raw_prediction(uint16_t predicted_target, float probability)
 {
 	const char *class_name = inference_get_class_name((class_label_t)predicted_target);
@@ -208,7 +231,7 @@ static void handle_inference_result(nrf_edgeai_t *model)
 	p_probabilities = model->decoded_output.classif.probabilities.p_f32;
 	__ASSERT_NO_MSG(p_probabilities != NULL);
 
-#if IS_ENABLED(CONFIG_HAR_INFERENCE_POSTPROCESSING)
+#if IS_ENABLED(CONFIG_SBM_INFERENCE_POSTPROCESSING)
 	report_raw_prediction(predicted_target, p_probabilities[predicted_target]);
 
 	prediction_ctx_t result =
@@ -263,7 +286,14 @@ int main(void)
 	__maybe_unused nrf_edgeai_err_t res = nrf_edgeai_init(p_model);
 
 	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
-	__ASSERT_NO_MSG(p_model->input.window_size == HAR_INPUT_WINDOW_SAMPLES);
+	__ASSERT_NO_MSG(p_model->input.window_size == INPUT_WINDOW_SAMPLES);
+
+	nrf_edgeai_rt_version_t version = nrf_edgeai_runtime_version();
+
+	LOG_INF("nRF Edge AI Sensor Based Models Demo");
+	LOG_INF("nRF Edge AI Runtime Version: %d.%d.%d", version.field.major, version.field.minor,
+		version.field.patch);
+	LOG_INF("nRF Edge AI Lab Solution id: %s", nrf_edgeai_solution_id_str(p_model));
 
 	imu_data_t imu_data = {0};
 	flt32_t input_data[NRF_EDGEAI_INPUT_DATA_LEN];
@@ -271,7 +301,7 @@ int main(void)
 	for (;;) {
 		k_sem_take(&imu_data_ready_sem, K_FOREVER);
 
-		if (imu_read(&imu_data) != STATUS_SUCCESS) {
+		if (imu_read(&imu_data) != 0) {
 			continue;
 		}
 
@@ -281,14 +311,19 @@ int main(void)
 		input_data[0] = (flt32_t)(imu_data.accel[0].g);
 		input_data[1] = (flt32_t)(imu_data.accel[1].g);
 		input_data[2] = (flt32_t)(imu_data.accel[2].g);
+#if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
 		input_data[3] = (flt32_t)imu_data.gyro[0].rad_s;
 		input_data[4] = (flt32_t)imu_data.gyro[1].rad_s;
 		input_data[5] = (flt32_t)imu_data.gyro[2].rad_s;
+#endif
 
 		LOG_DBG("Accelerometer [G]: %f, %f, %f",
 			(double)input_data[0], (double)input_data[1], (double)input_data[2]);
+
+#if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
 		LOG_DBG("Gyroscope [rad/s]: %f, %f, %f",
 			(double)input_data[3], (double)input_data[4], (double)input_data[5]);
+#endif
 
 		execute_inference(input_data);
 	}
