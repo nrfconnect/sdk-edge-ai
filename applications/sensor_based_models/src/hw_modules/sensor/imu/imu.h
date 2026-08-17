@@ -23,17 +23,23 @@ extern "C" {
 #endif /* __cplusplus */
 
 /** Accelerometer full scale variants */
-#define IMU_ACCEL_SCALE_2G      (2)
-#define IMU_ACCEL_SCALE_4G      (4)
-#define IMU_ACCEL_SCALE_8G      (8)
-#define IMU_ACCEL_SCALE_16G     (16)
+typedef enum imu_accel_scale {
+	IMU_ACCEL_SCALE_UNDEFINED = 0,
+	IMU_ACCEL_SCALE_2G = 2,
+	IMU_ACCEL_SCALE_4G = 4,
+	IMU_ACCEL_SCALE_8G = 8,
+	IMU_ACCEL_SCALE_16G = 16,
+} imu_accel_scale_t;
 
 /** Gyroscope full scale variants */
-#define IMU_GYRO_SCALE_125DPS  (125)
-#define IMU_GYRO_SCALE_250DPS  (250)
-#define IMU_GYRO_SCALE_500DPS  (500)
-#define IMU_GYRO_SCALE_1000DPS (1000)
-#define IMU_GYRO_SCALE_2000DPS (2000)
+typedef enum imu_gyro_scale {
+	IMU_GYRO_SCALE_UNDEFINED = 0,
+	IMU_GYRO_SCALE_125DPS = 125,
+	IMU_GYRO_SCALE_250DPS = 250,
+	IMU_GYRO_SCALE_500DPS = 500,
+	IMU_GYRO_SCALE_1000DPS = 1000,
+	IMU_GYRO_SCALE_2000DPS = 2000,
+} imu_gyro_scale_t;
 
 /** Number of axes */
 #define IMU_NUM_AXES (3U)
@@ -49,13 +55,19 @@ extern "C" {
  */
 typedef struct imu_config_s {
 	/** Accelerometer full scale in G */
-	int32_t accel_fs_g;
+	imu_accel_scale_t accel_fs_g;
 
 	/** Gyroscope full scale in DPS */
-	int32_t gyro_fs_dps;
+	imu_gyro_scale_t gyro_fs_dps;
 
 	/** IMU data rate in Hz */
 	int32_t data_rate_hz;
+
+	/** Accelerometer enabled */
+	bool accel_enabled;
+
+	/** Gyroscope enabled */
+	bool gyro_enabled;
 } imu_config_t;
 
 /** Inertial sensor data */
@@ -78,18 +90,18 @@ typedef struct imu_data_s {
  * @param data_ready_cb     Data ready callback, provided callback will be
  *                          called when new data sample is ready for reading
  *
- * @return Operation status @ref status_t
+ * @return 0 on success, negative errno code on failure.
  */
-status_t imu_init(const imu_config_t *p_config, generic_cb_t data_ready_cb);
+int imu_init(const imu_config_t *p_config, generic_cb_t data_ready_cb);
 
 /**
  * @brief Read IMU sensor data
  *
  * @param p_data        Pointer to data to be filled @ref imu_data_t
  *
- * @return Operation status @ref status_t
+ * @return 0 on success, negative errno code on failure.
  */
-status_t imu_read(imu_data_t *const p_data);
+int imu_read(imu_data_t *const p_data);
 
 #ifdef __cplusplus
 }

@@ -27,6 +27,7 @@ typedef struct activity_color_s {
 	float blue;
 } activity_color_t;
 
+#if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
 static const activity_color_t CLASS_COLORS[] = {
 	[CLASS_LABEL_WALKING] = {0.0f, 1.0f, 0.0f},
 	[CLASS_LABEL_WALKING_UPSTAIRS] = {0.0f, 1.0f, 1.0f},
@@ -35,6 +36,14 @@ static const activity_color_t CLASS_COLORS[] = {
 	[CLASS_LABEL_STANDING] = {1.0f, 0.0f, 1.0f},
 	[CLASS_LABEL_LYING] = {1.0f, 0.0f, 0.0f},
 };
+#elif IS_ENABLED(CONFIG_SBM_CAPTURE_24_MODEL)
+static const activity_color_t CLASS_COLORS[] = {
+	[CLASS_LABEL_BICYCLING] = {0.0f, 1.0f, 0.0f},
+	[CLASS_LABEL_SLEEP] = {0.0f, 1.0f, 1.0f},
+	[CLASS_LABEL_VEHICLE] = {1.0f, 1.0f, 0.0f},
+	[CLASS_LABEL_WALKING] = {0.0f, 0.0f, 1.0f},
+};
+#endif
 
 static const activity_color_t DISCONNECTED_COLOR = {0.15f, 0.15f, 0.15f};
 static const activity_color_t CONNECTED_COLOR = {0.0f, 0.0f, 1.0f};

@@ -12,6 +12,7 @@
 
 static const char *get_name_by_target(uint8_t predicted_target)
 {
+#if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
 	static const char *const LABEL_VS_NAME[] = {
 		[CLASS_LABEL_WALKING] = "WALKING",
 		[CLASS_LABEL_WALKING_UPSTAIRS] = "WALKING_UPSTAIRS",
@@ -20,6 +21,14 @@ static const char *get_name_by_target(uint8_t predicted_target)
 		[CLASS_LABEL_STANDING] = "STANDING",
 		[CLASS_LABEL_LYING] = "LYING",
 	};
+#elif IS_ENABLED(CONFIG_SBM_CAPTURE_24_MODEL)
+	static const char *const LABEL_VS_NAME[] = {
+		[CLASS_LABEL_BICYCLING] = "BICYCLING",
+		[CLASS_LABEL_SLEEP] = "SLEEP",
+		[CLASS_LABEL_VEHICLE] = "VEHICLE",
+		[CLASS_LABEL_WALKING] = "WALKING",
+	};
+#endif
 
 	BUILD_ASSERT(ARRAY_SIZE(LABEL_VS_NAME) == CLASS_LABEL_COUNT);
 
@@ -30,7 +39,7 @@ static const char *get_name_by_target(uint8_t predicted_target)
 	return LABEL_VS_NAME[predicted_target];
 }
 
-#if IS_ENABLED(CONFIG_HAR_INFERENCE_POSTPROCESSING)
+#if IS_ENABLED(CONFIG_SBM_INFERENCE_POSTPROCESSING)
 
 /* Consecutive identical raw predictions required before a class is published.
  *
@@ -94,7 +103,7 @@ static bool publish_timeout_expired(void)
 {
 	int64_t elapsed_ms = k_uptime_get() - prediction_history.last_publish_uptime_ms;
 
-	return elapsed_ms >= CONFIG_HAR_POSTPROCESSING_PUBLISH_TIMEOUT_MS;
+	return elapsed_ms >= CONFIG_SBM_POSTPROCESSING_PUBLISH_TIMEOUT_MS;
 }
 
 /**
@@ -167,7 +176,7 @@ prediction_ctx_t inference_postprocess(uint16_t target, float probability)
 	return result;
 }
 
-#endif /* IS_ENABLED(CONFIG_HAR_INFERENCE_POSTPROCESSING) */
+#endif /* IS_ENABLED(CONFIG_SBM_INFERENCE_POSTPROCESSING) */
 
 const char *inference_get_class_name(class_label_t class_label)
 {
