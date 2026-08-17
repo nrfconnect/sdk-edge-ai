@@ -181,11 +181,13 @@ Activation functions
      - Axon NPU
      - 1.0.0
    * - Sigmoid
-     - Executed on the CPU
+     - | Executed on the CPU
+       | Optimized in compiler v1.5.0
      - CPU
      - 1.0.0
    * - Tanh
-     - Executed on the CPU
+     - | Executed on the CPU
+       | Optimized in compiler v1.5.0
      - CPU
      - 1.0.0
    * - Softmax
@@ -248,6 +250,28 @@ Tensor manipulation operators
      - Supports dilation for convolution and depthwise convolution.
      - CPU
      - 1.3.0
+
+Recurrent operators
+===================
+
+.. list-table::
+   :header-rows: 1
+
+   * - Operator
+     - Notes / limitations
+     - Target
+     - Compiler version
+   * - Unidirectional Sequence LSTM (fused)
+     - | Partial and experimental support as of v1.4.0
+       | Cell state clipping added in v1.5.0
+       | Command buffer rolled up in v1.5.0, which significantly reduces model size
+     - Axon NPU | CPU
+     - 1.4.0
+   * - Unidirectional Sequence LSTM (unfused)
+     - | Experimental support as of v1.5.0
+       | Only the unrolled form is supported
+     - Axon NPU | CPU
+     - 1.5.0
 
 Model design recommendations
 ****************************

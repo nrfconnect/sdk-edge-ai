@@ -1,8 +1,9 @@
 .. _ug_axon_integration:
+.. _ug_axon_inference_integration:
 .. _axon_driver:
 
-Axon integration
-################
+Axon inference integration
+##########################
 
 .. contents::
    :local:
@@ -308,3 +309,9 @@ Ensure you have completed the following:
 
 #. Initialized driver one time at start-up.
 #. Initialized the model one-time at start-up for the desired mode of execution, synchronous (``nrf_axon_nn_model_validate``) or asynchronous (``nrf_axon_nn_model_async_init``).
+
+Next steps
+**********
+
+* :ref:`Axon DSP intrinsics integration <ug_axon_dsp_intrinsics_integration>` for hardware-accelerated DSP workloads without a compiled model.
+* :ref:`List of supported DSP intrinsics <supported_dsp_intrinsics>` for the available intrinsic functions.

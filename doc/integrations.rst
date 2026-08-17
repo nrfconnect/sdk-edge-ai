@@ -12,5 +12,6 @@ The following user guides describe the available integrations:
    :caption: Subpages:
 
    integrations/axon
+   integrations/axon_intrinsics
    integrations/nrf_edgeai
    integrations/edge_impulse

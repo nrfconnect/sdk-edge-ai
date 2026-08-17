@@ -17,6 +17,25 @@ Changelog
 
 See the list of changes for a specific release of the Axon NPU software.
 
+Release 1.5.0  13 Aug 2026
+==========================
+
+* Added:
+
+  * Compiler release v1.5.0.
+  * Cell state clipping for unidirectional sequential (fused) Long Short-Term Memory (LSTM) model.
+  * ``passlist_candidate_mode`` support in the compiler executor.
+    You can set this option when invoking the compiler, or enable it in the YAML configuration with the ``passlist_candidate_mode`` entry.
+  * Experimental support for unfused LSTM.
+    Only the unrolled mode is supported.
+  * :ref:`Test: DSP intrinsics application <test_axon_intrinsics>` for validating Axon DSP intrinsic functions on hardware and in the simulator.
+
+* Updated:
+
+  * The unidirectional sequential (fused) LSTM command buffer is now rolled up, which significantly reduces model size.
+  * Sigmoid (logistic) and tanh operators are optimized for better performance.
+  * API documentation in :c:group:`nrf_axon_dsp_intrinsics` is expanded with more complete comments.
+
 Release 1.4.0  17 Jul 2026
 ==========================
 
@@ -27,7 +46,7 @@ Release 1.4.0  17 Jul 2026
 
 * Updated:
 
-  * Multiply to no longer be limited to widths less than or equal to 512.
+  * Multiply no longer limited to widths less than or equal to 512.
 
 Release 1.3.0  02 Jul 2026
 ==========================

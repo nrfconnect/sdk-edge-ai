@@ -7,7 +7,7 @@ Test: NN Inference
    :local:
    :depth: 2
 
-The Test NN Inference application provides a simple way to run and validate a compiled neural network model on an Axon‑enabled target.
+The Test NN Inference application demonstrates how to run and validate a compiled neural network model on an Axon‑enabled target.
 
 Requirements
 ************

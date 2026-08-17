@@ -12,6 +12,7 @@ Each model includes an overview and a dedicated subpage with model‑specific de
    :maxdepth: 2
 
    /axon_compiler/supported_operators.rst
+   /axon_compiler/supported_dsp_intrinsics.rst
    /axon_compiler/Axon_npu_tflite_compiler.rst
    /axon_compiler/mlperf_tiny_models.rst
    /axon_compiler/axon_npu_changelog
