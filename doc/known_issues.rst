@@ -21,6 +21,12 @@ A known issue can list one or both of the following entries:
   Sometimes, they are discovered later and added over time.
 
 
+List of known issues for v2.3.0 release
+***************************************
+
+NCSDK-40932: In :ref:`app_gesture_recognition` DFU fails on Thingy53
+  When using the Device Firmware Update (DFU) feature in the :ref:`Gesture Recognition application <app_gesture_recognition>` on Thingy:53, the DFU process fails.
+
 List of known issues for v2.2.0 release
 ***************************************
 
