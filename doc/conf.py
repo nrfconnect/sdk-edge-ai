@@ -68,6 +68,7 @@ extensions = [
     'sphinx_copybutton',
     'options_from_kconfig',
     'table_from_rows',
+    'doxyrunner_winfix',
     'zephyr.doxyrunner',
     'zephyr.doxybridge',
     'zephyr.external_content',

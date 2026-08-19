@@ -12,7 +12,10 @@ BUILDDIR      = _build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help mkdir Makefile
+.PHONY: help mkdir clean-doxygen Makefile
+
+clean-doxygen:
+	rm -rf _build/html/doxygen
 
 mkdir:
 	mkdir -p ${SOURCEDIR}
