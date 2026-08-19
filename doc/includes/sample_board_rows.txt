@@ -57,3 +57,15 @@
 .. nrf54lm20dk_nrf54lm20b_cpuapp
 
 | :ref:`nRF54LM20 DK <nrf:ug_nrf54l>` | PCA10184 | :doc:`nrf54lm20dk <zephyr:boards/nordic/nrf54lm20dk/doc/index>` | ``nrf54lm20dk/nrf54lm20b/cpuapp`` |
+
+
+
+.. nrf7120dk_nrf7120_cpuapp
+
+| nRF7120 DK |   | nrf7120dk | ``nrf7120dk/nrf7120/cpuapp`` |
+
+
+
+.. nrf9251dk_nrf9251_cpuapp
+
+| nRF9251 DK |   | nrf9251dk | ``nrf9251dk/nrf9251/cpuapp`` |
