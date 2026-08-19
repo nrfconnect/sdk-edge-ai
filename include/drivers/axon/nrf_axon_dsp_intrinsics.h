@@ -4,6 +4,13 @@
 * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 */
 
+/**
+ * @defgroup nrf_axon_dsp_intrinsics Axon DSP intrinsics
+ * @{
+ *
+ * @brief Hardware-accelerated DSP functions executed directly on the Axon NPU.
+ */
+
 #pragma once
 
 #ifdef __cplusplus
@@ -1569,7 +1576,7 @@ nrf_axon_result_e nrf_axon_fir_cplx_2d_16_16_32_decimate(
  * @param height height of the input shape (in elements). maximum 512,
  *        input_height * decimation_width <= 512
  *        input_height >= filter_height.
- * @param width width of the input shape. If not a multiple of 4 padding bytes will be 
+ * @param width width of the input shape. If not a multiple of 4 padding bytes will be
  *        placeced at the end of each output row.
  * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
@@ -1590,3 +1597,7 @@ nrf_axon_result_e nrf_axon_dma_2d(
 #ifdef __cplusplus
 }
 #endif
+
+/**
+ * @}
+ */
