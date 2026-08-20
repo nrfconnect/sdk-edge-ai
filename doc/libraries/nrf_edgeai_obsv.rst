@@ -14,26 +14,21 @@ It works with any inference engine that produces a probability vector, including
 Overview
 ********
 
-Deployed Edge AI models behave differently in production then in controlled environments.
-Class distributions shift, transitions between predicted labels change over time, and confidence scores drift as conditions change.
-The observability module gives you a structured way to capture these statistics on-device and send them off-device for analysis.
+For a conceptual introduction to model observability, what it enables, and how it fits into the wider Edge AI model lifecycle, see :ref:`model_observability`.
 
 Metrics are driven by two input streams.
 Output metrics consume the model's class-probability vector passed to :c:func:`nrf_edgeai_obsv_update_probs`, while input-feature metrics consume the extracted feature vector fed to the model and passed to :c:func:`nrf_edgeai_obsv_update_features`.
 Each metric declares which stream it consumes through its ``source`` field, and the library routes every update only to the metrics that match.
 
-Collected data enables the following:
-
-* Model quality monitoring - Allows tracking whether prediction confidence and class frequencies stay within expected bounds after deployment.
-* Dataset collection guidance - Helps identify which classes are under-represented or confused in the field, and target data collection efforts accordingly.
-* Retraining triggers - Allows detecting distribution shift early and decide when a model update is needed before accuracy degrades noticeably.
-* A/B testing - Allows comparing metric snapshots from devices running different model versions to evaluate improvements in production conditions.
+.. note::
+   |EAILib| does not currently expose the extracted feature vector through its API, so input-feature metrics are not yet available for models integrated through it.
+   Support for capturing this data from |EAILib| is planned for a future release.
 
 The module is organized as three cooperating layers:
 
-* Core (:file:`lib/nrf_edgeai_obsv/`) - A portable, mutex-free state machine that accumulates metric counters as inference results arrive.
+* Core (:file:`lib/nrf_edgeai_obsv/nrf_edgeai_obsv_core.c`) - A portable, mutex-free state machine that accumulates metric counters as inference results arrive.
   It has no Zephyr RTOS dependency and you can use it in bare-metal environments, other RTOSes, or host-side test builds.
-* Zephyr wrapper (:file:`lib/nrf_edgeai_obsv/`) - Wraps the core in a mutex-protected context so that multiple threads can feed inferences and trigger encoding without data races, and integrates the library into the Zephyr build system (CMake, Kconfig, logging).
+* Zephyr wrapper (:file:`lib/nrf_edgeai_obsv/nrf_edgeai_obsv.c`) - Wraps the core in a mutex-protected context so that multiple threads can feed inferences and trigger encoding without data races, and integrates the library into the Zephyr build system (CMake, Kconfig, logging).
 * Memfault CDR transport (:file:`lib/nrf_edgeai_obsv_memfault/`) - Encodes the accumulated metric snapshots as a CBOR blob and stages them as a `Memfault Custom Data Recording`_ (CDR) that the Memfault SDK packetizer uploads on the next transport drain cycle.
   For Memfault Kconfig, keys, and transports in |NCS|, see :ref:`nrf:mod_memfault`.
 
@@ -46,7 +41,6 @@ The module is organized as three cooperating layers:
    skinparam defaultTextAlignment center
    skinparam ArrowColor #0077C8
    skinparam ArrowThickness 1
-   skinparam linetype ortho
    skinparam componentStyle rectangle
 
    skinparam component {
@@ -62,23 +56,29 @@ The module is organized as three cooperating layers:
    }
 
    together {
-     component "Application" as App
+     component "Application" as App #D9E1E2;line:768692;text:333F48
      component "nrf_edgeai_obsv\n(Zephyr wrapper + core)" as Obsv
      component "Metrics\n(e.g. probability distribution)" as Metrics
    }
 
-   component "nrf_edgeai_obsv_memfault\n(Memfault CDR transport)" as MfltTransport
-   component "Memfault SDK" as MfltSDK
-   cloud "nRF Cloud\n(Memfault)" as Cloud
-   component "Monitoring tool\n(dashboard / ML pipeline)" as Dashboard
+   component "nrf_edgeai_obsv_memfault\n(Memfault CDR transport)" as MfltTransport #0033A0;line:0033A0;text:FFFFFF
+   component "Memfault SDK" as MfltSDK #0033A0;line:0033A0;text:FFFFFF
+   cloud "nRF Cloud\n(Memfault)" as Cloud #0033A0;line:0033A0;text:FFFFFF
+   component "Monitoring tool\n(dashboard / ML pipeline)" as Dashboard #0033A0;line:0033A0;text:FFFFFF
 
-   App -right-> Obsv : inference results\n(class probabilities)
-   Obsv -down-> Metrics : accumulate counters
-   App -down-> MfltTransport : trigger collect
-   MfltTransport -up-> Obsv : encode metrics as CBOR
-   MfltTransport -right-> MfltSDK : stage CDR
-   MfltSDK -right-> Cloud : upload via BLE or HTTP
-   Cloud -right-> Dashboard : fetch CDR\n(REST API)
+   App -right-> Obsv : inference results\n(class probabilities) [1]
+   Obsv -down-> Metrics : accumulate counters [2]
+   App -down-> MfltTransport : trigger collect [3]
+   MfltTransport -up-> Obsv : encode metrics as CBOR [4]
+   MfltTransport -right-> MfltSDK : stage CDR [5]
+   MfltSDK -right-> Cloud : upload via BLE or HTTP [6]
+   Cloud -right-> Dashboard : fetch CDR\n(REST API) [7]
+
+   legend right
+     Two independent flows start at "Application":
+     1-2 run on every inference.
+     3-7 run periodically, or on demand, to drain and upload the accumulated metrics.
+   endlegend
 
 The following diagram shows the detailed call sequence between the observability layers, the application, and the Memfault SDK.
 
