@@ -73,11 +73,21 @@ extensions = [
     'zephyr.doxybridge',
     'zephyr.external_content',
     'sphinxcontrib.plantuml',
+    'sphinxcontrib.mermaid',
+    'sphinx.ext.graphviz',
     'edge_ai_project_info',
 ]
 
 plantuml = 'plantuml'
 plantuml_output_format = 'svg_img'
+
+mermaid_output_format = 'svg'
+# Sandboxed CI runners (and some containers) need Chromium's sandbox disabled
+# for mmdc/Puppeteer to launch.
+mermaid_params = ['--puppeteerConfigFile', str(EDGE_AI_BASE / 'doc' / 'puppeteer-config.json')]
+
+# Render Graphviz diagrams (e.g. the model observability cycle) as SVG.
+graphviz_output_format = 'svg'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

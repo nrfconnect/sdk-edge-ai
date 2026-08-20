@@ -1,6 +1,37 @@
-/* Make PlantUML SVG diagrams responsive.
- * svg_img format emits <p class="plantuml"><img src="...svg"> */
+/* Make PlantUML SVG diagrams responsive, filling the content column up to a cap.
+ * svg_img format emits <p class="plantuml"><img src="...svg">.
+ *
+ * !important overrides the sphinx_ncs_theme's right-ToC width limits, which the theme
+ * applies to both the wrapping <p> and the <img> as if it were body text.
+ */
+p.plantuml {
+    max-width: min(100%, 1200px) !important;
+}
+
 p.plantuml > img {
+    width: 100% !important;
+    max-width: min(100%, 1200px) !important;
+    height: auto !important;
+}
+
+/* Center figure captions under their diagram. */
+.rst-content figure > figcaption > p {
     max-width: 100%;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Cap tall diagrams so they do not force excessive scrolling. */
+.rst-content figure object[type="image/svg+xml"] {
+    max-width: min(100%, 1200px);
+    max-height: 1200px;
+    width: auto;
     height: auto;
+}
+
+/* Letter (a, b, c) numbered-step sub-steps nested under a numbered top-level step,
+ * instead of the theme's default plain sub-numbering. */
+section.numbered-step > h4::before {
+    content: counter(step-count-h4, lower-alpha);
 }
