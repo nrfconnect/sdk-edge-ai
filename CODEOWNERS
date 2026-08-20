@@ -4,7 +4,34 @@
 # Order is important; the last matching pattern takes the most
 # precedence.
 
+*                                       @nrfconnect/ncs-si-muffin
+
 # Documentation changes require review from the tech writer team.
-doc/**/*      @nrfconnect/ncs-sdk-edge-ai-doc
-**/*.rst      @nrfconnect/ncs-sdk-edge-ai-doc
-**/*.md       @nrfconnect/ncs-sdk-edge-ai-doc
+doc/**/*                                @nrfconnect/ncs-sdk-edge-ai-doc
+**/*.rst                                @nrfconnect/ncs-sdk-edge-ai-doc
+**/*.md                                 @nrfconnect/ncs-sdk-edge-ai-doc
+
+# Documentation of Axon requires review from tech writer team and Axon team
+/doc/axon_compiler/                     @nrfconnect/ncs-sdk-edge-ai-doc @nrfconnect/ncs-axons-ml
+/doc/axon_compiler.rst                  @nrfconnect/ncs-sdk-edge-ai-doc @nrfconnect/ncs-axons-ml
+/doc/integrations/axon.rst              @nrfconnect/ncs-sdk-edge-ai-doc @nrfconnect/ncs-axons-ml
+/doc/libraries/axon.rst                 @nrfconnect/ncs-sdk-edge-ai-doc @nrfconnect/ncs-axons-ml
+
+# Documentation of Edge AI Lib requires review from tech writer team and Neuton team
+/doc/integrations/nrf_edgeai.rst        @nrfconnect/ncs-sdk-edge-ai-doc @nrfconnect/neuton
+/doc/libraries/nrf_edgeai/              @nrfconnect/ncs-sdk-edge-ai-doc @nrfconnect/neuton
+/doc/libraries/nrf_edgeai_changelog.rst @nrfconnect/ncs-sdk-edge-ai-doc @nrfconnect/neuton
+/doc/libraries/nrf_edgeai.rst           @nrfconnect/ncs-sdk-edge-ai-doc @nrfconnect/neuton
+
+# Axon related code
+/axon_simulator                         @nrfconnect/ncs-axons-ml
+/drivers/axon                           @nrfconnect/ncs-axons-ml
+/include/axon                           @nrfconnect/ncs-axons-ml
+/include/drivers/axon                   @nrfconnect/ncs-axons-ml
+/lib/axon                               @nrfconnect/ncs-axons-ml
+/tests/axon                             @nrfconnect/ncs-axons-ml
+/tools/axon                             @nrfconnect/ncs-axons-ml
+
+# Edge AI related code
+/include/nrf_edgeai                     @nrfconnect/neuton
+/lib/nrf_edgeai                         @nrfconnect/neuton
