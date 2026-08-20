@@ -43,6 +43,7 @@ See the following documentation:
    :caption: Subpages:
 
    overview.rst
+   model_lifecycle.rst
    quick_start.rst
    applications.rst
    samples.rst

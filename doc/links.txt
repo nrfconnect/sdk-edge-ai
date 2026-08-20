@@ -59,6 +59,7 @@
 
 .. _`Memfault`: https://memfault.com/
 .. _`Memfault Custom Data Recording`: https://docs.memfault.com/docs/mcu/custom-data-recording
+.. _`Memfault Over-the-Air Updates`: https://docs.memfault.com/docs/platform/ota
 
 .. ### Source: edgeimpulse.com
 

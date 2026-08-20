@@ -186,3 +186,11 @@ Key characteristics:
 
 See :ref:`quick_start_axon_dsp_intrinsics` to get started.
 See the :ref:`supported_dsp_intrinsics` for the available functions.
+
+.. _solution_model_lifecycle:
+
+Model lifecycle and observability
+*********************************
+
+Once a model is deployed, :ref:`model_lifecycle` describes how observability closes the loop between field behavior and model development — from monitoring production metrics through retraining, application fixes, or hardware revisions.
+To integrate observability in your application, see :ref:`nrf_edgeai_obsv_lib`.
