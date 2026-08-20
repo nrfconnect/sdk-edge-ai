@@ -31,9 +31,7 @@ LOG_MODULE_REGISTER(ww);
  */
 #define WW_OBSV_CLASSES 2U
 
-/* Mel feature vector length from the model DSP front end; sizes the
- * FEATURES-stream metric storage and is validated at runtime against
- * nrf_edgeai_dsp_features_ctx()->overall_num.
+/* Mel feature vector length from the model DSP front end.
  */
 #define WW_NUM_FEATURES 40
 

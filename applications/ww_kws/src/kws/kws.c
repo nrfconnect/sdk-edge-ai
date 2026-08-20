@@ -52,9 +52,7 @@ static nrf_edgeai_t *kws_model;
 
 #if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
 
-/* Mel feature vector length produced by the model DSP front end. Sizes the
- * FEATURES-stream metric storage; validated at runtime against
- * nrf_edgeai_dsp_features_ctx()->overall_num.
+/* Mel feature vector length produced by the model DSP front end.
  */
 #define KWS_NUM_FEATURES 40
 

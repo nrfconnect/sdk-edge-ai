@@ -142,9 +142,9 @@ typedef union nrf_edgeai_rt_version_u
  */
 typedef struct nrf_edgeai_metadata_s
 {
-    /**< Solution ID string */
+    /** Solution ID string */
     const char* p_solution_id;
-    /**< Solution runtime version */
+    /** Solution runtime version */
     nrf_edgeai_rt_version_t version;
 } nrf_edgeai_metadata_t;
 
@@ -181,7 +181,7 @@ nRF Edge AI runtime context definition
 ***********************************************************************************************************************/
 struct nrf_edgeai_s
 {
-    /**< Model metadata information */
+    /** Model metadata information */
     nrf_edgeai_metadata_t metadata;
     /** Input features processing context */
     nrf_edgeai_input_t input;
