@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 int ble_nus_init(void);
+void ble_nus_restart_connection(void);
 int ble_nus_send_message(const char *message);
 
 /** @brief Send one classification line, optionally tagged with @p prefix.
