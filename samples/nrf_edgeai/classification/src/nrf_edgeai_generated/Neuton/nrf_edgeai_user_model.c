@@ -390,12 +390,8 @@ static const uint16_t MODEL_OUTPUT_NEURONS_INDICES[] = {71, 67, 77, 11, 75, 79, 
 	}
 #endif
 
-#ifndef MODEL_OTA_NEUTON_NEURONS_CAP
-#define MODEL_OTA_NEUTON_NEURONS_CAP MODEL_NEURONS_NUM
-#endif
-
 /** Model neurons activations buffer */
-static nrf_user_neuron_t model_neurons_[MODEL_OTA_NEUTON_NEURONS_CAP];
+static nrf_user_neuron_t model_neurons_[MODEL_NEURONS_NUM];
 
 /** Neuton model instance */
 #ifdef MODEL_OTA_NEUTON_RUNTIME_WIRED
