@@ -98,20 +98,23 @@ static void accel_window_get_average(float *x_g, float *y_g, float *z_g)
 
 static void on_button_click(button_click_t click)
 {
-	if (click != BUTTON_CLICK_SHORT) {
-		return;
-	}
-
-	LOG_INF("next");
-	accel_window_reset();
+	if (click == BUTTON_CLICK_SHORT) {
+		LOG_INF("next");
+		accel_window_reset();
 
 #if IS_ENABLED(CONFIG_BLE_NUS_OUTPUT)
-	int err = ble_nus_send_message("next");
+		int err = ble_nus_send_message("next");
 
-	if (err != 0) {
-		LOG_WRN("Failed to send phase marker over NUS (err %d)", err);
-	}
+		if (err != 0) {
+			LOG_WRN("Failed to send phase marker over NUS (err %d)", err);
+		}
 #endif
+	} else if (click == BUTTON_CLICK_LONG) {
+#if IS_ENABLED(CONFIG_BLE_NUS_OUTPUT)
+		LOG_INF("Long press: restarting BT connection");
+		ble_nus_restart_connection();
+#endif
+	}
 }
 
 static void hw_modules_init(void)

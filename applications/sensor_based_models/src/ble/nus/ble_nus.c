@@ -24,6 +24,7 @@
 LOG_MODULE_REGISTER(ble_nus, LOG_LEVEL_INF);
 
 static bool nus_send_enabled;
+static struct bt_conn *current_conn;
 
 static const struct bt_data nus_ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -71,6 +72,7 @@ static void nus_connected(struct bt_conn *conn, uint8_t err)
 		return;
 	}
 
+	current_conn = bt_conn_ref(conn);
 	ble_common_set_connected(true);
 	activity_led_set_ble_connected(true);
 	LOG_INF("NUS connected %s", addr);
@@ -87,6 +89,11 @@ static void nus_disconnected(struct bt_conn *conn, uint8_t reason)
 	nus_send_enabled = false;
 	ble_common_set_connected(false);
 	activity_led_set_ble_connected(false);
+
+	if (current_conn != NULL) {
+		bt_conn_unref(current_conn);
+		current_conn = NULL;
+	}
 
 	ret = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, nus_ad, ARRAY_SIZE(nus_ad), nus_sd,
 			      ARRAY_SIZE(nus_sd));
@@ -156,6 +163,29 @@ int ble_nus_send_message(const char *message)
 	}
 
 	return nus_send_string(buffer);
+}
+
+void ble_nus_restart_connection(void)
+{
+	if (current_conn != NULL) {
+		int err = bt_conn_disconnect(current_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+
+		if (err) {
+			LOG_WRN("BT disconnect request failed (err %d)", err);
+		}
+		/* nus_disconnected callback will restart advertising */
+	} else {
+		int err;
+
+		(void)bt_le_adv_stop();
+		err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, nus_ad, ARRAY_SIZE(nus_ad), nus_sd,
+				      ARRAY_SIZE(nus_sd));
+		if (err) {
+			LOG_ERR("NUS advertising failed to restart (err %d)", err);
+		} else {
+			LOG_INF("NUS advertising restarted");
+		}
+	}
 }
 
 int ble_nus_send_classification(const char *prefix, const char *class_name, int probability_pct,
