@@ -64,6 +64,51 @@ config MODEL_OTA_LOG_LEVEL
 	help
 	  0 = off, 1 = err, 2 = wrn, 3 = inf, 4 = dbg.
 
+config MODEL_OTA_GUARD_DRAIN_TIMEOUT_MS
+	int "Timeout to wait for inference before rejecting model update (ms)"
+	default 2000
+	range 100 30000
+	help
+	  When a model update starts, the library waits this long for in-flight
+	  model access to finish before rejecting the operation with -EBUSY or
+	  MGMT_ERR_EBUSY. Use a value below typical SMP client command timeouts
+	  (often 10-20 s) so the client receives a rejection before it times out.
 
+config MODEL_OTA_SMP
+	bool "Coordinate inference with MCUboot SMP model uploads"
+	depends on BOOTLOADER_MCUBOOT
+	depends on MCUMGR
+	depends on MCUMGR_MGMT_NOTIFICATION_HOOKS
+	depends on MCUMGR_GRP_IMG
+	depends on MCUMGR_GRP_IMG_UPLOAD_CHECK_HOOK
+	depends on MCUMGR_GRP_IMG_STATUS_HOOKS
+	help
+	  Register MCUMGR image-upload hooks that pause inference while a registered
+	  MCUboot updateable model image is uploaded over SMP. After upload completes,
+	  inference stays blocked until the device resets and reloads the new model.
+
+if MODEL_OTA_SMP
+
+config MODEL_OTA_SMP_MAX_SLOTS
+	int "Maximum number of MCUboot model image slots"
+	default 4
+	range 1 16
+	help
+	  Upper bound on entries passed to model_ota_smp_register().
+
+config MODEL_OTA_SMP_DRAIN_RETRY_WINDOW_MS
+	int "Window to keep inference blocked for an upload retry (ms)"
+	default 30000
+	range 1000 600000
+	help
+	  When the first upload chunk is rejected because in-flight model access did
+	  not finish within CONFIG_MODEL_OTA_GUARD_DRAIN_TIMEOUT_MS, inference stays
+	  blocked for this long so that readers drain and a repeated upload attempt
+	  is accepted without waiting again. If the client does not retry within the
+	  window, or the retry still finds model access in flight, the block is
+	  lifted and inference continues on the unchanged model. Size this to cover
+	  the client's retry delay after an MGMT_ERR_EBUSY response.
+
+endif # MODEL_OTA_SMP
 
 endif # MODEL_OTA
