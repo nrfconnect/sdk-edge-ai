@@ -15,12 +15,23 @@
 #include <model_ota/model_contract.h>
 #include <model_ota/model_image.h>
 #include <model_ota/model_ota_neuton.h>
+#include <model_ota/model_ota_partition.h>
+
+#include <errno.h>
+
+#include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/util.h>
+
+#if IS_ENABLED(CONFIG_MODEL_OTA_SMP)
+#include <model_ota/model_ota_smp.h>
+#endif
 
 #define MODEL_OTA_NEUTON_RUNTIME_WIRED 1
 #define MODEL_OTA_NEUTON_NEURONS_CAP     @MAX_NEURONS@
 
 #define NN_DECODED_OUTPUT_INIT {}
+
+MODEL_OTA_PARTITION_ASSERT(@PARTITION_NODELABEL@);
 
 #include "@MODEL_SRC_BASENAME@"
 
@@ -31,6 +42,13 @@
 				       MODEL_USES_AS_INPUT_DSP_FEATURES)
 
 #define MODEL_OTA_NEUTON_CONTRACT_HASH @NEUTON_CONTRACT_HASH@u
+
+#if IS_ENABLED(CONFIG_MODEL_OTA_SMP)
+static const struct model_ota_smp_slot model_ota_smp_slot_@SOLUTION_ID@ = {
+	.image_index = MODEL_OTA_IMAGE_INDEX(@PARTITION_NODELABEL@),
+	.name = "@SMP_NAME@",
+};
+#endif
 
 nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(uint8_t fa_id,
 							 const uint8_t *partition_addr)
@@ -44,10 +62,21 @@ nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(uint8_t fa_id,
 		.contract_hash = MODEL_OTA_NEUTON_CONTRACT_HASH,
 	};
 
+#if IS_ENABLED(CONFIG_MODEL_OTA_SMP)
+	/* Before the image load, so uploads are coordinated even for a bad image. */
+	int rc = model_ota_smp_register(&model_ota_smp_slot_@SOLUTION_ID@);
+
+	if (rc != 0 && rc != -EALREADY) {
+		return NULL;
+	}
+#endif
+
 	if (model_image_load_neuton(fa_id, partition_addr, &nrf_edgeai_, model_neurons_,
 				    ARRAY_SIZE(model_neurons_), &expect) != MODEL_IMAGE_OK) {
 		return NULL;
 	}
+
+	nrf_edgeai_.is_ota_managed = true;
 
 	return &nrf_edgeai_;
 }

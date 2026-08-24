@@ -27,6 +27,20 @@ tests:
       - nrf54lm20dk/nrf54lm20b/cpuapp
     tags:
       - nrf_edgeai_sample_regression
+  sample.edgeai_regression.model_ota:
+    sysbuild: true
+    build_only: true
+    extra_args:
+      - SB_EXTRA_CONF_FILE=sysbuild_model_ota.conf
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20a/cpuapp
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+    tags:
+      - nrf_edgeai_sample_regression
+      - model_ota
   sample.edgeai_regression.nrf54lm20dk:
     sysbuild: true
     build_only: false

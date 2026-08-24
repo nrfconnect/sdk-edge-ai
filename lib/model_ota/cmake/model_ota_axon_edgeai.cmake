@@ -64,6 +64,11 @@ function(model_ota_axon_edgeai_wire)
   else()
     set(_axon_target ${MO_SOLUTION_ID})
   endif()
+  if(MO_NAME)
+    set(SMP_NAME ${MO_NAME})
+  else()
+    set(SMP_NAME ${MO_SOLUTION_ID})
+  endif()
   set(_axon_args
     TARGET ${_axon_target}
     HEADER ${MO_HEADER}
@@ -101,6 +106,7 @@ function(model_ota_axon_edgeai_wire)
   string(TOUPPER ${_axon_target} AXON_TOKEN)
   string(REGEX REPLACE "[^A-Z0-9]" "_" AXON_TOKEN "${AXON_TOKEN}")
   set(SOLUTION_ID ${MO_SOLUTION_ID})
+  set(PARTITION_NODELABEL ${MO_PARTITION_NODELABEL})
   set(MODEL_SRC_BASENAME ${model_basename})
   configure_file(${wired_tpl} ${wired_src} @ONLY)
 

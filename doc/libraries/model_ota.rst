@@ -40,7 +40,7 @@ Production update flow (MCUboot SMP)
    - exit **2** — model exceeds firmware caps (for example ``MAX_NEURONS`` grew); ship firmware 1.1 first
    - exit **1** — incompatible (contract hash, binding, or format)
 
-4. Upload over SMP (MCUmgr ``image upload`` with the model image index), test, and reset. The application pauses inference on that model during upload.
+4. Upload over SMP (MCUmgr ``image upload`` with the model image index), then reset. The built-in inference guard blocks all OTA-managed Edge AI inference device-wide during upload and until reset.
 5. On boot, ``model_image_load_neuton()`` / ``model_image_load_axon()`` re-validate contract hash, caps, and (Axon) address bindings.
 
 Image header (format v5, 48 bytes)
@@ -115,16 +115,104 @@ set (``axon_elf.py provide`` needs a released ELF).
 SMP upload coordination
 ***********************
 
-When ``CONFIG_MODEL_OTA_SMP`` is enabled, register the MCUboot updateable image index for each partition-resident model with ``model_ota_smp_init()`` (:file:`include/model_ota/model_ota_smp.h`).
-Before running inference from a model partition, check ``model_ota_smp_blocks_inference()``.
-After any model upload completes, reset the device before loading the new image (``model_ota_smp_is_pending_reset()``).
+When ``CONFIG_MODEL_OTA_SMP`` is enabled, each OTA-wired loader
+(``nrf_edgeai_load_user_model_<solution_id>()``) registers its MCUboot image index through
+``model_ota_smp_register()`` before reading the model image, so uploads are coordinated even
+when the partition holds an invalid image. A registration failure other than ``-EALREADY``
+fails the load. Image indices are derived from the ``nordic,mcuboot-image`` bootchain in
+devicetree (:file:`include/model_ota/model_ota_partition.h`).
+
+Inference guard (``CONFIG_MODEL_OTA``)
+**************************************
+
+When model OTA is enabled, ``lib/model_ota`` provides a **device-wide inference guard**.
+Edge AI wired models are protected automatically through the runtime gate hooks.
+Direct Axon driver use and other model flash access require explicit
+``model_ota_guard_acquire()`` / ``model_ota_guard_release()`` pairs in
+application or library code.
+
+Global state machine (``model_ota_guard.h``):
+
+- **READY** — model access and inference permitted (initial state at boot)
+- **BLOCKED** — SMP upload reserved, active or finished/aborted; all OTA-managed
+  inference is refused
+
+Once model flash is modified, only a device reset returns the guard to READY.
+An upload that is given up on before any erase or write releases the guard with
+``model_ota_guard_abort_update()``, and inference continues on the unchanged
+model. Updating any one model partition blocks inference device-wide.
+
+``model_ota_smp_is_pending_reset()`` is true only after the upload session ends
+(success or abort), not while the transfer is still in progress.
+
+A single global reader count tracks in-flight model access. SMP upload waits
+for readers to reach zero before erasing flash. The wait uses one absolute
+deadline (``CONFIG_MODEL_OTA_GUARD_DRAIN_TIMEOUT_MS``): each wakeup subtracts
+elapsed time rather than restarting the full timeout, so a steady stream of
+short inferences cannot extend the wait beyond the configured limit.
+
+Enforcement:
+
+- **Edge AI runtime** — ``nrf_edgeai_run_inference()`` checks
+  ``nrf_edgeai_t.is_ota_managed`` and returns ``NRF_EDGEAI_ERR_UNAVAILABLE``
+  when global state is not READY. For OTA-managed contexts, the guard overrides
+  weak ``nrf_edgeai_guard_inference_session_*()`` hooks. The reader is held from
+  session begin through ``run_inference`` and ``propagate_outputs`` (Axon
+  dequantize reads quant fields from the XIP model struct). ``decode_outputs``
+  runs after session end — it only touches RAM outputs and firmware-side decode
+  metadata.
+- **Application / library code** — call ``model_ota_guard_acquire()`` before
+  touching model-linked data outside ``nrf_edgeai_run_inference()`` (for example
+  Axon quantization fields, direct ``nrf_axon_nn_model_infer_*()``, or other
+  model flash metadata). Release when done; for async Axon inference, hold until
+  the completion callback returns.
+
+Upload arbitration (``model_ota_smp.c``)
+========================================
+
+All registered slots share one state machine, because the guard is device-wide
+and MCUmgr keeps a single upload session. It is driven by ``img_mgmt`` events:
+
+- **DFU_CHUNK** at offset 0 for a model image calls
+  ``model_ota_guard_begin_update()``. On success the chunk is authorised and the
+  guard is held; further chunks of that transfer need no drain.
+- **DFU_STARTED** confirms the transfer really began and is the point where the
+  upload-active notification fires. ``img_mgmt`` erases and writes only after
+  this event, so a **DFU_STOPPED** before it (for example another upload-check
+  handler rejecting the same chunk) releases the guard.
+- **DFU_PENDING** (transfer complete) and **DFU_STOPPED** after DFU_STARTED both
+  leave the guard BLOCKED until reset and make
+  ``model_ota_smp_is_pending_reset()`` true.
+- **DFU_CHUNK** at offset 0 for a *non-model* image supersedes any model session:
+  a reservation that never wrote flash is released, a transfer that did write
+  stays blocked until reset.
+
+Deferred first chunk
+--------------------
+
+If readers do not drain within ``CONFIG_MODEL_OTA_GUARD_DRAIN_TIMEOUT_MS``, the
+first chunk is rejected with ``MGMT_ERR_EBUSY`` but the guard is **left BLOCKED**
+for ``CONFIG_MODEL_OTA_SMP_DRAIN_RETRY_WINDOW_MS``. New inference sessions are
+refused during that window, so the in-flight ones finish. ``img_mgmt`` discards
+the upload session together with the rejection, so the client's retry arrives as
+another chunk 0 and is accepted by a no-drain re-check
+(``model_ota_guard_retry_update()``).
+
+The guard is released and inference resumes when the retry still finds model
+access in flight, or when no retry arrives within the window. Nothing was
+erased or written in either case, so the device keeps running the current model.
+
+``model_ota_smp_is_pending_reset()`` tracks upload completion for application
+policy (LEDs, reboot prompts).
+
+Applications may still idle after upload until reset (operator policy); the
+guard ensures no model access runs against erased or unverified flash in the
+meantime.
 
 Known limitations
 *****************
 
-- MCUboot model updates overwrite the model partition in place.
-Inference on that model is paused during SMP upload and a reset is required before running against the new image.
-Check for inference blocking should be moved to different layer than the application layer (e.g. Edge AI Library, Axon driver, model OTA library).
+- MCUboot model updates overwrite the model partition in place; a device reset is still required before running against the new image (guard stays BLOCKED until reset).
 - Axon images bind to app RAM addresses from the firmware they were linked against; binding check catches drift
 - Neuton solution wrapper (DSP pipeline, decode interfaces) is not swappable — only the Neuton model payload
 - If a retrained Axon model needs a new op-extension symbol the old firmware never kept, image link fails at build time
@@ -134,6 +222,9 @@ Kconfig
 
 - ``CONFIG_MODEL_OTA`` — master enable
 - ``CONFIG_MODEL_OTA_NEUTON`` / ``CONFIG_MODEL_OTA_AXON`` — backends
-- ``CONFIG_MODEL_OTA_SMP`` — pause inference during MCUboot SMP model uploads
+- ``CONFIG_MODEL_OTA_SMP`` — SMP upload callbacks and inference guard integration
+- ``CONFIG_MODEL_OTA_GUARD_DRAIN_TIMEOUT_MS`` — reader-drain timeout at upload start
+- ``CONFIG_MODEL_OTA_SMP_DRAIN_RETRY_WINDOW_MS`` — how long inference stays blocked after a
+  deferred first chunk, waiting for the client to retry the upload
 
 See also ``tools/model_ota/README.md``, ``samples/multi_model/overlay-ota.conf``, and :ref:`WW KWS model OTA <app_ww_kws_model_ota>`.

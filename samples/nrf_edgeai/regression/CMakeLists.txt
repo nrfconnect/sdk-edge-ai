@@ -9,6 +9,12 @@ cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(nrf_edgeai_regression_sample)
 
+if(CONFIG_NRF_EDGEAI_FROM_SOURCE AND NOT NRF_EDGEAI_SRC_PATH)
+	if(DEFINED ENV{NRF_EDGEAI_SRC_PATH})
+		set(NRF_EDGEAI_SRC_PATH "$ENV{NRF_EDGEAI_SRC_PATH}" CACHE PATH "edge-ai-srcx repository root")
+	endif()
+endif()
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/model_ota_context.cmake)
 
 set(NEUTON_MODEL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/Neuton)
@@ -55,6 +61,8 @@ if(CONFIG_APP_MODEL_OTA)
       SOLUTION_ID 90508
       MODEL_SRC ${NEUTON_MODEL_SRC}
       MAX_NEURONS 2
+      PARTITION_NODELABEL model_storage
+      NAME regression
     )
     model_ota_neuton_image(
       TARGET regression
@@ -77,8 +85,6 @@ if(CONFIG_APP_MODEL_OTA)
     UUID_VID nordicsemi.com
   )
 endif()
-
-target_sources_ifdef(CONFIG_APP_MODEL_OTA app PRIVATE src/model_update.c)
 
 if(CONFIG_APP_MODEL_OTA)
   model_ota_context_finalize()

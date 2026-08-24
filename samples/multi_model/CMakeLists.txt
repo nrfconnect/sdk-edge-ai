@@ -81,11 +81,11 @@ target_include_directories(app PRIVATE
 if(CONFIG_MODEL_OTA_NEUTON)
   include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_neuton.cmake)
   model_ota_neuton_wire(SOLUTION_ID 90360 MODEL_SRC ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c
-                        MAX_NEURONS 20)
+                        MAX_NEURONS 20 PARTITION_NODELABEL model_anomaly_storage NAME gear_anomaly)
   model_ota_neuton_wire(SOLUTION_ID 90449 MODEL_SRC ${CLASSIF_MODEL_DIR}/nrf_edgeai_user_model.c
-                        MAX_NEURONS 80)
+                        MAX_NEURONS 80 PARTITION_NODELABEL model_classif_storage NAME gesture_class)
   model_ota_neuton_wire(SOLUTION_ID 90508 MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c
-                        MAX_NEURONS 2)
+                        MAX_NEURONS 2 PARTITION_NODELABEL model_regress_storage NAME temp_regress)
 
   include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_neuton_image.cmake)
   model_ota_neuton_image(TARGET gear_anomaly NAME gear_anomaly VERSION 1.0.0

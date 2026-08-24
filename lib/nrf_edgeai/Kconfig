@@ -12,6 +12,15 @@ menuconfig NRF_EDGEAI
 
 if NRF_EDGEAI
 
+config NRF_EDGEAI_FROM_SOURCE
+	bool "Build nRF Edge AI runtime from edge-ai-srcx sources"
+	default y if MODEL_OTA_SMP
+	help
+	  Compile libnrf_edgeai from a local edge-ai-srcx checkout instead of linking
+	  the prebuilt archive. Required for the model-OTA inference guard (native
+	  gate hooks in nrf_edgeai_gate.c). Set the NRF_EDGEAI_SRC_PATH environment
+	  variable or CMake variable to the edge-ai-srcx repository root.
+
 # General
 config MAIN_STACK_SIZE
 	default 2048

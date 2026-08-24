@@ -16,13 +16,31 @@
 
 #include <model_ota/model_image.h>
 #include <model_ota/model_ota_axon_edgeai.h>
+#include <model_ota/model_ota_partition.h>
 #include <model_ota/axon/@AXON_TARGET@.h>
 
+#include <errno.h>
+
+#include <zephyr/storage/flash_map.h>
+
+#if IS_ENABLED(CONFIG_MODEL_OTA_SMP)
+#include <model_ota/model_ota_smp.h>
+#endif
+
 #define MODEL_OTA_AXON_RUNTIME_WIRED 1
+
+MODEL_OTA_PARTITION_ASSERT(@PARTITION_NODELABEL@);
 
 #include "@MODEL_SRC_BASENAME@"
 
 extern const uint32_t MODEL_OTA_AXON_@AXON_TOKEN@_KEEP_LABEL[];
+
+#if IS_ENABLED(CONFIG_MODEL_OTA_SMP)
+static const struct model_ota_smp_slot model_ota_smp_slot_@SOLUTION_ID@ = {
+	.image_index = MODEL_OTA_IMAGE_INDEX(@PARTITION_NODELABEL@),
+	.name = "@SMP_NAME@",
+};
+#endif
 
 nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(uint8_t fa_id,
 							 const uint8_t *partition_addr)
@@ -35,11 +53,21 @@ nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(uint8_t fa_id,
 		.binding_table = MODEL_OTA_AXON_@AXON_TOKEN@_KEEP_LABEL,
 	};
 
+#if IS_ENABLED(CONFIG_MODEL_OTA_SMP)
+	/* Before the image load, so uploads are coordinated even for a bad image. */
+	int rc = model_ota_smp_register(&model_ota_smp_slot_@SOLUTION_ID@);
+
+	if (rc != 0 && rc != -EALREADY) {
+		return NULL;
+	}
+#endif
+
 	if (model_image_load_axon(fa_id, partition_addr, &expect, &model) != MODEL_IMAGE_OK) {
 		return NULL;
 	}
 
 	nrf_edgeai_.model.instance.p_void = (void *)model;
+	nrf_edgeai_.is_ota_managed = true;
 
 	return &nrf_edgeai_;
 }

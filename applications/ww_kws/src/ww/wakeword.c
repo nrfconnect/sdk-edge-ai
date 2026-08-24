@@ -139,13 +139,6 @@ static bool ww_postprocess(void)
 
 int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *const ww_detected)
 {
-#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
-	if (model_update_blocks_ww_inference()) {
-		free_dmic_buffer(audio_buffer);
-		return -EBUSY;
-	}
-#endif
-
 	__ASSERT_NO_MSG(audio_buffer);
 	__ASSERT_NO_MSG(num_samples == nrf_edgeai_input_window_size(ww_model));
 	__ASSERT_NO_MSG(ww_detected);
@@ -158,6 +151,8 @@ int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *co
 	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
 		/* Skip inference, not enough data. */
 		return -EBUSY;
+	} else if (err == NRF_EDGEAI_ERR_UNAVAILABLE) {
+		return -EBUSY;
 	} else if (err) {
 		LOG_ERR("Failed to feed inputs (err %d)", err);
 		return -EPERM;
@@ -166,6 +161,8 @@ int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *co
 	err = nrf_edgeai_run_inference(ww_model);
 	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
 		/* Skip output extraction, not enough data. */
+		return -EBUSY;
+	} else if (err == NRF_EDGEAI_ERR_UNAVAILABLE) {
 		return -EBUSY;
 	} else if (err) {
 		LOG_ERR("Failed to run inference (err %d)", err);

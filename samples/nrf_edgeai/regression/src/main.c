@@ -51,7 +51,7 @@
 #include <stdio.h>
 
 #if IS_ENABLED(CONFIG_APP_MODEL_OTA)
-#include "model_update.h"
+#include <model_ota/model_ota_smp.h>
 #include <zephyr/storage/flash_map.h>
 
 #if defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON)
@@ -238,10 +238,16 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, flt32_t *p_input_featur
 	/* Step 1: Feed sensor inputs into the model's preprocessing pipeline */
 	res = nrf_edgeai_feed_inputs(p_user_model, p_input_features, features_num);
 
+	if (res == NRF_EDGEAI_ERR_UNAVAILABLE) {
+		return INVALID_PREDICTION_VALUE;
+	}
+
 	if (res == NRF_EDGEAI_ERR_SUCCESS) {
-		/* Step 2: Execute neural network inference on the accumulated window */
-		/* With window size = 1, this occurs after every sample is fed */
 		res = nrf_edgeai_run_inference(p_user_model);
+
+		if (res == NRF_EDGEAI_ERR_UNAVAILABLE) {
+			return INVALID_PREDICTION_VALUE;
+		}
 
 		/* Step 3: Extract the regression output if inference was successful */
 		if (res == NRF_EDGEAI_ERR_SUCCESS) {
@@ -280,15 +286,6 @@ static void run_inference_loop(nrf_edgeai_t *p_user_model)
 
 int main(void)
 {
-#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
-	int err = model_update_init();
-
-	if (err != 0) {
-		LOG_ERR("Model update init failed (err %d)", err);
-		return err;
-	}
-#endif
-
 	/* Retrieve the generated neural network model for air quality prediction */
 #if defined(CONFIG_APP_MODEL_OTA)
 #if defined(CONFIG_NRF_EDGEAI_REGRESSION_MODEL_AXON)
@@ -335,13 +332,9 @@ int main(void)
 
 	while (1) {
 #if IS_ENABLED(CONFIG_APP_MODEL_OTA)
-		if (model_update_is_pending_reset()) {
+		/* Application policy: idle after upload until the operator resets the device. */
+		if (model_ota_smp_is_pending_reset()) {
 			k_sleep(K_FOREVER);
-			continue;
-		}
-
-		if (model_update_blocks_inference()) {
-			k_sleep(K_MSEC(100));
 			continue;
 		}
 #endif
