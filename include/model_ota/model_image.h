@@ -35,10 +35,10 @@
  * model_neurons_ from zephyr.elf, pure Axon style) cannot disambiguate the three identical
  * file-static `model_neurons_` symbols the multi_model sample compiles.
  *
- * Each OTA-wired Neuton model's payload is dropped from its dedicated static library via
- * archive-scoped linker /DISCARD/ rules (model_ota_neuton.cmake). Edge AI Lab / Axon-backend
- * models omit the compiled Axon weights from the app via MODEL_OTA_AXON_RUNTIME_WIRED instead
- * (model_ota_axon_edgeai.cmake). Models compiled directly into the app are unaffected.
+ * Each OTA-wired model's payload is dropped from its dedicated static library via archive-scoped
+ * linker /DISCARD/ rules (model_ota_neuton.cmake, model_ota_axon_edgeai.cmake). An Axon-backend
+ * Lab solution additionally omits the compiled Axon weights by not including the generated Axon
+ * header at all under MODEL_OTA_WIRED. Models compiled directly into the app are unaffected.
  */
 
 #include <stdint.h>
@@ -57,7 +57,7 @@ extern "C" {
 #endif
 
 /** Image format version (independent of the model's own version). */
-#define MODEL_IMAGE_FORMAT_VERSION 5
+#define MODEL_IMAGE_FORMAT_VERSION 10
 
 /* Magic {'N','E','I','\0'} = Neuton Edge-ai Image (version is @ref format_version only). */
 #define MODEL_IMAGE_MAGIC0 'N'
@@ -101,14 +101,12 @@ struct model_image_binding_entry {
 
 /**
  * Neuton backend fields (@ref params_type != @ref MODEL_IMAGE_PARAMS_AXON).
+ *
+ * The rest of the backend union slot is left zeroed for a Neuton image.
  */
 struct model_image_neuton_backend {
 	/** DIRECT absolute-flash pointer to the baked nrf_edgeai_model_neuton_t (NOT an offset). */
 	const nrf_edgeai_model_neuton_t *model;
-	uint8_t task; /**< nrf_edgeai_model_task_t of the baked model */
-	uint8_t _pad[3];
-	/** DIRECT pointer to the baked decode-output init (NN_DECODED_OUTPUT_INIT). */
-	const nrf_edgeai_decoded_output_t *decoded_output;
 };
 
 /**
@@ -128,13 +126,64 @@ struct model_image_axon_backend {
 };
 
 /**
+ * The model's share of nrf_edgeai_t, carried by the image so a model update can change it
+ * together with the weights.
+ *
+ * These are the values the runtime keeps outside the backend model descriptor, which is why they
+ * live beside the backend union rather than inside it. They are stored by value, in the runtime's
+ * own types, so applying them is a plain assignment (see
+ * lib/model_ota/model_image_edgeai_params.c). Every pointer inside is an absolute flash address
+ * baked by the linker.
+ */
+struct model_image_edgeai_params {
+	/**
+	 * Feature scaling factors. A solution scales exactly once on the path into the network,
+	 * and which stage does it follows from the solution itself: with a DSP feature pipeline
+	 * the extracted features are scaled (nrf_edgeai_process_features_dsp_*), without one the
+	 * raw input features are (nrf_edgeai_process_features_scale_vector_*). The live member is
+	 * therefore not recorded here - nrf_edgeai_t.p_dsp tells the loader which one to read.
+	 */
+	union {
+		/** INPUT_FEATURES_SCALE_MIN / _MAX -> nrf_edgeai_t.input.scale. */
+		nrf_edgeai_input_scale_t input;
+		/**
+		 * EXTRACTED_FEATURES_SCALE_MIN / _MAX and FEATURES_EXTRACTION_ARGUMENTS ->
+		 * nrf_edgeai_t.p_dsp->features.meta.
+		 */
+		nrf_edgeai_features_meta_t features;
+	} scale;
+
+	/** Baked NN_DECODED_OUTPUT_INIT -> nrf_edgeai_t.decoded_output. */
+	nrf_edgeai_decoded_output_t decoded_output;
+
+	/** Elements in each scaling array; 0 when the image carries no parameters at all. */
+	uint16_t scale_num;
+	/**
+	 * Bytes per scaling element. Stored explicitly because the runtime has no field
+	 * describing the element size of the DSP feature meta arrays.
+	 */
+	uint8_t scale_elem_size;
+	uint8_t _reserved;
+};
+
+/**
+ * App-side expectations for @ref model_image_edgeai_params, derived from the generated model
+ * source by the wired translation unit (see lib/model_ota/src/model_ota_scale_select.h) so both
+ * sides of the update agree by construction.
+ */
+struct model_image_scale_expect {
+	uint16_t num;
+	uint8_t elem_size;
+};
+
+/**
  * On-flash model partition image header, placed at offset 0 of the image (== the partition base
  * address) in section ".model_image.header".
  *
- * Layout: shared envelope and metadata first, then a backend union (20 bytes). @ref name points
- * at a NUL-terminated string stored elsewhere in the image (typically .rodata). All pointer
- * fields are absolute flash addresses baked by the linker (the image is linked at the partition
- * base).
+ * Layout: shared envelope and metadata first, then a backend union (20 bytes), then the shared
+ * nrf_edgeai_t parameter block (32 bytes). @ref name points at a NUL-terminated string stored
+ * elsewhere in the image (typically .rodata). All pointer fields are absolute flash addresses
+ * baked by the linker (the image is linked at the partition base).
  *
  * Field offsets are fixed (pointers are 32-bit on the target) so the host-side CRC patcher
  * (tools/model_ota/patch_image_crc.py) and layout validator can locate @ref crc32 at a constant
@@ -154,9 +203,16 @@ struct model_image_header {
 	/** off 24: DIRECT pointer to a NUL-terminated name stored elsewhere in the image. */
 	const char *name;
 	union {                  /**< off 28 */
-		struct model_image_neuton_backend neuton;   /**< 12 B; tail 8 B unused in slot */
+		struct model_image_neuton_backend neuton;   /**< 4 B; tail 16 B unused in slot */
 		struct model_image_axon_backend axon; /**< 20 B */
 	};
+	/**
+	 * off 48: the model's share of nrf_edgeai_t, shared by both backends. Left zeroed
+	 * (@c scale_num == 0) when the image carries none, i.e. the application keeps its
+	 * compiled-in values - which is the case for a pure Axon model, having no
+	 * nrf_edgeai_t at all.
+	 */
+	struct model_image_edgeai_params edgeai_params;
 } __packed;
 
 /** Return codes for @ref model_image_load_neuton and @ref model_image_load_axon. */
@@ -170,7 +226,11 @@ enum model_image_result {
 	MODEL_IMAGE_ERR_BAD_CRC = -6,
 	MODEL_IMAGE_ERR_MODEL_PTR_OUT_OF_RANGE = -7,
 	MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL = -8,
-	/** Image's task does not match the app's compiled task (@ref model_image_neuton_expect). */
+	/**
+	 * Unused: the image no longer carries a task byte, because the task is a property of the
+	 * solution rather than of the backend descriptor and both backends need it.
+	 * TODO: fold the task into @ref model_image_header.contract_hash and retire this code.
+	 */
 	MODEL_IMAGE_ERR_TASK_MISMATCH = -9,
 	/** Image's weight/neuron precision does not match the app's compiled precision. */
 	MODEL_IMAGE_ERR_PARAMS_TYPE_MISMATCH = -10,
@@ -194,6 +254,8 @@ enum model_image_result {
 	MODEL_IMAGE_ERR_PERSISTENT_VARS_TOO_MANY = -19,
 	/** Image needs more packed-output space than the app allocated. */
 	MODEL_IMAGE_ERR_PACKED_OUTPUT_TOO_LARGE = -20,
+	/** Image's scaling layout does not match the app's compiled feature pipeline. */
+	MODEL_IMAGE_ERR_SCALE_MISMATCH = -21,
 };
 
 /**
@@ -201,7 +263,6 @@ enum model_image_result {
  * invariants of the *solution* that a mere model update must not break.
  */
 struct model_image_neuton_expect {
-	uint8_t task;         /**< expected nrf_edgeai_model_task_t of the baked model */
 	uint8_t params_type;  /**< expected enum model_image_params_type */
 	uint16_t outputs_cap; /**< capacity of the app's output buffers, in elements */
 	uint16_t inputs_num;  /**< INPUT_UNIQ_FEATURES_NUM of the compiled solution */
@@ -225,9 +286,12 @@ struct model_image_axon_expect {
  *
  * The partition is assumed to be memory-mapped (XIP): @p partition_addr is dereferenced
  * directly, no payload is copied to RAM. On success the baked descriptor is written into
- * @p edgeai's model instance (via @c edgeai->model.instance), with only @c p_neurons patched
- * to @p neurons_buf, and the image's baked @c NN_DECODED_OUTPUT_INIT is copied into
- * @p edgeai->decoded_output. @p edgeai is untouched on failure.
+ * @p edgeai's model instance (via @c edgeai->model.instance), with only @c p_neurons patched to
+ * @p neurons_buf. @p edgeai is untouched on failure.
+ *
+ * The rest of @p edgeai - the feature scaling factors and the decoded-output init - comes from
+ * @ref model_image_header.edgeai_params and is applied separately by
+ * @c model_image_bind_edgeai_params(), which the wired translation unit calls next.
  *
  * @param[in]  fa_id           Flash area ID of the partition, e.g. FIXED_PARTITION_ID(x).
  * @param[in]  partition_addr  Memory-mapped base address of that same partition.
@@ -243,11 +307,40 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 			    const struct model_image_neuton_expect *expect);
 
 /**
+ * @brief Apply the nrf_edgeai_t parameters carried by a model partition image.
+ *
+ * These are the values that live in nrf_edgeai_t rather than in the backend model descriptor and
+ * so have to travel with the model: the feature scaling factors and the decoded-output init (see
+ * @ref model_image_edgeai_params). They are stored in the image in the runtime's own types, so
+ * applying them is a plain assignment.
+ *
+ * Which scaling stage the image speaks to is not recorded in the image: it follows from the
+ * solution, so it is read off @p edgeai (a context with a DSP pipeline scales its extracted
+ * features, one without scales its raw input features).
+ *
+ * The block sits outside the backend union, so this works for either backend: call it after a
+ * successful @ref model_image_load_neuton or @ref model_image_load_axon on the same partition.
+ * The image is taken to be already validated by that call, so only the app/image scaling layout
+ * is cross-checked here.
+ *
+ * @param[in]  partition_addr Memory-mapped base address of the validated partition.
+ * @param[out] edgeai         Runtime context to fill.
+ * @param[in]  expect         App-side scaling layout expectation (required).
+ * @retval MODEL_IMAGE_OK (0) on success, @ref MODEL_IMAGE_ERR_SCALE_MISMATCH otherwise.
+ */
+int model_image_bind_edgeai_params(const uint8_t *partition_addr, nrf_edgeai_t *edgeai,
+				   const struct model_image_scale_expect *expect);
+
+/**
  * @brief Validate a linked Axon model partition image and return its compiled model pointer.
  *
  * The partition is memory-mapped (XIP). App-owned RAM pointers inside the baked model
  * (interlayer buffer, packed output, op extensions) are resolved at model-image link time
  * from zephyr.elf symbol addresses and verified against the running firmware binding table.
+ *
+ * An Axon-backed Lab solution carries its nrf_edgeai_t parameters in
+ * @ref model_image_header.edgeai_params, applied by @ref model_image_bind_edgeai_params() just
+ * like a Neuton one; a pure Axon model has no nrf_edgeai_t and leaves that block zeroed.
  *
  * @param[in]  fa_id           Flash area ID of the partition.
  * @param[in]  partition_addr  Memory-mapped base address of that partition.

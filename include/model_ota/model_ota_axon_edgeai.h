@@ -19,10 +19,11 @@
  * model.instance.p_void is patched at runtime to the loaded image's model pointer.
  *
  * Wired models are built from model_ota_axon_edgeai_wired.c.in (see
- * model_ota_axon_edgeai.cmake). Generated nrf_edgeai_user_model.c stays agnostic: it honors
- * the MODEL_OTA_AXON_RUNTIME_WIRED hook below when a wired translation unit defines it before
- * #include, skipping the (otherwise unconditional) #include of the generated Axon model header
- * so its weights are never linked into the app image.
+ * model_ota_axon_edgeai.cmake). Generated nrf_edgeai_user_model.c stays agnostic: it honors the
+ * MODEL_OTA_WIRED hook when a wired translation unit defines it before #include, skipping the
+ * (otherwise unconditional) #include of the generated Axon model header so its weights are never
+ * linked into the app image, and zeroing its nrf_edgeai_t parameter initializers so those arrays
+ * can be dropped as well (both come from the partition image instead).
  */
 
 #include <stdint.h>

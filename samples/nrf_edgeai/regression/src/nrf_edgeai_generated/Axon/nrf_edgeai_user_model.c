@@ -54,6 +54,16 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
  11.8999996, 2040.0000000, 2214.0000000, 2683.0000000, 2775.0000000,
  2523.0000000, 44.5999985, 88.6999969, 2.1805999 };
 
+#ifdef MODEL_OTA_WIRED
+#define INPUT_FEATURES_SCALE_INIT .INPUT_TYPE = {0}
+#else
+#define INPUT_FEATURES_SCALE_INIT     \
+.INPUT_TYPE = {                       \
+   .p_min = INPUT_FEATURES_SCALE_MIN, \
+   .p_max = INPUT_FEATURES_SCALE_MAX, \
+}
+#endif /* MODEL_OTA_WIRED */
+
 /** Defines which unique features from the input data will be used/collected,
  *  one bit for one unique feature, starting from LSB
  */
@@ -76,7 +86,7 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 #if MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON
 #include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
-#ifdef MODEL_OTA_AXON_RUNTIME_WIRED
+#ifdef MODEL_OTA_WIRED
 /*
  * model_ota: OTA-wired build (see lib/model_ota/src/model_ota_axon_edgeai_wired.c.in). The
  * compiled Axon model (weights, cmd buffer, ...) lives in a separate flash partition image
@@ -99,11 +109,15 @@ static const nrf_user_output_t MODEL_OUTPUT_SCALE_MIN[] = {
 static const nrf_user_output_t MODEL_OUTPUT_SCALE_MAX[] = {
  1.0000000 };
 
+#ifdef MODEL_OTA_WIRED
+#define NN_DECODED_OUTPUT_INIT {0}
+#else
 #define NN_DECODED_OUTPUT_INIT                               \
 .regression = {                                              \
    .meta = { .p_scale_min         = MODEL_OUTPUT_SCALE_MIN,  \
              .p_scale_max         = MODEL_OUTPUT_SCALE_MAX, }, \
 }
+#endif /* MODEL_OTA_WIRED */
 
 //////////////////////////////////////////////////////////////////////////////
 #define INPUT_WINDOW_MEMORY    NULL 
@@ -146,10 +160,7 @@ static nrf_edgeai_t nrf_edgeai_ = {
     .input.window_memory.p_void = INPUT_WINDOW_MEMORY,
     .input.p_window_ctx         = P_INPUT_WINDOW_CTX,
 
-    .input.scale.INPUT_TYPE = {
-        .p_min = INPUT_FEATURES_SCALE_MIN,
-        .p_max = INPUT_FEATURES_SCALE_MAX,
-    }, 
+    .input.scale = { INPUT_FEATURES_SCALE_INIT },
     ///
     .p_dsp = P_DSP_PIPELINE,
     ///

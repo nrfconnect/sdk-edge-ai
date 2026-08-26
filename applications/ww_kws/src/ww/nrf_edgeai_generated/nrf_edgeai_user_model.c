@@ -52,6 +52,16 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MIN[] = {
 static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
  32767 };
 
+#ifdef MODEL_OTA_WIRED
+#define INPUT_FEATURES_SCALE_INIT .INPUT_TYPE = {0}
+#else
+#define INPUT_FEATURES_SCALE_INIT     \
+.INPUT_TYPE = {                       \
+   .p_min = INPUT_FEATURES_SCALE_MIN, \
+   .p_max = INPUT_FEATURES_SCALE_MAX, \
+}
+#endif /* MODEL_OTA_WIRED */
+
 /** Defines which unique features from the input data will be used/collected,
  *  one bit for one unique feature, starting from LSB
  */
@@ -74,7 +84,7 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 #if MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON
 #include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
-#ifdef MODEL_OTA_AXON_RUNTIME_WIRED
+#ifdef MODEL_OTA_WIRED
 /*
  * model_ota: OTA-wired build (see lib/model_ota/src/model_ota_axon_edgeai_wired.c.in). The
  * compiled Axon model (weights, cmd buffer, ...) lives in a separate flash partition image
@@ -91,11 +101,15 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 #endif
 
 
+#ifdef MODEL_OTA_WIRED
+#define NN_DECODED_OUTPUT_INIT {0}
+#else
 #define NN_DECODED_OUTPUT_INIT                 \
 .classif = {                                   \
    .predicted_class = 0,                       \
    .num_classes = MODEL_OUTPUTS_NUM,           \
 }
+#endif /* MODEL_OTA_WIRED */
 
 //////////////////////////////////////////////////////////////////////////////
 /** Input feature buffer element size,
@@ -155,6 +169,17 @@ static const nrf_user_feature_t EXTRACTED_FEATURES_SCALE_MIN[] = {
 static const nrf_user_feature_t EXTRACTED_FEATURES_SCALE_MAX[] = {
  0 };
 
+#ifdef MODEL_OTA_WIRED
+#define EXTRACTED_FEATURES_META_INIT .EXTRACTED_FEATURES_META_TYPE = {0}
+#else
+#define EXTRACTED_FEATURES_META_INIT             \
+.EXTRACTED_FEATURES_META_TYPE = {                \
+   .p_min = EXTRACTED_FEATURES_SCALE_MIN,        \
+   .p_max = EXTRACTED_FEATURES_SCALE_MAX,        \
+   .p_arguments = FEATURES_EXTRACTION_ARGUMENTS, \
+}
+#endif /* MODEL_OTA_WIRED */
+
 /** Memory allocation to store extracted features during DSP pipeline */
 static uint8_t extracted_features_buffer_[EXTRACTED_FEATURES_BUFFER_SIZE_BYTES] __NRF_EDGEAI_ALIGNED;
 
@@ -188,11 +213,7 @@ static nrf_edgeai_dsp_pipeline_t dsp_pipeline_ = {
        .p_freqdomain_pipeline = P_FREQDOMAIN_PIPELINE,
        .p_customdomain_pipeline = P_CUSTOMDOMAIN_PIPELINE,
 
-       .meta.EXTRACTED_FEATURES_META_TYPE = {
-           .p_min = EXTRACTED_FEATURES_SCALE_MIN,
-           .p_max = EXTRACTED_FEATURES_SCALE_MAX,
-       .p_arguments = FEATURES_EXTRACTION_ARGUMENTS,
-       },
+       .meta = { EXTRACTED_FEATURES_META_INIT },
    },
 };
 
@@ -231,10 +252,7 @@ static nrf_edgeai_t nrf_edgeai_ = {
     .input.window_memory.p_void = INPUT_WINDOW_MEMORY,
     .input.p_window_ctx         = P_INPUT_WINDOW_CTX,
 
-    .input.scale.INPUT_TYPE = {
-        .p_min = INPUT_FEATURES_SCALE_MIN,
-        .p_max = INPUT_FEATURES_SCALE_MAX,
-    },
+    .input.scale = { INPUT_FEATURES_SCALE_INIT },
     ///
     .p_dsp = P_DSP_PIPELINE,
     ///
@@ -286,7 +304,7 @@ uint32_t nrf_edgeai_user_model_size_36711(void)
 #endif
 
 #elif MODEL_TYPE == __NRF_EDGEAI_MODEL_AXON
-#ifdef MODEL_OTA_AXON_RUNTIME_WIRED
+#ifdef MODEL_OTA_WIRED
     /* model_ota: the compiled model lives in a flash partition image loaded at runtime; its
      * size is not known at compile time (see model_ota_axon_edgeai_wired.c.in). */
     model_size = 0;

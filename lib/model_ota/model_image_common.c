@@ -15,8 +15,12 @@
 
 LOG_MODULE_REGISTER(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
 
-BUILD_ASSERT(sizeof(struct model_image_header) == 48,
+BUILD_ASSERT(sizeof(struct model_image_header) == 80,
 	     "model_image_header size must match host layout tools");
+BUILD_ASSERT(offsetof(struct model_image_header, edgeai_params) == 48,
+	     "edgeai_params offset must match host layout tools");
+BUILD_ASSERT(offsetof(struct model_image_header, edgeai_params) % sizeof(uint32_t) == 0,
+	     "edgeai_params must be word-aligned");
 BUILD_ASSERT(offsetof(struct model_image_header, contract_hash) == 16,
 	     "contract_hash offset must match host layout tools");
 BUILD_ASSERT(offsetof(struct model_image_header, crc32) == MODEL_IMAGE_CRC32_OFFSET,
@@ -25,14 +29,14 @@ BUILD_ASSERT(offsetof(struct model_image_header, name) % sizeof(uint32_t) == 0,
 	     "name must be word-aligned");
 BUILD_ASSERT(offsetof(struct model_image_header, neuton.model) % sizeof(uint32_t) == 0,
 	     "neuton.model must be word-aligned");
-BUILD_ASSERT(offsetof(struct model_image_header, neuton.decoded_output) % sizeof(uint32_t) == 0,
-	     "neuton.decoded_output must be word-aligned");
 BUILD_ASSERT(offsetof(struct model_image_header, axon.model) % sizeof(uint32_t) == 0,
 	     "axon.model must be word-aligned");
-BUILD_ASSERT(sizeof(struct model_image_neuton_backend) == 12,
+BUILD_ASSERT(sizeof(struct model_image_neuton_backend) == 4,
 	     "neuton backend size must match host layout tools");
 BUILD_ASSERT(sizeof(struct model_image_axon_backend) == 20,
 	     "axon backend size must match host layout tools");
+BUILD_ASSERT(sizeof(struct model_image_edgeai_params) == 32,
+	     "edgeai params block size must match host layout tools");
 
 static bool magic_is_valid(const struct model_image_header *hdr)
 {

@@ -13,7 +13,8 @@ Confirms, after linking:
   - header magic / format_version are correct,
   - header.image_size equals the linker extent (__model_image_end - __model_image_start) and the
     binary size, and fits within the partition,
-  - the header's DIRECT model pointer equals &<model symbol> and lies inside the image, and
+  - the header's DIRECT model pointer equals &<model symbol> and lies inside the image,
+  - the feature-scaling block is self-consistent and its pointers lie inside the image, and
   - the crc32 field is non-zero and matches a recomputed CRC (i.e. patch_image_crc.py ran).
 
 There is no model_offset arithmetic: the header stores an absolute flash pointer, which is
@@ -34,13 +35,20 @@ PARAMS_AXON = 3
 
 # struct model_image_header (see include/model_ota/model_image.h), little-endian, __packed:
 #   magic[4] version:H params_type:B reserved:B image_size:I model_version:I
-#   contract_hash:I crc32:I name:I backend[20]
-# backend Neuton (first 12 B): model:I task:B pad[3]:BBB decoded_output:I
+#   contract_hash:I crc32:I name:I backend[20] edgeai_params[32]
+# backend Neuton (first 4 B): model:I, rest of the union slot zeroed
 # backend Axon (20 B): model:I packed_output:I persistent_required:I binding:I binding_count:I
-HEADER_FMT = "<4sHBBIIIII20s"
+HEADER_FMT = "<4sHBBIIIII20s32s"
 HEADER_SIZE = struct.calcsize(HEADER_FMT)
-BACKEND_NEUTON_FMT = "<IBBBBI"
+BACKEND_NEUTON_FMT = "<I"
 BACKEND_AXON_FMT = "<IIIII"
+
+# struct model_image_edgeai_params (zeroed when the image carries no parameters):
+#   scale union (12 B): p_min:I p_max:I p_arguments:I (the third word is DSP-features only)
+#   decoded_output (16 B): nrf_edgeai_decoded_output_t, laid out per task
+#   scale_num:H scale_elem_size:B reserved:B
+PARAMS_FMT = "<IIIIIIIHBB"
+PARAMS_SIZE = struct.calcsize(PARAMS_FMT)
 CRC32_OFFSET = 20
 
 
@@ -57,6 +65,54 @@ def name_in_image(name_ptr, image_bytes, start, end):
             return bytes(chars).decode("ascii", "replace")
         chars.append(byte)
     return None
+
+
+def validate_params(params_bytes, start, end, errors):
+    """Check the header's nrf_edgeai_t parameter block.
+
+    Returns (scale_num, scale_elem_size), both 0 when the image carries no parameters (a pure
+    Axon model, or a solution whose parameters the application keeps compiled in).
+    """
+    fields = struct.unpack(PARAMS_FMT, params_bytes)
+    p_min, p_max, p_args = fields[0:3]
+    decode_words = fields[3:7]
+    num, elem_size, reserved = fields[7:10]
+
+    def check_ptr(label, ptr, span):
+        if ptr < start or ptr + span > end:
+            errors.append("edgeai_params %s 0x%x + %u B outside image [0x%x, 0x%x)"
+                          % (label, ptr, span, start, end))
+
+    if reserved != 0:
+        errors.append("edgeai_params reserved byte %d != 0" % reserved)
+
+    if num == 0:
+        # No parameters carried, so the whole block must be empty.
+        if any(field != 0 for field in fields):
+            errors.append("edgeai_params scale_num 0 but block is not empty: %r" % (fields,))
+        return 0, 0
+
+    if elem_size == 0:
+        errors.append("edgeai_params scale_num %d with elem_size 0" % num)
+    else:
+        span = num * elem_size
+        check_ptr("scale p_min", p_min, span)
+        check_ptr("scale p_max", p_max, span)
+        if p_args != 0:
+            # Pipeline-implicit length, so only the base is bounded.
+            check_ptr("scale p_arguments", p_args, 1)
+
+    # Which words of the baked nrf_edgeai_decoded_output_t are pointers depends on the task, which
+    # the image no longer records (see MODEL_IMAGE_ERR_TASK_MISMATCH in model_image.h). Check the
+    # property that does not need it: whatever the union member, a decode word is either runtime
+    # state left at its initial value or a pointer into this image, never a pointer out of it.
+    # Word 0 is exempt because it holds a scalar for every task (score / outputs_num /
+    # predicted class + num_classes), and those are not all zero.
+    for index, word in enumerate(decode_words):
+        if index != 0 and word != 0:
+            check_ptr("decoded_output word %d" % index, word, 1)
+
+    return num, elem_size
 
 
 def symbol(elf, name):
@@ -160,7 +216,7 @@ def main(argv=None):
     image_bytes = args.bin.read_bytes()
 
     (magic, version, params_type, _reserved, image_size, model_version, contract_hash, crc32,
-     name_ptr, backend_bytes) = struct.unpack(HEADER_FMT, header_bytes)
+     name_ptr, backend_bytes, params_bytes) = struct.unpack(HEADER_FMT, header_bytes)
 
     if magic != MAGIC:
         errors.append("magic %r != %r" % (magic, MAGIC))
@@ -190,14 +246,11 @@ def main(argv=None):
         elif binding_ptr != 0:
             errors.append("binding_count 0 but binding pointer 0x%x != 0" % binding_ptr)
     else:
-        model_ptr, task, pad0, pad1, pad2, decoded_output_ptr = struct.unpack(
-            BACKEND_NEUTON_FMT, backend_bytes[:struct.calcsize(BACKEND_NEUTON_FMT)]
-        )
-        if (pad0, pad1, pad2) != (0, 0, 0):
-            errors.append("Neuton backend pad must be 0, got %d,%d,%d" % (pad0, pad1, pad2))
-        if decoded_output_ptr < start or decoded_output_ptr >= end:
-            errors.append("decoded_output pointer 0x%x outside image [0x%x, 0x%x)"
-                          % (decoded_output_ptr, start, end))
+        neuton_size = struct.calcsize(BACKEND_NEUTON_FMT)
+        (model_ptr,) = struct.unpack(BACKEND_NEUTON_FMT, backend_bytes[:neuton_size])
+        if any(backend_bytes[neuton_size:]):
+            errors.append("Neuton backend must leave the rest of the union slot 0, got %r"
+                          % (backend_bytes[neuton_size:],))
 
     bin_size = args.bin.stat().st_size
     if bin_size != linker_size:
@@ -255,19 +308,19 @@ def main(argv=None):
                 % (persistent_required, expected_persistent)
             )
 
+    scale_num, scale_elem = validate_params(params_bytes, start, end, errors)
+
     if errors:
         for e in errors:
             print("layout validation failed: %s" % e, file=sys.stderr)
         sys.exit(1)
 
-    if params_type == PARAMS_AXON:
-        task_field = 0
-    else:
-        task_field = struct.unpack(BACKEND_NEUTON_FMT, backend_bytes[:struct.calcsize(BACKEND_NEUTON_FMT)])[1]
     print("model image layout ok: base 0x%x, size 0x%x, model 0x%x (&%s), "
-          "params_type %d, task %d, contract 0x%08x, crc32 0x%08x, name '%s' v0x%08x"
-          % (start, image_size, model_ptr, args.model_symbol, params_type, task_field,
-             contract_hash, crc32, name_str if name_str is not None else "?", model_version))
+          "params_type %d, contract 0x%08x, crc32 0x%08x, name '%s' v0x%08x, "
+          "scale %ux%uB"
+          % (start, image_size, model_ptr, args.model_symbol, params_type,
+             contract_hash, crc32, name_str if name_str is not None else "?", model_version,
+             scale_num, scale_elem))
     return 0
 
 

@@ -15,7 +15,11 @@ from pathlib import Path
 
 import check_model_compat as compat
 import validate_model_image_layout as layout
-from model_contract import contract_hash_neuton, neuton_pipeline_hash
+from model_contract import (
+    MODEL_IMAGE_FORMAT_VERSION,
+    contract_hash_neuton,
+    neuton_pipeline_hash,
+)
 
 
 class CompatCheckerTests(unittest.TestCase):
@@ -28,13 +32,11 @@ class CompatCheckerTests(unittest.TestCase):
         meta = bytearray(28)
         struct.pack_into("<H", meta, 20, 1)
         struct.pack_into("<H", meta, 22, neurons_num)
-        backend = struct.pack(
-            layout.BACKEND_NEUTON_FMT, model_ptr, 2, 0, 0, 0, model_ptr + 16
-        )
+        backend = struct.pack(layout.BACKEND_NEUTON_FMT, model_ptr)
         header = struct.pack(
             layout.HEADER_FMT,
             layout.MAGIC,
-            5,
+            MODEL_IMAGE_FORMAT_VERSION,
             0,
             0,
             image_size,
@@ -43,6 +45,7 @@ class CompatCheckerTests(unittest.TestCase):
             0,
             name_ptr,
             backend + b"\0" * (20 - len(backend)),
+            b"\0" * layout.PARAMS_SIZE,
         )
         data = bytearray(header + meta + b"gear\0")
         struct.pack_into("<I", data, layout.CRC32_OFFSET, zlib.crc32(data) & 0xFFFFFFFF)
@@ -65,7 +68,7 @@ class CompatCheckerTests(unittest.TestCase):
             root = Path(tmp)
             image = self._neuton_image(root, fw_hash)
             context = {
-                "format_version": 5,
+                "format_version": MODEL_IMAGE_FORMAT_VERSION,
                 "slots": [
                     {
                         "target": "gear_anomaly",
@@ -89,7 +92,7 @@ class CompatCheckerTests(unittest.TestCase):
             root = Path(tmp)
             image = self._neuton_image(root, 1, neurons_num=25)
             context = {
-                "format_version": 5,
+                "format_version": MODEL_IMAGE_FORMAT_VERSION,
                 "slots": [
                     {
                         "target": "gear_anomaly",
@@ -112,7 +115,7 @@ class CompatCheckerTests(unittest.TestCase):
             root = Path(tmp)
             image = self._neuton_image(root, 0xDEADBEEF)
             context = {
-                "format_version": 5,
+                "format_version": MODEL_IMAGE_FORMAT_VERSION,
                 "slots": [{"target": "gear_anomaly", "backend": "neuton", "contract_hash": 1}],
             }
             ctx = root / "model_ota_context.json"

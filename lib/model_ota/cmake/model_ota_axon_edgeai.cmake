@@ -23,14 +23,20 @@
 #    header MUST declare them (and, if used, its packed-output buffer) via
 #    NRF_AXON_MODEL_APP_STORAGE, exactly like a raw (non-wrapped) Axon export.
 #
+#    MODEL_SRC is passed on as EDGEAI_MODEL_SRC so the image also carries the solution's
+#    nrf_edgeai_t parameters (feature scaling and decoded-output init), which are as much part of
+#    a model update as the weights.
+#
 # 2. Generates model_ota_axon_edgeai_wired.c.in into
 #    ${CMAKE_CURRENT_BINARY_DIR}/model_ota_axon_edgeai_wired_<SOLUTION_ID>.c (sets
-#    MODEL_OTA_AXON_RUNTIME_WIRED, then #includes MODEL_SRC). Under that hook, the generated
+#    MODEL_OTA_WIRED, then #includes MODEL_SRC). Under that hook, the generated
 #    nrf_edgeai_user_model.c skips its own #include of the generated Axon model header (so that
-#    header's weights are never linked into the app image) and leaves model.instance.p_void
-#    NULL. Builds a dedicated static library (default target ota_axon_edgeai_<SOLUTION_ID>) from
-#    that file, defining nrf_edgeai_load_user_model_<SOLUTION_ID>(): loads the Axon model image
-#    via model_image_load_axon() and patches it into model.instance.p_void.
+#    header's weights are never linked into the app image), leaves model.instance.p_void NULL,
+#    and zeroes its parameter initializers so those arrays can be discarded from the app too.
+#    Builds a dedicated static library (default target ota_axon_edgeai_<SOLUTION_ID>) from that
+#    file, defining nrf_edgeai_load_user_model_<SOLUTION_ID>(): loads the Axon model image via
+#    model_image_load_axon(), patches it into model.instance.p_void, and applies the image's
+#    parameters via model_image_bind_edgeai_params().
 #
 # Models compiled directly into the app (CONFIG_MODEL_OTA_AXON=n) are unaffected: the generated
 # nrf_edgeai_user_model.c includes the Axon model header itself, exactly as before.
@@ -67,7 +73,8 @@ function(model_ota_axon_edgeai_wire)
   set(_axon_args
     TARGET ${_axon_target}
     HEADER ${MO_HEADER}
-    PARTITION_NODELABEL ${MO_PARTITION_NODELABEL})
+    PARTITION_NODELABEL ${MO_PARTITION_NODELABEL}
+    EDGEAI_MODEL_SRC ${MO_MODEL_SRC})
   if(MO_NAME)
     list(APPEND _axon_args NAME ${MO_NAME})
   endif()
@@ -115,4 +122,12 @@ function(model_ota_axon_edgeai_wire)
                               TARGET_DIRECTORY ${_wired_lib}
                               PROPERTIES OBJECT_DEPENDS "${MO_MODEL_SRC}")
   target_link_libraries(app PRIVATE ${_wired_lib})
+
+  # The compiled Axon model never reaches the app on this path (the generated source does not
+  # include its header under MODEL_OTA_WIRED), but the solution's nrf_edgeai_t parameter arrays
+  # are still emitted, and the image supplies those at load time.
+  model_ota_discard_register(
+    LIB ${_wired_lib}
+    DESCRIPTION "solution ${MO_SOLUTION_ID} (${_wired_lib}, axon backend) <- ${MO_MODEL_SRC}"
+    SECTIONS ${MODEL_OTA_EDGEAI_PARAM_SECTIONS})
 endfunction()

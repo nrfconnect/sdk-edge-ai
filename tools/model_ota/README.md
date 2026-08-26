@@ -6,9 +6,11 @@
 ## Summary
 
 A Neuton or Axon model is shipped as a self-contained, **linked partition image**. The model
-descriptor and data are linked at the model partition's flash base, with a 48-byte header (format
-version 5, see `include/model_ota/model_image.h`) holding a direct pointer to the descriptor,
-a firmware **contract hash** (offset 16), and CRC-32/IEEE (offset 20).
+descriptor and data are linked at the model partition's flash base, with an 80-byte header (format
+version 10, see `include/model_ota/model_image.h`) holding a direct pointer to the descriptor,
+a firmware **contract hash** (offset 16), CRC-32/IEEE (offset 20), and the model's `nrf_edgeai_t`
+parameter block (offset 48): its feature scaling factors and decoded-output init. That block is
+shared by both backends; only a pure Axon model, having no `nrf_edgeai_t`, leaves it zeroed.
 
 Almost all of the image is produced by the compiler/linker. These host scripts perform the work
 that cannot be expressed directly in the toolchain:
@@ -90,9 +92,11 @@ declaration uses this option, so both code paths are exercised by its OTA build)
 A "Nordic EdgeAI Lab" solution exported for the Axon backend (a `nrf_edgeai_t` wrapper -
 input windowing, DSP feature pipeline, decode interfaces - around a compiled Axon model) uses
 `model_ota_axon_edgeai_wire()` in `lib/model_ota/cmake/model_ota_axon_edgeai.cmake` instead.
-Only the compiled Axon model is partition-loaded (via `model_ota_axon_model()`, same as a pure
-Axon model); the wrapper stays compiled into the app, and its `model.instance.p_void` is patched
-at runtime by `nrf_edgeai_load_user_model_<id>()` from
+The compiled Axon model is partition-loaded via `model_ota_axon_model()`, same as a pure Axon
+model, and the image additionally carries the solution's `nrf_edgeai_t` parameters. The wrapper
+itself (windowing, pipeline, interfaces) stays compiled into the app; its
+`model.instance.p_void` and its parameters are patched at runtime by
+`nrf_edgeai_load_user_model_<id>()` from
 `lib/model_ota/src/model_ota_axon_edgeai_wired.c.in` (the `multi_model` sample's `wakeword`,
 `classif_axon`, and `regress_axon` declarations exercise this path).
 

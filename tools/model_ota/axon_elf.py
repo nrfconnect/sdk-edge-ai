@@ -203,7 +203,22 @@ def compiled_model_size_from_probe(probe: Path) -> int:
 
 
 def collect_provide_symbols(objects: Sequence[Path]) -> list[str]:
-    """Undefined globals across image objects that must be resolved from zephyr.elf."""
+    """Undefined globals across image objects that must be resolved from zephyr.elf.
+
+    TODO: emit only the symbols the linked image actually keeps. Since the Axon backend of an
+    Edge AI Lab solution compiles the generated solution source into the image object (for its
+    nrf_edgeai_t parameter arrays), this now also picks up every runtime function reachable from
+    that solution's nrf_edgeai_t - 28 PROVIDE lines for classif_axon against 3 for a pure Axon
+    model. --gc-sections drops all of them and they never enter the loader's binding table (that
+    comes from the probe), so this is noise rather than a defect, but it implies a binding to app
+    addresses the image has no relationship with, and makes the image link fail if the
+    application ever stops linking one of those functions.
+
+    Fix: restrict the result to the probe-derived keep list (MODEL_OTA_AXON_KEEP_REFS) plus the
+    interlayer buffer and the app-storage symbols. For a pure Axon model that set is already
+    exactly what this returns, so the change is behaviour-preserving there and makes the emitted
+    fragment the same shape for both flavours.
+    """
     defined: set[str] = set()
     undefined: set[str] = set()
     for obj in objects:

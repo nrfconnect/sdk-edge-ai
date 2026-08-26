@@ -6,7 +6,7 @@
  * Neuton model partition-image stub (one translation unit, compiled once per model image).
  *
  * model_ota_neuton_image() sets MODEL_OTA_NEUTON_MODEL_SRC and NRF_MODEL_PARTITION_ADDR,
- * then compiles this file as an OBJECT library. MODEL_OTA_NEUTON_WIRED is not set, so the
+ * then compiles this file as an OBJECT library. MODEL_OTA_WIRED is not set, so the
  * included nrf_edgeai_user_model.c emits the compile-time model_instance_ descriptor and
  * payload arrays; this stub then emits the partition header that roots the gc-sections link.
  */
@@ -27,15 +27,19 @@
  * Partition-image emission (included model must expose file-static model_instance_ and data).
  *
  * We emit a single @ref model_image_header into section ".model_image.header". model_image.ld
- * links it first, at the partition base, followed by all reachable .rodata (the descriptor,
- * decode-output init and data). Because the image is linked at the partition base,
- * &model_instance_, &model_image_decoded_output_ and the scale arrays are already correct
- * absolute flash addresses, so they are stored directly in the header. --gc-sections drops
- * everything the header does not (transitively) reference. image_size is a link-time constant
- * from the __model_image_end anchor; crc32 is left 0 and patched by patch_image_crc.py.
+ * links it first, at the partition base, followed by all reachable .rodata (the descriptor and
+ * data). Because the image is linked at the partition base, &model_instance_ and the scaling /
+ * decode arrays are already correct absolute flash addresses, so they are stored directly in the
+ * header. --gc-sections drops everything the header does not (transitively) reference - which is
+ * why the scaling and decode-meta arrays only survive because .edgeai_params points at them.
+ * image_size
+ * is a link-time constant from the __model_image_end anchor; crc32 is left 0 and patched by
+ * patch_image_crc.py.
  */
 
 #include <model_ota/model_image.h>
+
+#include "model_ota_scale_select.h"
 
 extern char __model_image_end[];
 
@@ -51,9 +55,6 @@ extern char __model_image_end[];
 #ifndef MODEL_OTA_NEUTON_CONTRACT_HASH
 #error "MODEL_OTA_NEUTON_CONTRACT_HASH must be set by model_ota_neuton_image()"
 #endif
-
-__attribute__((section(".rodata.model_image_decoded_output"), used))
-static const nrf_edgeai_decoded_output_t model_image_decoded_output_ = {NN_DECODED_OUTPUT_INIT};
 
 __attribute__((section(".rodata.model_image_name"), used))
 static const char model_image_name_[] = MODEL_IMAGE_NAME_STR;
@@ -71,7 +72,6 @@ const struct model_image_header nrf_edgeai_model_image_hdr = {
 	.name = model_image_name_,
 	.neuton = {
 		.model = &model_instance_,
-		.task = MODEL_TASK,
-		.decoded_output = &model_image_decoded_output_,
 	},
+	.edgeai_params = MODEL_OTA_IMAGE_PARAMS_INIT,
 };

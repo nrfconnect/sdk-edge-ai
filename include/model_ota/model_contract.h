@@ -6,6 +6,9 @@
 #ifndef MODEL_OTA_MODEL_CONTRACT_H_
 #define MODEL_OTA_MODEL_CONTRACT_H_
 
+/* TODO: improve contract hash calculation */
+/* TODO: resolve part of issues from security review on confluence */
+
 /**
  * @file
  * @brief Firmware ABI contract hashing for model-only OTA images.
@@ -111,6 +114,11 @@ extern "C" {
 
 /**
  * Full Axon contract hash.
+ *
+ * TODO: an Axon-backed Edge AI Lab solution now carries nrf_edgeai_t parameters as well as the
+ * compiled model, so this should cover the solution's task and id the way
+ * @ref MODEL_OTA_CONTRACT_HASH_NEUTON does (which is where a Neuton image's task is validated,
+ * now that the header no longer carries one).
  *
  * @p persistent_required  Elements (int32_t) required in persistent_vars (from probe).
  * @p packed_output_bytes  Bytes required for packed output (0 when unused).

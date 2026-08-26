@@ -70,7 +70,6 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	const uint8_t *image_end;
 	const uint8_t *model_bytes;
 	const nrf_edgeai_model_neuton_t *img_model;
-	const nrf_edgeai_decoded_output_t *img_decoded;
 	nrf_edgeai_model_neuton_t *out_model =
 		(nrf_edgeai_model_neuton_t *)edgeai->model.instance.p_void;
 	nrf_edgeai_model_neuton_params_t params;
@@ -101,15 +100,14 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 		return rc;
 	}
 
-	/* Reject a model whose task or weight/neuron precision differs from what the app was built
-	 * for: a model-only update keeps the same solution, so both must match. The precision also
-	 * fixes the neuron-buffer element size, so a mismatch here would otherwise corrupt memory
-	 * when p_neurons is patched below.
+	/* Reject a model whose weight/neuron precision differs from what the app was built for: a
+	 * model-only update keeps the same solution, so it must match. The precision also fixes the
+	 * neuron-buffer element size, so a mismatch here would otherwise corrupt memory when
+	 * p_neurons is patched below.
+	 *
+	 * TODO: the solution's task is no longer carried by the image and so is no longer checked
+	 * here; fold it into the contract hash, which both backends already validate.
 	 */
-	if (hdr.neuton.task != expect->task) {
-		LOG_ERR("Image task %u != expected %u", hdr.neuton.task, expect->task);
-		return MODEL_IMAGE_ERR_TASK_MISMATCH;
-	}
 	if (hdr.params_type != expect->params_type) {
 		LOG_ERR("Image params_type %u != expected %u", hdr.params_type,
 			expect->params_type);
@@ -187,52 +185,6 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 	}
 
-	/* Baked NN_DECODED_OUTPUT_INIT lives in the image; confirm the struct and any flash-resident
-	 * meta pointers it references lie inside [base, image_end).
-	 */
-	if (!model_image_span_in_image(hdr.neuton.decoded_output,
-				       sizeof(nrf_edgeai_decoded_output_t), partition_addr,
-				       image_end)) {
-		LOG_ERR("Header decoded_output pointer %p outside image [%p, %p)",
-			(void *)hdr.neuton.decoded_output, (const void *)partition_addr,
-			(const void *)image_end);
-		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
-	}
-
-	img_decoded = hdr.neuton.decoded_output;
-
-	switch (hdr.neuton.task) {
-	case NRF_EDGEAI_TASK_ANOMALY_DETECTION:
-		if (!model_image_span_in_image(img_decoded->anomaly.meta.p_scale_min,
-					       (size_t)outputs_num * sizeof(float), partition_addr,
-					       image_end) ||
-		    !model_image_span_in_image(img_decoded->anomaly.meta.p_scale_max,
-					       (size_t)outputs_num * sizeof(float), partition_addr,
-					       image_end) ||
-		    !model_image_span_in_image(img_decoded->anomaly.meta.p_average_embedding,
-					       (size_t)outputs_num * sizeof(float), partition_addr,
-					       image_end)) {
-			LOG_ERR("Baked anomaly decode meta pointer outside image [%p, %p)",
-				(const void *)partition_addr, (const void *)image_end);
-			return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
-		}
-		break;
-	case NRF_EDGEAI_TASK_REGRESSION:
-		if (!model_image_span_in_image(img_decoded->regression.meta.p_scale_min,
-					       (size_t)outputs_num * sizeof(float), partition_addr,
-					       image_end) ||
-		    !model_image_span_in_image(img_decoded->regression.meta.p_scale_max,
-					       (size_t)outputs_num * sizeof(float), partition_addr,
-					       image_end)) {
-			LOG_ERR("Baked regression decode meta pointer outside image [%p, %p)",
-				(const void *)partition_addr, (const void *)image_end);
-			return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
-		}
-		break;
-	default:
-		break;
-	}
-
 	memcpy(&params, &img_model->params, sizeof(params));
 	rc = neuton_patch_neurons_buf(&params, hdr.params_type, neurons_buf);
 	if (rc != MODEL_IMAGE_OK) {
@@ -245,21 +197,6 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	};
 
 	memcpy(out_model, &built, sizeof(built));
-
-	switch (hdr.neuton.task) {
-	case NRF_EDGEAI_TASK_ANOMALY_DETECTION:
-		edgeai->decoded_output.anomaly = img_decoded->anomaly;
-		break;
-	case NRF_EDGEAI_TASK_REGRESSION:
-		edgeai->decoded_output.regression = img_decoded->regression;
-		break;
-	case NRF_EDGEAI_TASK_MULT_CLASS:
-	case NRF_EDGEAI_TASK_BIN_CLASS:
-		edgeai->decoded_output.classif = img_decoded->classif;
-		break;
-	default:
-		break;
-	}
 
 	LOG_INF("Loaded Neuton model image '%s' v0x%08x (%u neurons, %u weights, %u outputs)",
 		hdr.name, hdr.model_version, neurons_num, img_model->meta.weights_num,

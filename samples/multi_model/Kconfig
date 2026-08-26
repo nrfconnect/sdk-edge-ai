@@ -6,6 +6,14 @@
 
 menu "Multi-model sample"
 
+config MULTI_MODEL_AXON
+	bool "Include the Axon-backed models"
+	default y
+	help
+	  Build and run the models with an Axon backend: the pure Axon ones (person
+	  detection, okay_nordic) and the Edge AI Lab solutions whose backend is Axon
+	  (wakeword, classification, regression). The Neuton models always build.
+
 config SCORE_THRESHOLD
 	int "Person detection score threshold, in per mille"
 	default 250

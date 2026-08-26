@@ -41,14 +41,19 @@ target_sources(app PRIVATE
   src/main.c
   src/test_anomaly.c
   src/test_classification.c
-  src/test_classification_axon.c
   src/test_regression.c
-  src/test_regression_axon.c
-  src/test_wakeword.c
-  src/test_person_det.c
-  src/test_okay_nordic.c
-  ${PERSON_DET_DIR}/postprocessing.c
 )
+
+if(CONFIG_MULTI_MODEL_AXON)
+  target_sources(app PRIVATE
+    src/test_classification_axon.c
+    src/test_regression_axon.c
+    src/test_wakeword.c
+    src/test_person_det.c
+    src/test_okay_nordic.c
+    ${PERSON_DET_DIR}/postprocessing.c
+  )
+endif()
 
 # Neuton models are partition-loaded when CONFIG_MODEL_OTA_NEUTON is enabled; compiled directly
 # into the app otherwise.
@@ -59,7 +64,7 @@ endif()
 # The Edge AI Lab solutions with an Axon backend (wakeword, classification, regression) are
 # partition-loaded when Axon OTA is enabled: their compiled Axon models are wired via
 # model_ota_axon_edgeai_wire() below instead.
-if(NOT CONFIG_MODEL_OTA_AXON)
+if(CONFIG_MULTI_MODEL_AXON AND NOT CONFIG_MODEL_OTA_AXON)
   target_sources(app PRIVATE
     ${WW_MODEL_SRC}
     ${CLASSIF_AXON_MODEL_SRC}
@@ -99,7 +104,7 @@ if(CONFIG_MODEL_OTA_NEUTON)
                          MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c)
 endif()
 
-if(CONFIG_MODEL_OTA_AXON)
+if(CONFIG_MULTI_MODEL_AXON AND CONFIG_MODEL_OTA_AXON)
   include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_axon.cmake)
   # ALLOCATE_PACKED_OUTPUT: keeps this build path (app-owned storage wired into the
   # linked image's packed_output_buf) covered by every OTA build/flash of this sample.

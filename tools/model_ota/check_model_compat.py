@@ -46,7 +46,9 @@ def parse_header(bin_path: Path) -> dict:
         crc32,
         name_ptr,
         backend,
+        edgeai_params,
     ) = fields
+    scale_num, scale_elem_size = struct.unpack(layout.PARAMS_FMT, edgeai_params)[7:9]
     entry = {
         "magic": magic,
         "format_version": version,
@@ -56,6 +58,8 @@ def parse_header(bin_path: Path) -> dict:
         "contract_hash": contract_hash,
         "crc32": crc32,
         "name_ptr": name_ptr,
+        "scale_num": scale_num,
+        "scale_elem_size": scale_elem_size,
     }
     if params_type == PARAMS_AXON:
         model_ptr, packed, persistent, binding_ptr, binding_count = struct.unpack(
@@ -71,16 +75,10 @@ def parse_header(bin_path: Path) -> dict:
             }
         )
     else:
-        model_ptr, task, p0, p1, p2, decoded = struct.unpack(
+        (model_ptr,) = struct.unpack(
             layout.BACKEND_NEUTON_FMT, backend[: struct.calcsize(layout.BACKEND_NEUTON_FMT)]
         )
-        entry.update(
-            {
-                "model_ptr": model_ptr,
-                "task": task,
-                "decoded_output_ptr": decoded,
-            }
-        )
+        entry["model_ptr"] = model_ptr
     entry["raw"] = data
     return entry
 

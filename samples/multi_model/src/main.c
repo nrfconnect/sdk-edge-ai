@@ -21,11 +21,12 @@ int main(void)
 	run_classification_tests();
 	LOG_INF("Classification tests passed");
 
-	run_classification_axon_tests();
-	LOG_INF("Axon classification tests passed");
-
 	run_regression_tests();
 	LOG_INF("Regression tests passed");
+
+#ifdef CONFIG_MULTI_MODEL_AXON
+	run_classification_axon_tests();
+	LOG_INF("Axon classification tests passed");
 
 	run_regression_axon_tests();
 	LOG_INF("Axon regression tests passed");
@@ -38,6 +39,7 @@ int main(void)
 
 	run_okay_nordic_tests();
 	LOG_INF("okay_nordic tests passed");
+#endif
 
 	while (1) {
 		LOG_INF("All multi-model tests completed");

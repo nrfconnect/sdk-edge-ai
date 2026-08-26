@@ -9,12 +9,19 @@
 #                      PARTITION_NODELABEL <dt-nodelabel>
 #                      [NAME <str>] [VERSION <x.y.z>]
 #                      [PERSISTENT_VARS_CAP <n>] [MODEL_SYM <symbol>]
-#                      [ALLOCATE_PACKED_OUTPUT])
+#                      [ALLOCATE_PACKED_OUTPUT]
+#                      [EDGEAI_MODEL_SRC <abs-path-to-nrf_edgeai_user_model.c>])
 #
 # ALLOCATE_PACKED_OUTPUT allocates app-owned RAM for the model's optional
 # packed-output buffer and wires it into the linked partition image (the model's
 # packed_output_buf field). Without it (the default), the image links with
 # packed_output_buf NULL and no app RAM is spent on it.
+#
+# EDGEAI_MODEL_SRC marks the model as the backend of an Edge AI Lab solution (passed by
+# model_ota_axon_edgeai_wire(), never directly): the generated solution source is compiled into
+# the partition image so the image also carries the solution's nrf_edgeai_t parameters (feature
+# scaling and decoded-output init). Without it the image is a pure Axon model and its parameter
+# block stays zeroed.
 
 include_guard(GLOBAL)
 
@@ -76,7 +83,8 @@ endfunction()
 
 function(model_ota_axon_model)
   cmake_parse_arguments(MI "ALLOCATE_PACKED_OUTPUT"
-    "TARGET;HEADER;PARTITION_NODELABEL;NAME;VERSION;PERSISTENT_VARS_CAP;MODEL_SYM" "" ${ARGN})
+    "TARGET;HEADER;PARTITION_NODELABEL;NAME;VERSION;PERSISTENT_VARS_CAP;MODEL_SYM;EDGEAI_MODEL_SRC"
+    "" ${ARGN})
 
   if(NOT MI_TARGET OR NOT MI_HEADER OR NOT MI_PARTITION_NODELABEL)
     message(FATAL_ERROR
@@ -190,6 +198,7 @@ function(model_ota_axon_model)
   endif()
 
   set(_image_obj ${MI_TARGET}_axon_image_obj)
+  set(_image_deps "${MI_HEADER};${_private_h}")
   add_library(${_image_obj} OBJECT ${MODEL_OTA_AXON_IMAGE_STUB})
   target_link_libraries(${_image_obj} PRIVATE zephyr_interface)
   target_include_directories(${_image_obj} PRIVATE
@@ -201,10 +210,18 @@ function(model_ota_axon_model)
     MODEL_IMAGE_NAME_STR=\"${MI_NAME}\"
     MODEL_IMAGE_VERSION_U32=${_version_u32}u
     NRF_AXON_INTERLAYER_BUFFER_SIZE=${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE})
+  if(MI_EDGEAI_MODEL_SRC)
+    get_filename_component(_edgeai_model_dir ${MI_EDGEAI_MODEL_SRC} DIRECTORY)
+    get_filename_component(_edgeai_model_basename ${MI_EDGEAI_MODEL_SRC} NAME)
+    target_include_directories(${_image_obj} PRIVATE ${_edgeai_model_dir})
+    target_compile_definitions(${_image_obj} PRIVATE
+      MODEL_OTA_AXON_EDGEAI_MODEL_SRC=${_edgeai_model_basename})
+    list(APPEND _image_deps ${MI_EDGEAI_MODEL_SRC})
+  endif()
   set_source_files_properties(
     ${MODEL_OTA_AXON_IMAGE_STUB}
     TARGET_DIRECTORY ${_image_obj}
-    PROPERTIES OBJECT_DEPENDS "${MI_HEADER};${_private_h}")
+    PROPERTIES OBJECT_DEPENDS "${_image_deps}")
   add_dependencies(${_image_obj} ${_meta_target} zephyr_generated_headers)
 
   set(_model_syms_ld ${_work_dir}/${MI_TARGET}_model_syms.ld)

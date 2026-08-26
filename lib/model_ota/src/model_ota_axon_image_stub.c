@@ -8,6 +8,21 @@
  * model_ota_axon_model() compiles this file with probe-derived configuration,
  * then links the result at the partition base. App-owned pointer fields are
  * resolved from zephyr.elf via a generated PROVIDE() linker fragment.
+ *
+ * Shared by both flavours of Axon model. For an Edge AI Lab solution with an Axon backend,
+ * model_ota_axon_edgeai_wire() also passes MODEL_OTA_AXON_EDGEAI_MODEL_SRC, and the image then
+ * carries the solution's nrf_edgeai_t parameters as well as the compiled model. A pure Axon model
+ * has no nrf_edgeai_t, so its header leaves that block zeroed.
+ *
+ * TODO (potential): separate the pure Axon and Axon-backed-Lab paths further. Today they differ
+ * only in the #ifdef below and in the optional EDGEAI_MODEL_SRC argument of
+ * model_ota_axon_model(), while sharing the whole image pipeline (probe, axon_config.h, binding
+ * table, PROVIDE pass, link, CRC, validation) - so a split is not obviously worth the duplicated
+ * header definition, and the fork has to live in this file regardless, because edgeai_params is
+ * an in-place member whose initializer must be a compile-time constant in the translation unit
+ * that defines the header. If a second point of divergence appears, the least-cost form is a
+ * model_ota_axon_edgeai_image_stub.c that #includes a shared header-emission part, keeping one
+ * definition of the on-flash layout.
  */
 
 #include "model_ota_stub_macros.h"
@@ -49,7 +64,25 @@
 #define NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER 1
 #endif
 
+#ifdef MODEL_OTA_AXON_EDGEAI_MODEL_SRC
+/*
+ * Edge AI Lab solution: pull in the whole generated solution source, which #includes the Axon
+ * model header itself. MODEL_OTA_WIRED is deliberately *not* set here - this translation unit is
+ * the payload, so the compiled model and the scaling / decode arrays must all be emitted, and
+ * model_ota_scale_select.h below turns them into the header's parameter block. --gc-sections then
+ * drops everything the header does not reference, including the solution's own nrf_edgeai_t.
+ */
+#include MODEL_OTA_STUB_STR(MODEL_OTA_AXON_EDGEAI_MODEL_SRC)
+
+#include "model_ota_scale_select.h"
+
+#define MODEL_OTA_AXON_EDGEAI_PARAMS_INIT MODEL_OTA_IMAGE_PARAMS_INIT
+#else
 #include MODEL_OTA_AXON_HEADER
+
+/* Pure Axon model: no nrf_edgeai_t to carry. */
+#define MODEL_OTA_AXON_EDGEAI_PARAMS_INIT {0}
+#endif
 
 #if MODEL_OTA_AXON_KEEP_SYMBOL_COUNT > 0
 #define MODEL_OTA_AXON_BINDING_ENTRY(symbol) \
@@ -100,4 +133,5 @@ const struct model_image_header model_image_hdr = {
 #endif
 		.binding_count = MODEL_OTA_AXON_KEEP_SYMBOL_COUNT,
 	},
+	.edgeai_params = MODEL_OTA_AXON_EDGEAI_PARAMS_INIT,
 };

@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-MODEL_IMAGE_FORMAT_VERSION = 5
+MODEL_IMAGE_FORMAT_VERSION = 10
 MODEL_OTA_CONTRACT_BACKEND_NEUTON = 0
 MODEL_OTA_CONTRACT_BACKEND_AXON = 1
 
@@ -92,6 +92,12 @@ def contract_hash_axon(
     persistent_required: int,
     packed_output_bytes: int,
 ) -> int:
+    """Mirror MODEL_OTA_CONTRACT_HASH_AXON.
+
+    TODO: an Axon-backed Edge AI Lab solution now carries nrf_edgeai_t parameters too, so this
+    should also cover the solution's task and id the way contract_hash_neuton() does - the image
+    stopped carrying a task byte for the loader to check.
+    """
     state = FNV1A_INIT
     state = fnv1a_u32(state, MODEL_IMAGE_FORMAT_VERSION)
     state = fnv1a_u32(state, MODEL_OTA_CONTRACT_BACKEND_AXON)

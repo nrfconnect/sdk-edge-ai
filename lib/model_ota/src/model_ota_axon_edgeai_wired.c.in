@@ -9,7 +9,7 @@
  * One translation unit per OTA-wired Edge AI Lab / Axon-backend model: sets the wired-runtime
  * hook, #includes the generated nrf_edgeai_user_model.c (which then skips the generated Axon
  * model header and leaves model.instance.p_void NULL), then defines
- * nrf_edgeai_load_user_model_@SOLUTION_ID@() to patch that pointer from a loaded model image.
+ * nrf_edgeai_load_user_model_@SOLUTION_ID@() to fill the context from a loaded model image.
  */
 
 #include "model_ota_stub_macros.h"
@@ -18,9 +18,11 @@
 #include <model_ota/model_ota_axon_edgeai.h>
 #include <model_ota/axon/@AXON_TARGET@.h>
 
-#define MODEL_OTA_AXON_RUNTIME_WIRED 1
+#define MODEL_OTA_WIRED 1
 
 #include "@MODEL_SRC_BASENAME@"
+
+#include "model_ota_scale_select.h"
 
 extern const uint32_t MODEL_OTA_AXON_@AXON_TOKEN@_KEEP_LABEL[];
 
@@ -34,8 +36,14 @@ nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(uint8_t fa_id,
 		.packed_output_cap = MODEL_OTA_AXON_@AXON_TOKEN@_PACKED_OUTPUT_BYTES,
 		.binding_table = MODEL_OTA_AXON_@AXON_TOKEN@_KEEP_LABEL,
 	};
+	const struct model_image_scale_expect scale_expect = MODEL_OTA_SCALE_EXPECT_INIT;
 
 	if (model_image_load_axon(fa_id, partition_addr, &expect, &model) != MODEL_IMAGE_OK) {
+		return NULL;
+	}
+
+	if (model_image_bind_edgeai_params(partition_addr, &nrf_edgeai_, &scale_expect) !=
+	    MODEL_IMAGE_OK) {
 		return NULL;
 	}
 
