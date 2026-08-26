@@ -47,6 +47,16 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MIN[] = {6.2637229};
  */
 static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {232004.5625000};
 
+#ifdef MODEL_OTA_WIRED
+#define INPUT_FEATURES_SCALE_INIT .INPUT_TYPE = {0}
+#else
+#define INPUT_FEATURES_SCALE_INIT                                                                  \
+	.INPUT_TYPE = {                                                                            \
+		.p_min = INPUT_FEATURES_SCALE_MIN,                                                 \
+		.p_max = INPUT_FEATURES_SCALE_MAX,                                                 \
+	}
+#endif /* MODEL_OTA_WIRED */
+
 /** Defines which unique features from the input data will be used/collected,
  *  one bit for one unique feature, starting from LSB
  */
@@ -114,6 +124,17 @@ static const nrf_user_feature_t EXTRACTED_FEATURES_SCALE_MAX[] = {
 	231012.2343750, 5638.1899414, 9054.6552734, 32338.0703125, 32825.9062500, 0.8775510,
 	5638.1899414,	9455.0820312, 0.9600000,    1.8917454,	   3.9208295};
 
+#ifdef MODEL_OTA_WIRED
+#define EXTRACTED_FEATURES_META_INIT .EXTRACTED_FEATURES_META_TYPE = {0}
+#else
+#define EXTRACTED_FEATURES_META_INIT                                                               \
+	.EXTRACTED_FEATURES_META_TYPE = {                                                          \
+		.p_min = EXTRACTED_FEATURES_SCALE_MIN,                                             \
+		.p_max = EXTRACTED_FEATURES_SCALE_MAX,                                             \
+		.p_arguments = FEATURES_EXTRACTION_ARGUMENTS,                                      \
+	}
+#endif /* MODEL_OTA_WIRED */
+
 /** Memory allocation to store extracted features during DSP pipeline */
 static uint8_t
 	extracted_features_buffer_[EXTRACTED_FEATURES_BUFFER_SIZE_BYTES] __NRF_EDGEAI_ALIGNED;
@@ -158,12 +179,7 @@ static nrf_edgeai_dsp_pipeline_t dsp_pipeline_ = {
 			.p_freqdomain_pipeline = P_FREQDOMAIN_PIPELINE,
 			.p_customdomain_pipeline = P_CUSTOMDOMAIN_PIPELINE,
 
-			.meta.EXTRACTED_FEATURES_META_TYPE =
-				{
-					.p_min = EXTRACTED_FEATURES_SCALE_MIN,
-					.p_max = EXTRACTED_FEATURES_SCALE_MAX,
-					.p_arguments = FEATURES_EXTRACTION_ARGUMENTS,
-				},
+			.meta = {EXTRACTED_FEATURES_META_INIT},
 		},
 };
 
@@ -382,16 +398,23 @@ static const uint8_t MODEL_NEURON_ACTIVATION_TYPE_MASK[] = {0xff, 0xf7, 0xff, 0x
 
 static const uint16_t MODEL_OUTPUT_NEURONS_INDICES[] = {71, 67, 77, 11, 75, 79, 73};
 
+#ifdef MODEL_OTA_WIRED
+#define NN_DECODED_OUTPUT_INIT {0}
+#else
 #define NN_DECODED_OUTPUT_INIT                                                                     \
 	.classif = {                                                                               \
 		.predicted_class = 0,                                                              \
 		.num_classes = MODEL_OUTPUTS_NUM,                                                  \
 	}
+#endif /* MODEL_OTA_WIRED */
 
 /** Model neurons activations buffer */
 static nrf_user_neuron_t model_neurons_[MODEL_NEURONS_NUM];
 
 /** Neuton model instance */
+#ifdef MODEL_OTA_WIRED
+static nrf_edgeai_model_neuton_t model_instance_;
+#else
 static const nrf_edgeai_model_neuton_t model_instance_ = {
 	///
 	.meta.p_neuron_internal_links_num = MODEL_NEURON_INTERNAL_LINKS_NUM,
@@ -410,6 +433,7 @@ static const nrf_edgeai_model_neuton_t model_instance_ = {
 			.p_neurons = model_neurons_,
 		},
 };
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 #define NN_INPUT_INIT_INTERFACE	       nrf_edgeai_input_init_discrete_window
@@ -443,11 +467,7 @@ static nrf_edgeai_t nrf_edgeai_ = {
 	.input.window_memory.p_void = INPUT_WINDOW_MEMORY,
 	.input.p_window_ctx = P_INPUT_WINDOW_CTX,
 
-	.input.scale.INPUT_TYPE =
-		{
-			.p_min = INPUT_FEATURES_SCALE_MIN,
-			.p_max = INPUT_FEATURES_SCALE_MAX,
-		},
+	.input.scale = {INPUT_FEATURES_SCALE_INIT},
 	///
 	.p_dsp = P_DSP_PIPELINE,
 	///

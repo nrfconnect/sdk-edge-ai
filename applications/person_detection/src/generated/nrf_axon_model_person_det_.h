@@ -8277,7 +8277,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_person_det[23531] = {
 #define NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE 17280
 
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-  uint32_t axon_model_person_det_packed_output_buf[NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
+NRF_AXON_MODEL_APP_STORAGE uint32_t axon_model_person_det_packed_output_buf[NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
 const nrf_axon_compiled_model_output_s person_det_extra_outputs[] = {
   {

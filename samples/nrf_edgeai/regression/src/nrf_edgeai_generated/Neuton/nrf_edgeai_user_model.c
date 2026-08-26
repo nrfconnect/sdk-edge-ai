@@ -51,6 +51,16 @@ static const nrf_user_input_t INPUT_FEATURES_SCALE_MAX[] = {
 	11.8999996,   2040.0000000, 2214.0000000, 2683.0000000, 2775.0000000,
 	2523.0000000, 44.5999985,   88.6999969,	  2.1805999};
 
+#ifdef MODEL_OTA_WIRED
+#define INPUT_FEATURES_SCALE_INIT .INPUT_TYPE = {0}
+#else
+#define INPUT_FEATURES_SCALE_INIT                                                                  \
+	.INPUT_TYPE = {                                                                            \
+		.p_min = INPUT_FEATURES_SCALE_MIN,                                                 \
+		.p_max = INPUT_FEATURES_SCALE_MAX,                                                 \
+	}
+#endif /* MODEL_OTA_WIRED */
+
 /** Defines which unique features from the input data will be used/collected,
  *  one bit for one unique feature, starting from LSB
  */
@@ -127,6 +137,9 @@ static const nrf_user_output_t MODEL_OUTPUT_SCALE_MIN[] = {0.2000000};
 
 static const nrf_user_output_t MODEL_OUTPUT_SCALE_MAX[] = {63.7000008};
 
+#ifdef MODEL_OTA_WIRED
+#define NN_DECODED_OUTPUT_INIT {0}
+#else
 #define NN_DECODED_OUTPUT_INIT                                                                     \
 	.regression = {                                                                            \
 		.meta =                                                                            \
@@ -135,11 +148,15 @@ static const nrf_user_output_t MODEL_OUTPUT_SCALE_MAX[] = {63.7000008};
 				.p_scale_max = MODEL_OUTPUT_SCALE_MAX,                             \
 			},                                                                         \
 	}
+#endif /* MODEL_OTA_WIRED */
 
 /** Model neurons activations buffer */
 static nrf_user_neuron_t model_neurons_[MODEL_NEURONS_NUM];
 
 /** Neuton model instance */
+#ifdef MODEL_OTA_WIRED
+static nrf_edgeai_model_neuton_t model_instance_;
+#else
 static const nrf_edgeai_model_neuton_t model_instance_ = {
 	///
 	.meta.p_neuron_internal_links_num = MODEL_NEURON_INTERNAL_LINKS_NUM,
@@ -158,6 +175,7 @@ static const nrf_edgeai_model_neuton_t model_instance_ = {
 			.p_neurons = model_neurons_,
 		},
 };
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 #define NN_INPUT_INIT_INTERFACE	       nrf_edgeai_input_init_no_window
@@ -191,11 +209,7 @@ static nrf_edgeai_t nrf_edgeai_ = {
 	.input.window_memory.p_void = INPUT_WINDOW_MEMORY,
 	.input.p_window_ctx = P_INPUT_WINDOW_CTX,
 
-	.input.scale.INPUT_TYPE =
-		{
-			.p_min = INPUT_FEATURES_SCALE_MIN,
-			.p_max = INPUT_FEATURES_SCALE_MAX,
-		},
+	.input.scale = {INPUT_FEATURES_SCALE_INIT},
 	///
 	.p_dsp = P_DSP_PIPELINE,
 	///
