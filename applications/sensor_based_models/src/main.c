@@ -33,9 +33,6 @@ LOG_MODULE_REGISTER(main);
 #define NRF_EDGEAI_INPUT_DATA_LEN (ACCEL_AXIS_NUM)
 #endif
 
-#define HAR_SAMPLE_RATE_HZ (50)
-#define CAPTURE_24_SAMPLE_RATE_HZ (100)
-
 #if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
 #define INPUT_WINDOW_SAMPLES (128)
 #elif IS_ENABLED(CONFIG_SBM_CAPTURE_24_MODEL)
@@ -117,26 +114,25 @@ static void on_button_click(button_click_t click)
 	}
 }
 
+static const imu_config_t imu_config = {
+#if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
+	.accel_fs_g   = IMU_ACCEL_SCALE_2G,
+	.gyro_fs_dps  = IMU_GYRO_SCALE_1000DPS,
+	.data_rate_hz = 50,
+	.accel_enabled = true,
+	.gyro_enabled  = true,
+#elif IS_ENABLED(CONFIG_SBM_CAPTURE_24_MODEL)
+	.accel_fs_g   = IMU_ACCEL_SCALE_8G,
+	.gyro_fs_dps  = IMU_GYRO_SCALE_UNDEFINED,
+	.data_rate_hz = 100,
+	.accel_enabled = true,
+	.gyro_enabled  = false,
+#endif
+};
+
 static void hw_modules_init(void)
 {
 	int ret;
-	imu_config_t imu_configs[] =
-	{
-		[0] = {
-			.accel_fs_g = IMU_ACCEL_SCALE_2G,
-			.gyro_fs_dps = IMU_GYRO_SCALE_1000DPS,
-			.data_rate_hz = HAR_SAMPLE_RATE_HZ,
-			.accel_enabled = true,
-			.gyro_enabled = true,
-		},
-		[1] = {
-			.accel_fs_g = IMU_ACCEL_SCALE_8G,
-			.gyro_fs_dps = IMU_GYRO_SCALE_UNDEFINED,
-			.data_rate_hz = CAPTURE_24_SAMPLE_RATE_HZ,
-			.accel_enabled = true,
-			.gyro_enabled = false,
-		},
-	};
 
 	ret = activity_led_init();
 	if (ret != 0) {
@@ -148,7 +144,7 @@ static void hw_modules_init(void)
 		LOG_ERR("Failed to initialize button module (err %d)", ret);
 	}
 
-	int imu_ret = imu_init(&imu_configs[1], imu_data_ready_cb);
+	int imu_ret = imu_init(&imu_config, imu_data_ready_cb);
 
 	if (imu_ret != 0) {
 		LOG_ERR("Failed to initialize IMU sensor, error = %d", imu_ret);
