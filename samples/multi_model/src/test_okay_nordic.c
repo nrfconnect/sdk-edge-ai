@@ -78,8 +78,8 @@ void run_okay_nordic_tests(void)
 		.binding_table = MODEL_OTA_AXON_OKAY_NORDIC_KEEP_LABEL,
 	};
 
-	if (model_image_load_axon(PARTITION_ID(model_okay_nordic_storage),
-				  (const uint8_t *)PARTITION_ADDRESS(model_okay_nordic_storage),
+	if (model_image_load_axon((const uint8_t *)PARTITION_ADDRESS(model_okay_nordic_storage),
+				  PARTITION_SIZE(model_okay_nordic_storage),
 				  &expect, &model) != MODEL_IMAGE_OK ||
 	    model == NULL) {
 		LOG_WRN("No valid okay_nordic model image in model_okay_nordic_storage - skipping "

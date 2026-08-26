@@ -6,7 +6,8 @@
 # CMake helper for Neuton model-only OTA: per-model static library + payload discard.
 #
 # model_ota_neuton_wire(SOLUTION_ID <id> MODEL_SRC <abs-path-to-nrf_edgeai_user_model.c>
-#                       MAX_NEURONS <cap> [LIB_NAME <static-lib-target>])
+#                       PARTITION_NODELABEL <dt-nodelabel> MAX_NEURONS <cap>
+#                       [LIB_NAME <static-lib-target>])
 #
 # For each OTA-updatable model:
 #
@@ -44,7 +45,7 @@ set(MODEL_OTA_NEUTON_PAYLOAD_SECTIONS
 )
 
 function(model_ota_neuton_wire)
-  cmake_parse_arguments(MO "" "SOLUTION_ID;MODEL_SRC;LIB_NAME;MAX_NEURONS" "" ${ARGN})
+  cmake_parse_arguments(MO "" "SOLUTION_ID;MODEL_SRC;LIB_NAME;MAX_NEURONS;PARTITION_NODELABEL" "" ${ARGN})
 
   model_ota_using_released_fw(_using_released_fw)
   if(_using_released_fw)
@@ -60,6 +61,9 @@ function(model_ota_neuton_wire)
   if(NOT MO_MAX_NEURONS)
     message(FATAL_ERROR "model_ota_neuton_wire: MAX_NEURONS is required")
   endif()
+  if(NOT MO_PARTITION_NODELABEL)
+    message(FATAL_ERROR "model_ota_neuton_wire: PARTITION_NODELABEL is required")
+  endif()
   if(NOT MO_LIB_NAME)
     set(MO_LIB_NAME ota_neuton_${MO_SOLUTION_ID})
   endif()
@@ -74,6 +78,7 @@ function(model_ota_neuton_wire)
   endif()
 
   set(SOLUTION_ID ${MO_SOLUTION_ID})
+  set(PARTITION_NODELABEL ${MO_PARTITION_NODELABEL})
   set(MAX_NEURONS ${MO_MAX_NEURONS})
   set(MODEL_SRC_BASENAME ${model_basename})
   execute_process(

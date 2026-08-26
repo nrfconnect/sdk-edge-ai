@@ -164,8 +164,8 @@ void run_classification_tests(void)
 #if defined(CONFIG_MODEL_OTA_NEUTON)
 	/* Model-only OTA: load the payload from its flash partition (XIP) at runtime. */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_load_user_model_90449(
-		PARTITION_ID(model_classif_storage),
-		(const uint8_t *)PARTITION_ADDRESS(model_classif_storage));
+		(const uint8_t *)PARTITION_ADDRESS(model_classif_storage),
+		PARTITION_SIZE(model_classif_storage));
 
 	if (p_user_model == NULL) {
 		LOG_WRN("No valid classification model image in model_classif_storage - skipping "

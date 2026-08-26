@@ -15,6 +15,7 @@
  * translation unit defines them before #include.
  */
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <nrf_edgeai/nrf_edgeai.h>
@@ -25,8 +26,8 @@ extern "C" {
 
 /** Declare nrf_edgeai_load_user_model_<solution_id>() from a wired static library. */
 #define MODEL_OTA_NEUTON_LOAD_DECL(solution_id)                                                \
-	nrf_edgeai_t *nrf_edgeai_load_user_model_##solution_id(uint8_t fa_id,                    \
-							       const uint8_t *partition_addr)
+	nrf_edgeai_t *nrf_edgeai_load_user_model_##solution_id(const uint8_t *partition_addr,    \
+							       size_t partition_size)
 
 #ifdef __cplusplus
 }

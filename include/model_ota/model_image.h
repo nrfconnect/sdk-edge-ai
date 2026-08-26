@@ -293,8 +293,9 @@ struct model_image_axon_expect {
  * @ref model_image_header.edgeai_params and is applied separately by
  * @c model_image_bind_edgeai_params(), which the wired translation unit calls next.
  *
- * @param[in]  fa_id           Flash area ID of the partition, e.g. FIXED_PARTITION_ID(x).
- * @param[in]  partition_addr  Memory-mapped base address of that same partition.
+ * @param[in]  partition_addr  Memory-mapped base address of a zephyr,mapped-partition node,
+ *                             e.g. PARTITION_ADDRESS(model_storage).
+ * @param[in]  partition_size  Size of that partition, in bytes, e.g. PARTITION_SIZE(model_storage).
  * @param[out] edgeai          Runtime context to wire; @c model.instance must already point at
  *                             the caller-owned writable @ref nrf_edgeai_model_neuton_t.
  * @param[out] neurons_buf     Caller-owned RAM scratch for neuron activations.
@@ -302,8 +303,8 @@ struct model_image_axon_expect {
  * @param[in]  expect          App-side contract and capacity expectations (required).
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
-int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_edgeai_t *edgeai,
-			    void *neurons_buf, size_t neurons_buf_cap,
+int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size,
+			    nrf_edgeai_t *edgeai, void *neurons_buf, size_t neurons_buf_cap,
 			    const struct model_image_neuton_expect *expect);
 
 /**
@@ -342,13 +343,13 @@ int model_image_bind_edgeai_params(const uint8_t *partition_addr, nrf_edgeai_t *
  * @ref model_image_header.edgeai_params, applied by @ref model_image_bind_edgeai_params() just
  * like a Neuton one; a pure Axon model has no nrf_edgeai_t and leaves that block zeroed.
  *
- * @param[in]  fa_id           Flash area ID of the partition.
- * @param[in]  partition_addr  Memory-mapped base address of that partition.
+ * @param[in]  partition_addr  Memory-mapped base address of a zephyr,mapped-partition node.
+ * @param[in]  partition_size  Size of that partition, in bytes.
  * @param[in]  expect          App-side contract, caps, and binding expectations (required).
  * @param[out] out_model       On success, pointer to the model inside the partition.
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
-int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
+int model_image_load_axon(const uint8_t *partition_addr, size_t partition_size,
 			  const struct model_image_axon_expect *expect,
 			  const nrf_axon_nn_compiled_model_s **out_model);
 

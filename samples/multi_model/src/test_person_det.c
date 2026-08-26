@@ -74,8 +74,8 @@ void run_person_det_tests(void)
 		.binding_table = MODEL_OTA_AXON_PERSON_DET_KEEP_LABEL,
 	};
 
-	if (model_image_load_axon(PARTITION_ID(model_person_det_storage),
-				  (const uint8_t *)PARTITION_ADDRESS(model_person_det_storage),
+	if (model_image_load_axon((const uint8_t *)PARTITION_ADDRESS(model_person_det_storage),
+				  PARTITION_SIZE(model_person_det_storage),
 				  &expect, &model) != MODEL_IMAGE_OK ||
 	    model == NULL) {
 		LOG_WRN("No valid person-det model image in model_person_det_storage - skipping "

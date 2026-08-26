@@ -26,9 +26,13 @@
 
 extern const uint32_t MODEL_OTA_AXON_@AXON_TOKEN@_KEEP_LABEL[];
 
-nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(uint8_t fa_id,
-							 const uint8_t *partition_addr)
+MODEL_OTA_BUILD_ASSERT_MAPPED_PARTITION(@PARTITION_NODELABEL@);
+
+nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(const uint8_t *partition_addr,
+							 size_t partition_size)
 {
+	MODEL_OTA_ASSERT_MAPPED_PARTITION_ADDR(@PARTITION_NODELABEL@, partition_addr);
+
 	const nrf_axon_nn_compiled_model_s *model;
 	const struct model_image_axon_expect expect = {
 		.contract_hash = MODEL_OTA_AXON_@AXON_TOKEN@_CONTRACT_HASH,
@@ -38,7 +42,7 @@ nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(uint8_t fa_id,
 	};
 	const struct model_image_scale_expect scale_expect = MODEL_OTA_SCALE_EXPECT_INIT;
 
-	if (model_image_load_axon(fa_id, partition_addr, &expect, &model) != MODEL_IMAGE_OK) {
+	if (model_image_load_axon(partition_addr, partition_size, &expect, &model) != MODEL_IMAGE_OK) {
 		return NULL;
 	}
 

@@ -21,7 +21,7 @@
 #error "MODEL_OTA_NEUTON_MODEL_SRC must be defined by model_ota_neuton_image()"
 #endif
 
-#include MODEL_OTA_STUB_STR(MODEL_OTA_NEUTON_MODEL_SRC)
+#include STRINGIFY(MODEL_OTA_NEUTON_MODEL_SRC)
 
 /*
  * Partition-image emission (included model must expose file-static model_instance_ and data).

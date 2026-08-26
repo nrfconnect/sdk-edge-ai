@@ -18,7 +18,7 @@
  * Neuton app wired (model_ota_neuton_wire):
  *   Generated: ${CMAKE_CURRENT_BINARY_DIR}/model_ota_neuton_wired_<SOLUTION_ID>.c
  *   from lib/model_ota/src/model_ota_neuton_wired.c.in
- *   MAX_NEURONS substituted at configure time; sets MODEL_OTA_WIRED
+ *   PARTITION_NODELABEL and MAX_NEURONS substituted at configure time; sets MODEL_OTA_WIRED
  *   and MODEL_OTA_NEUTON_NEURONS_CAP, defines cap-sized
  *   model_neurons_cap_[], then #includes the generated nrf_edgeai_user_model.c; defines
  *   nrf_edgeai_load_user_model_<SOLUTION_ID>() (declared via model_ota_neuton.h).
@@ -33,7 +33,8 @@
  * Axon Edge AI Lab wired (model_ota_axon_edgeai_wire):
  *   Generated: ${CMAKE_CURRENT_BINARY_DIR}/model_ota_axon_edgeai_wired_<SOLUTION_ID>.c
  *   from lib/model_ota/src/model_ota_axon_edgeai_wired.c.in
- *   Sets MODEL_OTA_WIRED before #include of generated nrf_edgeai_user_model.c;
+ *   PARTITION_NODELABEL substituted at configure time. Sets MODEL_OTA_WIRED before #include of
+ *   generated nrf_edgeai_user_model.c;
  *   defines nrf_edgeai_load_user_model_<SOLUTION_ID>() (declared via model_ota_axon_edgeai.h).
  *
  * Every stub that has a generated solution source in scope #includes model_ota_scale_select.h
@@ -43,7 +44,16 @@
 #ifndef MODEL_OTA_STUB_MACROS_H_
 #define MODEL_OTA_STUB_MACROS_H_
 
-#define MODEL_OTA_STUB_XSTR(s) #s
-#define MODEL_OTA_STUB_STR(s)  MODEL_OTA_STUB_XSTR(s)
+#include <zephyr/devicetree.h>
+
+/** Compile-time check that @p label is a zephyr,mapped-partition node. */
+#define MODEL_OTA_BUILD_ASSERT_MAPPED_PARTITION(label)                                             \
+	BUILD_ASSERT(DT_MAPPED_PARTITION_EXISTS(DT_NODELABEL(label)),                               \
+		     STRINGIFY(label) " must use compatible = \"zephyr,mapped-partition\"")
+
+/** Runtime check that @p addr is the memory-mapped base from devicetree. */
+#define MODEL_OTA_ASSERT_MAPPED_PARTITION_ADDR(label, addr)                                        \
+	__ASSERT((addr) == (const uint8_t *)DT_MAPPED_PARTITION_ADDR(DT_NODELABEL(label)),         \
+		 STRINGIFY(label) " partition_addr must match devicetree")
 
 #endif /* MODEL_OTA_STUB_MACROS_H_ */

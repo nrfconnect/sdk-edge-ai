@@ -76,8 +76,8 @@ void run_regression_axon_tests(void)
 	 * runtime and wired into the app-compiled nrf_edgeai_t wrapper.
 	 */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_load_user_model_36025(
-		PARTITION_ID(model_regress_axon_storage),
-		(const uint8_t *)PARTITION_ADDRESS(model_regress_axon_storage));
+		(const uint8_t *)PARTITION_ADDRESS(model_regress_axon_storage),
+		PARTITION_SIZE(model_regress_axon_storage));
 
 	if (p_user_model == NULL) {
 		LOG_WRN("No valid regression model image in model_regress_axon_storage - "

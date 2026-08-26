@@ -72,7 +72,7 @@
  * model_ota_scale_select.h below turns them into the header's parameter block. --gc-sections then
  * drops everything the header does not reference, including the solution's own nrf_edgeai_t.
  */
-#include MODEL_OTA_STUB_STR(MODEL_OTA_AXON_EDGEAI_MODEL_SRC)
+#include STRINGIFY(MODEL_OTA_AXON_EDGEAI_MODEL_SRC)
 
 #include "model_ota_scale_select.h"
 

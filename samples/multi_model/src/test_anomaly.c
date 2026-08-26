@@ -326,8 +326,8 @@ void run_anomaly_tests(void)
 #if defined(CONFIG_MODEL_OTA_NEUTON)
 	/* Model-only OTA: load the payload from its flash partition (XIP) at runtime. */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_load_user_model_90360(
-		PARTITION_ID(model_anomaly_storage),
-		(const uint8_t *)PARTITION_ADDRESS(model_anomaly_storage));
+		(const uint8_t *)PARTITION_ADDRESS(model_anomaly_storage),
+		PARTITION_SIZE(model_anomaly_storage));
 
 	if (p_user_model == NULL) {
 		LOG_WRN("No valid anomaly model image in model_anomaly_storage - skipping (flash "

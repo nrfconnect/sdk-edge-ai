@@ -6,15 +6,16 @@
 
 menuconfig MODEL_OTA
 	bool "Model-only OTA update (linked partition images)"
-	depends on FLASH && FLASH_MAP && CRC
+	depends on FLASH && CRC && XIP
 	help
 	  Proof-of-concept library that loads and validates NN models from dedicated flash
 	  partitions at runtime, independently of the application image, and without relying on
 	  MCUboot for integrity checking or transport. Neuton and Axon models are built as
 	  self-contained, linked partition images (descriptor and data linked AT the partition
 	  base, with a header holding a DIRECT pointer to the model). Model pointers are used
-	  directly in the memory-mapped partition (XIP) - there is no RAM-copy loading mode.
-	  Enable CONFIG_FLASH, CONFIG_FLASH_MAP and CONFIG_CRC in the application's prj.conf.
+	  directly in zephyr,mapped-partition storage (XIP) - there is no RAM-copy loading mode
+	  and no flash_area API usage. Enable CONFIG_FLASH and CONFIG_CRC in the application's
+	  prj.conf.
 
 if MODEL_OTA
 

@@ -62,8 +62,8 @@ static int neuton_patch_neurons_buf(nrf_edgeai_model_neuton_params_t *params, ui
 	}
 }
 
-int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_edgeai_t *edgeai,
-			    void *neurons_buf, size_t neurons_buf_cap,
+int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size,
+			    nrf_edgeai_t *edgeai, void *neurons_buf, size_t neurons_buf_cap,
 			    const struct model_image_neuton_expect *expect)
 {
 	struct model_image_header hdr;
@@ -78,7 +78,7 @@ int model_image_load_neuton(uint8_t fa_id, const uint8_t *partition_addr, nrf_ed
 	uint32_t weights_num;
 	int rc;
 
-	rc = model_image_read_and_validate(fa_id, partition_addr, &hdr);
+	rc = model_image_read_and_validate(partition_addr, partition_size, &hdr);
 	if (rc != MODEL_IMAGE_OK) {
 		return rc;
 	}

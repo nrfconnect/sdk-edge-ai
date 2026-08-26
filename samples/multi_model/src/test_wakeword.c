@@ -36,8 +36,8 @@ void run_wakeword_tests(void)
 	 * runtime and wired into the app-compiled nrf_edgeai_t wrapper.
 	 */
 	nrf_edgeai_t *model = nrf_edgeai_load_user_model_36711(
-		PARTITION_ID(model_wakeword_storage),
-		(const uint8_t *)PARTITION_ADDRESS(model_wakeword_storage));
+		(const uint8_t *)PARTITION_ADDRESS(model_wakeword_storage),
+		PARTITION_SIZE(model_wakeword_storage));
 
 	if (model == NULL) {
 		LOG_WRN("No valid wakeword model image in model_wakeword_storage - skipping "

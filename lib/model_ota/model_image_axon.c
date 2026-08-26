@@ -75,7 +75,7 @@ static int model_image_verify_axon_binding(const struct model_image_header *hdr,
 	return MODEL_IMAGE_OK;
 }
 
-int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
+int model_image_load_axon(const uint8_t *partition_addr, size_t partition_size,
 			  const struct model_image_axon_expect *expect,
 			  const nrf_axon_nn_compiled_model_s **out_model)
 {
@@ -91,7 +91,7 @@ int model_image_load_axon(uint8_t fa_id, const uint8_t *partition_addr,
 
 	*out_model = NULL;
 
-	rc = model_image_read_and_validate(fa_id, partition_addr, &hdr);
+	rc = model_image_read_and_validate(partition_addr, partition_size, &hdr);
 	if (rc != MODEL_IMAGE_OK) {
 		return rc;
 	}

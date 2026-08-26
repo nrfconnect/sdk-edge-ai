@@ -66,8 +66,8 @@ void run_classification_axon_tests(void)
 	 * runtime and wired into the app-compiled nrf_edgeai_t wrapper.
 	 */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_load_user_model_36237(
-		PARTITION_ID(model_classif_axon_storage),
-		(const uint8_t *)PARTITION_ADDRESS(model_classif_axon_storage));
+		(const uint8_t *)PARTITION_ADDRESS(model_classif_axon_storage),
+		PARTITION_SIZE(model_classif_axon_storage));
 
 	if (p_user_model == NULL) {
 		LOG_WRN("No valid classification model image in model_classif_axon_storage - "

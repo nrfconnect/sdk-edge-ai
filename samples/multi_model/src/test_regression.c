@@ -215,8 +215,8 @@ void run_regression_tests(void)
 #if defined(CONFIG_MODEL_OTA_NEUTON)
 	/* Model-only OTA: load the payload from its flash partition (XIP) at runtime. */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_load_user_model_90508(
-		PARTITION_ID(model_regress_storage),
-		(const uint8_t *)PARTITION_ADDRESS(model_regress_storage));
+		(const uint8_t *)PARTITION_ADDRESS(model_regress_storage),
+		PARTITION_SIZE(model_regress_storage));
 
 	if (p_user_model == NULL) {
 		LOG_WRN("No valid regression model image in model_regress_storage - skipping (flash "

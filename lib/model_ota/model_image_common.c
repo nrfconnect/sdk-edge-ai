@@ -7,9 +7,9 @@
 #include "model_image_common.h"
 
 #include <stddef.h>
+#include <string.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/crc.h>
 #include <zephyr/sys/util.h>
 
@@ -44,46 +44,33 @@ static bool magic_is_valid(const struct model_image_header *hdr)
 	       hdr->magic[2] == MODEL_IMAGE_MAGIC2 && hdr->magic[3] == MODEL_IMAGE_MAGIC3;
 }
 
-int model_image_read_and_validate(uint8_t fa_id, const uint8_t *partition_addr,
+int model_image_read_and_validate(const uint8_t *partition_addr, size_t partition_size,
 				  struct model_image_header *hdr_out)
 {
-	const struct flash_area *fa;
 	struct model_image_header hdr;
-	int rc;
 
-	rc = flash_area_open(fa_id, &fa);
-	if (rc != 0) {
-		LOG_ERR("Cannot open model partition (err %d)", rc);
+	if (partition_addr == NULL) {
+		LOG_ERR("partition_addr is NULL");
 		return MODEL_IMAGE_ERR_NO_PARTITION;
 	}
 
-	rc = flash_area_read(fa, 0, &hdr, sizeof(hdr));
-	if (rc != 0) {
-		flash_area_close(fa);
-		LOG_ERR("Flash read of image header failed (err %d)", rc);
-		return MODEL_IMAGE_ERR_FLASH_READ;
-	}
+	memcpy(&hdr, partition_addr, sizeof(hdr));
 
 	if (!magic_is_valid(&hdr)) {
-		flash_area_close(fa);
 		LOG_WRN("No valid model image in partition (bad magic)");
 		return MODEL_IMAGE_ERR_BAD_MAGIC;
 	}
 
 	if (hdr.format_version != MODEL_IMAGE_FORMAT_VERSION) {
-		flash_area_close(fa);
 		LOG_ERR("Unsupported image format version %u", hdr.format_version);
 		return MODEL_IMAGE_ERR_BAD_FORMAT_VERSION;
 	}
 
-	if (hdr.image_size < sizeof(hdr) || hdr.image_size > fa->fa_size) {
-		flash_area_close(fa);
-		LOG_ERR("Image size %u B does not fit partition (%u B)", hdr.image_size,
-			(unsigned)fa->fa_size);
+	if (hdr.image_size < sizeof(hdr) || hdr.image_size > partition_size) {
+		LOG_ERR("Image size %u B does not fit partition (%zu B)", hdr.image_size,
+			partition_size);
 		return MODEL_IMAGE_ERR_TOO_LARGE;
 	}
-
-	flash_area_close(fa);
 
 	/* CRC32/IEEE over the whole memory-mapped image with the header's crc32 field treated as
 	 * 0 - matches how tools/model_ota/patch_image_crc.py computed the stored value. The header
