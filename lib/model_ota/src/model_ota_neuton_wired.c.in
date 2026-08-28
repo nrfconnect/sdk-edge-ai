@@ -28,13 +28,16 @@ static nrf_user_neuron_t model_neurons_cap_[MODEL_OTA_NEUTON_NEURONS_CAP];
 
 #include "model_ota_scale_select.h"
 
-#define MODEL_OTA_NEUTON_PIPELINE_HASH_                                           \
-	MODEL_OTA_NEUTON_PIPELINE_HASH(INPUT_FEATURE_DATA_TYPE, INPUT_WINDOW_SIZE, \
-				       INPUT_WINDOW_SHIFT, INPUT_UNIQ_FEATURES_NUM, \
-				       MODEL_USES_AS_INPUT_INPUT_FEATURES,        \
-				       MODEL_USES_AS_INPUT_DSP_FEATURES)
-
-#define MODEL_OTA_NEUTON_CONTRACT_HASH @NEUTON_CONTRACT_HASH@u
+/*
+ * The value the loader compares an image against, computed from the compiler's own sizeof() over
+ * the generated source this application was built with. The image stub derives it from the same
+ * macros over the same source, so the two agree by construction; a stale runtime header shows up
+ * as a mismatch here rather than as a silently accepted ABI break.
+ */
+#define MODEL_OTA_NEUTON_CONTRACT_HASH                                                             \
+	MODEL_OTA_CONTRACT_HASH_NEUTON(NRF_MODEL_PARTITION_ADDR,                                   \
+				       MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),              \
+				       MODEL_OTA_SOLUTION_CONTRACT_ARGS)
 
 MODEL_OTA_BUILD_ASSERT_MAPPED_PARTITION(@PARTITION_NODELABEL@);
 
@@ -48,20 +51,16 @@ nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(const uint8_t *partition_
 
 	const struct model_image_neuton_expect expect = {
 		.params_type = MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),
-		.outputs_cap = MODEL_OUTPUTS_NUM,
-		.inputs_num = INPUT_UNIQ_FEATURES_NUM,
 		.neurons_cap = MODEL_OTA_NEUTON_NEURONS_CAP,
 		.contract_hash = MODEL_OTA_NEUTON_CONTRACT_HASH,
 	};
-	const struct model_image_scale_expect scale_expect = MODEL_OTA_SCALE_EXPECT_INIT;
 
 	if (model_image_load_neuton(partition_addr, partition_size, &nrf_edgeai_, model_neurons_cap_,
 				    ARRAY_SIZE(model_neurons_cap_), &expect) != MODEL_IMAGE_OK) {
 		return NULL;
 	}
 
-	if (model_image_bind_edgeai_params(partition_addr, &nrf_edgeai_, &scale_expect) !=
-	    MODEL_IMAGE_OK) {
+	if (model_image_bind_edgeai_params(partition_addr, &nrf_edgeai_) != MODEL_IMAGE_OK) {
 		return NULL;
 	}
 

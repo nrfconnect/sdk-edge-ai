@@ -53,12 +53,11 @@ def pick_fields(slot: dict, names: tuple[str, ...]) -> dict:
     return {key: slot[key] for key in names if key in slot}
 
 
-def load_axon_slot_build(build_dir: Path, target: str) -> dict:
+def load_slot_build(build_dir: Path, target: str) -> dict:
+    """Per-slot metadata only known once the build ran, chiefly the compiler's contract hash."""
     path = build_dir / "model_ota" / target / "context_slot.json"
     if not path.is_file():
-        raise ValueError(
-            "missing build-time Axon slot metadata for %r (%s)" % (target, path)
-        )
+        raise ValueError("missing build-time slot metadata for %r (%s)" % (target, path))
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -98,13 +97,14 @@ def main(argv=None) -> int:
 
     for slot in manifest.get("slots", []):
         backend = slot.get("backend", "neuton")
+        merged = {**slot, **load_slot_build(args.build_dir, slot["target"])}
+        if "contract_hash" not in merged:
+            raise ValueError(
+                "%s slot %r missing contract_hash" % (backend, slot.get("target"))
+            )
         if backend == "neuton":
-            if "contract_hash" not in slot:
-                raise ValueError("Neuton slot %r missing contract_hash" % slot.get("target"))
-            entry = pick_fields(slot, SLOT_NEUTON)
+            entry = pick_fields(merged, SLOT_NEUTON)
         else:
-            extras = load_axon_slot_build(args.build_dir, slot["target"])
-            merged = {**slot, **extras}
             entry = pick_fields(merged, SLOT_AXON)
             if args.elf and args.elf.is_file() and elf_index is not None:
                 addresses = {}

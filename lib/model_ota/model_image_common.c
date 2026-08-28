@@ -15,7 +15,7 @@
 
 LOG_MODULE_REGISTER(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
 
-BUILD_ASSERT(sizeof(struct model_image_header) == 80,
+BUILD_ASSERT(sizeof(struct model_image_header) == 84,
 	     "model_image_header size must match host layout tools");
 BUILD_ASSERT(offsetof(struct model_image_header, edgeai_params) == 48,
 	     "edgeai_params offset must match host layout tools");
@@ -35,8 +35,10 @@ BUILD_ASSERT(sizeof(struct model_image_neuton_backend) == 4,
 	     "neuton backend size must match host layout tools");
 BUILD_ASSERT(sizeof(struct model_image_axon_backend) == 20,
 	     "axon backend size must match host layout tools");
-BUILD_ASSERT(sizeof(struct model_image_edgeai_params) == 32,
+BUILD_ASSERT(sizeof(struct model_image_edgeai_params) == 36,
 	     "edgeai params block size must match host layout tools");
+BUILD_ASSERT(offsetof(struct model_image_edgeai_params, p_extraction_mask) % sizeof(uint32_t) == 0,
+	     "p_extraction_mask must be word-aligned");
 
 static bool magic_is_valid(const struct model_image_header *hdr)
 {

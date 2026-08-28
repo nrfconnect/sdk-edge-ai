@@ -100,13 +100,9 @@ int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size
 		return rc;
 	}
 
-	/* Reject a model whose weight/neuron precision differs from what the app was built for: a
-	 * model-only update keeps the same solution, so it must match. The precision also fixes the
-	 * neuron-buffer element size, so a mismatch here would otherwise corrupt memory when
-	 * p_neurons is patched below.
-	 *
-	 * TODO: the solution's task is no longer carried by the image and so is no longer checked
-	 * here; fold it into the contract hash, which both backends already validate.
+	/* Deliberately redundant with the contract hash: the precision fixes the neuron-buffer
+	 * element size, so a mismatch here would corrupt memory when p_neurons is patched below,
+	 * and that is not a property to leave to a 32-bit non-cryptographic hash alone.
 	 */
 	if (hdr.params_type != expect->params_type) {
 		LOG_ERR("Image params_type %u != expected %u", hdr.params_type,
@@ -149,12 +145,6 @@ int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size
 		LOG_ERR("Model needs %u neurons, only %u provided", neurons_num,
 			(unsigned)neurons_buf_cap);
 		return MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL;
-	}
-
-	if (outputs_num > expect->outputs_cap) {
-		LOG_ERR("Model has %u outputs, app buffers hold %u", outputs_num,
-			expect->outputs_cap);
-		return MODEL_IMAGE_ERR_OUTPUTS_TOO_MANY;
 	}
 
 	/* Defence in depth: CRC proves the image is intact, but a well-formed image that was linked

@@ -6,8 +6,8 @@
 ## Summary
 
 A Neuton or Axon model is shipped as a self-contained, **linked partition image**. The model
-descriptor and data are linked at the model partition's flash base, with an 80-byte header (format
-version 10, see `include/model_ota/model_image.h`) holding a direct pointer to the descriptor,
+descriptor and data are linked at the model partition's flash base, with an 84-byte header (format
+version 12, see `include/model_ota/model_image.h`) holding a direct pointer to the descriptor,
 a firmware **contract hash** (offset 16), CRC-32/IEEE (offset 20), and the model's `nrf_edgeai_t`
 parameter block (offset 48): its feature scaling factors and decoded-output init. That block is
 shared by both backends; only a pure Axon model, having no `nrf_edgeai_t`, leaves it zeroed.
@@ -20,12 +20,27 @@ that cannot be expressed directly in the toolchain:
   host-written bytes in the image; the loader recomputes the CRC exactly the same way.
 - `validate_model_image_layout.py` - a post-link check that fails the build if the on-flash
   header disagrees with the link: image linked at the partition base, header first, correct
-  magic/format-version, image and partition sizes, model pointers, contract hash, and CRC.
-- `check_model_compat.py` - compares a model image against a released `model_ota_context.json`
-  (exit 0 compatible, 1 incompatible, 2 requires firmware update).
+  magic/format-version, image and partition sizes, model pointers, and CRC.
+- `check_model_compat.py` - compares a model image against a `model_ota_context.json` (exit 0
+  compatible, 1 incompatible, 2 requires firmware update). Also the build's gate on the contract
+  hash: the image carries the stub's value and the context the probe's, so requiring them to agree
+  is what keeps the released value equal to the one images carry. That verdict is fatal even under
+  `--report-only`, which only makes the capacity verdicts a report.
 - `export_model_ota_context.py` - invoked from CMake to emit `model_ota_context.json` per app
   build (partition map, caps, contract hashes, Axon symbol addresses).
-- `model_contract.py` - shared FNV-1a contract hash helpers for host tools.
+- `elf_const.py` - reads a compile-time constant back out of an object. The contract hash mixes
+  `sizeof` of the runtime structs, so only the compiler can fold it; the build compiles
+  `lib/model_ota/src/model_ota_contract_probe.c` per slot and this reads the finished word,
+  which is why no host script reimplements the hash.
+- `emit_contract_slot.py` / `emit_axon_context_slot.py` - turn a slot's probe (and, for Axon, its
+  generated config header) into the build-time half of its `model_ota_context.json` entry.
+- `model_contract.py` - the *string* hashes the preprocessor cannot do: the solution ID mixed into
+  the solution contract, and the Axon binding table's symbol names. Both are 32-bit `blake2s`
+  rather than the contract hash's FNV-1a chain, since C only consumes them as literals and never
+  recomputes one - and an avalanching hash is what keeps two long-shared-prefix symbol names from
+  colliding into the wrong binding row. Run as `model_contract.py solution-id-hash --
+  <SOLUTION_ID>`, it prints the first of those, which is how CMake obtains
+  `MODEL_OTA_SOLUTION_ID_HASH`.
 - `axon_elf.py` - inspects compiler-resolved Axon model metadata and resolves application
   symbols used by Axon partition images.
 
@@ -127,7 +142,8 @@ nrfutil device program --firmware gear_anomaly_model_partition.hex \
 ## References
 
 - Image format and loader: `include/model_ota/model_image.h`,
-  `include/model_ota/model_contract.h`,
+  `include/model_ota/model_contract.h` (the one definition of the contract hash),
+  `lib/model_ota/src/model_ota_contract_probe.c` (how the host gets its value),
   `lib/model_ota/model_image_neuton.c`, `lib/model_ota/model_image_axon.c`
 - Production flow doc: `doc/libraries/model_ota.rst`
 - Context export: `lib/model_ota/cmake/model_ota_context.cmake`

@@ -81,17 +81,29 @@ function(model_ota_neuton_wire)
   set(PARTITION_NODELABEL ${MO_PARTITION_NODELABEL})
   set(MAX_NEURONS ${MO_MAX_NEURONS})
   set(MODEL_SRC_BASENAME ${model_basename})
-  execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} -c
-            "import sys; from pathlib import Path; sys.path.insert(0, r'${EDGE_AI_MODULE_ROOT}/tools/model_ota'); from model_contract import neuton_contract_from_model_c; print(f'{neuton_contract_from_model_c(Path(r'${MO_MODEL_SRC}'), int(${MO_MAX_NEURONS}))}')"
-    OUTPUT_VARIABLE NEUTON_CONTRACT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
+
+  # model_ota_neuton_image() reads this back instead of taking the number again, so the cap
+  # published in model_ota_context.json is the buffer this translation unit actually allocates.
+  # A published cap larger than the real buffer makes check_model_compat.py call an image
+  # compatible that the loader then rejects with MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL.
+  set_property(GLOBAL PROPERTY model_ota_neuton_wired_cap_${MO_PARTITION_NODELABEL}
+               ${MO_MAX_NEURONS})
+
+  # The contract hash covers the flash base the image is linked at, so the application has to
+  # name the same partition the image was built for. The wired translation unit computes the hash
+  # itself from the same generated source, so nothing but the base has to be passed in.
+  dt_nodelabel(_partition_node NODELABEL ${MO_PARTITION_NODELABEL} REQUIRED)
+  dt_reg_addr(_partition_addr PATH ${_partition_node})
+
+  model_ota_solution_id_hash(${MO_SOLUTION_ID} _solution_id_hash)
+
   configure_file(${wired_tpl} ${wired_src} @ONLY)
 
   add_library(${MO_LIB_NAME} STATIC ${wired_src})
   target_link_libraries(${MO_LIB_NAME} PRIVATE zephyr_interface)
+  target_compile_definitions(${MO_LIB_NAME} PRIVATE
+                             NRF_MODEL_PARTITION_ADDR=${_partition_addr}
+                             MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u)
   add_dependencies(${MO_LIB_NAME} zephyr_generated_headers)
   target_include_directories(${MO_LIB_NAME} PRIVATE ${model_dir} ${MODEL_OTA_ROOT}/src)
   set_source_files_properties(${wired_src}

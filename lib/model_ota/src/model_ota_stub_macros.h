@@ -37,6 +37,12 @@
  *   generated nrf_edgeai_user_model.c;
  *   defines nrf_edgeai_load_user_model_<SOLUTION_ID>() (declared via model_ota_axon_edgeai.h).
  *
+ * Contract-hash probe (every flavour, see model_ota_contract_probe() in model_ota_common.cmake):
+ *   model_ota_contract_probe.c
+ *   MODEL_OTA_CONTRACT_PROBE_NEUTON / _AXON / _AXON_EDGEAI - flavour selector
+ *   MODEL_OTA_CONTRACT_PROBE_MODEL_SRC - basename of nrf_edgeai_user_model.c, for the two
+ *   solution flavours; NRF_MODEL_PARTITION_ADDR as above
+ *
  * Every stub that has a generated solution source in scope #includes model_ota_scale_select.h
  * *after* it, to derive which scaling factors the image carries (see that header).
  */

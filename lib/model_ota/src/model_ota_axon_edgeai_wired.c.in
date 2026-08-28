@@ -14,6 +14,7 @@
 
 #include "model_ota_stub_macros.h"
 
+#include <model_ota/model_contract.h>
 #include <model_ota/model_image.h>
 #include <model_ota/model_ota_axon_edgeai.h>
 #include <model_ota/axon/@AXON_TARGET@.h>
@@ -28,6 +29,16 @@ extern const uint32_t MODEL_OTA_AXON_@AXON_TOKEN@_KEEP_LABEL[];
 
 MODEL_OTA_BUILD_ASSERT_MAPPED_PARTITION(@PARTITION_NODELABEL@);
 
+/*
+ * Computed here rather than in the generated model_ota/axon/<target>.h, because only this
+ * translation unit has the solution source in scope. The generated header deliberately omits a
+ * contract hash for an Edge AI Lab solution, so there is no pure-Axon value to pick up by
+ * mistake.
+ */
+#define MODEL_OTA_AXON_EDGEAI_CONTRACT_HASH                                                        \
+	MODEL_OTA_CONTRACT_HASH_AXON_EDGEAI(MODEL_OTA_AXON_@AXON_TOKEN@_IMAGE_BASE,                \
+					    MODEL_OTA_SOLUTION_CONTRACT_ARGS)
+
 nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(const uint8_t *partition_addr,
 							 size_t partition_size)
 {
@@ -35,19 +46,17 @@ nrf_edgeai_t *nrf_edgeai_load_user_model_@SOLUTION_ID@(const uint8_t *partition_
 
 	const nrf_axon_nn_compiled_model_s *model;
 	const struct model_image_axon_expect expect = {
-		.contract_hash = MODEL_OTA_AXON_@AXON_TOKEN@_CONTRACT_HASH,
+		.contract_hash = MODEL_OTA_AXON_EDGEAI_CONTRACT_HASH,
 		.persistent_vars_cap = MODEL_OTA_AXON_@AXON_TOKEN@_PERSISTENT_VARS_CAP,
 		.packed_output_cap = MODEL_OTA_AXON_@AXON_TOKEN@_PACKED_OUTPUT_BYTES,
 		.binding_table = MODEL_OTA_AXON_@AXON_TOKEN@_KEEP_LABEL,
 	};
-	const struct model_image_scale_expect scale_expect = MODEL_OTA_SCALE_EXPECT_INIT;
 
 	if (model_image_load_axon(partition_addr, partition_size, &expect, &model) != MODEL_IMAGE_OK) {
 		return NULL;
 	}
 
-	if (model_image_bind_edgeai_params(partition_addr, &nrf_edgeai_, &scale_expect) !=
-	    MODEL_IMAGE_OK) {
+	if (model_image_bind_edgeai_params(partition_addr, &nrf_edgeai_) != MODEL_IMAGE_OK) {
 		return NULL;
 	}
 

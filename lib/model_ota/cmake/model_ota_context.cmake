@@ -66,7 +66,9 @@ function(model_ota_using_released_fw OUT_VAR)
 endfunction()
 
 function(model_ota_context_register_slot)
-  cmake_parse_arguments(S "" "TARGET;BACKEND;PARTITION_NODELABEL;NAME;CONTRACT_HASH;NEURONS_CAP;PERSISTENT_VARS_CAP;PACKED_OUTPUT_CAP" "" ${ARGN})
+  cmake_parse_arguments(S ""
+    "TARGET;BACKEND;PARTITION_NODELABEL;NAME;NEURONS_CAP;PERSISTENT_VARS_CAP;PACKED_OUTPUT_CAP"
+    "" ${ARGN})
   if(NOT S_TARGET OR NOT S_BACKEND OR NOT S_PARTITION_NODELABEL)
     message(FATAL_ERROR "model_ota_context_register_slot requires TARGET, BACKEND, PARTITION_NODELABEL")
   endif()
@@ -88,9 +90,6 @@ function(model_ota_context_register_slot)
     "\"partition_addr\": ${_addr_dec}"
     "\"partition_size\": ${_size_dec}"
   )
-  if(S_CONTRACT_HASH)
-    list(APPEND _fields "\"contract_hash\": ${S_CONTRACT_HASH}")
-  endif()
   if(S_NEURONS_CAP)
     list(APPEND _fields "\"neurons_cap\": ${S_NEURONS_CAP}")
   endif()
@@ -105,12 +104,15 @@ function(model_ota_context_register_slot)
   set_property(GLOBAL APPEND PROPERTY model_ota_context_slot_json "{${_slot_json}}")
 endfunction()
 
-function(model_ota_context_register_axon_slot_build)
+# Per-slot metadata only known once the build runs, merged into model_ota_context.json by
+# export_model_ota_context.py. Every backend has at least the contract hash there, since that value
+# is read out of a compiled probe object rather than computed at configure time.
+function(model_ota_context_register_slot_build)
   cmake_parse_arguments(S "" "SLOT_JSON" "" ${ARGN})
   if(NOT S_SLOT_JSON)
-    message(FATAL_ERROR "model_ota_context_register_axon_slot_build requires SLOT_JSON")
+    message(FATAL_ERROR "model_ota_context_register_slot_build requires SLOT_JSON")
   endif()
-  set_property(GLOBAL APPEND PROPERTY model_ota_context_axon_slot_json ${S_SLOT_JSON})
+  set_property(GLOBAL APPEND PROPERTY model_ota_context_slot_build_json ${S_SLOT_JSON})
 endfunction()
 
 function(model_ota_block_app_build)
@@ -144,7 +146,7 @@ function(model_ota_context_finalize)
     return()
   endif()
 
-  get_property(_axon_slot_files GLOBAL PROPERTY model_ota_context_axon_slot_json)
+  get_property(_slot_build_files GLOBAL PROPERTY model_ota_context_slot_build_json)
 
   set(_manifest ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context_manifest.json)
   set(_out ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context.json)
@@ -168,7 +170,7 @@ function(model_ota_context_finalize)
             --build-dir ${CMAKE_CURRENT_BINARY_DIR}
             --elf ${_zephyr_elf}
             --autoconf ${_autoconf}
-    DEPENDS ${MODEL_OTA_CONTEXT_EXPORT} ${_manifest} ${_zephyr_elf} ${_axon_slot_files}
+    DEPENDS ${MODEL_OTA_CONTEXT_EXPORT} ${_manifest} ${_zephyr_elf} ${_slot_build_files}
     COMMENT "Exporting model OTA firmware context"
     VERBATIM
   )

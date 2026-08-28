@@ -37,7 +37,10 @@
  * patch_image_crc.py.
  */
 
+#include <model_ota/model_contract.h>
 #include <model_ota/model_image.h>
+
+#include <zephyr/toolchain.h>
 
 #include "model_ota_scale_select.h"
 
@@ -52,9 +55,15 @@ extern char __model_image_end[];
 #define MODEL_IMAGE_VERSION_U32 0x00010000u
 #endif
 
-#ifndef MODEL_OTA_NEUTON_CONTRACT_HASH
-#error "MODEL_OTA_NEUTON_CONTRACT_HASH must be set by model_ota_neuton_image()"
-#endif
+/*
+ * Baked from the same macros the wired application expands over the same generated source, so the
+ * two sides of an update agree by construction. check_model_compat.py additionally requires this
+ * to equal the value the contract probe folded, which is what catches the probe (and therefore
+ * model_ota_context.json) drifting away from the image.
+ */
+#define MODEL_OTA_NEUTON_CONTRACT_HASH                                                             \
+	MODEL_OTA_CONTRACT_HASH_NEUTON(NRF_MODEL_PARTITION_ADDR, MODEL_IMAGE_PARAMS_TYPE_NUM,       \
+				       MODEL_OTA_SOLUTION_CONTRACT_ARGS)
 
 __attribute__((section(".rodata.model_image_name"), used))
 static const char model_image_name_[] = MODEL_IMAGE_NAME_STR;

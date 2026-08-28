@@ -17,6 +17,9 @@ Confirms, after linking:
   - the feature-scaling block is self-consistent and its pointers lie inside the image, and
   - the crc32 field is non-zero and matches a recomputed CRC (i.e. patch_image_crc.py ran).
 
+The header's contract_hash is reported but not checked here: it is only meaningful against a
+firmware context, which check_model_compat.py has and this tool does not.
+
 There is no model_offset arithmetic: the header stores an absolute flash pointer, which is
 compared directly against the model symbol's address (default `model_instance_` for Neuton;
 pass `--model-symbol` for Axon, normally read from the generated config header instead).
@@ -35,10 +38,10 @@ PARAMS_AXON = 3
 
 # struct model_image_header (see include/model_ota/model_image.h), little-endian, __packed:
 #   magic[4] version:H params_type:B reserved:B image_size:I model_version:I
-#   contract_hash:I crc32:I name:I backend[20] edgeai_params[32]
+#   contract_hash:I crc32:I name:I backend[20] edgeai_params[36]
 # backend Neuton (first 4 B): model:I, rest of the union slot zeroed
 # backend Axon (20 B): model:I packed_output:I persistent_required:I binding:I binding_count:I
-HEADER_FMT = "<4sHBBIIIII20s32s"
+HEADER_FMT = "<4sHBBIIIII20s36s"
 HEADER_SIZE = struct.calcsize(HEADER_FMT)
 BACKEND_NEUTON_FMT = "<I"
 BACKEND_AXON_FMT = "<IIIII"
@@ -46,10 +49,20 @@ BACKEND_AXON_FMT = "<IIIII"
 # struct model_image_edgeai_params (zeroed when the image carries no parameters):
 #   scale union (12 B): p_min:I p_max:I p_arguments:I (the third word is DSP-features only)
 #   decoded_output (16 B): nrf_edgeai_decoded_output_t, laid out per task
+#   p_extraction_mask:I (DSP solutions only; verified against the app's at load time)
 #   scale_num:H scale_elem_size:B reserved:B
-PARAMS_FMT = "<IIIIIIIHBB"
+PARAMS_FMT = "<IIIIIIIIHBB"
 PARAMS_SIZE = struct.calcsize(PARAMS_FMT)
 CRC32_OFFSET = 20
+
+
+def params_scale_layout(params_bytes):
+    """(scale_num, scale_elem_size) out of an edgeai_params block; both 0 when it carries none.
+
+    Lives here so that PARAMS_FMT and the field offsets into it stay in one place.
+    """
+    fields = struct.unpack(PARAMS_FMT, params_bytes)
+    return fields[8], fields[9]
 
 
 def name_in_image(name_ptr, image_bytes, start, end):
@@ -76,7 +89,9 @@ def validate_params(params_bytes, start, end, errors):
     fields = struct.unpack(PARAMS_FMT, params_bytes)
     p_min, p_max, p_args = fields[0:3]
     decode_words = fields[3:7]
-    num, elem_size, reserved = fields[7:10]
+    p_mask = fields[7]
+    num, elem_size = params_scale_layout(params_bytes)
+    reserved = fields[10]
 
     def check_ptr(label, ptr, span):
         if ptr < start or ptr + span > end:
@@ -102,8 +117,14 @@ def validate_params(params_bytes, start, end, errors):
             # Pipeline-implicit length, so only the base is bounded.
             check_ptr("scale p_arguments", p_args, 1)
 
+    if p_mask != 0:
+        # Length is INPUT_UNIQ_FEATURES_NUM, which the header does not record (it is folded into
+        # the contract hash), so only the base is bounded here; the loader bounds the full span
+        # against the count it gets from the application's pipeline.
+        check_ptr("p_extraction_mask", p_mask, 8)
+
     # Which words of the baked nrf_edgeai_decoded_output_t are pointers depends on the task, which
-    # the image no longer records (see MODEL_IMAGE_ERR_TASK_MISMATCH in model_image.h). Check the
+    # the image does not record as a field (it is folded into the contract hash). Check the
     # property that does not need it: whatever the union member, a decode word is either runtime
     # state left at its initial value or a pointer into this image, never a pointer out of it.
     # Word 0 is exempt because it holds a scalar for every task (score / outputs_num /

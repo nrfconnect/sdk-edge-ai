@@ -77,11 +77,22 @@
 #include "model_ota_scale_select.h"
 
 #define MODEL_OTA_AXON_EDGEAI_PARAMS_INIT MODEL_OTA_IMAGE_PARAMS_INIT
+
+/*
+ * A wrapped solution hashes its whole nrf_edgeai_t contract on top of the Axon one, which is what
+ * keeps a pure Axon image out of this slot: such an image carries no edgeai_params, while an
+ * OTA-wired application has discarded its own compiled-in copy.
+ */
+#define MODEL_OTA_AXON_CONTRACT_HASH                                                               \
+	MODEL_OTA_CONTRACT_HASH_AXON_EDGEAI(NRF_MODEL_PARTITION_ADDR,                              \
+					    MODEL_OTA_SOLUTION_CONTRACT_ARGS)
 #else
 #include MODEL_OTA_AXON_HEADER
 
 /* Pure Axon model: no nrf_edgeai_t to carry. */
 #define MODEL_OTA_AXON_EDGEAI_PARAMS_INIT {0}
+
+#define MODEL_OTA_AXON_CONTRACT_HASH MODEL_OTA_CONTRACT_HASH_AXON(NRF_MODEL_PARTITION_ADDR)
 #endif
 
 #if MODEL_OTA_AXON_KEEP_SYMBOL_COUNT > 0
@@ -103,10 +114,6 @@ extern char __model_image_end[];
 #ifndef MODEL_IMAGE_VERSION_U32
 #define MODEL_IMAGE_VERSION_U32 0x00010000u
 #endif
-
-#define MODEL_OTA_AXON_CONTRACT_HASH                                           \
-	MODEL_OTA_CONTRACT_HASH_AXON(MODEL_OTA_AXON_PERSISTENT_VARS_REQUIRED,  \
-				     MODEL_OTA_AXON_PACKED_OUTPUT_BYTES)
 
 __attribute__((section(".rodata.model_image_name"), used))
 static const char model_image_name_[] = MODEL_IMAGE_NAME_STR;

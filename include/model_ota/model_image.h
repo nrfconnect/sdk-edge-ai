@@ -57,7 +57,7 @@ extern "C" {
 #endif
 
 /** Image format version (independent of the model's own version). */
-#define MODEL_IMAGE_FORMAT_VERSION 10
+#define MODEL_IMAGE_FORMAT_VERSION 12
 
 /* Magic {'N','E','I','\0'} = Neuton Edge-ai Image (version is @ref format_version only). */
 #define MODEL_IMAGE_MAGIC0 'N'
@@ -156,6 +156,19 @@ struct model_image_edgeai_params {
 	/** Baked NN_DECODED_OUTPUT_INIT -> nrf_edgeai_t.decoded_output. */
 	nrf_edgeai_decoded_output_t decoded_output;
 
+	/**
+	 * FEATURES_EXTRACTION_MASK[INPUT_UNIQ_FEATURES_NUM], carried for verification rather than
+	 * to be applied: the loader compares it against nrf_edgeai_t.p_dsp->features.p_masks and
+	 * rejects a mismatch. NULL when the solution has no DSP pipeline.
+	 *
+	 * This is the artifact that decides which features are extracted, in which order, per
+	 * unique input feature, and therefore how the flat @ref scale arrays are indexed. It is
+	 * verified here rather than folded into @ref model_image_header.contract_hash because the
+	 * preprocessor cannot hash an array, and because comparing it names the input feature whose
+	 * mask diverged instead of reporting an opaque contract mismatch.
+	 */
+	const nrf_edgeai_features_mask_t *p_extraction_mask;
+
 	/** Elements in each scaling array; 0 when the image carries no parameters at all. */
 	uint16_t scale_num;
 	/**
@@ -167,21 +180,11 @@ struct model_image_edgeai_params {
 };
 
 /**
- * App-side expectations for @ref model_image_edgeai_params, derived from the generated model
- * source by the wired translation unit (see lib/model_ota/src/model_ota_scale_select.h) so both
- * sides of the update agree by construction.
- */
-struct model_image_scale_expect {
-	uint16_t num;
-	uint8_t elem_size;
-};
-
-/**
  * On-flash model partition image header, placed at offset 0 of the image (== the partition base
  * address) in section ".model_image.header".
  *
  * Layout: shared envelope and metadata first, then a backend union (20 bytes), then the shared
- * nrf_edgeai_t parameter block (32 bytes). @ref name points at a NUL-terminated string stored
+ * nrf_edgeai_t parameter block (36 bytes). @ref name points at a NUL-terminated string stored
  * elsewhere in the image (typically .rodata). All pointer fields are absolute flash addresses
  * baked by the linker (the image is linked at the partition base).
  *
@@ -226,16 +229,10 @@ enum model_image_result {
 	MODEL_IMAGE_ERR_BAD_CRC = -6,
 	MODEL_IMAGE_ERR_MODEL_PTR_OUT_OF_RANGE = -7,
 	MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL = -8,
-	/**
-	 * Unused: the image no longer carries a task byte, because the task is a property of the
-	 * solution rather than of the backend descriptor and both backends need it.
-	 * TODO: fold the task into @ref model_image_header.contract_hash and retire this code.
-	 */
-	MODEL_IMAGE_ERR_TASK_MISMATCH = -9,
+	/* -9 (task mismatch) retired: the task is part of @ref contract_hash for both backends. */
 	/** Image's weight/neuron precision does not match the app's compiled precision. */
 	MODEL_IMAGE_ERR_PARAMS_TYPE_MISMATCH = -10,
-	/** Image needs more outputs than the app's output buffers can hold. */
-	MODEL_IMAGE_ERR_OUTPUTS_TOO_MANY = -11,
+	/* -11 (too many outputs) retired: the output count is part of @ref contract_hash. */
 	/** A baked descriptor/scale pointer falls outside the image's flash extent. */
 	MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE = -12,
 	/** Image is not an Axon model (@ref params_type != @ref MODEL_IMAGE_PARAMS_AXON). */
@@ -246,26 +243,34 @@ enum model_image_result {
 	MODEL_IMAGE_ERR_BAD_PARAMS_TYPE = -15,
 	/** Image @ref contract_hash does not match the app's compiled contract. */
 	MODEL_IMAGE_ERR_CONTRACT_MISMATCH = -16,
-	/** Image input count does not match the app's compiled pipeline. */
-	MODEL_IMAGE_ERR_INPUTS_MISMATCH = -17,
+	/* -17 (input count mismatch) retired: the input count is part of @ref contract_hash. */
 	/** Axon binding address does not match the running firmware. */
 	MODEL_IMAGE_ERR_BINDING_MISMATCH = -18,
 	/** Image needs more persistent vars than the app allocated. */
 	MODEL_IMAGE_ERR_PERSISTENT_VARS_TOO_MANY = -19,
 	/** Image needs more packed-output space than the app allocated. */
 	MODEL_IMAGE_ERR_PACKED_OUTPUT_TOO_LARGE = -20,
-	/** Image's scaling layout does not match the app's compiled feature pipeline. */
-	MODEL_IMAGE_ERR_SCALE_MISMATCH = -21,
+	/* -21 (scale layout mismatch) retired: the layout is part of @ref contract_hash. */
+	/**
+	 * Image's FEATURES_EXTRACTION_MASK differs from the application's compiled-in one, so the
+	 * app's pipeline would index the image's flat feature arrays with the wrong per-slot
+	 * meaning. See @ref model_image_edgeai_params.p_extraction_mask.
+	 */
+	MODEL_IMAGE_ERR_DSP_MASK_MISMATCH = -22,
 };
 
 /**
- * App-side expectations validated by @ref model_image_load_neuton. These are the compile-time
- * invariants of the *solution* that a mere model update must not break.
+ * App-side expectations validated by @ref model_image_load_neuton.
+ *
+ * Only what the contract hash cannot express: the neuron scratch *capacity* (an inequality, so
+ * that an oversized model reports "needs new firmware" rather than "incompatible"), and the
+ * weight precision. Precision is deliberately redundant with the hash - it selects the
+ * nrf_edgeai_model_neuton_params_* union member and therefore the element size of the caller's
+ * neuron buffer, so it is worth re-checking directly rather than trusting a 32-bit hash with a
+ * memory-safety property.
  */
 struct model_image_neuton_expect {
 	uint8_t params_type;  /**< expected enum model_image_params_type */
-	uint16_t outputs_cap; /**< capacity of the app's output buffers, in elements */
-	uint16_t inputs_num;  /**< INPUT_UNIQ_FEATURES_NUM of the compiled solution */
 	uint16_t neurons_cap; /**< MODEL_OTA_NEUTON_NEURONS_CAP scratch buffer capacity */
 	uint32_t contract_hash; /**< expected @ref model_image_header.contract_hash */
 };
@@ -319,18 +324,21 @@ int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size
  * solution, so it is read off @p edgeai (a context with a DSP pipeline scales its extracted
  * features, one without scales its raw input features).
  *
+ * For a solution with a DSP pipeline this also verifies the image's
+ * @ref model_image_edgeai_params.p_extraction_mask against the application's compiled-in
+ * FEATURES_EXTRACTION_MASK - the one part of the DSP contract that cannot be hashed - and applies
+ * nothing if they disagree.
+ *
  * The block sits outside the backend union, so this works for either backend: call it after a
  * successful @ref model_image_load_neuton or @ref model_image_load_axon on the same partition.
- * The image is taken to be already validated by that call, so only the app/image scaling layout
- * is cross-checked here.
+ * The image is taken to be already validated by that call: the scaling layout the block uses is
+ * covered by @ref model_image_header.contract_hash, and its pointers by the range checks there.
  *
  * @param[in]  partition_addr Memory-mapped base address of the validated partition.
- * @param[out] edgeai         Runtime context to fill.
- * @param[in]  expect         App-side scaling layout expectation (required).
- * @retval MODEL_IMAGE_OK (0) on success, @ref MODEL_IMAGE_ERR_SCALE_MISMATCH otherwise.
+ * @param[out] edgeai         Runtime context to fill; untouched on failure.
+ * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
-int model_image_bind_edgeai_params(const uint8_t *partition_addr, nrf_edgeai_t *edgeai,
-				   const struct model_image_scale_expect *expect);
+int model_image_bind_edgeai_params(const uint8_t *partition_addr, nrf_edgeai_t *edgeai);
 
 /**
  * @brief Validate a linked Axon model partition image and return its compiled model pointer.

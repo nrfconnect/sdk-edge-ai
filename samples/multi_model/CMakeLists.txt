@@ -93,14 +93,14 @@ if(CONFIG_MODEL_OTA_NEUTON)
                         PARTITION_NODELABEL model_regress_storage MAX_NEURONS 2)
 
   include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_neuton_image.cmake)
-  model_ota_neuton_image(TARGET gear_anomaly NAME gear_anomaly VERSION 1.0.0
-                         PARTITION_NODELABEL model_anomaly_storage NEURONS_CAP 20
+  model_ota_neuton_image(TARGET gear_anomaly SOLUTION_ID 90360 NAME gear_anomaly VERSION 1.0.0
+                         PARTITION_NODELABEL model_anomaly_storage
                          MODEL_SRC ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c)
-  model_ota_neuton_image(TARGET gesture_class NAME gesture_class VERSION 1.0.0
-                         PARTITION_NODELABEL model_classif_storage NEURONS_CAP 80
+  model_ota_neuton_image(TARGET gesture_class SOLUTION_ID 90449 NAME gesture_class VERSION 1.0.0
+                         PARTITION_NODELABEL model_classif_storage
                          MODEL_SRC ${CLASSIF_MODEL_DIR}/nrf_edgeai_user_model.c)
-  model_ota_neuton_image(TARGET temp_regress NAME temp_regress VERSION 1.0.0
-                         PARTITION_NODELABEL model_regress_storage NEURONS_CAP 2
+  model_ota_neuton_image(TARGET temp_regress SOLUTION_ID 90508 NAME temp_regress VERSION 1.0.0
+                         PARTITION_NODELABEL model_regress_storage
                          MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c)
 endif()
 

@@ -15,11 +15,11 @@ from pathlib import Path
 
 import check_model_compat as compat
 import validate_model_image_layout as layout
-from model_contract import (
-    MODEL_IMAGE_FORMAT_VERSION,
-    contract_hash_neuton,
-    neuton_pipeline_hash,
-)
+from model_contract import MODEL_IMAGE_FORMAT_VERSION
+
+# Any value works: the checker compares the image header against the context, and neither side
+# recomputes the contract hash any more (it is the compiler's, read out of the slot's probe).
+CONTRACT_HASH = 0x5F3A21C4
 
 
 class CompatCheckerTests(unittest.TestCase):
@@ -54,16 +54,7 @@ class CompatCheckerTests(unittest.TestCase):
         return path
 
     def test_compatible_neuton(self) -> None:
-        pipeline = neuton_pipeline_hash(0, 128, 128, 2, 0, 1)
-        fw_hash = contract_hash_neuton(
-            task=3,
-            params_type=1,
-            outputs_cap=10,
-            inputs_num=2,
-            neurons_cap=20,
-            solution_id="90360",
-            pipeline_hash=pipeline,
-        )
+        fw_hash = CONTRACT_HASH
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             image = self._neuton_image(root, fw_hash)
@@ -120,9 +111,35 @@ class CompatCheckerTests(unittest.TestCase):
             }
             ctx = root / "model_ota_context.json"
             ctx.write_text(json.dumps(context), encoding="utf-8")
+            argv = ["--context", str(ctx), "--image", str(image), "--slot", "gear_anomaly"]
+            self.assertEqual(compat.main(argv), compat.EXIT_INCOMPATIBLE)
+            # --report-only makes the capacity verdicts a report; the hash is still a build gate.
+            self.assertEqual(compat.main(argv + ["--report-only"]), compat.EXIT_INCOMPATIBLE)
+
+    def test_report_only_allows_cap_overrun(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            image = self._neuton_image(root, 1, neurons_num=25)
+            context = {
+                "format_version": MODEL_IMAGE_FORMAT_VERSION,
+                "slots": [
+                    {
+                        "target": "gear_anomaly",
+                        "backend": "neuton",
+                        "partition_addr": 0x102000,
+                        "contract_hash": 1,
+                        "neurons_cap": 20,
+                    }
+                ],
+            }
+            ctx = root / "model_ota_context.json"
+            ctx.write_text(json.dumps(context), encoding="utf-8")
             self.assertEqual(
-                compat.main(["--context", str(ctx), "--image", str(image), "--slot", "gear_anomaly"]),
-                compat.EXIT_INCOMPATIBLE,
+                compat.main(
+                    ["--context", str(ctx), "--image", str(image), "--slot", "gear_anomaly",
+                     "--report-only"]
+                ),
+                compat.EXIT_OK,
             )
 
 

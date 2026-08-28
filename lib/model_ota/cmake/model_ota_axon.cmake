@@ -10,7 +10,8 @@
 #                      [NAME <str>] [VERSION <x.y.z>]
 #                      [PERSISTENT_VARS_CAP <n>] [MODEL_SYM <symbol>]
 #                      [ALLOCATE_PACKED_OUTPUT]
-#                      [EDGEAI_MODEL_SRC <abs-path-to-nrf_edgeai_user_model.c>])
+#                      [EDGEAI_MODEL_SRC <abs-path-to-nrf_edgeai_user_model.c>]
+#                      [SOLUTION_ID <id>])
 #
 # ALLOCATE_PACKED_OUTPUT allocates app-owned RAM for the model's optional
 # packed-output buffer and wires it into the linked partition image (the model's
@@ -21,7 +22,8 @@
 # model_ota_axon_edgeai_wire(), never directly): the generated solution source is compiled into
 # the partition image so the image also carries the solution's nrf_edgeai_t parameters (feature
 # scaling and decoded-output init). Without it the image is a pure Axon model and its parameter
-# block stays zeroed.
+# block stays zeroed. SOLUTION_ID goes with it and is required there: it feeds the solution's
+# contract hash on both sides of an update.
 
 include_guard(GLOBAL)
 
@@ -44,16 +46,8 @@ set(MODEL_OTA_AXON_CONTEXT_SLOT_TOOL
     ${EDGE_AI_MODULE_ROOT}/tools/model_ota/emit_axon_context_slot.py)
 set(MODEL_OTA_IMAGE_DEFS ${EDGE_AI_MODULE_ROOT}/include/model_ota/model_image.h)
 
-function(model_ota_axon_zephyr_c_compile_flags OUT_VAR)
-  zephyr_get_include_directories_for_lang(C _inc)
-  zephyr_get_system_include_directories_for_lang(C _sys)
-  zephyr_get_compile_definitions_for_lang(C _def)
-  zephyr_get_compile_options_for_lang(C _opt)
-  set(${OUT_VAR} ${_opt} ${_inc} ${_sys} ${_def} PARENT_SCOPE)
-endfunction()
-
 function(model_ota_axon_add_probe OUT_OBJ WORK_DIR HEADER HEADER_NAME HEADER_DIR)
-  model_ota_axon_zephyr_c_compile_flags(_zephyr_cflags)
+  model_ota_zephyr_c_compile_flags(_zephyr_cflags)
 
   set(_probe_o ${WORK_DIR}/axon_probe.o)
   set(_probe_d ${WORK_DIR}/axon_probe.d)
@@ -83,12 +77,15 @@ endfunction()
 
 function(model_ota_axon_model)
   cmake_parse_arguments(MI "ALLOCATE_PACKED_OUTPUT"
-    "TARGET;HEADER;PARTITION_NODELABEL;NAME;VERSION;PERSISTENT_VARS_CAP;MODEL_SYM;EDGEAI_MODEL_SRC"
+    "TARGET;HEADER;PARTITION_NODELABEL;NAME;VERSION;PERSISTENT_VARS_CAP;MODEL_SYM;EDGEAI_MODEL_SRC;SOLUTION_ID"
     "" ${ARGN})
 
   if(NOT MI_TARGET OR NOT MI_HEADER OR NOT MI_PARTITION_NODELABEL)
     message(FATAL_ERROR
             "model_ota_axon_model requires TARGET, HEADER and PARTITION_NODELABEL")
+  endif()
+  if(MI_EDGEAI_MODEL_SRC AND NOT MI_SOLUTION_ID)
+    message(FATAL_ERROR "model_ota_axon_model requires SOLUTION_ID alongside EDGEAI_MODEL_SRC")
   endif()
   if(NOT EXISTS ${MI_HEADER})
     message(FATAL_ERROR "model_ota_axon_model: HEADER not found: ${MI_HEADER}")
@@ -126,7 +123,13 @@ function(model_ota_axon_model)
     --model-id ${MI_TARGET}
     --private-header ${_private_h}
     --public-header ${_public_h}
+    --partition-addr ${_partition_addr}
   )
+  if(MI_EDGEAI_MODEL_SRC)
+    # An Edge AI Lab solution's contract also covers its nrf_edgeai_t pipeline, which only the
+    # wired translation unit can see; the generated header must not offer a pure-Axon hash there.
+    list(APPEND _inspect_cmd --edgeai)
+  endif()
   if(MI_PERSISTENT_VARS_CAP)
     list(APPEND _inspect_cmd --persistent-vars-cap ${MI_PERSISTENT_VARS_CAP})
   endif()
@@ -148,16 +151,35 @@ function(model_ota_axon_model)
   set(_meta_target ${MI_TARGET}_axon_metadata)
   add_custom_target(${_meta_target} DEPENDS ${_private_h} ${_public_h})
 
+  # The contract hash is the compiler's, read back out of this object rather than recomputed on
+  # the host. A wrapped solution hashes its nrf_edgeai_t contract on top of the Axon one, so the
+  # probe needs the generated source (and the solution ID) in scope there.
+  if(MI_EDGEAI_MODEL_SRC)
+    model_ota_solution_id_hash(${MI_SOLUTION_ID} _solution_id_hash)
+    model_ota_contract_probe(
+      OUT_OBJ _contract_probe_o
+      WORK_DIR ${_work_dir}
+      FLAVOR axon_edgeai
+      IMAGE_BASE ${_partition_addr}
+      MODEL_SRC ${MI_EDGEAI_MODEL_SRC}
+      SOLUTION_ID_HASH ${_solution_id_hash})
+  else()
+    model_ota_contract_probe(
+      OUT_OBJ _contract_probe_o
+      WORK_DIR ${_work_dir}
+      FLAVOR axon
+      IMAGE_BASE ${_partition_addr})
+  endif()
+
   set(_context_slot ${_work_dir}/context_slot.json)
   add_custom_command(
     OUTPUT ${_context_slot}
     COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_CONTEXT_SLOT_TOOL}
             --config ${_private_h}
-            --probe ${_probe_o}
+            --contract-probe ${_contract_probe_o}
             --out ${_context_slot}
-            --interlayer-size ${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE}
-            --psum-size ${CONFIG_NRF_AXON_PSUM_BUFFER_SIZE}
-    DEPENDS ${_private_h} ${_probe_o} ${MODEL_OTA_AXON_CONTEXT_SLOT_TOOL}
+    DEPENDS ${_private_h} ${_contract_probe_o} ${MODEL_OTA_AXON_CONTEXT_SLOT_TOOL}
+    COMMAND_EXPAND_LISTS
     COMMENT "Emitting Axon OTA context slot metadata (${MI_TARGET})"
     VERBATIM
   )
@@ -172,7 +194,7 @@ function(model_ota_axon_model)
       BACKEND axon
       PARTITION_NODELABEL ${MI_PARTITION_NODELABEL}
       NAME ${MI_NAME})
-    model_ota_context_register_axon_slot_build(SLOT_JSON ${_context_slot})
+    model_ota_context_register_slot_build(SLOT_JSON ${_context_slot})
   endif()
 
   if(NOT _using_released_fw)
@@ -215,7 +237,8 @@ function(model_ota_axon_model)
     get_filename_component(_edgeai_model_basename ${MI_EDGEAI_MODEL_SRC} NAME)
     target_include_directories(${_image_obj} PRIVATE ${_edgeai_model_dir})
     target_compile_definitions(${_image_obj} PRIVATE
-      MODEL_OTA_AXON_EDGEAI_MODEL_SRC=${_edgeai_model_basename})
+      MODEL_OTA_AXON_EDGEAI_MODEL_SRC=${_edgeai_model_basename}
+      MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u)
     list(APPEND _image_deps ${MI_EDGEAI_MODEL_SRC})
   endif()
   set_source_files_properties(
@@ -283,6 +306,8 @@ function(model_ota_axon_model)
             --params-type 3 --config-header ${_private_h}
     COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex
             --change-addresses=${_partition_addr} ${_image_bin} ${_image_hex}
+    # The caps are a report, but a contract hash mismatch fails the build even under
+    # --report-only.
     COMMAND ${PYTHON_EXECUTABLE} ${_compat_tool}
             --context ${_compat_context} --image ${_image_bin} --slot ${MI_TARGET}
             --elf ${_symbol_elf} --report-only

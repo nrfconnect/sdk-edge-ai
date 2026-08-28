@@ -67,6 +67,8 @@ class InspectOutputTests(unittest.TestCase):
                         str(public),
                         "--persistent-vars-cap",
                         "8",
+                        "--partition-addr",
+                        "0x102000",
                     ]
                 )
             self.assertEqual(result, 0)
@@ -97,8 +99,44 @@ class InspectOutputTests(unittest.TestCase):
                 "#define MODEL_OTA_AXON_DOOR_BELL_V2_PACKED_OUTPUT_BYTES 20",
                 public.read_text(),
             )
+            self.assertIn(
+                "#define MODEL_OTA_AXON_DOOR_BELL_V2_IMAGE_BASE 0x00102000u", public.read_text()
+            )
             self.assertIn("#define MODEL_OTA_AXON_DOOR_BELL_V2_CONTRACT_HASH", public.read_text())
             self.assertIn("#define MODEL_OTA_AXON_DOOR_BELL_V2_KEEP_LABEL", public.read_text())
+
+    def test_inspect_edgeai_omits_the_pure_axon_contract_hash(self) -> None:
+        """A wrapped solution's hash covers its pipeline, so only the wired unit can compute it."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            probe = root / "probe.o"
+            private = root / "private.h"
+            public = root / "public.h"
+            probe.write_bytes(b"not read due to mock")
+            index = SymbolIndex.build(basic_probe_symbols())
+            with patch("axon_elf.load_symbol_index", return_value=index):
+                result = axon_elf.main(
+                    [
+                        "inspect",
+                        "--probe",
+                        str(probe),
+                        "--header-name",
+                        "nrf_axon_model_demo.h",
+                        "--model-id",
+                        "demo",
+                        "--private-header",
+                        str(private),
+                        "--public-header",
+                        str(public),
+                        "--partition-addr",
+                        "0x102000",
+                        "--edgeai",
+                    ]
+                )
+            self.assertEqual(result, 0)
+            public_text = public.read_text()
+            self.assertIn("#define MODEL_OTA_AXON_DEMO_IMAGE_BASE 0x00102000u", public_text)
+            self.assertNotIn("#define MODEL_OTA_AXON_DEMO_CONTRACT_HASH", public_text)
 
     def test_inspect_allocate_packed_output_wires_app_storage(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -124,6 +162,8 @@ class InspectOutputTests(unittest.TestCase):
                         str(public),
                         "--persistent-vars-cap",
                         "8",
+                        "--partition-addr",
+                        "0x102000",
                         "--allocate-packed-output",
                     ]
                 )

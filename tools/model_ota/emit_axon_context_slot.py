@@ -4,7 +4,14 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-"""Emit build-time Axon slot metadata for model_ota_context.json export."""
+"""Emit build-time Axon slot metadata for model_ota_context.json export.
+
+The contract hash is the compiler's own value, read back out of the slot's contract probe (see
+lib/model_ota/src/model_ota_contract_probe.c); the flavour of the hash - pure Axon or a wrapped
+Edge AI Lab solution - is a property of how that probe was compiled, so nothing here has to know
+which one it is. The caps and the binding table come from the generated private configuration
+header.
+"""
 from __future__ import annotations
 
 import argparse
@@ -13,8 +20,8 @@ import re
 import sys
 from pathlib import Path
 
-from axon_elf import compiled_model_size_from_probe
-from model_contract import axon_contract_from_config, config_define
+from elf_const import contract_hash_from_probe
+from model_contract import config_define
 
 OP_EXTENSION_PREFIX = "nrf_axon_nn_op_extension_"
 
@@ -31,25 +38,20 @@ def axon_binding_symbols(config_header: Path) -> list[str]:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
-    parser.add_argument("--probe", type=Path, required=True)
+    parser.add_argument("--contract-probe", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--interlayer-size", type=int, default=0)
-    parser.add_argument("--psum-size", type=int, default=0)
     args = parser.parse_args(argv)
 
     if not args.config.is_file():
         raise SystemExit(f"config header not found: {args.config}")
-    if not args.probe.is_file():
-        raise SystemExit(f"probe object not found: {args.probe}")
 
-    compiled_size = compiled_model_size_from_probe(args.probe)
+    try:
+        contract_hash = contract_hash_from_probe(args.contract_probe)
+    except (ImportError, OSError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
+
     slot = {
-        "contract_hash": axon_contract_from_config(
-            args.config,
-            compiled_model_size=compiled_size,
-            interlayer_size=args.interlayer_size,
-            psum_size=args.psum_size,
-        ),
+        "contract_hash": contract_hash,
         "persistent_vars_cap": config_define(args.config, "MODEL_OTA_AXON_PERSISTENT_VARS_CAP")
         or 0,
         "packed_output_cap": config_define(args.config, "MODEL_OTA_AXON_PACKED_OUTPUT_BYTES") or 0,

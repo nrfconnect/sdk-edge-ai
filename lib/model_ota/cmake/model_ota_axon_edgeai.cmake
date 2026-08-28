@@ -74,7 +74,8 @@ function(model_ota_axon_edgeai_wire)
     TARGET ${_axon_target}
     HEADER ${MO_HEADER}
     PARTITION_NODELABEL ${MO_PARTITION_NODELABEL}
-    EDGEAI_MODEL_SRC ${MO_MODEL_SRC})
+    EDGEAI_MODEL_SRC ${MO_MODEL_SRC}
+    SOLUTION_ID ${MO_SOLUTION_ID})
   if(MO_NAME)
     list(APPEND _axon_args NAME ${MO_NAME})
   endif()
@@ -112,8 +113,12 @@ function(model_ota_axon_edgeai_wire)
   set(MODEL_SRC_BASENAME ${model_basename})
   configure_file(${wired_tpl} ${wired_src} @ONLY)
 
+  model_ota_solution_id_hash(${MO_SOLUTION_ID} _solution_id_hash)
+
   add_library(${_wired_lib} STATIC ${wired_src})
   target_link_libraries(${_wired_lib} PRIVATE zephyr_interface)
+  target_compile_definitions(${_wired_lib} PRIVATE
+                             MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u)
   add_dependencies(${_wired_lib} zephyr_generated_headers ${_axon_target}_axon_metadata)
   target_include_directories(${_wired_lib} PRIVATE
                              ${model_dir}

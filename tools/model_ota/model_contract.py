@@ -2,196 +2,90 @@
 # Copyright (c) 2026 Nordic Semiconductor ASA
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 
-"""FNV-1a contract hashing mirroring include/model_ota/model_contract.h."""
+"""The string hashes the host tools need alongside include/model_ota/model_contract.h.
+
+The contract hash itself is *not* computed here. It folds sizeof() of the runtime structs, which
+neither the preprocessor nor a host reimplementation can evaluate, so the build reads the
+compiler's own value out of a probe object instead (elf_const.py,
+lib/model_ota/src/model_ota_contract_probe.c). What is left are the two things the preprocessor
+genuinely cannot do, both of which hash a *string*:
+
+  - solution_id_hash(), passed to the stubs as MODEL_OTA_SOLUTION_ID_HASH and mixed into the
+    solution contract there,
+  - symbol_name_hash(), the Axon binding table's key.
+
+Run as a script, this prints solution_id_hash() for one solution ID, which is how
+model_ota_solution_id_hash() in lib/model_ota/cmake/model_ota_common.cmake obtains the value.
+"""
 
 from __future__ import annotations
 
+import argparse
+import hashlib
 import re
+import sys
 from pathlib import Path
 
-MODEL_IMAGE_FORMAT_VERSION = 10
-MODEL_OTA_CONTRACT_BACKEND_NEUTON = 0
-MODEL_OTA_CONTRACT_BACKEND_AXON = 1
-
-FNV1A_INIT = 2166136261
-FNV1A_MUL = 16777619
-
-# Struct sizes on target (arm-zephyr-eabi, 32-bit pointers) — must match sizeof() in
-# include/model_ota/model_contract.h on the firmware build.
-SIZEOF_NEUTON_MODEL = 40  # nrf_edgeai_model_neuton_t (meta + params union)
-SIZEOF_NEUTON_META = 28     # nrf_nn_neuton_model_meta_t
-SIZEOF_DECODED_OUTPUT = 16  # nrf_edgeai_decoded_output_t (union of task outputs)
-NEURON_ELEM = {0: 4, 1: 2, 2: 1}
-
-INPUT_FEATURE_DATA_TYPE_MAP = {
-    "NRF_EDGEAI_INPUT_I8": 1,
-    "NRF_EDGEAI_INPUT_I16": 2,
-    "NRF_EDGEAI_INPUT_F32": 4,
-}
+MODEL_IMAGE_FORMAT_VERSION = 12
 
 
+def _hash32(text: str) -> int:
+    """A 32-bit blake2s over an ASCII string.
 
-def fnv1a_u32(state: int, value: int) -> int:
-    return ((state ^ (value & 0xFFFFFFFF)) * FNV1A_MUL) & 0xFFFFFFFF
-
-
-def fnv1a_str(state: int, text: str) -> int:
-    for byte in text.encode("ascii"):
-        state = fnv1a_u32(state, byte)
-    return state
-
-
-def neuton_pipeline_hash(
-    input_feature_type: int,
-    window_size: int,
-    window_shift: int,
-    uniq_features: int,
-    uses_input: int,
-    uses_dsp: int,
-) -> int:
-    state = FNV1A_INIT
-    state = fnv1a_u32(state, input_feature_type)
-    state = fnv1a_u32(state, window_size)
-    state = fnv1a_u32(state, window_shift)
-    state = fnv1a_u32(state, uniq_features)
-    state = fnv1a_u32(state, uses_input)
-    return fnv1a_u32(state, uses_dsp)
-
-
-def contract_hash_neuton(
-    *,
-    task: int,
-    params_type: int,
-    outputs_cap: int,
-    inputs_num: int,
-    neurons_cap: int,
-    solution_id: str,
-    pipeline_hash: int,
-) -> int:
-    state = FNV1A_INIT
-    state = fnv1a_u32(state, MODEL_IMAGE_FORMAT_VERSION)
-    state = fnv1a_u32(state, MODEL_OTA_CONTRACT_BACKEND_NEUTON)
-    state = fnv1a_u32(state, task)
-    state = fnv1a_u32(state, params_type)
-    state = fnv1a_u32(state, SIZEOF_NEUTON_MODEL)
-    state = fnv1a_u32(state, SIZEOF_NEUTON_META)
-    state = fnv1a_u32(state, SIZEOF_DECODED_OUTPUT)
-    state = fnv1a_u32(state, NEURON_ELEM[params_type])
-    state = fnv1a_u32(state, outputs_cap)
-    state = fnv1a_u32(state, inputs_num)
-    state = fnv1a_u32(state, neurons_cap)
-    state = fnv1a_u32(state, pipeline_hash)
-    return fnv1a_str(state, solution_id)
-
-
-def contract_hash_axon(
-    *,
-    compiled_model_size: int,
-    interlayer_size: int,
-    psum_size: int,
-    persistent_required: int,
-    packed_output_bytes: int,
-) -> int:
-    """Mirror MODEL_OTA_CONTRACT_HASH_AXON.
-
-    TODO: an Axon-backed Edge AI Lab solution now carries nrf_edgeai_t parameters too, so this
-    should also cover the solution's task and id the way contract_hash_neuton() does - the image
-    stopped carrying a task byte for the loader to check.
+    digest_size is a blake2s parameter rather than a truncation of a wider digest, so these are
+    four bytes the function was asked for, not four bytes picked out of thirty-two.
     """
-    state = FNV1A_INIT
-    state = fnv1a_u32(state, MODEL_IMAGE_FORMAT_VERSION)
-    state = fnv1a_u32(state, MODEL_OTA_CONTRACT_BACKEND_AXON)
-    state = fnv1a_u32(state, compiled_model_size)
-    state = fnv1a_u32(state, interlayer_size)
-    state = fnv1a_u32(state, psum_size)
-    state = fnv1a_u32(state, persistent_required)
-    return fnv1a_u32(state, packed_output_bytes)
-
-
-def parse_define_int(
-    source: str,
-    name: str,
-    default: int | None = None,
-    *,
-    token_map: dict[str, int] | None = None,
-) -> int:
-    match = re.search(rf"^\s*#define\s+{re.escape(name)}\s+(\d+)\s*$", source, re.MULTILINE)
-    if match is not None:
-        return int(match.group(1))
-    match = re.search(rf"^\s*#define\s+{re.escape(name)}\s+(\S+)\s*$", source, re.MULTILINE)
-    if match is not None and token_map is not None:
-        token = match.group(1)
-        if token in token_map:
-            return token_map[token]
-    if default is not None:
-        return default
-    raise ValueError(f"{name} not found in model source")
-
-
-def parse_define_token(source: str, name: str) -> str:
-    match = re.search(rf'^\s*#define\s+{re.escape(name)}\s+"([^"]+)"\s*$', source, re.MULTILINE)
-    if match is None:
-        match = re.search(rf"^\s*#define\s+{re.escape(name)}\s+(\S+)\s*$", source, re.MULTILINE)
-    if match is None:
-        raise ValueError(f"{name} not found in model source")
-    return match.group(1).strip('"')
-
-
-def params_type_from_model(source: str) -> int:
-    token = parse_define_token(source, "MODEL_PARAMS_TYPE")
-    mapping = {"f32": 0, "q16": 1, "q8": 2}
-    if token not in mapping:
-        raise ValueError(f"unsupported MODEL_PARAMS_TYPE {token!r}")
-    return mapping[token]
-
-
-def neuton_contract_from_model_c(path: Path, neurons_cap: int) -> int:
-    source = path.read_text(encoding="utf-8")
-    pipeline = neuton_pipeline_hash(
-        parse_define_int(source, "INPUT_FEATURE_DATA_TYPE", token_map=INPUT_FEATURE_DATA_TYPE_MAP),
-        parse_define_int(source, "INPUT_WINDOW_SIZE"),
-        parse_define_int(source, "INPUT_WINDOW_SHIFT"),
-        parse_define_int(source, "INPUT_UNIQ_FEATURES_NUM"),
-        parse_define_int(source, "MODEL_USES_AS_INPUT_INPUT_FEATURES"),
-        parse_define_int(source, "MODEL_USES_AS_INPUT_DSP_FEATURES"),
+    return int.from_bytes(
+        hashlib.blake2s(text.encode("ascii"), digest_size=4).digest(), "little"
     )
-    return contract_hash_neuton(
-        task=parse_define_int(source, "MODEL_TASK"),
-        params_type=params_type_from_model(source),
-        outputs_cap=parse_define_int(source, "MODEL_OUTPUTS_NUM"),
-        inputs_num=parse_define_int(source, "INPUT_UNIQ_FEATURES_NUM"),
-        neurons_cap=neurons_cap,
-        solution_id=parse_define_token(source, "EDGEAI_LAB_SOLUTION_ID_STR"),
-        pipeline_hash=pipeline,
-    )
+
+
+def solution_id_hash(solution_id: str) -> int:
+    """Hash of the solution ID; the value CMake passes as MODEL_OTA_SOLUTION_ID_HASH.
+
+    The ID comes from the SOLUTION_ID the build was configured with rather than from the
+    generated source's EDGEAI_LAB_SOLUTION_ID_STR, so it is the same string on both sides of an
+    update by construction.
+    """
+    return _hash32(solution_id)
+
+
+def symbol_name_hash(name: str) -> int:
+    """Hash of an ASCII symbol name; the value behind MODEL_OTA_AXON_SYM_HASH in generated headers.
+
+    Deliberately the same function as solution_id_hash(): the two values are never looked up in
+    one table, so there is nothing for a domain separator to protect.
+    """
+    return _hash32(name)
 
 
 def config_define(path: Path, name: str) -> int | None:
     match = re.search(
-        rf"^\s*#define\s+{re.escape(name)}\s+(\d+)[uUlL]*\s*$",
+        rf"^\s*#define\s+{re.escape(name)}\s+(0[xX][0-9A-Fa-f]+|\d+)[uUlL]*\s*$",
         path.read_text(encoding="utf-8"),
         re.MULTILINE,
     )
-    return int(match.group(1)) if match else None
+    return int(match.group(1), 0) if match else None
 
 
-def axon_contract_from_config(
-    config_header: Path,
-    *,
-    compiled_model_size: int,
-    interlayer_size: int,
-    psum_size: int,
-) -> int:
-    persistent = config_define(config_header, "MODEL_OTA_AXON_PERSISTENT_VARS_REQUIRED") or 0
-    packed = config_define(config_header, "MODEL_OTA_AXON_PACKED_OUTPUT_BYTES") or 0
-    return contract_hash_axon(
-        compiled_model_size=compiled_model_size,
-        interlayer_size=interlayer_size,
-        psum_size=psum_size,
-        persistent_required=persistent,
-        packed_output_bytes=packed,
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    sub = parser.add_subparsers(dest="command", required=True)
+    solution = sub.add_parser(
+        "solution-id-hash",
+        help="print the decimal MODEL_OTA_SOLUTION_ID_HASH for one solution ID",
     )
+    solution.add_argument("solution_id", help="the SOLUTION_ID the build was configured with")
+    args = parser.parse_args(argv)
+
+    try:
+        print(solution_id_hash(str(args.solution_id)))
+    except UnicodeEncodeError as exc:
+        # A solution ID also names C identifiers in the generated source, so it is ASCII by
+        # construction; refuse instead of silently picking an encoding for it.
+        raise SystemExit(f"solution ID must be ASCII: {args.solution_id!r} ({exc})") from exc
+    return 0
 
 
-def symbol_name_hash(name: str) -> int:
-    return fnv1a_str(FNV1A_INIT, name)
+if __name__ == "__main__":
+    sys.exit(main())

@@ -31,6 +31,7 @@ class LayoutValidationTests(unittest.TestCase):
         p_max: int | None = None,
         p_args: int = 0,
         decode: tuple[int, int, int, int] = (0, 0, 0, 0),
+        p_mask: int = 0,
     ) -> bytes:
         """Parameter block whose scaling arrays sit in the fixture's payload region."""
         if p_min is None:
@@ -38,7 +39,7 @@ class LayoutValidationTests(unittest.TestCase):
         if p_max is None:
             p_max = p_min + num * elem_size
         return struct.pack(
-            validator.PARAMS_FMT, p_min, p_max, p_args, *decode, num, elem_size, 0
+            validator.PARAMS_FMT, p_min, p_max, p_args, *decode, p_mask, num, elem_size, 0
         )
 
     def _files(self, directory: Path, params: bytes | None = None) -> tuple[Path, Path, Path]:
@@ -167,6 +168,24 @@ class LayoutValidationTests(unittest.TestCase):
 
     def test_decoded_output_pointer_outside_image_fails(self) -> None:
         stray = self._params_block(decode=(0, self.BASE - 4, 0, 0))
+        with tempfile.TemporaryDirectory() as tmp, patch.object(
+            validator, "lookup_symbol", side_effect=lambda _elf, name: self._symbol(name)
+        ):
+            elf, binary, defs = self._files(Path(tmp), params=stray)
+            with self.assertRaises(SystemExit):
+                self._run(elf, binary, defs)
+
+    def test_extraction_mask_in_image_ok(self) -> None:
+        """A DSP solution carries its FEATURES_EXTRACTION_MASK for the loader to compare."""
+        baked = self._params_block(p_mask=self.BASE + validator.HEADER_SIZE)
+        with tempfile.TemporaryDirectory() as tmp, patch.object(
+            validator, "lookup_symbol", side_effect=lambda _elf, name: self._symbol(name)
+        ):
+            elf, binary, defs = self._files(Path(tmp), params=baked)
+            self.assertEqual(self._run(elf, binary, defs), 0)
+
+    def test_extraction_mask_outside_image_fails(self) -> None:
+        stray = self._params_block(p_mask=self.BASE - 8)
         with tempfile.TemporaryDirectory() as tmp, patch.object(
             validator, "lookup_symbol", side_effect=lambda _elf, name: self._symbol(name)
         ):

@@ -10,6 +10,11 @@ Exit codes:
   0 — compatible
   1 — incompatible or malformed
   2 — requires firmware update (model exceeds firmware caps)
+
+Also the build's own gate on the contract hash: the image carries the hash its stub folded, the
+context carries the one the slot's contract probe folded, and they are compiled as separate
+translation units, so requiring them to agree is what keeps the value released to the field equal
+to the value images actually carry. That verdict is fatal even under --report-only.
 """
 from __future__ import annotations
 
@@ -48,7 +53,7 @@ def parse_header(bin_path: Path) -> dict:
         backend,
         edgeai_params,
     ) = fields
-    scale_num, scale_elem_size = struct.unpack(layout.PARAMS_FMT, edgeai_params)[7:9]
+    scale_num, scale_elem_size = layout.params_scale_layout(edgeai_params)
     entry = {
         "magic": magic,
         "format_version": version,
@@ -103,10 +108,18 @@ def neuton_neurons_num(hdr: dict, partition_addr: int) -> int | None:
     return struct.unpack_from("<H", hdr["raw"], offset + NEUTON_META_NEURONS_NUM_OFFSET)[0]
 
 
-def check_neuton(slot: dict, hdr: dict, image_path: Path) -> int:
+def check_contract_hash(slot: dict, hdr: dict, backend: str) -> int:
+    """Compare the image's baked contract hash against the firmware's.
+
+    Checked apart from the rest because --report-only must not suppress it: the hash is not a
+    capacity, so a mismatch has no benign reading, and in an in-tree build it means the value
+    exported to model_ota_context.json is not the one the images actually carry - which would
+    otherwise only surface in the field, as every model update being refused against firmware
+    that is itself fine.
+    """
     fw_hash = slot.get("contract_hash")
     if fw_hash is None:
-        print("context missing contract_hash for Neuton slot", file=sys.stderr)
+        print("context missing contract_hash for %s slot" % backend, file=sys.stderr)
         return EXIT_INCOMPATIBLE
     if hdr["contract_hash"] != fw_hash:
         print(
@@ -115,7 +128,10 @@ def check_neuton(slot: dict, hdr: dict, image_path: Path) -> int:
             file=sys.stderr,
         )
         return EXIT_INCOMPATIBLE
+    return EXIT_OK
 
+
+def check_neuton(slot: dict, hdr: dict, image_path: Path) -> int:
     partition_size = slot.get("partition_size")
     if partition_size is not None and hdr["image_size"] > partition_size:
         print(
@@ -144,18 +160,6 @@ def check_neuton(slot: dict, hdr: dict, image_path: Path) -> int:
 
 
 def check_axon(slot: dict, hdr: dict, image_path: Path, elf_path: Path | None) -> int:
-    fw_hash = slot.get("contract_hash")
-    if fw_hash is None:
-        print("context missing contract_hash for Axon slot", file=sys.stderr)
-        return EXIT_INCOMPATIBLE
-    if hdr["contract_hash"] != fw_hash:
-        print(
-            "contract hash mismatch: image 0x%08x != firmware 0x%08x"
-            % (hdr["contract_hash"], fw_hash),
-            file=sys.stderr,
-        )
-        return EXIT_INCOMPATIBLE
-
     partition_size = slot.get("partition_size")
     if partition_size is not None and hdr["image_size"] > partition_size:
         print(
@@ -231,7 +235,8 @@ def main(argv=None) -> int:
     parser.add_argument(
         "--report-only",
         action="store_true",
-        help="Print verdict to stderr/stdout but always exit 0 (in-tree build report)",
+        help="Report the capacity verdicts without failing (in-tree build report). A contract "
+             "hash mismatch still exits 1: see check_contract_hash()",
     )
     args = parser.parse_args(argv)
 
@@ -257,10 +262,27 @@ def main(argv=None) -> int:
 
     slot = find_slot(context, args.slot)
     backend = slot.get("backend", "neuton")
+
+    rc = check_contract_hash(slot, hdr, backend)
+    if rc != EXIT_OK:
+        # Fatal even under --report-only, and the rest is meaningless once it fails.
+        return rc
+
     if backend == "axon" or hdr["params_type"] == PARAMS_AXON:
         rc = check_axon(slot, hdr, args.image, args.elf)
     else:
         rc = check_neuton(slot, hdr, args.image)
+
+    # TODO: review whether EXIT_NEEDS_FW should stay advisory here.
+    #
+    # In an in-tree build the caps come from the same CMake arguments the application was wired
+    # with, so exceeding one arguably ought to fail: for Axon, axon_elf.py already refuses a
+    # persistent-vars cap below what the model requires, and packed_output_cap is the probe's own
+    # measurement, so in practice only the Neuton neuron cap can trip. Out-of-tree, against
+    # released firmware, "this retrained model needs a firmware update" is the useful *output* of
+    # the rebuild rather than an error - though the image it produced is unusable on that
+    # firmware either way. Decide whether the two flows want the same verdict, and if not, say so
+    # with something narrower than one --report-only covering everything.
     if args.report_only:
         return EXIT_OK
     return rc

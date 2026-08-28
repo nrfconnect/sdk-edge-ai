@@ -6,8 +6,16 @@
 # Neuton model-only OTA: build the model as a self-contained, linked partition IMAGE
 # (same linked-at-partition-base layout as Axon images).
 #
-# model_ota_neuton_image(TARGET <prefix> MODEL_SRC <abs nrf_edgeai_user_model.c>
-#                        PARTITION_NODELABEL <dt-nodelabel> [NAME <str>] [VERSION <x.y.z>])
+# model_ota_neuton_image(TARGET <prefix> SOLUTION_ID <id> MODEL_SRC <abs nrf_edgeai_user_model.c>
+#                        PARTITION_NODELABEL <dt-nodelabel>
+#                        [NAME <str>] [VERSION <x.y.z>] [NEURONS_CAP <n>])
+#
+# The neuron cap published in model_ota_context.json comes from the model_ota_neuton_wire() call
+# for the same partition; NEURONS_CAP is only needed when the image is built without one.
+#
+# SOLUTION_ID must be the same value the application passed to model_ota_neuton_wire(): it feeds
+# the contract hash (see model_ota_solution_id_hash() in model_ota_common.cmake), so a mismatch
+# makes the image report as incompatible rather than producing a subtly wrong one.
 #
 # adds a target `<prefix>_model_image` (built by default) that:
 #
@@ -40,14 +48,40 @@ get_filename_component(EDGE_AI_MODULE_ROOT ${CMAKE_CURRENT_LIST_DIR}/../../.. AB
 include(${CMAKE_CURRENT_LIST_DIR}/model_ota_context.cmake)
 
 function(model_ota_neuton_image)
-  cmake_parse_arguments(MI "" "TARGET;MODEL_SRC;PARTITION_NODELABEL;NAME;VERSION;NEURONS_CAP" "" ${ARGN})
+  cmake_parse_arguments(MI ""
+    "TARGET;SOLUTION_ID;MODEL_SRC;PARTITION_NODELABEL;NAME;VERSION;NEURONS_CAP" "" ${ARGN})
 
   if(NOT MI_TARGET OR NOT MI_MODEL_SRC OR NOT MI_PARTITION_NODELABEL)
     message(FATAL_ERROR
             "model_ota_neuton_image requires TARGET, MODEL_SRC and PARTITION_NODELABEL")
   endif()
-  if(NOT MI_NEURONS_CAP)
-    message(FATAL_ERROR "model_ota_neuton_image requires NEURONS_CAP (must match model_ota_neuton_wire)")
+  if(NOT MI_SOLUTION_ID)
+    message(FATAL_ERROR
+            "model_ota_neuton_image requires SOLUTION_ID (must match model_ota_neuton_wire)")
+  endif()
+  model_ota_using_released_fw(_using_released_fw)
+
+  # The cap is the *application's* scratch capacity, recorded in model_ota_context.json so that
+  # check_model_compat.py can tell "model outgrew this firmware" from "incompatible model". It is
+  # not part of the contract hash, so nothing else would catch it being wrong: the number has to
+  # be the buffer model_ota_neuton_wire() allocated, which is why it is taken from the wire rather
+  # than repeated here. NEURONS_CAP remains accepted for a wire-less image build, but a value
+  # conflicting with the wire is refused rather than silently published.
+  get_property(_wired_cap GLOBAL PROPERTY
+               model_ota_neuton_wired_cap_${MI_PARTITION_NODELABEL})
+  if(_wired_cap)
+    if(MI_NEURONS_CAP AND NOT MI_NEURONS_CAP EQUAL _wired_cap)
+      message(FATAL_ERROR
+              "model_ota_neuton_image(${MI_TARGET}): NEURONS_CAP ${MI_NEURONS_CAP} disagrees with "
+              "the application scratch buffer for ${MI_PARTITION_NODELABEL} "
+              "(model_ota_neuton_wire MAX_NEURONS ${_wired_cap}); drop NEURONS_CAP or make them "
+              "match")
+    endif()
+    set(MI_NEURONS_CAP ${_wired_cap})
+  elseif(NOT MI_NEURONS_CAP AND NOT _using_released_fw)
+    message(FATAL_ERROR
+            "model_ota_neuton_image(${MI_TARGET}): no model_ota_neuton_wire() for "
+            "${MI_PARTITION_NODELABEL}, so NEURONS_CAP is required")
   endif()
   if(NOT MI_NAME)
     set(MI_NAME ${MI_TARGET})
@@ -82,6 +116,7 @@ function(model_ota_neuton_image)
   set(validate_tool ${EDGE_AI_MODULE_ROOT}/tools/model_ota/validate_model_image_layout.py)
   set(defs_header ${EDGE_AI_MODULE_ROOT}/include/model_ota/model_image.h)
   set(_compat_tool ${EDGE_AI_MODULE_ROOT}/tools/model_ota/check_model_compat.py)
+  set(_context_slot_tool ${EDGE_AI_MODULE_ROOT}/tools/model_ota/emit_contract_slot.py)
   set(_generated_context ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context.json)
 
   if(MODEL_OTA_FW_CONTEXT)
@@ -90,21 +125,36 @@ function(model_ota_neuton_image)
     set(_compat_context ${_generated_context})
   endif()
 
-  model_ota_using_released_fw(_using_released_fw)
-
   set(stub tgt_${MI_TARGET}_model_image_stub)
   add_library(${stub} OBJECT ${stub_src})
   target_link_libraries(${stub} PRIVATE zephyr_interface)
   add_dependencies(${stub} zephyr_generated_headers)
   target_include_directories(${stub} PRIVATE ${model_dir})
   target_compile_options(${stub} PRIVATE -ffunction-sections -fdata-sections)
-  execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} -c
-            "import sys; from pathlib import Path; sys.path.insert(0, r'${EDGE_AI_MODULE_ROOT}/tools/model_ota'); from model_contract import neuton_contract_from_model_c; print(neuton_contract_from_model_c(Path(r'${MI_MODEL_SRC}'), int(${MI_NEURONS_CAP})))"
-    OUTPUT_VARIABLE MI_NEUTON_CONTRACT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
+
+  model_ota_solution_id_hash(${MI_SOLUTION_ID} _solution_id_hash)
+
+  # The contract hash is the compiler's own, read back out of a probe object rather than
+  # recomputed on the host, so it only becomes known at build time - hence the slot's
+  # contract_hash arrives via context_slot.json instead of model_ota_context_register_slot().
+  set(_slot_dir ${CMAKE_CURRENT_BINARY_DIR}/model_ota/${MI_TARGET})
+  model_ota_contract_probe(
+    OUT_OBJ _contract_probe_o
+    WORK_DIR ${_slot_dir}
+    FLAVOR neuton
+    IMAGE_BASE ${partition_addr}
+    MODEL_SRC ${MI_MODEL_SRC}
+    SOLUTION_ID_HASH ${_solution_id_hash})
+
+  set(_context_slot ${_slot_dir}/context_slot.json)
+  add_custom_command(
+    OUTPUT ${_context_slot}
+    COMMAND ${PYTHON_EXECUTABLE} ${_context_slot_tool}
+            --contract-probe ${_contract_probe_o} --out ${_context_slot}
+    DEPENDS ${_contract_probe_o} ${_context_slot_tool}
+    COMMENT "Emitting Neuton OTA context slot metadata (${MI_TARGET})"
+    VERBATIM)
+  add_custom_target(${MI_TARGET}_contract_slot DEPENDS ${_context_slot})
 
   if(CONFIG_MODEL_OTA AND NOT _using_released_fw)
     model_ota_context_register_slot(
@@ -112,8 +162,8 @@ function(model_ota_neuton_image)
       BACKEND neuton
       PARTITION_NODELABEL ${MI_PARTITION_NODELABEL}
       NAME ${MI_NAME}
-      CONTRACT_HASH ${MI_NEUTON_CONTRACT_HASH}
       NEURONS_CAP ${MI_NEURONS_CAP})
+    model_ota_context_register_slot_build(SLOT_JSON ${_context_slot})
   endif()
 
   target_compile_definitions(${stub} PRIVATE
@@ -121,7 +171,7 @@ function(model_ota_neuton_image)
                              NRF_MODEL_PARTITION_ADDR=${partition_addr}
                              MODEL_IMAGE_NAME_STR=\"${MI_NAME}\"
                              MODEL_IMAGE_VERSION_U32=${ver_u32}u
-                             MODEL_OTA_NEUTON_CONTRACT_HASH=${MI_NEUTON_CONTRACT_HASH}u)
+                             MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u)
   set_source_files_properties(${stub_src}
                               TARGET_DIRECTORY ${stub}
                               PROPERTIES OBJECT_DEPENDS "${MI_MODEL_SRC}")
@@ -152,6 +202,8 @@ function(model_ota_neuton_image)
     #    on their own.
     COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex --change-addresses=${partition_addr}
             ${image_bin} ${image_hex}
+    # 6. Compare the image against the firmware context: the caps are a report, but a contract
+    #    hash mismatch fails the build even under --report-only.
     COMMAND ${PYTHON_EXECUTABLE} ${_compat_tool}
             --context ${_compat_context} --image ${image_bin} --slot ${MI_TARGET}
             --report-only
