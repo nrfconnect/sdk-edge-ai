@@ -100,15 +100,13 @@ function(model_ota_neuton_image)
   get_filename_component(model_dir ${MI_MODEL_SRC} DIRECTORY)
   get_filename_component(model_basename ${MI_MODEL_SRC} NAME)
 
-  # Intermediates (ELF, raw bin) live under <target>/; only the flashable .bin and addressed
-  # .hex are emitted at the build directory root.
-  set(work_dir ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET})
+  set(work_dir ${CMAKE_CURRENT_BINARY_DIR}/model_ota/${MI_TARGET})
   file(MAKE_DIRECTORY ${work_dir})
 
   set(stub_src       ${MODEL_OTA_ROOT}/src/model_ota_neuton_image_stub.c)
   set(image_elf     ${work_dir}/${MI_TARGET}_model_image.elf)
   set(image_bin_raw ${work_dir}/${MI_TARGET}_model_image_raw.bin)
-  set(image_bin     ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_image.bin)
+  set(image_bin     ${work_dir}/${MI_TARGET}_model_image.bin)
   set(image_hex     ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_partition.hex)
 
   set(linker_script ${MODEL_OTA_ROOT}/linker/model_image.ld)
@@ -137,16 +135,15 @@ function(model_ota_neuton_image)
   # The contract hash is the compiler's own, read back out of a probe object rather than
   # recomputed on the host, so it only becomes known at build time - hence the slot's
   # contract_hash arrives via context_slot.json instead of model_ota_context_register_slot().
-  set(_slot_dir ${CMAKE_CURRENT_BINARY_DIR}/model_ota/${MI_TARGET})
   model_ota_contract_probe(
     OUT_OBJ _contract_probe_o
-    WORK_DIR ${_slot_dir}
+    WORK_DIR ${work_dir}
     FLAVOR neuton
     IMAGE_BASE ${partition_addr}
     MODEL_SRC ${MI_MODEL_SRC}
     SOLUTION_ID_HASH ${_solution_id_hash})
 
-  set(_context_slot ${_slot_dir}/context_slot.json)
+  set(_context_slot ${work_dir}/context_slot.json)
   add_custom_command(
     OUTPUT ${_context_slot}
     COMMAND ${PYTHON_EXECUTABLE} ${_context_slot_tool}
@@ -213,9 +210,6 @@ function(model_ota_neuton_image)
     COMMAND_EXPAND_LISTS
     VERBATIM)
 
-  # Standalone, independently-flashable per-model artifacts at the build dir root:
-  #   <TARGET>_model_image.bin, <TARGET>_model_partition.hex
-  # Intermediates remain under <TARGET>/.
   add_custom_target(${MI_TARGET}_model_image ALL DEPENDS ${image_bin} ${image_hex})
   if(TARGET model_ota_context AND NOT _using_released_fw)
     add_dependencies(${MI_TARGET}_model_image model_ota_context)

@@ -148,7 +148,7 @@ function(model_ota_context_finalize)
 
   get_property(_slot_build_files GLOBAL PROPERTY model_ota_context_slot_build_json)
 
-  set(_manifest ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context_manifest.json)
+  set(_manifest ${CMAKE_CURRENT_BINARY_DIR}/model_ota/model_ota_context_manifest.json)
   set(_out ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context.json)
   set(_zephyr_elf ${CMAKE_CURRENT_BINARY_DIR}/zephyr/zephyr.elf)
   set(_autoconf ${CMAKE_CURRENT_BINARY_DIR}/zephyr/include/generated/zephyr/autoconf.h)

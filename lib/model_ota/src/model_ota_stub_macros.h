@@ -16,7 +16,7 @@
  *   MODEL_IMAGE_VERSION_U32      - optional (default: 0x00010000)
  *
  * Neuton app wired (model_ota_neuton_wire):
- *   Generated: ${CMAKE_CURRENT_BINARY_DIR}/model_ota_neuton_wired_<SOLUTION_ID>.c
+ *   Generated: ${CMAKE_CURRENT_BINARY_DIR}/model_ota/model_ota_neuton_wired_<SOLUTION_ID>.c
  *   from lib/model_ota/src/model_ota_neuton_wired.c.in
  *   PARTITION_NODELABEL and MAX_NEURONS substituted at configure time; sets MODEL_OTA_WIRED
  *   and MODEL_OTA_NEUTON_NEURONS_CAP, defines cap-sized
@@ -31,7 +31,8 @@
  *   Axon backend of an Edge AI Lab solution so the image also carries its nrf_edgeai_t parameters
  *
  * Axon Edge AI Lab wired (model_ota_axon_edgeai_wire):
- *   Generated: ${CMAKE_CURRENT_BINARY_DIR}/model_ota_axon_edgeai_wired_<SOLUTION_ID>.c
+ *   Generated:
+ *   ${CMAKE_CURRENT_BINARY_DIR}/model_ota/<TARGET>/model_ota_axon_edgeai_wired_<SOLUTION_ID>.c
  *   from lib/model_ota/src/model_ota_axon_edgeai_wired.c.in
  *   PARTITION_NODELABEL substituted at configure time. Sets MODEL_OTA_WIRED before #include of
  *   generated nrf_edgeai_user_model.c;

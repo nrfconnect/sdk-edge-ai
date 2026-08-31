@@ -157,7 +157,7 @@ set(MODEL_OTA_EDGEAI_PARAM_SECTIONS
 )
 
 function(model_ota_regenerate_discard_fragment)
-  set(frag "${CMAKE_CURRENT_BINARY_DIR}/model_ota_discard.ld")
+  set(frag "${CMAKE_CURRENT_BINARY_DIR}/model_ota/model_ota_discard.ld")
 
   get_property(wired GLOBAL PROPERTY model_ota_discard_wired)
   string(REPLACE ";" "\n *   " wired_comment "${wired}")

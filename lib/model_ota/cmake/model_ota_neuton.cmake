@@ -12,7 +12,7 @@
 # For each OTA-updatable model:
 #
 #   1. Generates lib/model_ota/src/model_ota_neuton_wired.c.in into
-#      ${CMAKE_CURRENT_BINARY_DIR}/model_ota_neuton_wired_<SOLUTION_ID>.c (partition-load
+#      ${CMAKE_CURRENT_BINARY_DIR}/model_ota/model_ota_neuton_wired_<SOLUTION_ID>.c (partition-load
 #      wrapper + #include of the generated model). Builds a dedicated static library (default
 #      target ota_neuton_<SOLUTION_ID>) from that file with MODEL_OTA_WIRED and a per-model
 #      MODEL_OTA_NEUTON_MAX_NEURONS. Models compiled directly into the app are unaffected
@@ -71,7 +71,11 @@ function(model_ota_neuton_wire)
   get_filename_component(model_dir ${MO_MODEL_SRC} DIRECTORY)
   get_filename_component(model_basename ${MO_MODEL_SRC} NAME)
   set(wired_tpl ${MODEL_OTA_ROOT}/src/model_ota_neuton_wired.c.in)
-  set(wired_src ${CMAKE_CURRENT_BINARY_DIR}/model_ota_neuton_wired_${MO_SOLUTION_ID}.c)
+  # Keyed by solution ID rather than by an image TARGET: this call is the application side of the
+  # wiring and runs before (and independently of) any model_ota_neuton_image() for the same
+  # partition, so it has no model subfolder of its own.
+  set(wired_dir ${CMAKE_CURRENT_BINARY_DIR}/model_ota)
+  set(wired_src ${wired_dir}/model_ota_neuton_wired_${MO_SOLUTION_ID}.c)
 
   if(TARGET ${MO_LIB_NAME})
     message(FATAL_ERROR "model_ota_neuton_wire: duplicate LIB_NAME/target ${MO_LIB_NAME}")
@@ -100,6 +104,7 @@ function(model_ota_neuton_wire)
   configure_file(${wired_tpl} ${wired_src} @ONLY)
 
   add_library(${MO_LIB_NAME} STATIC ${wired_src})
+  set_target_properties(${MO_LIB_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${wired_dir})
   target_link_libraries(${MO_LIB_NAME} PRIVATE zephyr_interface)
   target_compile_definitions(${MO_LIB_NAME} PRIVATE
                              NRF_MODEL_PARTITION_ADDR=${_partition_addr}

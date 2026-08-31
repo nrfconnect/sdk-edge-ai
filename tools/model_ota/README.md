@@ -47,20 +47,36 @@ that cannot be expressed directly in the toolchain:
 ## In the build
 
 The tools are wired into the OTA build; there is no manual step. Building the `multi_model`
-sample with the OTA overlay produces a standalone `<name>_model_partition.hex` (addressed) plus
-`<name>_model_image.bin` per model under the build dir:
+sample with the OTA overlay produces a standalone addressed `<name>_model_partition.hex` per
+model at the build directory root, plus the OTA payload `<name>_model_image.bin` under
+`model_ota/<name>/`:
 
 ```bash
 cd edge-ai/samples/multi_model
 nrfutil toolchain-manager launch --ncs-version v3.4.0 -- \
   west build -p always -b nrf54lm20dk/nrf54lm20b/cpuapp -d build . \
   -- -DEXTRA_CONF_FILE=overlay-ota.conf
-ls build/multi_model/*_model_partition.hex build/multi_model/*_model_image.bin
+ls build/multi_model/*_model_partition.hex
+ls build/multi_model/model_ota/*/*_model_image.bin
 ls build/multi_model/model_ota_context.json
 ```
 
 The build also emits **`model_ota_context.json`** — archive this alongside `zephyr.hex` and
 `zephyr/zephyr.elf` at firmware release.
+
+### Build directory layout
+
+Only the release artifacts stay at the build directory root; everything else the OTA build
+generates lives under `model_ota/`:
+
+- `<name>_model_partition.hex` - addressed hex, flashed into the model's partition.
+- `model_ota_context.json` - firmware context, archived at release.
+- `model_ota/<name>/` - one subfolder per model: the OTA payload `<name>_model_image.bin`, the
+  linked `.elf`, the raw pre-CRC `.bin`, probes, generated headers, `context_slot.json`, and the
+  model's app-side static library.
+- `model_ota/` - build-wide artifacts: `model_ota_context_manifest.json`,
+  `model_ota_discard.ld`, and the Neuton wired sources and libraries (keyed by solution ID
+  rather than by model target).
 
 ### Out-of-tree model partition rebuild
 
@@ -122,7 +138,7 @@ Before flashing a model built against a released firmware:
 ```bash
 python3 tools/model_ota/check_model_compat.py \
   --context /path/to/model_ota_context.json \
-  --image build/multi_model/gear_anomaly_model_image.bin \
+  --image build/multi_model/model_ota/gear_anomaly/gear_anomaly_model_image.bin \
   --slot gear_anomaly
 ```
 

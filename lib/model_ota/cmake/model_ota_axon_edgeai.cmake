@@ -27,8 +27,8 @@
 #    nrf_edgeai_t parameters (feature scaling and decoded-output init), which are as much part of
 #    a model update as the weights.
 #
-# 2. Generates model_ota_axon_edgeai_wired.c.in into
-#    ${CMAKE_CURRENT_BINARY_DIR}/model_ota_axon_edgeai_wired_<SOLUTION_ID>.c (sets
+# 2. Generates model_ota_axon_edgeai_wired.c.in into ${CMAKE_CURRENT_BINARY_DIR}/model_ota/
+#    <TARGET>/model_ota_axon_edgeai_wired_<SOLUTION_ID>.c (sets
 #    MODEL_OTA_WIRED, then #includes MODEL_SRC). Under that hook, the generated
 #    nrf_edgeai_user_model.c skips its own #include of the generated Axon model header (so that
 #    header's weights are never linked into the app image), leaves model.instance.p_void NULL,
@@ -63,8 +63,9 @@ function(model_ota_axon_edgeai_wire)
   endif()
 
   # Step 1: compiled Axon model -> partition image + app-owned persistent-vars/packed-output RAM.
-  # TARGET drives the emitted <TARGET>_model_partition.hex / <TARGET>_model_image.bin names, so
-  # use NAME (falling back to SOLUTION_ID) directly, same as a raw model_ota_axon_model() call.
+  # TARGET drives the emitted <TARGET>_model_partition.hex name and the model_ota/<TARGET>/
+  # subfolder holding every other artifact, so use NAME (falling back to SOLUTION_ID) directly,
+  # same as a raw model_ota_axon_model() call.
   if(MO_NAME)
     set(_axon_target ${MO_NAME})
   else()
@@ -103,7 +104,8 @@ function(model_ota_axon_edgeai_wire)
   get_filename_component(model_basename ${MO_MODEL_SRC} NAME)
 
   set(wired_tpl ${MODEL_OTA_ROOT}/src/model_ota_axon_edgeai_wired.c.in)
-  set(wired_src ${CMAKE_CURRENT_BINARY_DIR}/model_ota_axon_edgeai_wired_${MO_SOLUTION_ID}.c)
+  set(wired_dir ${CMAKE_CURRENT_BINARY_DIR}/model_ota/${_axon_target})
+  set(wired_src ${wired_dir}/model_ota_axon_edgeai_wired_${MO_SOLUTION_ID}.c)
 
   set(AXON_TARGET ${_axon_target})
   string(TOUPPER ${_axon_target} AXON_TOKEN)
@@ -116,6 +118,7 @@ function(model_ota_axon_edgeai_wire)
   model_ota_solution_id_hash(${MO_SOLUTION_ID} _solution_id_hash)
 
   add_library(${_wired_lib} STATIC ${wired_src})
+  set_target_properties(${_wired_lib} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${wired_dir})
   target_link_libraries(${_wired_lib} PRIVATE zephyr_interface)
   target_compile_definitions(${_wired_lib} PRIVATE
                              MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u)
