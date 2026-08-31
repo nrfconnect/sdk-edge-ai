@@ -62,10 +62,12 @@ int model_obsv_init(struct model_obsv *o, const nrf_edgeai_obsv_model_info_t *in
 
 	/* FEATURES-stream metrics (sized/created for the feature-vector length). */
 #if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC)
-	MODEL_OBSV_REGISTER(o, med, nrf_edgeai_obsv_metric_med_create, med_buf, num_features, "MED");
+	MODEL_OBSV_REGISTER(o, med, nrf_edgeai_obsv_metric_med_create, med_buf, num_features,
+		"MED");
 #endif
 #if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_SPECTRAL_DESC)
-	MODEL_OBSV_REGISTER(o, msd, nrf_edgeai_obsv_metric_msd_create, msd_buf, num_features, "MSD");
+	MODEL_OBSV_REGISTER(o, msd, nrf_edgeai_obsv_metric_msd_create, msd_buf, num_features,
+		"MSD");
 #endif
 
 	err = nrf_edgeai_obsv_memfault_init(&o->ctx);

@@ -41,11 +41,16 @@ Observability
 =============
 
 The application collects runtime observability metrics using the :ref:`nrf_edgeai_obsv_lib`.
-Enable ``CONFIG_MODELS_OBSERVABILITY_WW``, ``CONFIG_MODELS_OBSERVABILITY_KWS``, or both to wire metrics into the wakeword model, the keyword spotting model, or both.
-The shared :file:`src/obsv/model_obsv.c` module owns each model's observability context, registers every enabled built-in metric, and binds the Memfault transport; the model files (:file:`src/ww/wakeword.c` and :file:`src/kws/kws.c`) only feed samples to it.
 
-Both models register the same metric set: whichever built-in metrics are enabled at build time (see :file:`observability.conf`).
-The wakeword model has a single output, so it is expanded into a synthetic two-class ``[1 - p, p]`` distribution before the probability metrics, which lets the same set apply to it as to the multi-class keyword spotting model.
+Enable metrics for each model independently (either option, or both):
+* ``CONFIG_MODELS_OBSERVABILITY_WW`` - Wakeword model
+* ``CONFIG_MODELS_OBSERVABILITY_KWS`` - Keyword spotting model
+
+The :file:`src/obsv/model_obsv.c` module does all the observability work.
+For each enabled model, it owns the observability context, registers the built-in metrics selected in :file:`observability.conf`, and binds the Memfault transport.
+The model files (:file:`src/ww/wakeword.c` and :file:`src/kws/kws.c`) only feed samples to this module.
+
+Because both models use the same metric set, the single output of the wakeword model is expanded into a synthetic two-class ``[1 - p, p]`` distribution before the probability metrics are updated.
 
 Metrics are collected every 24 hours (see the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT`` Kconfig option) and sent to the `Memfault`_ using `Custom Data Recording <Memfault Custom Data Recording_>`_ registered by the :ref:`nrf_edgeai_obsv_lib`.
 
@@ -181,7 +186,9 @@ Configuration files
 ===================
 
 The application provides predefined :file:`observability.conf` configuration file for enabling observability.
-This file enables observability for both bundled models (``CONFIG_MODELS_OBSERVABILITY_WW`` and ``CONFIG_MODELS_OBSERVABILITY_KWS``), Bluetooth LE, Memfault Diagnostic Service and required dependencies. Enable only one of the two options to observe just the wakeword or just the keyword spotting model.
+
+This file enables observability for both bundled models (``CONFIG_MODELS_OBSERVABILITY_WW`` and ``CONFIG_MODELS_OBSERVABILITY_KWS``), Bluetooth LE, Memfault Diagnostic Service and required dependencies.
+Enable only one of the two options to observe just the wakeword or just the keyword spotting model.
 
 Check :ref:`nrf:cmake_options` and use :makevar:`EXTRA_CONF_FILE` variable to include this configuration file.
 

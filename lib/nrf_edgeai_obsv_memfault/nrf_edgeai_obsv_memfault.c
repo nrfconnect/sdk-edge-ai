@@ -17,6 +17,19 @@
 #include <nrf_edgeai_obsv/nrf_edgeai_obsv_memfault.h>
 #include "nrf_edgeai_obsv_memfault_priv.h"
 
+/* nrf_edgeai_obsv_memfault_collect() places a NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ-byte
+ * buffer on the caller's stack. With auto-collect that caller is the system
+ * workqueue, so its stack must hold the buffer plus this encoder's own call frames.
+ * Assert the floor here so an under-sized stack fails the build instead of
+ * overflowing at runtime; integrators own the value (and any margin for the
+ * workqueue's other users) via CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE.
+ */
+#if defined(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT)
+BUILD_ASSERT(CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE >= NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ + 1024,
+	     "CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE is too small for the observability collect "
+	     "buffer that auto-collect builds on the system workqueue stack");
+#endif
+
 LOG_MODULE_REGISTER(nrf_edgeai_obsv_mflt, CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_LOG_LEVEL);
 
 /* External linkage for internal variables when CONFIG_ZTEST. */
