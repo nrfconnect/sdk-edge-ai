@@ -26,9 +26,8 @@
  * Axon OTA build helpers (ELF probe + generated metadata, see tools/model_ota/axon_elf.py):
  *   Probe: model_ota_axon_probe.c
  *   App wired stub: model_ota_axon_app_stub.c
- *   Partition image stub: model_ota_axon_image_stub.c
- *   MODEL_OTA_AXON_EDGEAI_MODEL_SRC - optional, basename of nrf_edgeai_user_model.c; set for the
- *   Axon backend of an Edge AI Lab solution so the image also carries its nrf_edgeai_t parameters
+ *   Partition image stub: model_ota_axon_image_stub.c (raw Axon, or Edge AI Lab / Axon when
+ *   MODEL_OTA_EDGEAI_AXON_MODEL_SRC is set)
  *
  * Axon Edge AI Lab wired (model_ota_axon_edgeai_wire):
  *   Generated:

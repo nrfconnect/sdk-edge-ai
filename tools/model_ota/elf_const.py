@@ -11,7 +11,7 @@ application's own flags and the host reads the finished word out of that object,
 keeps model_ota_context.json carrying the compiler's value rather than a second implementation of
 the hash.
 
-Kept apart from axon_elf.py because every flavour needs it, including Neuton, which has nothing to
+Kept apart from axon_elf.py because every flavor needs it, including Neuton, which has nothing to
 do with Axon model inspection. axon_elf.py takes its pyelftools access from here.
 """
 

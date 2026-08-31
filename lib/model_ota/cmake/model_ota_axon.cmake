@@ -3,48 +3,31 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-# Axon model-only OTA: app wiring and partition image from one model declaration.
+# Edge AI Lab / Axon-backend and raw Axon model-only OTA.
 #
-# model_ota_axon_model(TARGET <id> HEADER <nrf_axon_model_*.h>
-#                      PARTITION_NODELABEL <dt-nodelabel>
-#                      [NAME <str>] [VERSION <x.y.z>]
-#                      [PERSISTENT_VARS_CAP <n>] [MODEL_SYM <symbol>]
-#                      [ALLOCATE_PACKED_OUTPUT]
-#                      [EDGEAI_MODEL_SRC <abs-path-to-nrf_edgeai_user_model.c>]
-#                      [SOLUTION_ID <id>])
+# model_ota_edgeai_axon_model(TARGET <id> SOLUTION_ID <id> MODEL_SRC <abs nrf_edgeai_user_model.c>
+#                             HEADER <abs nrf_edgeai_user_model_axon.h>
+#                             PARTITION_NODELABEL <dt-nodelabel>
+#                             [NAME <str>] [VERSION <x.y.z>] [PERSISTENT_VARS_CAP <n>]
+#                             [MODEL_SYM <sym>] [ALLOCATE_PACKED_OUTPUT])
 #
-# ALLOCATE_PACKED_OUTPUT allocates app-owned RAM for the model's optional
-# packed-output buffer and wires it into the linked partition image (the model's
-# packed_output_buf field). Without it (the default), the image links with
-# packed_output_buf NULL and no app RAM is spent on it.
-#
-# EDGEAI_MODEL_SRC marks the model as the backend of an Edge AI Lab solution (passed by
-# model_ota_axon_edgeai_wire(), never directly): the generated solution source is compiled into
-# the partition image so the image also carries the solution's nrf_edgeai_t parameters (feature
-# scaling and decoded-output init). Without it the image is a pure Axon model and its parameter
-# block stays zeroed. SOLUTION_ID goes with it and is required there: it feeds the solution's
-# contract hash on both sides of an update.
+# model_ota_axon_model(TARGET <id> HEADER <nrf_axon_model_*.h> PARTITION_NODELABEL <dt-nodelabel>
+#                      [NAME <str>] [VERSION <x.y.z>] [PERSISTENT_VARS_CAP <n>] [MODEL_SYM <sym>]
+#                      [ALLOCATE_PACKED_OUTPUT])
 
 include_guard(GLOBAL)
 
 include(${CMAKE_CURRENT_LIST_DIR}/model_ota_common.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/model_ota_context.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/model_ota_image.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/model_ota_wired.cmake)
 
-get_filename_component(MODEL_OTA_ROOT ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
-get_filename_component(EDGE_AI_MODULE_ROOT ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSOLUTE)
-
-set(MODEL_OTA_AXON_PROBE_SRC ${MODEL_OTA_ROOT}/src/model_ota_axon_probe.c)
-set(MODEL_OTA_AXON_APP_STUB ${MODEL_OTA_ROOT}/src/model_ota_axon_app_stub.c)
-set(MODEL_OTA_AXON_IMAGE_STUB ${MODEL_OTA_ROOT}/src/model_ota_axon_image_stub.c)
-set(MODEL_OTA_AXON_KEEP_REFS ${MODEL_OTA_ROOT}/src/model_ota_axon_keep_refs.S)
-set(MODEL_OTA_AXON_ELF ${EDGE_AI_MODULE_ROOT}/tools/model_ota/axon_elf.py)
-set(MODEL_OTA_AXON_LINKER_SCRIPT ${MODEL_OTA_ROOT}/linker/model_image.ld)
-set(MODEL_OTA_AXON_CRC_TOOL ${EDGE_AI_MODULE_ROOT}/tools/model_ota/patch_image_crc.py)
-set(MODEL_OTA_AXON_VALIDATE_TOOL
-    ${EDGE_AI_MODULE_ROOT}/tools/model_ota/validate_model_image_layout.py)
-set(MODEL_OTA_AXON_CONTEXT_SLOT_TOOL
-    ${EDGE_AI_MODULE_ROOT}/tools/model_ota/emit_axon_context_slot.py)
-set(MODEL_OTA_IMAGE_DEFS ${EDGE_AI_MODULE_ROOT}/include/model_ota/model_image.h)
+set(MODEL_OTA_AXON_PROBE_SRC ${MODEL_OTA_LIB_DIR}/src/model_ota_axon_probe.c)
+set(MODEL_OTA_AXON_APP_STUB ${MODEL_OTA_LIB_DIR}/src/model_ota_axon_app_stub.c)
+set(MODEL_OTA_AXON_IMAGE_STUB ${MODEL_OTA_LIB_DIR}/src/model_ota_axon_image_stub.c)
+set(MODEL_OTA_AXON_KEEP_REFS ${MODEL_OTA_LIB_DIR}/src/model_ota_axon_keep_refs.S)
+set(MODEL_OTA_AXON_ELF ${MODEL_OTA_TOOLS_DIR}/axon_elf.py)
+set(MODEL_OTA_EDGEAI_AXON_WIRED_TPL ${MODEL_OTA_LIB_DIR}/src/model_ota_edgeai_axon_wired.c.in)
 
 function(model_ota_axon_add_probe OUT_OBJ WORK_DIR HEADER HEADER_NAME HEADER_DIR)
   model_ota_zephyr_c_compile_flags(_zephyr_cflags)
@@ -58,9 +41,9 @@ function(model_ota_axon_add_probe OUT_OBJ WORK_DIR HEADER HEADER_NAME HEADER_DIR
             -o ${_probe_o}
             -MMD -MF ${_probe_d}
             ${_zephyr_cflags}
-            -I${MODEL_OTA_ROOT}/src
+            -I${MODEL_OTA_LIB_DIR}/src
             -I${HEADER_DIR}
-            -I${EDGE_AI_MODULE_ROOT}/include
+            -I${MODEL_OTA_MODULE_DIR}/include
             -include ${CMAKE_CURRENT_BINARY_DIR}/zephyr/include/generated/zephyr/autoconf.h
             -DMODEL_OTA_AXON_PROBE
             -DMODEL_OTA_AXON_HEADER=\"${HEADER_NAME}\"
@@ -75,23 +58,31 @@ function(model_ota_axon_add_probe OUT_OBJ WORK_DIR HEADER HEADER_NAME HEADER_DIR
   set(${OUT_OBJ} ${_probe_o} PARENT_SCOPE)
 endfunction()
 
-function(model_ota_axon_model)
-  cmake_parse_arguments(MI "ALLOCATE_PACKED_OUTPUT"
-    "TARGET;HEADER;PARTITION_NODELABEL;NAME;VERSION;PERSISTENT_VARS_CAP;MODEL_SYM;EDGEAI_MODEL_SRC;SOLUTION_ID"
-    "" ${ARGN})
+function(_model_ota_axon_slot)
+  cmake_parse_arguments(MI "ALLOCATE_PACKED_OUTPUT" "FLAVOR"
+    "TARGET;HEADER;PARTITION_NODELABEL;NAME;VERSION;PERSISTENT_VARS_CAP;MODEL_SYM;MODEL_SRC;SOLUTION_ID"
+    ${ARGN})
 
-  if(NOT MI_TARGET OR NOT MI_HEADER OR NOT MI_PARTITION_NODELABEL)
+  if(NOT MI_FLAVOR OR NOT MI_TARGET OR NOT MI_HEADER OR NOT MI_PARTITION_NODELABEL)
     message(FATAL_ERROR
-            "model_ota_axon_model requires TARGET, HEADER and PARTITION_NODELABEL")
+            "_model_ota_axon_slot requires FLAVOR, TARGET, HEADER and PARTITION_NODELABEL")
   endif()
-  if(MI_EDGEAI_MODEL_SRC AND NOT MI_SOLUTION_ID)
-    message(FATAL_ERROR "model_ota_axon_model requires SOLUTION_ID alongside EDGEAI_MODEL_SRC")
+  if(MI_FLAVOR STREQUAL "edgeai_axon")
+    if(NOT MI_MODEL_SRC OR NOT MI_SOLUTION_ID)
+      message(FATAL_ERROR
+              "model_ota_edgeai_axon_model requires MODEL_SRC and SOLUTION_ID")
+    endif()
+  elseif(MI_MODEL_SRC OR MI_SOLUTION_ID)
+    message(FATAL_ERROR "model_ota_axon_model does not accept MODEL_SRC or SOLUTION_ID")
   endif()
   if(NOT EXISTS ${MI_HEADER})
-    message(FATAL_ERROR "model_ota_axon_model: HEADER not found: ${MI_HEADER}")
+    message(FATAL_ERROR "Axon OTA: HEADER not found: ${MI_HEADER}")
+  endif()
+  if(MI_FLAVOR STREQUAL "edgeai_axon" AND TARGET ota_edgeai_axon_${MI_TARGET})
+    message(FATAL_ERROR "duplicate Edge AI Lab / Axon OTA TARGET ${MI_TARGET}")
   endif()
   if(TARGET ota_axon_${MI_TARGET})
-    message(FATAL_ERROR "model_ota_axon_model: duplicate TARGET ${MI_TARGET}")
+    message(FATAL_ERROR "duplicate Axon OTA TARGET ${MI_TARGET}")
   endif()
   if(NOT MI_NAME)
     set(MI_NAME ${MI_TARGET})
@@ -125,9 +116,7 @@ function(model_ota_axon_model)
     --public-header ${_public_h}
     --partition-addr ${_partition_addr}
   )
-  if(MI_EDGEAI_MODEL_SRC)
-    # An Edge AI Lab solution's contract also covers its nrf_edgeai_t pipeline, which only the
-    # wired translation unit can see; the generated header must not offer a pure-Axon hash there.
+  if(MI_FLAVOR STREQUAL "edgeai_axon")
     list(APPEND _inspect_cmd --edgeai)
   endif()
   if(MI_PERSISTENT_VARS_CAP)
@@ -151,17 +140,14 @@ function(model_ota_axon_model)
   set(_meta_target ${MI_TARGET}_axon_metadata)
   add_custom_target(${_meta_target} DEPENDS ${_private_h} ${_public_h})
 
-  # The contract hash is the compiler's, read back out of this object rather than recomputed on
-  # the host. A wrapped solution hashes its nrf_edgeai_t contract on top of the Axon one, so the
-  # probe needs the generated source (and the solution ID) in scope there.
-  if(MI_EDGEAI_MODEL_SRC)
+  if(MI_FLAVOR STREQUAL "edgeai_axon")
     model_ota_solution_id_hash(${MI_SOLUTION_ID} _solution_id_hash)
     model_ota_contract_probe(
       OUT_OBJ _contract_probe_o
       WORK_DIR ${_work_dir}
-      FLAVOR axon_edgeai
+      FLAVOR edgeai_axon
       IMAGE_BASE ${_partition_addr}
-      MODEL_SRC ${MI_EDGEAI_MODEL_SRC}
+      MODEL_SRC ${MI_MODEL_SRC}
       SOLUTION_ID_HASH ${_solution_id_hash})
   else()
     model_ota_contract_probe(
@@ -171,30 +157,47 @@ function(model_ota_axon_model)
       IMAGE_BASE ${_partition_addr})
   endif()
 
-  set(_context_slot ${_work_dir}/context_slot.json)
-  add_custom_command(
-    OUTPUT ${_context_slot}
-    COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_CONTEXT_SLOT_TOOL}
-            --config ${_private_h}
-            --contract-probe ${_contract_probe_o}
-            --out ${_context_slot}
-    DEPENDS ${_private_h} ${_contract_probe_o} ${MODEL_OTA_AXON_CONTEXT_SLOT_TOOL}
-    COMMAND_EXPAND_LISTS
-    COMMENT "Emitting Axon OTA context slot metadata (${MI_TARGET})"
-    VERBATIM
-  )
-  add_custom_target(${MI_TARGET}_axon_context_slot DEPENDS ${_context_slot})
-  add_dependencies(${_meta_target} ${MI_TARGET}_axon_context_slot)
+  model_ota_add_context_slot(
+    TARGET ${MI_TARGET}
+    BACKEND axon
+    PARTITION_NODELABEL ${MI_PARTITION_NODELABEL}
+    NAME ${MI_NAME}
+    WORK_DIR ${_work_dir}
+    CONTRACT_PROBE ${_contract_probe_o}
+    CONFIG_HEADER ${_private_h}
+    OUT_SLOT_JSON _context_slot)
+  add_dependencies(${_meta_target} ${MI_TARGET}_contract_slot)
 
   model_ota_using_released_fw(_using_released_fw)
 
-  if(CONFIG_MODEL_OTA AND NOT _using_released_fw)
-    model_ota_context_register_slot(
-      TARGET ${MI_TARGET}
-      BACKEND axon
-      PARTITION_NODELABEL ${MI_PARTITION_NODELABEL}
-      NAME ${MI_NAME})
-    model_ota_context_register_slot_build(SLOT_JSON ${_context_slot})
+  if(MI_FLAVOR STREQUAL "edgeai_axon" AND NOT _using_released_fw)
+    get_filename_component(_model_dir ${MI_MODEL_SRC} DIRECTORY)
+    get_filename_component(_model_basename ${MI_MODEL_SRC} NAME)
+
+    set(_wired_lib ota_edgeai_axon_${MI_TARGET})
+    set(_wired_src ${_work_dir}/model_ota_edgeai_axon_wired_${MI_SOLUTION_ID}.c)
+
+    # TODO: unprefixed template variables, picked up by configure_file() in
+    # model_ota_add_wired_library() through CMake scope chaining rather than passed as arguments.
+    # AXON_TARGET and AXON_TOKEN only exist because the wired TU includes the token-suffixed public
+    # header; force-including ${_private_h} instead removes both. See model_ota_wired.cmake.
+    set(AXON_TARGET ${MI_TARGET})
+    string(TOUPPER ${MI_TARGET} AXON_TOKEN)
+    string(REGEX REPLACE "[^A-Z0-9]" "_" AXON_TOKEN "${AXON_TOKEN}")
+    set(SOLUTION_ID ${MI_SOLUTION_ID})
+    set(PARTITION_NODELABEL ${MI_PARTITION_NODELABEL})
+    set(MODEL_SRC_BASENAME ${_model_basename})
+
+    model_ota_add_wired_library(
+      LIB ${_wired_lib}
+      TEMPLATE ${MODEL_OTA_EDGEAI_AXON_WIRED_TPL}
+      OUT_SRC ${_wired_src}
+      MODEL_SRC ${MI_MODEL_SRC}
+      DESCRIPTION "solution ${MI_SOLUTION_ID} (${_wired_lib}, axon backend) <- ${MI_MODEL_SRC}"
+      DISCARD_SECTIONS ${MODEL_OTA_EDGEAI_PARAM_SECTIONS}
+      DEFINES MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u
+      INCLUDES ${_model_dir} ${_public_include_dir}
+      DEPENDS ${_meta_target})
   endif()
 
   if(NOT _using_released_fw)
@@ -203,8 +206,8 @@ function(model_ota_axon_model)
     set_target_properties(${_app_lib} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${_work_dir})
     target_link_libraries(${_app_lib} PRIVATE zephyr_interface)
     target_include_directories(${_app_lib} PRIVATE
-                               ${MODEL_OTA_ROOT}/src ${_header_dir}
-                               ${EDGE_AI_MODULE_ROOT}/include)
+                               ${MODEL_OTA_LIB_DIR}/src ${_header_dir}
+                               ${MODEL_OTA_MODULE_DIR}/include)
     target_compile_options(${_app_lib} PRIVATE "SHELL:-include \"${_private_h}\"")
     target_compile_definitions(${_app_lib} PRIVATE
                                MODEL_OTA_AXON_KEEP_LABEL=model_ota_axon_keep_${MI_TARGET})
@@ -220,53 +223,43 @@ function(model_ota_axon_model)
     toolchain_ld_force_undefined_symbols(model_ota_axon_keep_${MI_TARGET})
   endif()
 
+  set(_image_stub ${MODEL_OTA_AXON_IMAGE_STUB})
+
   set(_image_obj ${MI_TARGET}_axon_image_obj)
   set(_image_deps "${MI_HEADER};${_private_h}")
-  add_library(${_image_obj} OBJECT ${MODEL_OTA_AXON_IMAGE_STUB})
+  add_library(${_image_obj} OBJECT ${_image_stub})
   target_link_libraries(${_image_obj} PRIVATE zephyr_interface)
   target_include_directories(${_image_obj} PRIVATE
-                             ${MODEL_OTA_ROOT}/src ${_header_dir}
-                             ${EDGE_AI_MODULE_ROOT}/include)
+                             ${MODEL_OTA_LIB_DIR}/src ${_header_dir}
+                             ${MODEL_OTA_MODULE_DIR}/include)
   target_compile_options(${_image_obj} PRIVATE "SHELL:-include \"${_private_h}\"")
   target_compile_definitions(${_image_obj} PRIVATE
     NRF_MODEL_PARTITION_ADDR=${_partition_addr}
     MODEL_IMAGE_NAME_STR=\"${MI_NAME}\"
     MODEL_IMAGE_VERSION_U32=${_version_u32}u
     NRF_AXON_INTERLAYER_BUFFER_SIZE=${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE})
-  if(MI_EDGEAI_MODEL_SRC)
-    get_filename_component(_edgeai_model_dir ${MI_EDGEAI_MODEL_SRC} DIRECTORY)
-    get_filename_component(_edgeai_model_basename ${MI_EDGEAI_MODEL_SRC} NAME)
+  if(MI_FLAVOR STREQUAL "edgeai_axon")
+    get_filename_component(_edgeai_model_dir ${MI_MODEL_SRC} DIRECTORY)
+    get_filename_component(_edgeai_model_basename ${MI_MODEL_SRC} NAME)
     target_include_directories(${_image_obj} PRIVATE ${_edgeai_model_dir})
     target_compile_definitions(${_image_obj} PRIVATE
-      MODEL_OTA_AXON_EDGEAI_MODEL_SRC=${_edgeai_model_basename}
+      MODEL_OTA_EDGEAI_AXON_MODEL_SRC=${_edgeai_model_basename}
       MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u)
-    list(APPEND _image_deps ${MI_EDGEAI_MODEL_SRC})
+    list(APPEND _image_deps ${MI_MODEL_SRC})
   endif()
   set_source_files_properties(
-    ${MODEL_OTA_AXON_IMAGE_STUB}
+    ${_image_stub}
     TARGET_DIRECTORY ${_image_obj}
     PROPERTIES OBJECT_DEPENDS "${_image_deps}")
   add_dependencies(${_image_obj} ${_meta_target} zephyr_generated_headers)
 
   set(_model_syms_ld ${_work_dir}/${MI_TARGET}_model_syms.ld)
-  set(_image_elf ${_work_dir}/${MI_TARGET}_model_image.elf)
-  set(_image_raw ${_work_dir}/${MI_TARGET}_model_image_raw.bin)
-  set(_image_bin ${_work_dir}/${MI_TARGET}_model_image.bin)
-  set(_image_hex ${CMAKE_CURRENT_BINARY_DIR}/${MI_TARGET}_model_partition.hex)
   set(_zephyr_elf ${CMAKE_CURRENT_BINARY_DIR}/zephyr/zephyr.elf)
-  set(_generated_context ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context.json)
-  set(_compat_tool ${EDGE_AI_MODULE_ROOT}/tools/model_ota/check_model_compat.py)
 
   if(MODEL_OTA_FW_ELF)
     set(_symbol_elf ${MODEL_OTA_FW_ELF})
   else()
     set(_symbol_elf ${_zephyr_elf})
-  endif()
-
-  if(MODEL_OTA_FW_CONTEXT)
-    set(_compat_context ${MODEL_OTA_FW_CONTEXT})
-  else()
-    set(_compat_context ${_generated_context})
   endif()
 
   set(_provide_deps ${MODEL_OTA_AXON_ELF} $<TARGET_OBJECTS:${_image_obj}>)
@@ -287,45 +280,43 @@ function(model_ota_axon_model)
     COMMENT "Resolving Axon app symbols from ${_symbol_elf} (${MI_TARGET})"
     VERBATIM)
 
-  add_custom_command(
-    OUTPUT ${_image_bin} ${_image_hex}
-    COMMAND ${CMAKE_C_COMPILER}
-            -nostdlib -nostartfiles
-            -Wl,--gc-sections
-            -Wl,--defsym=NRF_MODEL_PARTITION_ADDR=${_partition_addr}
-            -T ${MODEL_OTA_AXON_LINKER_SCRIPT}
-            -T ${_model_syms_ld}
-            -o ${_image_elf}
-            $<TARGET_OBJECTS:${_image_obj}>
-    COMMAND ${CMAKE_OBJCOPY} -O binary -j .model_image ${_image_elf} ${_image_raw}
-    COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_CRC_TOOL}
-            --bin ${_image_raw} -o ${_image_bin}
-    COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_VALIDATE_TOOL}
-            --elf ${_image_elf} --bin ${_image_bin}
-            --partition-addr ${_partition_addr} --partition-size ${_partition_size}
-            --defs-header ${MODEL_OTA_IMAGE_DEFS}
-            --params-type 3 --config-header ${_private_h}
-    COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex
-            --change-addresses=${_partition_addr} ${_image_bin} ${_image_hex}
-    # The caps are a report, but a contract hash mismatch fails the build even under
-    # --report-only.
-    COMMAND ${PYTHON_EXECUTABLE} ${_compat_tool}
-            --context ${_compat_context} --image ${_image_bin} --slot ${MI_TARGET}
-            --elf ${_symbol_elf} --report-only
-    DEPENDS $<TARGET_OBJECTS:${_image_obj}> ${_model_syms_ld} ${_private_h}
-            ${_compat_context}
-            ${MODEL_OTA_AXON_LINKER_SCRIPT} ${MODEL_OTA_AXON_CRC_TOOL}
-            ${MODEL_OTA_AXON_VALIDATE_TOOL} ${_compat_tool}
-    COMMAND_EXPAND_LISTS
-    COMMENT "Building Axon model partition image '${MI_NAME}' at ${_partition_addr}"
-    VERBATIM)
-
+  set(_exclude_from_all FALSE)
   if(_using_released_fw AND NOT MODEL_OTA_FW_ELF)
-    add_custom_target(${MI_TARGET}_model_image DEPENDS ${_image_bin} ${_image_hex})
+    set(_exclude_from_all TRUE)
+  endif()
+
+  if(_exclude_from_all)
+    model_ota_add_image(
+      TARGET ${MI_TARGET}
+      OBJ_LIB ${_image_obj}
+      WORK_DIR ${_work_dir}
+      PARTITION_ADDR ${_partition_addr}
+      PARTITION_SIZE ${_partition_size}
+      NAME ${MI_NAME}
+      LINK_SCRIPTS ${_model_syms_ld}
+      VALIDATE_ARGS --params-type 3 --config-header ${_private_h}
+      COMPAT_ARGS --elf ${_symbol_elf}
+      DEPENDS ${_model_syms_ld} ${_private_h}
+      EXCLUDE_FROM_ALL)
   else()
-    add_custom_target(${MI_TARGET}_model_image ALL DEPENDS ${_image_bin} ${_image_hex})
+    model_ota_add_image(
+      TARGET ${MI_TARGET}
+      OBJ_LIB ${_image_obj}
+      WORK_DIR ${_work_dir}
+      PARTITION_ADDR ${_partition_addr}
+      PARTITION_SIZE ${_partition_size}
+      NAME ${MI_NAME}
+      LINK_SCRIPTS ${_model_syms_ld}
+      VALIDATE_ARGS --params-type 3 --config-header ${_private_h}
+      COMPAT_ARGS --elf ${_symbol_elf}
+      DEPENDS ${_model_syms_ld} ${_private_h})
   endif()
-  if(TARGET model_ota_context AND NOT _using_released_fw)
-    add_dependencies(${MI_TARGET}_model_image model_ota_context)
-  endif()
+endfunction()
+
+function(model_ota_edgeai_axon_model)
+  _model_ota_axon_slot(FLAVOR edgeai_axon ${ARGN})
+endfunction()
+
+function(model_ota_axon_model)
+  _model_ota_axon_slot(FLAVOR axon ${ARGN})
 endfunction()

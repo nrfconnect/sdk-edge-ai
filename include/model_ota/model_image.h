@@ -36,7 +36,7 @@
  * file-static `model_neurons_` symbols the multi_model sample compiles.
  *
  * Each OTA-wired model's payload is dropped from its dedicated static library via archive-scoped
- * linker /DISCARD/ rules (model_ota_neuton.cmake, model_ota_axon_edgeai.cmake). An Axon-backend
+ * linker /DISCARD/ rules (model_ota_edgeai_neuton.cmake, model_ota_edgeai_axon_model()). An Axon-backend
  * Lab solution additionally omits the compiled Axon weights by not including the generated Axon
  * header at all under MODEL_OTA_WIRED. Models compiled directly into the app are unaffected.
  */

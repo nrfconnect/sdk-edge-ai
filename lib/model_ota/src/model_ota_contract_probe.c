@@ -12,10 +12,17 @@
  * reads the finished word back out of the object (tools/model_ota/elf_const.py), which is what
  * puts the compiler's own value into model_ota_context.json.
  *
- * The probe must see exactly the firmware's headers and Kconfig. The flavour-specific stub bakes
+ * The probe must see exactly the firmware's headers and Kconfig. The flavor-specific stub bakes
  * the same macro into the image from a different translation unit, and check_model_compat.py
  * requires the two to agree - a mismatch there means this object was not compiled the way the
  * firmware was.
+ *
+ * TODO: three translation units must reach the same hash - this probe, the image stub and the
+ * wired TU - and each is parameterized differently: raw -D on a hand-built compiler command line
+ * here (model_ota_contract_probe() in model_ota_common.cmake), target_compile_definitions() for
+ * the stub, and configure_file() substitution mixed with -D for the wired TU. Since the whole
+ * guarantee is that all three saw identical inputs, they should share one delivery mechanism and
+ * one define set, ideally emitted by a single helper. See model_ota_edgeai_neuton_wired.c.in.
  */
 
 #include "model_ota_stub_macros.h"
@@ -53,19 +60,19 @@
 #include "model_ota_scale_select.h"
 #endif /* MODEL_OTA_CONTRACT_PROBE_MODEL_SRC */
 
-#if defined(MODEL_OTA_CONTRACT_PROBE_NEUTON)
+#if defined(MODEL_OTA_CONTRACT_PROBE_EDGEAI_NEUTON)
 #define MODEL_OTA_CONTRACT_PROBE_HASH                                                              \
-	MODEL_OTA_CONTRACT_HASH_NEUTON(NRF_MODEL_PARTITION_ADDR,                                   \
-				       MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),              \
-				       MODEL_OTA_SOLUTION_CONTRACT_ARGS)
-#elif defined(MODEL_OTA_CONTRACT_PROBE_AXON_EDGEAI)
+	MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON(NRF_MODEL_PARTITION_ADDR,                            \
+					      MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),       \
+					      MODEL_OTA_SOLUTION_CONTRACT_ARGS)
+#elif defined(MODEL_OTA_CONTRACT_PROBE_EDGEAI_AXON)
 #define MODEL_OTA_CONTRACT_PROBE_HASH                                                              \
-	MODEL_OTA_CONTRACT_HASH_AXON_EDGEAI(NRF_MODEL_PARTITION_ADDR,                              \
+	MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON(NRF_MODEL_PARTITION_ADDR,                              \
 					    MODEL_OTA_SOLUTION_CONTRACT_ARGS)
 #elif defined(MODEL_OTA_CONTRACT_PROBE_AXON)
 #define MODEL_OTA_CONTRACT_PROBE_HASH MODEL_OTA_CONTRACT_HASH_AXON(NRF_MODEL_PARTITION_ADDR)
 #else
-#error "model_ota_contract_probe() must select a flavour"
+#error "model_ota_contract_probe() must select a flavor"
 #endif
 
 /** The word tools/model_ota/elf_const.py reads back; see @ref CONTRACT_HASH_SYMBOL. */

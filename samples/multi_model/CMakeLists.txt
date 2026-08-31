@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(nrf_edgeai_multi_model_sample)
 
-include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_context.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota.cmake)
 
 set(ANOMALY_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/anomaly/src/nrf_edgeai_generated)
 set(CLASSIF_MODEL_DIR ${CMAKE_CURRENT_LIST_DIR}/../nrf_edgeai/classification/src/nrf_edgeai_generated/Neuton)
@@ -61,9 +61,7 @@ if(NOT CONFIG_MODEL_OTA_NEUTON)
   target_sources(app PRIVATE ${NEUTON_MODEL_SOURCES})
 endif()
 
-# The Edge AI Lab solutions with an Axon backend (wakeword, classification, regression) are
-# partition-loaded when Axon OTA is enabled: their compiled Axon models are wired via
-# model_ota_axon_edgeai_wire() below instead.
+# Edge AI Lab solutions with an Axon backend are partition-loaded when Axon OTA is enabled.
 if(CONFIG_MULTI_MODEL_AXON AND NOT CONFIG_MODEL_OTA_AXON)
   target_sources(app PRIVATE
     ${WW_MODEL_SRC}
@@ -84,56 +82,41 @@ target_include_directories(app PRIVATE
 )
 
 if(CONFIG_MODEL_OTA_NEUTON)
-  include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_neuton.cmake)
-  model_ota_neuton_wire(SOLUTION_ID 90360 MODEL_SRC ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c
-                        PARTITION_NODELABEL model_anomaly_storage MAX_NEURONS 20)
-  model_ota_neuton_wire(SOLUTION_ID 90449 MODEL_SRC ${CLASSIF_MODEL_DIR}/nrf_edgeai_user_model.c
-                        PARTITION_NODELABEL model_classif_storage MAX_NEURONS 80)
-  model_ota_neuton_wire(SOLUTION_ID 90508 MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c
-                        PARTITION_NODELABEL model_regress_storage MAX_NEURONS 2)
-
-  include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_neuton_image.cmake)
-  model_ota_neuton_image(TARGET gear_anomaly SOLUTION_ID 90360 NAME gear_anomaly VERSION 1.0.0
-                         PARTITION_NODELABEL model_anomaly_storage
-                         MODEL_SRC ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c)
-  model_ota_neuton_image(TARGET gesture_class SOLUTION_ID 90449 NAME gesture_class VERSION 1.0.0
-                         PARTITION_NODELABEL model_classif_storage
-                         MODEL_SRC ${CLASSIF_MODEL_DIR}/nrf_edgeai_user_model.c)
-  model_ota_neuton_image(TARGET temp_regress SOLUTION_ID 90508 NAME temp_regress VERSION 1.0.0
-                         PARTITION_NODELABEL model_regress_storage
-                         MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c)
+  model_ota_edgeai_neuton_model(TARGET gear_anomaly SOLUTION_ID 90360 VERSION 1.0.0
+                                PARTITION_NODELABEL model_anomaly_storage NEURONS_CAP 20
+                                MODEL_SRC ${ANOMALY_MODEL_DIR}/nrf_edgeai_user_model.c)
+  model_ota_edgeai_neuton_model(TARGET gesture_class SOLUTION_ID 90449 VERSION 1.0.0
+                                PARTITION_NODELABEL model_classif_storage NEURONS_CAP 80
+                                MODEL_SRC ${CLASSIF_MODEL_DIR}/nrf_edgeai_user_model.c)
+  model_ota_edgeai_neuton_model(TARGET temp_regress SOLUTION_ID 90508 VERSION 1.0.0
+                                PARTITION_NODELABEL model_regress_storage NEURONS_CAP 2
+                                MODEL_SRC ${REGRESS_MODEL_DIR}/nrf_edgeai_user_model.c)
 endif()
 
 if(CONFIG_MULTI_MODEL_AXON AND CONFIG_MODEL_OTA_AXON)
-  include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_axon.cmake)
+  model_ota_edgeai_axon_model(TARGET wakeword SOLUTION_ID 36711 VERSION 1.0.0
+                              PARTITION_NODELABEL model_wakeword_storage
+                              MODEL_SRC ${WW_MODEL_SRC} HEADER ${WW_MODEL_HEADER}
+                              PERSISTENT_VARS_CAP 1160)
+  model_ota_edgeai_axon_model(TARGET classif_axon SOLUTION_ID 36237 VERSION 1.0.0
+                              PARTITION_NODELABEL model_classif_axon_storage
+                              MODEL_SRC ${CLASSIF_AXON_MODEL_SRC}
+                              HEADER ${CLASSIF_AXON_MODEL_HEADER})
+  model_ota_edgeai_axon_model(TARGET regress_axon SOLUTION_ID 36025 VERSION 1.0.0
+                              PARTITION_NODELABEL model_regress_axon_storage
+                              MODEL_SRC ${REGRESS_AXON_MODEL_SRC}
+                              HEADER ${REGRESS_AXON_MODEL_HEADER})
+
   # ALLOCATE_PACKED_OUTPUT: keeps this build path (app-owned storage wired into the
   # linked image's packed_output_buf) covered by every OTA build/flash of this sample.
-  model_ota_axon_model(TARGET person_det NAME person_det VERSION 1.0.0
+  model_ota_axon_model(TARGET person_det VERSION 1.0.0
                        PARTITION_NODELABEL model_person_det_storage
                        HEADER ${PERSON_DET_HEADER}
                        ALLOCATE_PACKED_OUTPUT)
-  model_ota_axon_model(TARGET okay_nordic NAME okay_nordic VERSION 1.0.0
+  model_ota_axon_model(TARGET okay_nordic VERSION 1.0.0
                        PARTITION_NODELABEL model_okay_nordic_storage
                        HEADER ${OKAY_NORDIC_HEADER}
                        PERSISTENT_VARS_CAP 1160)
-
-  # Edge AI Lab solutions (nrf_edgeai_t wrapper, Axon backend): only the compiled Axon model is
-  # partition-loaded, the wrapper (DSP pipeline, decode interfaces) stays in the app. See
-  # lib/model_ota/cmake/model_ota_axon_edgeai.cmake.
-  include(${CMAKE_CURRENT_LIST_DIR}/../../lib/model_ota/cmake/model_ota_axon_edgeai.cmake)
-  model_ota_axon_edgeai_wire(SOLUTION_ID 36711 MODEL_SRC ${WW_MODEL_SRC}
-                             HEADER ${WW_MODEL_HEADER}
-                             NAME wakeword VERSION 1.0.0
-                             PARTITION_NODELABEL model_wakeword_storage
-                             PERSISTENT_VARS_CAP 1160)
-  model_ota_axon_edgeai_wire(SOLUTION_ID 36237 MODEL_SRC ${CLASSIF_AXON_MODEL_SRC}
-                             HEADER ${CLASSIF_AXON_MODEL_HEADER}
-                             NAME classif_axon VERSION 1.0.0
-                             PARTITION_NODELABEL model_classif_axon_storage)
-  model_ota_axon_edgeai_wire(SOLUTION_ID 36025 MODEL_SRC ${REGRESS_AXON_MODEL_SRC}
-                             HEADER ${REGRESS_AXON_MODEL_HEADER}
-                             NAME regress_axon VERSION 1.0.0
-                             PARTITION_NODELABEL model_regress_axon_storage)
 endif()
 
 if(CONFIG_MODEL_OTA)

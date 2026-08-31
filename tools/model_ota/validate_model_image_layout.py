@@ -146,6 +146,8 @@ def symbol(elf, name):
 def config_define(path, name):
     if path is None:
         return None
+    # TODO: audit/replace regex scraping of generated C headers; share one implementation
+    # with model_contract.config_define() or read values from structured build metadata.
     match = re.search(
         rf"^\s*#define\s+{re.escape(name)}\s+([A-Za-z_]\w*|0[xX][0-9A-Fa-f]+|\d+)[uUlL]*\s*$",
         path.read_text(encoding="utf-8"),
@@ -193,6 +195,8 @@ def main(argv=None):
     if args.defs_header is not None:
         text = args.defs_header.read_text(encoding="utf-8")
         if expected_version is None:
+            # TODO: audit/replace regex scraping of model_image.h; import
+            # MODEL_IMAGE_FORMAT_VERSION from model_contract instead.
             m = re.search(r"#define\s+MODEL_IMAGE_FORMAT_VERSION\s+(\d+)", text)
             if m is not None:
                 expected_version = int(m.group(1))

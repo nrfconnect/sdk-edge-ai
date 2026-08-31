@@ -60,6 +60,8 @@ def symbol_name_hash(name: str) -> int:
 
 
 def config_define(path: Path, name: str) -> int | None:
+    # TODO: audit/replace regex scraping of generated C headers (#define values); fragile
+    # against line continuations, comments, and duplicate macro names.
     match = re.search(
         rf"^\s*#define\s+{re.escape(name)}\s+(0[xX][0-9A-Fa-f]+|\d+)[uUlL]*\s*$",
         path.read_text(encoding="utf-8"),

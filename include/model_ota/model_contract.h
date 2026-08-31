@@ -88,7 +88,7 @@ extern "C" {
 		MODEL_OTA_FMX32_3(MODEL_OTA_FMX32_2(MODEL_OTA_FMX32_1((uint32_t)(h))))))
 
 /**
- * Envelope common to every flavour: image format and the flash base the image was linked at.
+ * Envelope common to every flavor: image format and the flash base the image was linked at.
  *
  * @p image_base ties the image to one partition. Every intra-image pointer is an absolute flash
  * address baked at link time, so an image linked for a different partition is not merely a
@@ -140,7 +140,7 @@ extern "C" {
 						   (bitrev_len)))
 
 /**
- * The Edge AI Lab *solution* contract, shared by every nrf_edgeai_t-wrapped flavour (Neuton and
+ * The Edge AI Lab *solution* contract, shared by every nrf_edgeai_t-wrapped flavor (Neuton and
  * Axon backends alike). This is what a mere retrain must not change.
  *
  * Callers pass @ref MODEL_OTA_SOLUTION_CONTRACT_ARGS (lib/model_ota/src/model_ota_scale_select.h)
@@ -204,11 +204,28 @@ extern "C" {
  * The neuron scratch capacity is deliberately absent: it is an application capacity, checked by
  * inequality in model_image_load_neuton().
  */
-#define MODEL_OTA_CONTRACT_HASH_NEUTON(image_base, params_type, ...)                               \
+#define MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON(image_base, params_type, ...)                        \
 	MODEL_OTA_HASH_FINAL(MODEL_OTA_HASH_SOLUTION_MIX(                                          \
 		MODEL_OTA_HASH_NEUTON_MIX(                                                         \
 			MODEL_OTA_HASH_ENVELOPE(MODEL_OTA_HASH_SEED, (image_base)),                 \
 			(params_type)),                                                            \
+		__VA_ARGS__))
+
+/**
+ * Full contract hash for an Edge AI Lab solution with an Axon backend.
+ *
+ * A pure Axon image can never be accepted by a wrapped solution's slot (or the reverse): the two
+ * differ by the sixteen solution chunks, which the final avalanche spreads over the whole word.
+ * That matters because such an image carries no @ref model_image_edgeai_params, while the wrapped
+ * application discarded its own compiled-in copy when it was wired for OTA.
+ *
+ * @p image_base  Flash base the image is linked at (NRF_MODEL_PARTITION_ADDR).
+ * @p ...         @ref MODEL_OTA_SOLUTION_CONTRACT_ARGS.
+ */
+#define MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON(image_base, ...)                                       \
+	MODEL_OTA_HASH_FINAL(MODEL_OTA_HASH_SOLUTION_MIX(                                          \
+		MODEL_OTA_HASH_AXON_MIX(                                                           \
+			MODEL_OTA_HASH_ENVELOPE(MODEL_OTA_HASH_SEED, (image_base))),                \
 		__VA_ARGS__))
 
 /**
@@ -224,23 +241,6 @@ extern "C" {
 #define MODEL_OTA_CONTRACT_HASH_AXON(image_base)                                                   \
 	MODEL_OTA_HASH_FINAL(                                                                      \
 		MODEL_OTA_HASH_AXON_MIX(MODEL_OTA_HASH_ENVELOPE(MODEL_OTA_HASH_SEED, (image_base))))
-
-/**
- * Full contract hash for an Edge AI Lab solution with an Axon backend.
- *
- * A pure Axon image can never be accepted by a wrapped solution's slot (or the reverse): the two
- * differ by the sixteen solution chunks, which the final avalanche spreads over the whole word.
- * That matters because such an image carries no @ref model_image_edgeai_params, while the wrapped
- * application discarded its own compiled-in copy when it was wired for OTA.
- *
- * @p image_base  Flash base the image is linked at (NRF_MODEL_PARTITION_ADDR).
- * @p ...         @ref MODEL_OTA_SOLUTION_CONTRACT_ARGS.
- */
-#define MODEL_OTA_CONTRACT_HASH_AXON_EDGEAI(image_base, ...)                                       \
-	MODEL_OTA_HASH_FINAL(MODEL_OTA_HASH_SOLUTION_MIX(                                          \
-		MODEL_OTA_HASH_AXON_MIX(                                                           \
-			MODEL_OTA_HASH_ENVELOPE(MODEL_OTA_HASH_SEED, (image_base))),                \
-		__VA_ARGS__))
 
 #ifdef __cplusplus
 }

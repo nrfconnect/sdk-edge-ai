@@ -7,10 +7,9 @@
 
 include_guard(GLOBAL)
 
-get_filename_component(MODEL_OTA_ROOT ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
-get_filename_component(EDGE_AI_MODULE_ROOT ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSOLUTE)
+include(${CMAKE_CURRENT_LIST_DIR}/model_ota_common.cmake)
 
-set(MODEL_OTA_CONTEXT_EXPORT ${EDGE_AI_MODULE_ROOT}/tools/model_ota/export_model_ota_context.py)
+set(MODEL_OTA_CONTEXT_EXPORT ${MODEL_OTA_TOOLS_DIR}/export_model_ota_context.py)
 
 # Released firmware artifacts for out-of-tree model partition builds (see tools/model_ota/README.md):
 #   MODEL_OTA_FW_ELF     — shipped zephyr.elf (Axon PROVIDE() symbol resolution)
@@ -113,6 +112,59 @@ function(model_ota_context_register_slot_build)
     message(FATAL_ERROR "model_ota_context_register_slot_build requires SLOT_JSON")
   endif()
   set_property(GLOBAL APPEND PROPERTY model_ota_context_slot_build_json ${S_SLOT_JSON})
+endfunction()
+
+# Emit context_slot.json, register configure-time and build-time slot metadata.
+#
+# model_ota_add_context_slot(TARGET <id> BACKEND <axon|neuton> PARTITION_NODELABEL <label>
+#                            NAME <str> WORK_DIR <dir> CONTRACT_PROBE <obj>
+#                            [CONFIG_HEADER <axon_config.h>] [NEURONS_CAP <n>]
+#                            OUT_SLOT_JSON <var>)
+function(model_ota_add_context_slot)
+  cmake_parse_arguments(CS ""
+    "TARGET;BACKEND;PARTITION_NODELABEL;NAME;WORK_DIR;CONTRACT_PROBE;CONFIG_HEADER;NEURONS_CAP;OUT_SLOT_JSON"
+    "" ${ARGN})
+
+  if(NOT CS_TARGET OR NOT CS_BACKEND OR NOT CS_PARTITION_NODELABEL OR NOT CS_WORK_DIR
+     OR NOT CS_CONTRACT_PROBE OR NOT CS_OUT_SLOT_JSON)
+    message(FATAL_ERROR
+            "model_ota_add_context_slot requires TARGET, BACKEND, PARTITION_NODELABEL, "
+            "WORK_DIR, CONTRACT_PROBE and OUT_SLOT_JSON")
+  endif()
+  if(NOT CS_NAME)
+    set(CS_NAME ${CS_TARGET})
+  endif()
+
+  set(_slot_json ${CS_WORK_DIR}/context_slot.json)
+  set(_emit_cmd ${PYTHON_EXECUTABLE} ${MODEL_OTA_CONTEXT_SLOT_TOOL}
+               --contract-probe ${CS_CONTRACT_PROBE} --out ${_slot_json})
+  if(CS_CONFIG_HEADER)
+    list(APPEND _emit_cmd --config ${CS_CONFIG_HEADER})
+  endif()
+
+  add_custom_command(
+    OUTPUT ${_slot_json}
+    COMMAND ${_emit_cmd}
+    DEPENDS ${CS_CONTRACT_PROBE} ${MODEL_OTA_CONTEXT_SLOT_TOOL} ${CS_CONFIG_HEADER}
+    COMMENT "Emitting OTA context slot metadata (${CS_TARGET})"
+    VERBATIM)
+  add_custom_target(${CS_TARGET}_contract_slot DEPENDS ${_slot_json})
+
+  model_ota_using_released_fw(_using_released_fw)
+  if(CONFIG_MODEL_OTA AND NOT _using_released_fw)
+    set(_register_args
+      TARGET ${CS_TARGET}
+      BACKEND ${CS_BACKEND}
+      PARTITION_NODELABEL ${CS_PARTITION_NODELABEL}
+      NAME ${CS_NAME})
+    if(CS_NEURONS_CAP)
+      list(APPEND _register_args NEURONS_CAP ${CS_NEURONS_CAP})
+    endif()
+    model_ota_context_register_slot(${_register_args})
+    model_ota_context_register_slot_build(SLOT_JSON ${_slot_json})
+  endif()
+
+  set(${CS_OUT_SLOT_JSON} ${_slot_json} PARENT_SCOPE)
 endfunction()
 
 function(model_ota_block_app_build)

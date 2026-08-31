@@ -16,6 +16,14 @@ set(MODEL_OTA_LIB_DIR ${_model_ota_lib} CACHE INTERNAL "edge-ai model_ota librar
 get_filename_component(_model_ota_module ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSOLUTE)
 set(MODEL_OTA_MODULE_DIR ${_model_ota_module} CACHE INTERNAL "edge-ai module root")
 
+# Shared partition-image inputs (used by model_ota_add_image()).
+set(MODEL_OTA_LINKER_SCRIPT ${MODEL_OTA_LIB_DIR}/linker/model_image.ld)
+set(MODEL_OTA_CRC_TOOL ${MODEL_OTA_TOOLS_DIR}/patch_image_crc.py)
+set(MODEL_OTA_VALIDATE_TOOL ${MODEL_OTA_TOOLS_DIR}/validate_model_image_layout.py)
+set(MODEL_OTA_COMPAT_TOOL ${MODEL_OTA_TOOLS_DIR}/check_model_compat.py)
+set(MODEL_OTA_IMAGE_DEFS ${MODEL_OTA_MODULE_DIR}/include/model_ota/model_image.h)
+set(MODEL_OTA_CONTEXT_SLOT_TOOL ${MODEL_OTA_TOOLS_DIR}/emit_context_slot.py)
+
 # Hash of the solution ID. The preprocessor cannot hash a string literal, so the value is
 # computed here and passed to the stubs as MODEL_OTA_SOLUTION_ID_HASH (see
 # lib/model_ota/src/model_ota_scale_select.h).
@@ -51,11 +59,11 @@ endfunction()
 # Compile the contract-hash probe for one model slot; see
 # lib/model_ota/src/model_ota_contract_probe.c for why the value cannot be computed on the host.
 #
-# model_ota_contract_probe(OUT_OBJ <var> WORK_DIR <dir> FLAVOR <neuton|axon|axon_edgeai>
+# model_ota_contract_probe(OUT_OBJ <var> WORK_DIR <dir> FLAVOR <edgeai_neuton|edgeai_axon|axon>
 #                          IMAGE_BASE <addr> [MODEL_SRC <abs nrf_edgeai_user_model.c>]
 #                          [SOLUTION_ID_HASH <u32>])
 #
-# MODEL_SRC and SOLUTION_ID_HASH go together and are required for the two solution flavours: those
+# MODEL_SRC and SOLUTION_ID_HASH go together and are required for the two solution flavors: those
 # contracts cover the generated nrf_edgeai_t pipeline, which is only visible with the source in
 # scope.
 function(model_ota_contract_probe)
@@ -67,12 +75,12 @@ function(model_ota_contract_probe)
             "model_ota_contract_probe requires OUT_OBJ, WORK_DIR, FLAVOR and IMAGE_BASE")
   endif()
 
-  if(CP_FLAVOR STREQUAL "neuton")
-    set(_flavor_def MODEL_OTA_CONTRACT_PROBE_NEUTON)
+  if(CP_FLAVOR STREQUAL "edgeai_neuton")
+    set(_flavor_def MODEL_OTA_CONTRACT_PROBE_EDGEAI_NEUTON)
+  elseif(CP_FLAVOR STREQUAL "edgeai_axon")
+    set(_flavor_def MODEL_OTA_CONTRACT_PROBE_EDGEAI_AXON)
   elseif(CP_FLAVOR STREQUAL "axon")
     set(_flavor_def MODEL_OTA_CONTRACT_PROBE_AXON)
-  elseif(CP_FLAVOR STREQUAL "axon_edgeai")
-    set(_flavor_def MODEL_OTA_CONTRACT_PROBE_AXON_EDGEAI)
   else()
     message(FATAL_ERROR "model_ota_contract_probe: unknown FLAVOR ${CP_FLAVOR}")
   endif()

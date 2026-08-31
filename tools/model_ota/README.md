@@ -32,8 +32,8 @@ that cannot be expressed directly in the toolchain:
   `sizeof` of the runtime structs, so only the compiler can fold it; the build compiles
   `lib/model_ota/src/model_ota_contract_probe.c` per slot and this reads the finished word,
   which is why no host script reimplements the hash.
-- `emit_contract_slot.py` / `emit_axon_context_slot.py` - turn a slot's probe (and, for Axon, its
-  generated config header) into the build-time half of its `model_ota_context.json` entry.
+- `emit_context_slot.py` - turn a slot's probe (and, for Axon, its generated config header)
+  into the build-time half of its `model_ota_context.json` entry.
 - `model_contract.py` - the *string* hashes the preprocessor cannot do: the solution ID mixed into
   the solution contract, and the Axon binding table's symbol names. Both are 32-bit `blake2s`
   rather than the contract hash's FNV-1a chain, since C only consumes them as literals and never
@@ -74,9 +74,6 @@ generates lives under `model_ota/`:
 - `model_ota/<name>/` - one subfolder per model: the OTA payload `<name>_model_image.bin`, the
   linked `.elf`, the raw pre-CRC `.bin`, probes, generated headers, `context_slot.json`, and the
   model's app-side static library.
-- `model_ota/` - build-wide artifacts: `model_ota_context_manifest.json`,
-  `model_ota_discard.ld`, and the Neuton wired sources and libraries (keyed by solution ID
-  rather than by model target).
 
 ### Out-of-tree model partition rebuild
 
@@ -97,8 +94,8 @@ cmake --build build/multi_model --target gesture_class_model_image
 | `MODEL_OTA_FW_ELF` | `zephyr.elf` | Axon image link (`axon_elf.py provide` — app RAM symbol addresses) |
 | `MODEL_OTA_FW_CONTEXT` | `model_ota_context.json` | Build-time `check_model_compat.py` (`--report-only`) |
 
-**Axon** models require **both** variables when building out-of-tree. **Neuton** partition images
-do not use the ELF (pass only `MODEL_OTA_FW_CONTEXT` to skip in-tree context export).
+**Neuton** partition images do not use the ELF (pass only `MODEL_OTA_FW_CONTEXT` to skip
+in-tree context export). **Axon** models require **both** variables when building out-of-tree.
 
 When either variable is set, CMake skips `model_ota_context` export and omits app partition-loader
 wiring. The application build (`app`, `zephyr.elf`) is deliberately blocked and prints how to
@@ -107,29 +104,26 @@ build a partition image instead. Use `cmake --build build/multi_model --target <
 Axon `*_model_image` targets are excluded from the default build unless `MODEL_OTA_FW_ELF` is set
 (because `axon_elf.py provide` has no symbol source without a released ELF).
 
-Neuton per-image build steps live in `lib/model_ota/cmake/model_ota_neuton_image.cmake`
+`model_ota_edgeai_neuton_model()` in `lib/model_ota/cmake/model_ota_edgeai_neuton.cmake`,
+`model_ota_edgeai_axon_model()` and `model_ota_axon_model()` in
+`lib/model_ota/cmake/model_ota_axon.cmake`. All three share `model_ota_add_image()` from
+`lib/model_ota/cmake/model_ota_image.cmake`
 (compile a model stub, link at the partition base with `lib/model_ota/linker/model_image.ld`,
-`objcopy` the `.model_image` section, patch CRC, validate, emit the addressed hex). Neuton
-app-image payload discard and partition loaders live in `lib/model_ota/cmake/model_ota_neuton.cmake`
-(`configure_file` from `lib/model_ota/src/model_ota_neuton_wired.c.in`).
+`objcopy` the `.model_image` section, patch CRC, validate, emit the addressed hex).
 
-Axon per-image build steps and app wiring use one `model_ota_axon_model()` declaration in
-`lib/model_ota/cmake/model_ota_axon.cmake`. By default the linked image's optional
-`packed_output_buf` field is NULL and no app RAM is spent on it; pass
-`ALLOCATE_PACKED_OUTPUT` to allocate app-owned storage and wire it into the image for
-models that require a dedicated packing buffer (the `multi_model` sample's `person_det`
-declaration uses this option, so both code paths are exercised by its OTA build).
-
-A "Nordic EdgeAI Lab" solution exported for the Axon backend (a `nrf_edgeai_t` wrapper -
-input windowing, DSP feature pipeline, decode interfaces - around a compiled Axon model) uses
-`model_ota_axon_edgeai_wire()` in `lib/model_ota/cmake/model_ota_axon_edgeai.cmake` instead.
-The compiled Axon model is partition-loaded via `model_ota_axon_model()`, same as a pure Axon
-model, and the image additionally carries the solution's `nrf_edgeai_t` parameters. The wrapper
-itself (windowing, pipeline, interfaces) stays compiled into the app; its
-`model.instance.p_void` and its parameters are patched at runtime by
-`nrf_edgeai_load_user_model_<id>()` from
-`lib/model_ota/src/model_ota_axon_edgeai_wired.c.in` (the `multi_model` sample's `wakeword`,
+Edge AI Lab solutions with an Axon backend use `model_ota_edgeai_axon_model()` in
+`lib/model_ota/cmake/model_ota_axon.cmake`. The compiled Axon model is partition-loaded like a raw
+Axon model, and the image additionally carries the solution's `nrf_edgeai_t` parameters. The
+wrapper itself stays compiled into the app; its `model.instance.p_void` and its parameters are
+patched at runtime by `nrf_edgeai_load_user_model_<id>()` from
+`lib/model_ota/src/model_ota_edgeai_axon_wired.c.in` (the `multi_model` sample's `wakeword`,
 `classif_axon`, and `regress_axon` declarations exercise this path).
+
+Raw Axon per-image build steps wire app-owned RAM via `axon_elf.py provide` from `zephyr.elf`.
+By default the linked image's optional `packed_output_buf` field is NULL; pass
+`ALLOCATE_PACKED_OUTPUT` to allocate app-owned storage and wire it into the image for models that
+require a dedicated packing buffer (the `multi_model` sample's `person_det` declaration uses this
+option).
 
 ## Pre-flight compatibility check
 
@@ -163,12 +157,13 @@ nrfutil device program --firmware gear_anomaly_model_partition.hex \
   `lib/model_ota/model_image_neuton.c`, `lib/model_ota/model_image_axon.c`
 - Production flow doc: `doc/libraries/model_ota.rst`
 - Context export: `lib/model_ota/cmake/model_ota_context.cmake`
-- Build wiring: `lib/model_ota/cmake/model_ota_neuton_image.cmake`,
-  `lib/model_ota/cmake/model_ota_neuton.cmake`, `lib/model_ota/src/model_ota_neuton_wired.c.in`,
-  `lib/model_ota/src/model_ota_neuton_image_stub.c`,
+- Build wiring: `lib/model_ota/cmake/model_ota.cmake` (single include),
+  `lib/model_ota/cmake/model_ota_edgeai_neuton.cmake`,
+  `lib/model_ota/cmake/model_ota_axon.cmake`, `lib/model_ota/cmake/model_ota_image.cmake`,
+  `lib/model_ota/src/model_ota_edgeai_neuton_wired.c.in`,
+  `lib/model_ota/src/model_ota_edgeai_neuton_image_stub.c`,
+  `lib/model_ota/src/model_ota_axon_image_stub.c`,
   `lib/model_ota/src/model_ota_stub_macros.h`, `lib/model_ota/linker/model_image.ld`
-- Axon wiring: `lib/model_ota/cmake/model_ota_axon.cmake`,
-  `tools/model_ota/axon_elf.py`
-- Edge AI Lab / Axon-backend wiring: `lib/model_ota/cmake/model_ota_axon_edgeai.cmake`,
-  `lib/model_ota/src/model_ota_axon_edgeai_wired.c.in`,
-  `include/model_ota/model_ota_axon_edgeai.h`
+- Axon wiring: `tools/model_ota/axon_elf.py`, `tools/model_ota/emit_context_slot.py`
+- Edge AI Lab wired loaders: `lib/model_ota/src/model_ota_edgeai_neuton_wired.c.in`,
+  `lib/model_ota/src/model_ota_edgeai_axon_wired.c.in`, `include/model_ota/model_ota_edgeai.h`

@@ -24,22 +24,23 @@ config MODEL_OTA_NEUTON
 	depends on NRF_EDGEAI
 	help
 	  Builds model_image_neuton.c and model_image_load_neuton(). OTA-wired models are compiled
-	  via model_ota_neuton_wire(), which configure_file()s lib/model_ota/src/model_ota_neuton_wired.c.in
-	  into a per-model wired translation unit (includes generated nrf_edgeai_user_model.c and
-	  defines nrf_edgeai_load_user_model_<SOLUTION_ID>()), then drops each wired model's payload from its static library by archive-scoped linker /DISCARD/ rules.
+	  via model_ota_edgeai_neuton_model(), which configure_file()s
+	  lib/model_ota/src/model_ota_edgeai_neuton_wired.c.in into a per-model wired translation
+	  unit (includes generated nrf_edgeai_user_model.c and defines
+	  nrf_edgeai_load_user_model_<SOLUTION_ID>()), then drops each wired model's payload from
+	  its static library by archive-scoped linker /DISCARD/ rules.
 	  Build-time macro contract: model_ota_stub_macros.h.
-	  See lib/model_ota/cmake/model_ota_neuton_image.cmake,
-	  lib/model_ota/cmake/model_ota_neuton.cmake and include/model_ota/model_image.h.
+	  See lib/model_ota/cmake/model_ota_edgeai_neuton.cmake and include/model_ota/model_image.h.
 
 config MODEL_OTA_AXON
 	bool "Enable the Axon model image loader"
 	depends on NRF_AXON
 	help
-	  Builds model_image_axon.c and model_image_load_axon(). Pure Axon models are built as
-	  self-contained partition images and wired to the application with one
-	  model_ota_axon_model() declaration. Edge AI Lab solutions with an Axon backend use
-	  model_ota_axon_edgeai_wire() (lib/model_ota/cmake/model_ota_axon_edgeai.cmake): only
-	  the compiled Axon model is partition-loaded; the nrf_edgeai_t wrapper stays in the app.
+	  Builds model_image_axon.c and model_image_load_axon(). Edge AI Lab solutions with an
+	  Axon backend use model_ota_edgeai_axon_model(): only the compiled Axon model is
+	  partition-loaded; the nrf_edgeai_t wrapper stays in the app. Raw Axon models are built
+	  as self-contained partition images and wired to the application with one
+	  model_ota_axon_model() declaration.
 	  See lib/model_ota/cmake/model_ota_axon.cmake and include/model_ota/model_image.h.
 
 config MODEL_OTA_LOG_LEVEL

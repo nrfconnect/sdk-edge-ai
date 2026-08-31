@@ -188,7 +188,7 @@ def collect_provide_symbols(objects: Sequence[Path]) -> list[str]:
     Fix: restrict the result to the probe-derived keep list (MODEL_OTA_AXON_KEEP_REFS) plus the
     interlayer buffer and the app-storage symbols. For a pure Axon model that set is already
     exactly what this returns, so the change is behaviour-preserving there and makes the emitted
-    fragment the same shape for both flavours.
+    fragment the same shape for both flavors.
     """
     defined: set[str] = set()
     undefined: set[str] = set()
@@ -420,11 +420,11 @@ def render_public_header(
     ]
     if edgeai:
         # The solution's own contract (task, pipeline, scale layout) is only visible to the wired
-        # translation unit, which computes MODEL_OTA_CONTRACT_HASH_AXON_EDGEAI itself. Emitting a
+        # translation unit, which computes MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON itself. Emitting a
         # pure-Axon hash here would just be a wrong value waiting to be picked up.
         lines.append(
             f"/* No MODEL_OTA_AXON_{token}_CONTRACT_HASH: Edge AI Lab solution, see "
-            "model_ota_axon_edgeai_wired.c.in. */"
+            "model_ota_edgeai_axon_wired.c.in. */"
         )
     else:
         lines.append(

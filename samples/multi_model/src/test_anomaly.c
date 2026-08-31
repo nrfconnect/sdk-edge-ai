@@ -60,10 +60,10 @@ LOG_MODULE_REGISTER(multi_anomaly, LOG_LEVEL_INF);
 nrf_edgeai_t *nrf_edgeai_user_model_90360(void);
 
 #if defined(CONFIG_MODEL_OTA_NEUTON)
-#include <model_ota/model_ota_neuton.h>
+#include <model_ota/model_ota_edgeai.h>
 #include <zephyr/storage/flash_map.h>
 
-MODEL_OTA_NEUTON_LOAD_DECL(90360);
+MODEL_OTA_EDGEAI_LOAD_DECL(90360);
 
 BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_anomaly_storage),
 	     "board devicetree is missing model_anomaly_storage - see boards/*.overlay");

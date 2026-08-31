@@ -18,7 +18,7 @@ Production update flow
 3. Run ``check_model_compat.py`` against the archived context before release:
 
    - exit **0** — compatible; flash the partition hex
-   - exit **2** — model exceeds firmware caps (for example ``MAX_NEURONS`` grew); ship firmware 1.1 first
+   - exit **2** — model exceeds firmware caps (for example ``NEURONS_CAP`` grew); ship firmware 1.1 first
    - exit **1** — incompatible (contract hash, binding, or format)
 
 4. On boot, ``model_image_load_neuton()`` / ``model_image_load_axon()`` re-validate contract hash, caps, and (Axon) address bindings.
@@ -56,21 +56,21 @@ Contract vs binding
 
 **Contract hash** — same value in the image and compiled into the app; checked at load time.
 
-Only *identity* invariants are hashed: values that must be equal or the image is meaningless. Every flavour starts from the same envelope — format version and the partition base the image was linked at (which ties an image to one slot, since all its pointers are absolute flash addresses).
+Only *identity* invariants are hashed: values that must be equal or the image is meaningless. Every flavor starts from the same envelope — format version and the partition base the image was linked at (which ties an image to one slot, since all its pointers are absolute flash addresses).
 
-- **Neuton** (``MODEL_OTA_CONTRACT_HASH_NEUTON``): envelope, weight precision, descriptor/meta struct sizes, then the solution contract
-- **pure Axon** (``MODEL_OTA_CONTRACT_HASH_AXON``): envelope and the driver ABI — compiled-model struct size, interlayer and psum Kconfig sizes
-- **Axon-backed Lab solution** (``MODEL_OTA_CONTRACT_HASH_AXON_EDGEAI``): envelope, the same driver ABI, then the solution contract
+- **Edge AI Lab / Neuton** (``MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON``): envelope, weight precision, descriptor/meta struct sizes, then the solution contract
+- **Edge AI Lab / Axon** (``MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON``): envelope, the same driver ABI, then the solution contract
+- **raw Axon** (``MODEL_OTA_CONTRACT_HASH_AXON``): envelope and the driver ABI — compiled-model struct size, interlayer and psum Kconfig sizes
 
-The *solution contract* is shared by both ``nrf_edgeai_t``-wrapped flavours: solution ID, Lab runtime version, task, output count, decoded-output and parameter-block struct sizes, scaling geometry, input feature type and count, window size/shift/subwindows, extracted-feature count, ``MODEL_USES_AS_INPUT_MASK``, and a DSP digest.
+The *solution contract* is shared by both ``nrf_edgeai_t``-wrapped flavors: solution ID, Lab runtime version, task, output count, decoded-output and parameter-block struct sizes, scaling geometry, input feature type and count, window size/shift/subwindows, extracted-feature count, ``MODEL_USES_AS_INPUT_MASK``, and a DSP digest.
 
 That DSP digest (``MODEL_OTA_CONTRACT_HASH_DSP``, 0 for a solution without a feature pipeline) covers the extent and element width of ``FEATURES_EXTRACTION_ARGUMENTS`` and the FFT geometry — ``DSP_AMPLITUDE_SPECTRUM_LEN``, ``DSP_RFFT_LEN`` and the bit-reversal table length, all 0 without a frequency-domain pipeline. The FFT and twiddle *table contents* are not hashed: they are a pure function of those lengths. ``FEATURES_EXTRACTION_MASK`` is not hashed either — the preprocessor cannot fold an array, so it travels in the image and is compared at load time instead (see ``p_extraction_mask`` above).
 
-There is no backend tag in the hash. The flavours differ in the *sequence* of chunks they fold in — a wrapped solution adds sixteen more than a raw Axon model — so an FNV-1a chain plus the final avalanche separates them without one, and each loader independently checks ``params_type``. A pure Axon image can therefore never be accepted by a wrapped solution's slot. That matters: such an image carries no ``edgeai_params``, while an OTA-wired application has discarded its own compiled-in copy.
+There is no backend tag in the hash. The flavors differ in the *sequence* of chunks they fold in — a wrapped solution adds sixteen more than a raw Axon model — so an FNV-1a chain plus the final avalanche separates them without one, and each loader independently checks ``params_type``. A pure Axon image can therefore never be accepted by a wrapped solution's slot. That matters: such an image carries no ``edgeai_params``, while an OTA-wired application has discarded its own compiled-in copy.
 
 The solution ID hashed here is the ``SOLUTION_ID`` the CMake helper was called with, not the generated source's ``EDGEAI_LAB_SOLUTION_ID_STR``, so both sides of an update derive it from the value the build was configured with.
 
-**One implementation, the compiler's.** Every value above is folded by the C macros — nothing recomputes the hash on the host. Since the mix includes ``sizeof`` of the runtime structs, the preprocessor cannot evaluate it and a host reimplementation would need hand-maintained struct sizes that go stale behind a runtime header change. Instead the build compiles ``lib/model_ota/src/model_ota_contract_probe.c`` once per slot — a throwaway translation unit built with the application's own flags and linked into neither the firmware nor the image — and the host reads the finished word out of that object (``tools/model_ota/elf_const.py``). That is the value ``model_ota_context.json`` carries. The image's own copy is baked by the flavour's stub, a separate translation unit, and ``check_model_compat.py`` requires the two to agree — which is what keeps the value released to the field equal to the one images actually carry, and is fatal even in the in-tree ``--report-only`` build report. The only hashing left on the host is over *strings*, which the preprocessor genuinely cannot do: the solution ID above and the Axon binding table's symbol names. Those two are a 32-bit ``blake2s`` rather than the FNV-1a chain — C only ever consumes them as literals, never recomputing one, so they are free of the constraint that shaped the contract hash, and an avalanching hash is what keeps two Axon symbol names sharing a long prefix from colliding into the wrong binding row.
+**One implementation, the compiler's.** Every value above is folded by the C macros — nothing recomputes the hash on the host. Since the mix includes ``sizeof`` of the runtime structs, the preprocessor cannot evaluate it and a host reimplementation would need hand-maintained struct sizes that go stale behind a runtime header change. Instead the build compiles ``lib/model_ota/src/model_ota_contract_probe.c`` once per slot — a throwaway translation unit built with the application's own flags and linked into neither the firmware nor the image — and the host reads the finished word out of that object (``tools/model_ota/elf_const.py``). That is the value ``model_ota_context.json`` carries. The image's own copy is baked by the flavor's stub, a separate translation unit, and ``check_model_compat.py`` requires the two to agree — which is what keeps the value released to the field equal to the one images actually carry, and is fatal even in the in-tree ``--report-only`` build report. The only hashing left on the host is over *strings*, which the preprocessor genuinely cannot do: the solution ID above and the Axon binding table's symbol names. Those two are a 32-bit ``blake2s`` rather than the FNV-1a chain — C only ever consumes them as literals, never recomputing one, so they are free of the constraint that shaped the contract hash, and an avalanching hash is what keeps two Axon symbol names sharing a long prefix from colliding into the wrong binding row.
 
 **Capacities are deliberately not hashed.** The Neuton neuron scratch capacity and the Axon persistent-vars and packed-output caps have a "required <= provided" relation, so they stay as header fields checked by inequality. Hashing them would collapse the "model outgrew this firmware" verdict (exit 2) into an opaque contract mismatch.
 
@@ -95,9 +95,11 @@ Under ``tools/model_ota/``:
 CMake integration
 *****************
 
-- ``model_ota_neuton_wire()`` + ``model_ota_neuton_image()`` — Neuton
-- ``model_ota_axon_model()`` — pure Axon
-- ``model_ota_axon_edgeai_wire()`` — Edge AI Lab wrapper + Axon backend
+Include ``lib/model_ota/cmake/model_ota.cmake`` once, then:
+
+- ``model_ota_edgeai_neuton_model()`` — Edge AI Lab solution, Neuton backend
+- ``model_ota_edgeai_axon_model()`` — Edge AI Lab solution, Axon backend
+- ``model_ota_axon_model()`` — raw Axon model (no ``nrf_edgeai_t`` wrapper)
 
 Optional CMake cache variables for **out-of-tree** model partition builds against shipped
 firmware (see ``tools/model_ota/README.md``):

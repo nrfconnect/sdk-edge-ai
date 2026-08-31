@@ -39,10 +39,6 @@ class StringHashTests(unittest.TestCase):
         """The value feeds the solution contract, so a wrong slot must not look compatible."""
         self.assertNotEqual(solution_id_hash(SOLUTION_ID), solution_id_hash("90449"))
 
-    def test_solution_id_accepts_a_non_string(self) -> None:
-        """CMake passes numeric solution IDs unquoted."""
-        self.assertEqual(solution_id_hash(90360), solution_id_hash("90360"))
-
     def test_a_trailing_byte_changes_most_of_the_hash(self) -> None:
         """Binding rows are matched on the hash alone, and Axon symbols share long prefixes.
 

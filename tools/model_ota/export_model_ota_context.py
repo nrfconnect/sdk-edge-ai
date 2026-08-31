@@ -44,6 +44,8 @@ def parse_autoconf(path: Path, name: str, default: int = 0) -> int:
         return default
     import re
 
+    # TODO: audit/replace regex scraping of autoconf.h #defines; use west/kconfig export
+    # or another structured Kconfig snapshot instead of parsing the header text.
     text = path.read_text(encoding="utf-8")
     match = re.search(rf"#define\s+{re.escape(name)}\s+(\d+)", text)
     return int(match.group(1)) if match else default

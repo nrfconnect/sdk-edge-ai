@@ -12,10 +12,10 @@
 #include <zephyr/logging/log.h>
 
 #if defined(CONFIG_MODEL_OTA_AXON)
-#include <model_ota/model_ota_axon_edgeai.h>
+#include <model_ota/model_ota_edgeai.h>
 #include <zephyr/storage/flash_map.h>
 
-MODEL_OTA_AXON_EDGEAI_LOAD_DECL(36237);
+MODEL_OTA_EDGEAI_LOAD_DECL(36237);
 
 BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_classif_axon_storage),
 	     "board devicetree is missing model_classif_axon_storage - see boards/*.overlay");
