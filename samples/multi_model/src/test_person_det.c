@@ -12,17 +12,15 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/storage/flash_map.h>
 
 #include <axon/nrf_axon_platform.h>
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
 
 #if defined(CONFIG_MODEL_OTA_AXON)
-#include <model_ota/model_image.h>
-#include <model_ota/axon/person_det.h>
+#include <model_ota/model_ota_axon.h>
 
-extern const uint32_t MODEL_OTA_AXON_PERSON_DET_KEEP_LABEL[];
+MODEL_OTA_AXON_LOAD_DECL(person_det);
 #else
 /*
  * Non-OTA build: allocate the packed-output buffer inline (this TU owns
@@ -67,17 +65,7 @@ void run_person_det_tests(void)
 	struct detection_box boxes[MAX_BOXES];
 
 #if defined(CONFIG_MODEL_OTA_AXON)
-	const struct model_image_axon_expect expect = {
-		.contract_hash = MODEL_OTA_AXON_PERSON_DET_CONTRACT_HASH,
-		.persistent_vars_cap = MODEL_OTA_AXON_PERSON_DET_PERSISTENT_VARS_CAP,
-		.packed_output_cap = MODEL_OTA_AXON_PERSON_DET_PACKED_OUTPUT_BYTES,
-		.binding_table = MODEL_OTA_AXON_PERSON_DET_KEEP_LABEL,
-	};
-
-	if (model_image_load_axon((const uint8_t *)PARTITION_ADDRESS(model_person_det_storage),
-				  PARTITION_SIZE(model_person_det_storage),
-				  &expect, &model) != MODEL_IMAGE_OK ||
-	    model == NULL) {
+	if (model_ota_load_axon_person_det(&model) != MODEL_IMAGE_OK) {
 		LOG_WRN("No valid person-det model image in model_person_det_storage - skipping "
 			"(flash person_det_model_partition.hex)");
 		return;

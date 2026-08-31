@@ -13,12 +13,8 @@
 
 #if defined(CONFIG_MODEL_OTA_AXON)
 #include <model_ota/model_ota_edgeai.h>
-#include <zephyr/storage/flash_map.h>
 
 MODEL_OTA_EDGEAI_LOAD_DECL(36711);
-
-BUILD_ASSERT(FIXED_PARTITION_EXISTS(model_wakeword_storage),
-	     "board devicetree is missing model_wakeword_storage - see boards/*.overlay");
 #else
 nrf_edgeai_t *nrf_edgeai_user_model_36711(void);
 #endif
@@ -35,11 +31,9 @@ void run_wakeword_tests(void)
 	/* Model-only OTA: the compiled Axon model is loaded from its flash partition (XIP) at
 	 * runtime and wired into the app-compiled nrf_edgeai_t wrapper.
 	 */
-	nrf_edgeai_t *model = nrf_edgeai_load_user_model_36711(
-		(const uint8_t *)PARTITION_ADDRESS(model_wakeword_storage),
-		PARTITION_SIZE(model_wakeword_storage));
+	nrf_edgeai_t *model;
 
-	if (model == NULL) {
+	if (nrf_edgeai_load_user_model_36711(&model) != MODEL_IMAGE_OK) {
 		LOG_WRN("No valid wakeword model image in model_wakeword_storage - skipping "
 			"(flash wakeword_model_partition.hex)");
 		return;

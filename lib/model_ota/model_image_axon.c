@@ -35,7 +35,7 @@ static bool binding_entry_matches(const struct model_image_binding_entry *entry,
 	return false;
 }
 
-static int model_image_verify_axon_binding(const struct model_image_header *hdr,
+static enum model_image_result model_image_verify_axon_binding(const struct model_image_header *hdr,
 					     const uint32_t *app_binding_table)
 {
 	const struct model_image_binding_entry *entries;
@@ -66,13 +66,13 @@ static int model_image_verify_axon_binding(const struct model_image_header *hdr,
 	return MODEL_IMAGE_OK;
 }
 
-int model_image_load_axon(const uint8_t *partition_addr, size_t partition_size,
+enum model_image_result model_image_load_axon(const uint8_t *partition_addr, size_t partition_size,
 			  const struct model_image_axon_expect *expect,
 			  const nrf_axon_nn_compiled_model_s **out_model)
 {
 	struct model_image_header hdr;
 	const nrf_axon_nn_compiled_model_s *model;
-	int rc;
+	enum model_image_result rc;
 
 	if (out_model == NULL || expect == NULL) {
 		return MODEL_IMAGE_ERR_AXON_VALIDATE;

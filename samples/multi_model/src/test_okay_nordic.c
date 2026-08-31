@@ -10,17 +10,15 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/storage/flash_map.h>
 
 #include <axon/nrf_axon_platform.h>
 #include <drivers/axon/nrf_axon_driver.h>
 #include <drivers/axon/nrf_axon_nn_infer.h>
 
 #if defined(CONFIG_MODEL_OTA_AXON)
-#include <model_ota/model_image.h>
-#include <model_ota/axon/okay_nordic.h>
+#include <model_ota/model_ota_axon.h>
 
-extern const uint32_t MODEL_OTA_AXON_OKAY_NORDIC_KEEP_LABEL[];
+MODEL_OTA_AXON_LOAD_DECL(okay_nordic);
 #else
 #include "generated/nrf_axon_model_okay_nordic.h"
 #endif
@@ -71,17 +69,7 @@ void run_okay_nordic_tests(void)
 	int err;
 
 #if defined(CONFIG_MODEL_OTA_AXON)
-	const struct model_image_axon_expect expect = {
-		.contract_hash = MODEL_OTA_AXON_OKAY_NORDIC_CONTRACT_HASH,
-		.persistent_vars_cap = MODEL_OTA_AXON_OKAY_NORDIC_PERSISTENT_VARS_CAP,
-		.packed_output_cap = MODEL_OTA_AXON_OKAY_NORDIC_PACKED_OUTPUT_BYTES,
-		.binding_table = MODEL_OTA_AXON_OKAY_NORDIC_KEEP_LABEL,
-	};
-
-	if (model_image_load_axon((const uint8_t *)PARTITION_ADDRESS(model_okay_nordic_storage),
-				  PARTITION_SIZE(model_okay_nordic_storage),
-				  &expect, &model) != MODEL_IMAGE_OK ||
-	    model == NULL) {
+	if (model_ota_load_axon_okay_nordic(&model) != MODEL_IMAGE_OK) {
 		LOG_WRN("No valid okay_nordic model image in model_okay_nordic_storage - skipping "
 			"(flash okay_nordic_model_partition.hex)");
 		return;

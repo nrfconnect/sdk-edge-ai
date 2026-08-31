@@ -14,7 +14,7 @@
 
 LOG_MODULE_DECLARE(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
 
-static int neuton_patch_neurons_buf(nrf_edgeai_model_neuton_params_t *params, uint8_t params_type,
+static enum model_image_result neuton_patch_neurons_buf(nrf_edgeai_model_neuton_params_t *params, uint8_t params_type,
 				    void *neurons_buf)
 {
 	switch (params_type) {
@@ -32,7 +32,7 @@ static int neuton_patch_neurons_buf(nrf_edgeai_model_neuton_params_t *params, ui
 	}
 }
 
-int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size,
+enum model_image_result model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size,
 			    nrf_edgeai_t *edgeai, void *neurons_buf, size_t neurons_buf_cap,
 			    const struct model_image_neuton_expect *expect)
 {
@@ -42,7 +42,7 @@ int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size
 		(nrf_edgeai_model_neuton_t *)edgeai->model.instance.p_void;
 	nrf_edgeai_model_neuton_params_t params;
 	uint16_t neurons_num;
-	int rc;
+	enum model_image_result rc;
 
 	rc = model_image_read_and_validate(partition_addr, partition_size, &hdr);
 	if (rc != MODEL_IMAGE_OK) {

@@ -20,7 +20,7 @@ LOG_MODULE_DECLARE(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
  * code itself stays compiled into the application, so an image whose masks differ would have its
  * arrays indexed with the wrong per-slot meaning: wrong numbers, no fault.
  */
-static int extraction_mask_matches(const struct model_image_edgeai_params *params,
+static enum model_image_result extraction_mask_matches(const struct model_image_edgeai_params *params,
 				   const nrf_edgeai_t *edgeai)
 {
 	const nrf_edgeai_features_mask_t *app = edgeai->p_dsp->features.p_masks;
@@ -46,7 +46,8 @@ static int extraction_mask_matches(const struct model_image_edgeai_params *param
 	return MODEL_IMAGE_OK;
 }
 
-int model_image_bind_edgeai_params(const uint8_t *partition_addr, nrf_edgeai_t *edgeai)
+enum model_image_result model_image_bind_edgeai_params(const uint8_t *partition_addr,
+							       nrf_edgeai_t *edgeai)
 {
 	const struct model_image_header *hdr = (const struct model_image_header *)partition_addr;
 	/* By value: hdr is __packed, so &hdr->edgeai_params would be a possibly-unaligned
@@ -62,10 +63,10 @@ int model_image_bind_edgeai_params(const uint8_t *partition_addr, nrf_edgeai_t *
 	}
 
 	if (edgeai->p_dsp != NULL) {
-		int err = extraction_mask_matches(&params, edgeai);
+		enum model_image_result rc = extraction_mask_matches(&params, edgeai);
 
-		if (err != MODEL_IMAGE_OK) {
-			return err;
+		if (rc != MODEL_IMAGE_OK) {
+			return rc;
 		}
 
 		edgeai->p_dsp->features.meta = params.scale.features;

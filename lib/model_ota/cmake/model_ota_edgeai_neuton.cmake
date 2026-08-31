@@ -18,8 +18,8 @@ include(${CMAKE_CURRENT_LIST_DIR}/model_ota_wired.cmake)
 
 set(MODEL_OTA_EDGEAI_NEUTON_IMAGE_STUB
     ${MODEL_OTA_LIB_DIR}/src/model_ota_edgeai_neuton_image_stub.c)
-set(MODEL_OTA_EDGEAI_NEUTON_WIRED_TPL
-    ${MODEL_OTA_LIB_DIR}/src/model_ota_edgeai_neuton_wired.c.in)
+set(MODEL_OTA_EDGEAI_NEUTON_WIRED_SRC
+    ${MODEL_OTA_LIB_DIR}/src/model_ota_edgeai_neuton_wired.c)
 
 set(MODEL_OTA_EDGEAI_NEUTON_PAYLOAD_SECTIONS
     .rodata.MODEL_WEIGHTS
@@ -87,26 +87,20 @@ function(model_ota_edgeai_neuton_model)
 
   if(NOT _using_released_fw)
     set(_wired_lib ota_edgeai_neuton_${MI_TARGET})
-    set(_wired_src ${_work_dir}/model_ota_edgeai_neuton_wired_${MI_SOLUTION_ID}.c)
-
-    # TODO: unprefixed template variables, picked up by configure_file() in
-    # model_ota_add_wired_library() through CMake scope chaining rather than passed as arguments.
-    # All but SOLUTION_ID should become DEFINES below; see model_ota_wired.cmake.
-    set(SOLUTION_ID ${MI_SOLUTION_ID})
-    set(PARTITION_NODELABEL ${MI_PARTITION_NODELABEL})
-    set(NEURONS_CAP ${MI_NEURONS_CAP})
-    set(MODEL_SRC_BASENAME ${_model_basename})
 
     model_ota_add_wired_library(
       LIB ${_wired_lib}
-      TEMPLATE ${MODEL_OTA_EDGEAI_NEUTON_WIRED_TPL}
-      OUT_SRC ${_wired_src}
+      SOURCE ${MODEL_OTA_EDGEAI_NEUTON_WIRED_SRC}
+      ARCHIVE_DIR ${_work_dir}
       MODEL_SRC ${MI_MODEL_SRC}
       DESCRIPTION
         "solution ${MI_SOLUTION_ID} (${_wired_lib}, neurons_cap=${MI_NEURONS_CAP}) <- ${MI_MODEL_SRC}"
       DISCARD_SECTIONS ${MODEL_OTA_EDGEAI_NEUTON_PAYLOAD_SECTIONS}
       DEFINES
-        NRF_MODEL_PARTITION_ADDR=${_partition_addr}
+        MODEL_OTA_EDGEAI_SOLUTION_ID=${MI_SOLUTION_ID}
+        MODEL_OTA_EDGEAI_NEUTON_MODEL_SRC=${_model_basename}
+        MODEL_OTA_PARTITION_NODELABEL=${MI_PARTITION_NODELABEL}
+        MODEL_OTA_NEUTON_NEURONS_CAP=${MI_NEURONS_CAP}
         MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u
       INCLUDES ${_model_dir})
   endif()

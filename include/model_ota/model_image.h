@@ -311,9 +311,10 @@ struct model_image_axon_expect {
  * @param[in]  expect          App-side contract and capacity expectations (required).
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
-int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size,
-			    nrf_edgeai_t *edgeai, void *neurons_buf, size_t neurons_buf_cap,
-			    const struct model_image_neuton_expect *expect);
+enum model_image_result model_image_load_neuton(const uint8_t *partition_addr,
+						size_t partition_size, nrf_edgeai_t *edgeai,
+						void *neurons_buf, size_t neurons_buf_cap,
+						const struct model_image_neuton_expect *expect);
 
 /**
  * @brief Apply the nrf_edgeai_t parameters carried by a model partition image.
@@ -342,7 +343,8 @@ int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size
  * @param[out] edgeai         Runtime context to fill; untouched on failure.
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
-int model_image_bind_edgeai_params(const uint8_t *partition_addr, nrf_edgeai_t *edgeai);
+enum model_image_result model_image_bind_edgeai_params(const uint8_t *partition_addr,
+						       nrf_edgeai_t *edgeai);
 
 /**
  * @brief Validate a linked Axon model partition image and return its compiled model pointer.
@@ -361,9 +363,9 @@ int model_image_bind_edgeai_params(const uint8_t *partition_addr, nrf_edgeai_t *
  * @param[out] out_model       On success, pointer to the model inside the partition.
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
-int model_image_load_axon(const uint8_t *partition_addr, size_t partition_size,
-			  const struct model_image_axon_expect *expect,
-			  const nrf_axon_nn_compiled_model_s **out_model);
+enum model_image_result model_image_load_axon(const uint8_t *partition_addr, size_t partition_size,
+					      const struct model_image_axon_expect *expect,
+					      const nrf_axon_nn_compiled_model_s **out_model);
 
 #ifdef __cplusplus
 }

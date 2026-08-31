@@ -20,9 +20,9 @@
  * TODO: three translation units must reach the same hash - this probe, the image stub and the
  * wired TU - and each is parameterized differently: raw -D on a hand-built compiler command line
  * here (model_ota_contract_probe() in model_ota_common.cmake), target_compile_definitions() for
- * the stub, and configure_file() substitution mixed with -D for the wired TU. Since the whole
- * guarantee is that all three saw identical inputs, they should share one delivery mechanism and
- * one define set, ideally emitted by a single helper. See model_ota_edgeai_neuton_wired.c.in.
+ * the stub and the wired TU. Since the whole guarantee is that all three saw identical inputs,
+ * they should share one delivery mechanism and one define set, ideally emitted by a single
+ * helper. See model_ota_edgeai_neuton_wired.c and model_ota_edgeai_axon_wired.c.
  */
 
 #include "model_ota_stub_macros.h"

@@ -27,7 +27,8 @@ set(MODEL_OTA_AXON_APP_STUB ${MODEL_OTA_LIB_DIR}/src/model_ota_axon_app_stub.c)
 set(MODEL_OTA_AXON_IMAGE_STUB ${MODEL_OTA_LIB_DIR}/src/model_ota_axon_image_stub.c)
 set(MODEL_OTA_AXON_KEEP_REFS ${MODEL_OTA_LIB_DIR}/src/model_ota_axon_keep_refs.S)
 set(MODEL_OTA_AXON_ELF ${MODEL_OTA_TOOLS_DIR}/axon_elf.py)
-set(MODEL_OTA_EDGEAI_AXON_WIRED_TPL ${MODEL_OTA_LIB_DIR}/src/model_ota_edgeai_axon_wired.c.in)
+set(MODEL_OTA_AXON_WIRED_SRC ${MODEL_OTA_LIB_DIR}/src/model_ota_axon_wired.c)
+set(MODEL_OTA_EDGEAI_AXON_WIRED_SRC ${MODEL_OTA_LIB_DIR}/src/model_ota_edgeai_axon_wired.c)
 
 function(model_ota_axon_add_probe OUT_OBJ WORK_DIR HEADER HEADER_NAME HEADER_DIR)
   model_ota_zephyr_c_compile_flags(_zephyr_cflags)
@@ -175,28 +176,44 @@ function(_model_ota_axon_slot)
     get_filename_component(_model_basename ${MI_MODEL_SRC} NAME)
 
     set(_wired_lib ota_edgeai_axon_${MI_TARGET})
-    set(_wired_src ${_work_dir}/model_ota_edgeai_axon_wired_${MI_SOLUTION_ID}.c)
+    string(TOUPPER ${MI_TARGET} _axon_token)
+    string(REGEX REPLACE "[^A-Z0-9]" "_" _axon_token "${_axon_token}")
 
-    # TODO: unprefixed template variables, picked up by configure_file() in
-    # model_ota_add_wired_library() through CMake scope chaining rather than passed as arguments.
-    # AXON_TARGET and AXON_TOKEN only exist because the wired TU includes the token-suffixed public
-    # header; force-including ${_private_h} instead removes both. See model_ota_wired.cmake.
-    set(AXON_TARGET ${MI_TARGET})
-    string(TOUPPER ${MI_TARGET} AXON_TOKEN)
-    string(REGEX REPLACE "[^A-Z0-9]" "_" AXON_TOKEN "${AXON_TOKEN}")
-    set(SOLUTION_ID ${MI_SOLUTION_ID})
-    set(PARTITION_NODELABEL ${MI_PARTITION_NODELABEL})
-    set(MODEL_SRC_BASENAME ${_model_basename})
-
+    # TODO: MODEL_OTA_AXON_TARGET and MODEL_OTA_AXON_TOKEN only exist because the wired TU includes
+    # the token-suffixed public header; force-including ${_private_h} instead removes both.
     model_ota_add_wired_library(
       LIB ${_wired_lib}
-      TEMPLATE ${MODEL_OTA_EDGEAI_AXON_WIRED_TPL}
-      OUT_SRC ${_wired_src}
+      SOURCE ${MODEL_OTA_EDGEAI_AXON_WIRED_SRC}
+      ARCHIVE_DIR ${_work_dir}
       MODEL_SRC ${MI_MODEL_SRC}
       DESCRIPTION "solution ${MI_SOLUTION_ID} (${_wired_lib}, axon backend) <- ${MI_MODEL_SRC}"
       DISCARD_SECTIONS ${MODEL_OTA_EDGEAI_PARAM_SECTIONS}
-      DEFINES MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u
+      DEFINES
+        MODEL_OTA_EDGEAI_SOLUTION_ID=${MI_SOLUTION_ID}
+        MODEL_OTA_EDGEAI_AXON_MODEL_SRC=${_model_basename}
+        MODEL_OTA_PARTITION_NODELABEL=${MI_PARTITION_NODELABEL}
+        MODEL_OTA_AXON_TARGET=${MI_TARGET}
+        MODEL_OTA_AXON_TOKEN=${_axon_token}
+        MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u
       INCLUDES ${_model_dir} ${_public_include_dir}
+      DEPENDS ${_meta_target})
+  endif()
+
+  if(MI_FLAVOR STREQUAL "axon" AND NOT _using_released_fw)
+    set(_wired_lib ota_axon_${MI_TARGET}_wired)
+    string(TOUPPER ${MI_TARGET} _axon_token)
+    string(REGEX REPLACE "[^A-Z0-9]" "_" _axon_token "${_axon_token}")
+
+    model_ota_add_wired_library(
+      LIB ${_wired_lib}
+      SOURCE ${MODEL_OTA_AXON_WIRED_SRC}
+      ARCHIVE_DIR ${_work_dir}
+      DESCRIPTION "raw Axon ${MI_TARGET} (${_wired_lib}) partition loader"
+      DEFINES
+        MODEL_OTA_AXON_TARGET=${MI_TARGET}
+        MODEL_OTA_AXON_TOKEN=${_axon_token}
+        MODEL_OTA_PARTITION_NODELABEL=${MI_PARTITION_NODELABEL}
+      INCLUDES ${_public_include_dir}
       DEPENDS ${_meta_target})
   endif()
 
