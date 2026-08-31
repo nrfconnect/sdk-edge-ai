@@ -14,36 +14,6 @@
 
 LOG_MODULE_DECLARE(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
 
-static bool neuton_weight_spans_ok(const nrf_edgeai_model_neuton_t *img_model, uint8_t params_type,
-				   uint32_t weights_num, const uint8_t *base, const uint8_t *end)
-{
-	switch (params_type) {
-	case MODEL_IMAGE_PARAMS_F32: {
-		const nrf_edgeai_model_neuton_params_f32_t *p = &img_model->params.f32;
-
-		return model_image_span_in_image(p->p_weights, (size_t)weights_num * 4, base,
-						 end) &&
-		       model_image_span_in_image(p->p_act_weights, 1, base, end);
-	}
-	case MODEL_IMAGE_PARAMS_Q16: {
-		const nrf_edgeai_model_neuton_params_q16_t *p = &img_model->params.q16;
-
-		return model_image_span_in_image(p->p_weights, (size_t)weights_num * 2, base,
-						 end) &&
-		       model_image_span_in_image(p->p_act_weights, 1, base, end);
-	}
-	case MODEL_IMAGE_PARAMS_Q8: {
-		const nrf_edgeai_model_neuton_params_q8_t *p = &img_model->params.q8;
-
-		return model_image_span_in_image(p->p_weights, (size_t)weights_num * 1, base,
-						 end) &&
-		       model_image_span_in_image(p->p_act_weights, 1, base, end);
-	}
-	default:
-		return false;
-	}
-}
-
 static int neuton_patch_neurons_buf(nrf_edgeai_model_neuton_params_t *params, uint8_t params_type,
 				    void *neurons_buf)
 {
@@ -67,15 +37,11 @@ int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size
 			    const struct model_image_neuton_expect *expect)
 {
 	struct model_image_header hdr;
-	const uint8_t *image_end;
-	const uint8_t *model_bytes;
 	const nrf_edgeai_model_neuton_t *img_model;
 	nrf_edgeai_model_neuton_t *out_model =
 		(nrf_edgeai_model_neuton_t *)edgeai->model.instance.p_void;
 	nrf_edgeai_model_neuton_params_t params;
 	uint16_t neurons_num;
-	uint16_t outputs_num;
-	uint32_t weights_num;
 	int rc;
 
 	rc = model_image_read_and_validate(partition_addr, partition_size, &hdr);
@@ -110,31 +76,12 @@ int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size
 		return MODEL_IMAGE_ERR_PARAMS_TYPE_MISMATCH;
 	}
 
-	/* The baked descriptor is addressed by an absolute flash pointer (the image was linked at
-	 * the partition base). Confirm it lies fully inside [base, base + image_size) before we
-	 * dereference it.
+	/* The baked pointers below are absolute flash addresses linked at the partition base, and
+	 * that base is part of contract_hash, so a wrong-slot image was rejected above.
+	 * Containment is a build-time property (validate_model_image_layout.py).
 	 */
-	image_end = partition_addr + hdr.image_size;
-
-	if (!model_image_name_in_image(hdr.name, partition_addr, image_end)) {
-		LOG_ERR("Header name pointer %p outside image or not NUL-terminated",
-			(void *)hdr.name);
-		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
-	}
-
-	model_bytes = (const uint8_t *)hdr.neuton.model;
-
-	if (model_bytes < partition_addr ||
-	    model_bytes + sizeof(nrf_edgeai_model_neuton_t) > image_end) {
-		LOG_ERR("Header model pointer %p outside image [%p, %p)", (void *)hdr.neuton.model,
-			(const void *)partition_addr, (const void *)image_end);
-		return MODEL_IMAGE_ERR_MODEL_PTR_OUT_OF_RANGE;
-	}
-
 	img_model = hdr.neuton.model;
 	neurons_num = img_model->meta.neurons_num;
-	outputs_num = img_model->meta.outputs_num;
-	weights_num = img_model->meta.weights_num;
 
 	if (neurons_num > expect->neurons_cap) {
 		LOG_ERR("Model needs %u neurons, app cap is %u", neurons_num, expect->neurons_cap);
@@ -145,34 +92,6 @@ int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size
 		LOG_ERR("Model needs %u neurons, only %u provided", neurons_num,
 			(unsigned)neurons_buf_cap);
 		return MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL;
-	}
-
-	/* Defence in depth: CRC proves the image is intact, but a well-formed image that was linked
-	 * at the wrong base (or a crafted one) could still carry pointers into app RAM or past the
-	 * partition. Confirm every baked pointer we are about to hand to the inference engine lands
-	 * inside [base, image_end). Spans are checked where the element count is known from meta;
-	 * p_neuron_links / p_act_weights have variable, meta-implicit lengths, so only their base is
-	 * bounded (the CRC still covers their contents). p_neurons is excluded - it is overwritten
-	 * with the caller's RAM buffer below.
-	 */
-	const nrf_nn_neuton_model_meta_t *m = &img_model->meta;
-
-	if (!model_image_span_in_image(m->p_neuron_internal_links_num,
-				       (size_t)neurons_num * sizeof(uint16_t), partition_addr,
-				       image_end) ||
-	    !model_image_span_in_image(m->p_neuron_external_links_num,
-				       (size_t)neurons_num * sizeof(uint16_t), partition_addr,
-				       image_end) ||
-	    !model_image_span_in_image(m->p_output_neurons_indices,
-				       (size_t)outputs_num * sizeof(uint16_t), partition_addr,
-				       image_end) ||
-	    !model_image_span_in_image(m->p_neuron_links, 1, partition_addr, image_end) ||
-	    !model_image_span_in_image(m->p_neuron_act_type_mask, 1, partition_addr, image_end) ||
-	    !neuton_weight_spans_ok(img_model, hdr.params_type, weights_num, partition_addr,
-				    image_end)) {
-		LOG_ERR("Baked descriptor pointer outside image [%p, %p)",
-			(const void *)partition_addr, (const void *)image_end);
-		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 	}
 
 	memcpy(&params, &img_model->params, sizeof(params));

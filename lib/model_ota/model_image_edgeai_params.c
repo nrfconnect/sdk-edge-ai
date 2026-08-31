@@ -8,8 +8,6 @@
  * contract the hash cannot express: the feature-extraction mask.
  */
 
-#include "model_image_common.h"
-
 #include <model_ota/model_image.h>
 
 #include <zephyr/logging/log.h>
@@ -23,8 +21,7 @@ LOG_MODULE_DECLARE(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
  * arrays indexed with the wrong per-slot meaning: wrong numbers, no fault.
  */
 static int extraction_mask_matches(const struct model_image_edgeai_params *params,
-				   const nrf_edgeai_t *edgeai, const uint8_t *partition_addr,
-				   const uint8_t *image_end)
+				   const nrf_edgeai_t *edgeai)
 {
 	const nrf_edgeai_features_mask_t *app = edgeai->p_dsp->features.p_masks;
 	const uint16_t num = edgeai->p_dsp->features.masks_num;
@@ -33,13 +30,6 @@ static int extraction_mask_matches(const struct model_image_edgeai_params *param
 		LOG_ERR("Extraction mask missing (image %p, app %p)",
 			(const void *)params->p_extraction_mask, (const void *)app);
 		return MODEL_IMAGE_ERR_DSP_MASK_MISMATCH;
-	}
-
-	if (!model_image_span_in_image(params->p_extraction_mask, (size_t)num * sizeof(*app),
-				       partition_addr, image_end)) {
-		LOG_ERR("Extraction mask outside image [%p, %p)", (const void *)partition_addr,
-			(const void *)image_end);
-		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
 	}
 
 	for (uint16_t i = 0; i < num; i++) {
@@ -72,8 +62,7 @@ int model_image_bind_edgeai_params(const uint8_t *partition_addr, nrf_edgeai_t *
 	}
 
 	if (edgeai->p_dsp != NULL) {
-		int err = extraction_mask_matches(&params, edgeai, partition_addr,
-						  partition_addr + hdr->image_size);
+		int err = extraction_mask_matches(&params, edgeai);
 
 		if (err != MODEL_IMAGE_OK) {
 			return err;

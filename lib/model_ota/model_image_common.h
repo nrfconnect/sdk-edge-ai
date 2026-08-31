@@ -8,7 +8,6 @@
 
 #include <model_ota/model_image.h>
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -26,20 +25,6 @@
  */
 int model_image_read_and_validate(const uint8_t *partition_addr, size_t partition_size,
 				  struct model_image_header *hdr_out);
-
-/**
- * @brief True iff [p, p + nbytes) lies fully inside [base, end).
- *
- * A NULL @p is never in range. The (p + nbytes) >= p guard rejects a span that
- * would wrap the address space.
- */
-bool model_image_span_in_image(const void *p, size_t nbytes, const uint8_t *base,
-			       const uint8_t *end);
-
-/**
- * @brief True iff @p name points at a NUL-terminated string wholly inside [base, end).
- */
-bool model_image_name_in_image(const char *name, const uint8_t *base, const uint8_t *end);
 
 /**
  * @brief Weight/neuron element size for a Neuton @ref model_image_params_type.

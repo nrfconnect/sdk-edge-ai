@@ -68,7 +68,7 @@ extern "C" {
 /**
  * Precision of the baked model's weights/act_weights, matching MODEL_PARAMS_TYPE in the
  * generated model source. The Neuton loader selects the matching nrf_edgeai_model_neuton_params_*
- * union member when range-checking baked pointers and patching p_neurons.
+ * union member when patching p_neurons.
  */
 enum model_image_params_type {
 	MODEL_IMAGE_PARAMS_F32 = 0,
@@ -227,14 +227,17 @@ enum model_image_result {
 	MODEL_IMAGE_ERR_BAD_FORMAT_VERSION = -4,
 	MODEL_IMAGE_ERR_TOO_LARGE = -5,
 	MODEL_IMAGE_ERR_BAD_CRC = -6,
-	MODEL_IMAGE_ERR_MODEL_PTR_OUT_OF_RANGE = -7,
+	/* -7 (model pointer out of range) retired: see -12. */
 	MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL = -8,
 	/* -9 (task mismatch) retired: the task is part of @ref contract_hash for both backends. */
 	/** Image's weight/neuron precision does not match the app's compiled precision. */
 	MODEL_IMAGE_ERR_PARAMS_TYPE_MISMATCH = -10,
 	/* -11 (too many outputs) retired: the output count is part of @ref contract_hash. */
-	/** A baked descriptor/scale pointer falls outside the image's flash extent. */
-	MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE = -12,
+	/*
+	 * -12 (pointer out of range) retired, with -7: the partition base every image pointer was
+	 * linked against is part of @ref contract_hash, and containment within the image is gated
+	 * at build time by tools/model_ota/validate_model_image_layout.py.
+	 */
 	/** Image is not an Axon model (@ref params_type != @ref MODEL_IMAGE_PARAMS_AXON). */
 	MODEL_IMAGE_ERR_NOT_AXON_IMAGE = -13,
 	/** Loaded Axon model failed nrf_axon_nn_model_validate(). */
@@ -331,8 +334,9 @@ int model_image_load_neuton(const uint8_t *partition_addr, size_t partition_size
  *
  * The block sits outside the backend union, so this works for either backend: call it after a
  * successful @ref model_image_load_neuton or @ref model_image_load_axon on the same partition.
- * The image is taken to be already validated by that call: the scaling layout the block uses is
- * covered by @ref model_image_header.contract_hash, and its pointers by the range checks there.
+ * The image is taken to be already validated by that call: the scaling layout the block uses and
+ * the partition base its pointers were linked at are both covered by
+ * @ref model_image_header.contract_hash.
  *
  * @param[in]  partition_addr Memory-mapped base address of the validated partition.
  * @param[out] edgeai         Runtime context to fill; untouched on failure.

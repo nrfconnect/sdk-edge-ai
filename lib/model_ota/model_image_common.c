@@ -99,37 +99,6 @@ int model_image_read_and_validate(const uint8_t *partition_addr, size_t partitio
 	return MODEL_IMAGE_OK;
 }
 
-bool model_image_name_in_image(const char *name, const uint8_t *base, const uint8_t *end)
-{
-	const uint8_t *s;
-
-	if (name == NULL) {
-		return false;
-	}
-
-	s = (const uint8_t *)name;
-	if (s < base || s >= end) {
-		return false;
-	}
-
-	while (s < end) {
-		if (*s == '\0') {
-			return true;
-		}
-		s++;
-	}
-
-	return false;
-}
-
-bool model_image_span_in_image(const void *p, size_t nbytes, const uint8_t *base,
-			       const uint8_t *end)
-{
-	const uint8_t *s = (const uint8_t *)p;
-
-	return s != NULL && s >= base && (s + nbytes) >= s && (s + nbytes) <= end;
-}
-
 int model_image_neuton_params_elem_size(uint8_t params_type, size_t *elem_size_out)
 {
 	switch (params_type) {

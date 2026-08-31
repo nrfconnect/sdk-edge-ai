@@ -36,8 +36,6 @@ static bool binding_entry_matches(const struct model_image_binding_entry *entry,
 }
 
 static int model_image_verify_axon_binding(const struct model_image_header *hdr,
-					     const uint8_t *partition_addr,
-					     const uint8_t *image_end,
 					     const uint32_t *app_binding_table)
 {
 	const struct model_image_binding_entry *entries;
@@ -59,13 +57,6 @@ static int model_image_verify_axon_binding(const struct model_image_header *hdr,
 
 	entries = hdr->axon.binding;
 
-	if (!model_image_span_in_image(entries, (size_t)count * sizeof(*entries),
-				       partition_addr, image_end)) {
-		LOG_ERR("Binding table outside image [%p, %p)", (const void *)partition_addr,
-			(const void *)image_end);
-		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
-	}
-
 	for (uint32_t i = 0; i < count; i++) {
 		if (!binding_entry_matches(&entries[i], app_binding_table)) {
 			return MODEL_IMAGE_ERR_BINDING_MISMATCH;
@@ -80,8 +71,6 @@ int model_image_load_axon(const uint8_t *partition_addr, size_t partition_size,
 			  const nrf_axon_nn_compiled_model_s **out_model)
 {
 	struct model_image_header hdr;
-	const uint8_t *image_end;
-	const uint8_t *model_bytes;
 	const nrf_axon_nn_compiled_model_s *model;
 	int rc;
 
@@ -119,30 +108,15 @@ int model_image_load_axon(const uint8_t *partition_addr, size_t partition_size,
 		return MODEL_IMAGE_ERR_PACKED_OUTPUT_TOO_LARGE;
 	}
 
-	image_end = partition_addr + hdr.image_size;
-
-	if (!model_image_name_in_image(hdr.name, partition_addr, image_end)) {
-		LOG_ERR("Header name pointer %p outside image or not NUL-terminated",
-			(void *)hdr.name);
-		return MODEL_IMAGE_ERR_PTR_OUT_OF_RANGE;
-	}
-
-	rc = model_image_verify_axon_binding(&hdr, partition_addr, image_end,
-					     expect->binding_table);
+	rc = model_image_verify_axon_binding(&hdr, expect->binding_table);
 	if (rc != MODEL_IMAGE_OK) {
 		return rc;
 	}
 
-	model_bytes = (const uint8_t *)hdr.axon.model;
-
-	if (model_bytes < partition_addr ||
-	    model_bytes + sizeof(nrf_axon_nn_compiled_model_s) > image_end) {
-		LOG_ERR("Header model pointer %p outside image [%p, %p)",
-			(void *)hdr.axon.model, (const void *)partition_addr,
-			(const void *)image_end);
-		return MODEL_IMAGE_ERR_MODEL_PTR_OUT_OF_RANGE;
-	}
-
+	/* The baked pointers here are absolute flash addresses linked at the partition base, and
+	 * that base is part of contract_hash, so a wrong-slot image was rejected above.
+	 * Containment is a build-time property (validate_model_image_layout.py).
+	 */
 	model = hdr.axon.model;
 
 	if (nrf_axon_nn_model_validate(model) != NRF_AXON_RESULT_SUCCESS) {

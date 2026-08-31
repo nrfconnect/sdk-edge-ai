@@ -119,9 +119,10 @@ Known limitations
 *****************
 
 - No OTA transport, signing, A/B slots, or rollback
+- The loaders do not range-check the image's baked pointers: the partition base they were linked at is part of the contract hash, and containment is gated at build time by ``validate_model_image_layout.py``. A crafted image with a valid CRC and contract hash is therefore not contained — authenticity is MCUboot's job in the final solution
 - Axon images bind to app RAM addresses from the firmware they were linked against; binding check catches drift
 - The solution wrapper (DSP pipeline, decode interfaces) is not swappable — only the model payload and the ``nrf_edgeai_t`` parameters that travel with it
-- ``model_image_bind_edgeai_params()`` trusts the image it is handed: apart from range-checking and comparing the extraction mask, it assumes the backend loader validated it first, and that the contract hash already covered the scaling geometry
+- ``model_image_bind_edgeai_params()`` trusts the image it is handed: apart from comparing the extraction mask, it assumes the backend loader validated it first, and that the contract hash already covered the scaling geometry
 - If a retrained Axon model needs a new op-extension symbol the old firmware never kept, image link fails at build time
 - A contract mismatch surfaces once the slot's contract probe has compiled, i.e. during the build rather than at CMake configure time, since that is when the compiler's value first exists
 - A Lab release that changes what an extraction function *computes* while keeping the same ``FEATURES_EXTRACTION_MASK`` is caught only by ``EDGEAI_RUNTIME_VERSION_COMBINED`` — a version bump being trusted, not a digest of the implementation
