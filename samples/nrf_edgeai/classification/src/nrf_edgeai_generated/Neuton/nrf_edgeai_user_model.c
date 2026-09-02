@@ -408,13 +408,14 @@ static const uint16_t MODEL_OUTPUT_NEURONS_INDICES[] = {71, 67, 77, 11, 75, 79, 
 	}
 #endif /* MODEL_OTA_WIRED */
 
+#ifdef MODEL_OTA_WIRED
+/** Empty Neuton model instance */
+static nrf_edgeai_model_neuton_t model_instance_;
+#else
 /** Model neurons activations buffer */
 static nrf_user_neuron_t model_neurons_[MODEL_NEURONS_NUM];
 
 /** Neuton model instance */
-#ifdef MODEL_OTA_WIRED
-static nrf_edgeai_model_neuton_t model_instance_;
-#else
 static const nrf_edgeai_model_neuton_t model_instance_ = {
 	///
 	.meta.p_neuron_internal_links_num = MODEL_NEURON_INTERNAL_LINKS_NUM,
