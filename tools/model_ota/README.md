@@ -111,6 +111,10 @@ Axon `*_model_image` targets are excluded from the default build unless `MODEL_O
 (compile a model stub, link at the partition base with `lib/model_ota/linker/model_image.ld`,
 `objcopy` the `.model_image` section, patch CRC, validate, emit the addressed hex).
 
+Contract hashing and ``image_size`` use ``MODEL_OTA_IMAGE_LINK_BASE`` (``dt_reg_addr()`` from CMake).
+Wired loaders hash the same literal and cross-check it against ``MODEL_OTA_PARTITION_ADDR()``
+from the slot nodelabel before loading. See ``lib/model_ota/src/model_ota_stub_macros.h``.
+
 Edge AI Lab solutions with an Axon backend use `model_ota_edgeai_axon_model()` in
 `lib/model_ota/cmake/model_ota_axon.cmake`. The compiled Axon model is partition-loaded like a raw
 Axon model, and the image additionally carries the solution's `nrf_edgeai_t` parameters. The

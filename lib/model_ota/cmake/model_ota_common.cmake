@@ -60,7 +60,7 @@ endfunction()
 # lib/model_ota/src/model_ota_contract_probe.c for why the value cannot be computed on the host.
 #
 # model_ota_contract_probe(OUT_OBJ <var> WORK_DIR <dir> FLAVOR <edgeai_neuton|edgeai_axon|axon>
-#                          IMAGE_BASE <addr> [MODEL_SRC <abs nrf_edgeai_user_model.c>]
+#                          IMAGE_BASE <partition-addr> [MODEL_SRC <abs nrf_edgeai_user_model.c>]
 #                          [SOLUTION_ID_HASH <u32>])
 #
 # MODEL_SRC and SOLUTION_ID_HASH go together and are required for the two solution flavors: those
@@ -122,7 +122,7 @@ function(model_ota_contract_probe)
             -I${MODEL_OTA_MODULE_DIR}/include
             -include ${CMAKE_CURRENT_BINARY_DIR}/zephyr/include/generated/zephyr/autoconf.h
             -D${_flavor_def}
-            -DNRF_MODEL_PARTITION_ADDR=${CP_IMAGE_BASE}
+            -DMODEL_OTA_IMAGE_LINK_BASE=${CP_IMAGE_BASE}
             ${_extra_flags}
     DEPENDS ${_deps}
     DEPFILE ${_dep}

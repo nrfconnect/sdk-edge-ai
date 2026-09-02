@@ -6,22 +6,20 @@
  * Edge AI Lab / Neuton-backend partition-image stub.
  */
 
-#include "model_ota_stub_macros.h"
-
-#ifndef NRF_MODEL_PARTITION_ADDR
-#error "NRF_MODEL_PARTITION_ADDR must be defined when compiling the Neuton model image stub"
+#ifndef MODEL_OTA_IMAGE_LINK_BASE
+#error "MODEL_OTA_IMAGE_LINK_BASE must be defined when compiling the Neuton model image stub"
 #endif
 
 #ifndef MODEL_OTA_EDGEAI_NEUTON_MODEL_SRC
 #error "MODEL_OTA_EDGEAI_NEUTON_MODEL_SRC must be defined by model_ota_edgeai_neuton_model()"
 #endif
 
+#include <zephyr/toolchain.h>
+
 #include STRINGIFY(MODEL_OTA_EDGEAI_NEUTON_MODEL_SRC)
 
 #include <model_ota/model_contract.h>
 #include <model_ota/model_image.h>
-
-#include <zephyr/toolchain.h>
 
 #include "model_ota_scale_select.h"
 
@@ -37,7 +35,8 @@ extern char __model_image_end[];
 #endif
 
 #define MODEL_OTA_EDGEAI_NEUTON_CONTRACT_HASH                                                      \
-	MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON(NRF_MODEL_PARTITION_ADDR, MODEL_IMAGE_PARAMS_TYPE_NUM, \
+	MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON(MODEL_OTA_IMAGE_LINK_BASE,                           \
+					      MODEL_IMAGE_PARAMS_TYPE_NUM,                         \
 					      MODEL_OTA_SOLUTION_CONTRACT_ARGS)
 
 __attribute__((section(".rodata.model_image_name"), used))
@@ -49,7 +48,7 @@ const struct model_image_header nrf_edgeai_model_image_hdr = {
 	.format_version = MODEL_IMAGE_FORMAT_VERSION,
 	.params_type = MODEL_IMAGE_PARAMS_TYPE_NUM,
 	._reserved = 0,
-	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)NRF_MODEL_PARTITION_ADDR),
+	.image_size = (uint32_t)((uintptr_t)&__model_image_end - MODEL_OTA_IMAGE_LINK_BASE),
 	.model_version = MODEL_IMAGE_VERSION_U32,
 	.contract_hash = MODEL_OTA_EDGEAI_NEUTON_CONTRACT_HASH,
 	.crc32 = 0,

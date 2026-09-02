@@ -197,7 +197,7 @@ extern "C" {
 /**
  * Full Edge AI Lab / Neuton contract hash.
  *
- * @p image_base   Flash base the image is linked at (NRF_MODEL_PARTITION_ADDR).
+ * @p image_base   Flash base the image is linked at.
  * @p params_type  @ref model_image_params_type (0/1/2).
  * @p ...          @ref MODEL_OTA_SOLUTION_CONTRACT_ARGS.
  *
@@ -219,7 +219,7 @@ extern "C" {
  * That matters because such an image carries no @ref model_image_edgeai_params, while the wrapped
  * application discarded its own compiled-in copy when it was wired for OTA.
  *
- * @p image_base  Flash base the image is linked at (NRF_MODEL_PARTITION_ADDR).
+ * @p image_base  Flash base the image is linked at.
  * @p ...         @ref MODEL_OTA_SOLUTION_CONTRACT_ARGS.
  */
 #define MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON(image_base, ...)                                       \
@@ -231,7 +231,7 @@ extern "C" {
 /**
  * Full pure-Axon contract hash: a raw compiled model with no nrf_edgeai_t around it.
  *
- * @p image_base  Flash base the image is linked at (NRF_MODEL_PARTITION_ADDR).
+ * @p image_base  Flash base the image is linked at.
  *
  * The model's persistent-vars and packed-output requirements are deliberately absent. They are
  * per-model requirements already carried in @ref model_image_axon_backend and checked by

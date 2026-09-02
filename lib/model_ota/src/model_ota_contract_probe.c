@@ -16,23 +16,14 @@
  * the same macro into the image from a different translation unit, and check_model_compat.py
  * requires the two to agree - a mismatch there means this object was not compiled the way the
  * firmware was.
- *
- * TODO: three translation units must reach the same hash - this probe, the image stub and the
- * wired TU - and each is parameterized differently: raw -D on a hand-built compiler command line
- * here (model_ota_contract_probe() in model_ota_common.cmake), target_compile_definitions() for
- * the stub and the wired TU. Since the whole guarantee is that all three saw identical inputs,
- * they should share one delivery mechanism and one define set, ideally emitted by a single
- * helper. See model_ota_edgeai_neuton_wired.c and model_ota_edgeai_axon_wired.c.
  */
-
-#include "model_ota_stub_macros.h"
 
 #include <stdint.h>
 
 #include <model_ota/model_contract.h>
 
-#ifndef NRF_MODEL_PARTITION_ADDR
-#error "NRF_MODEL_PARTITION_ADDR must be defined by model_ota_contract_probe()"
+#ifndef MODEL_OTA_IMAGE_LINK_BASE
+#error "MODEL_OTA_IMAGE_LINK_BASE must be defined when compiling model_ota_contract_probe.c"
 #endif
 
 #ifdef MODEL_OTA_CONTRACT_PROBE_MODEL_SRC
@@ -57,15 +48,15 @@
 
 #if defined(MODEL_OTA_CONTRACT_PROBE_EDGEAI_NEUTON)
 #define MODEL_OTA_CONTRACT_PROBE_HASH                                                              \
-	MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON(NRF_MODEL_PARTITION_ADDR,                            \
+	MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON(MODEL_OTA_IMAGE_LINK_BASE,                            \
 					      MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),       \
 					      MODEL_OTA_SOLUTION_CONTRACT_ARGS)
 #elif defined(MODEL_OTA_CONTRACT_PROBE_EDGEAI_AXON)
 #define MODEL_OTA_CONTRACT_PROBE_HASH                                                              \
-	MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON(NRF_MODEL_PARTITION_ADDR,                              \
+	MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON(MODEL_OTA_IMAGE_LINK_BASE,                               \
 					    MODEL_OTA_SOLUTION_CONTRACT_ARGS)
 #elif defined(MODEL_OTA_CONTRACT_PROBE_AXON)
-#define MODEL_OTA_CONTRACT_PROBE_HASH MODEL_OTA_CONTRACT_HASH_AXON(NRF_MODEL_PARTITION_ADDR)
+#define MODEL_OTA_CONTRACT_PROBE_HASH MODEL_OTA_CONTRACT_HASH_AXON(MODEL_OTA_IMAGE_LINK_BASE)
 #else
 #error "model_ota_contract_probe() must select a flavor"
 #endif

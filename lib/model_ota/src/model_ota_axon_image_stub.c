@@ -8,8 +8,6 @@
  * MODEL_OTA_EDGEAI_AXON_MODEL_SRC so the image also carries solution parameters.
  */
 
-#include "model_ota_stub_macros.h"
-
 #include <stddef.h>
 #include <stdint.h>
 #include <assert.h>
@@ -26,8 +24,8 @@
 #error "Unsupported or missing Axon OTA configuration"
 #endif
 
-#ifndef NRF_MODEL_PARTITION_ADDR
-#error "NRF_MODEL_PARTITION_ADDR must be defined when linking the Axon model image"
+#ifndef MODEL_OTA_IMAGE_LINK_BASE
+#error "MODEL_OTA_IMAGE_LINK_BASE must be defined when linking the Axon model image"
 #endif
 
 #ifndef MODEL_OTA_AXON_HEADER
@@ -56,7 +54,7 @@
 #define MODEL_OTA_IMAGE_EDGEAI_PARAMS_INIT MODEL_OTA_IMAGE_PARAMS_INIT
 
 #define MODEL_OTA_IMAGE_CONTRACT_HASH                                                              \
-	MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON(NRF_MODEL_PARTITION_ADDR,                               \
+	MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON(MODEL_OTA_IMAGE_LINK_BASE,                             \
 					    MODEL_OTA_SOLUTION_CONTRACT_ARGS)
 
 #else /* raw Axon */
@@ -64,7 +62,7 @@
 #include MODEL_OTA_AXON_HEADER
 
 #define MODEL_OTA_IMAGE_EDGEAI_PARAMS_INIT {{{{0}}}}
-#define MODEL_OTA_IMAGE_CONTRACT_HASH MODEL_OTA_CONTRACT_HASH_AXON(NRF_MODEL_PARTITION_ADDR)
+#define MODEL_OTA_IMAGE_CONTRACT_HASH MODEL_OTA_CONTRACT_HASH_AXON(MODEL_OTA_IMAGE_LINK_BASE)
 
 #endif
 
@@ -97,7 +95,7 @@ const struct model_image_header model_image_hdr = {
 	.format_version = MODEL_IMAGE_FORMAT_VERSION,
 	.params_type = MODEL_IMAGE_PARAMS_AXON,
 	._reserved = 0,
-	.image_size = (uint32_t)((uintptr_t)&__model_image_end - (uintptr_t)NRF_MODEL_PARTITION_ADDR),
+	.image_size = (uint32_t)((uintptr_t)&__model_image_end - MODEL_OTA_IMAGE_LINK_BASE),
 	.model_version = MODEL_IMAGE_VERSION_U32,
 	.contract_hash = MODEL_OTA_IMAGE_CONTRACT_HASH,
 	.crc32 = 0,

@@ -58,6 +58,8 @@ Contract vs binding
 
 Only *identity* invariants are hashed: values that must be equal or the image is meaningless. Every flavor starts from the same envelope — format version and the partition base the image was linked at (which ties an image to one slot, since all its pointers are absolute flash addresses).
 
+The base folded into the hash is ``MODEL_OTA_IMAGE_LINK_BASE``: CMake passes the same ``dt_reg_addr()`` literal to the contract probe, the partition-image stub, wired loaders (for hashing), and the standalone image link (``--defsym`` in ``model_image.ld``). Wired loaders also take a devicetree nodelabel and ``BUILD_ASSERT`` that ``MODEL_OTA_PARTITION_ADDR()`` matches ``MODEL_OTA_IMAGE_LINK_BASE`` before dereferencing the mapped partition at runtime.
+
 - **Edge AI Lab / Neuton** (``MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON``): envelope, weight precision, descriptor/meta struct sizes, then the solution contract
 - **Edge AI Lab / Axon** (``MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON``): envelope, the same driver ABI, then the solution contract
 - **raw Axon** (``MODEL_OTA_CONTRACT_HASH_AXON``): envelope and the driver ABI — compiled-model struct size, interlayer and psum Kconfig sizes

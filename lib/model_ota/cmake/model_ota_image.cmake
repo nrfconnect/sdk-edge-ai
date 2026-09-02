@@ -64,7 +64,7 @@ function(model_ota_add_image)
     COMMAND ${CMAKE_C_COMPILER}
             -nostdlib -nostartfiles
             -Wl,--gc-sections
-            -Wl,--defsym=NRF_MODEL_PARTITION_ADDR=${IMG_PARTITION_ADDR}
+            -Wl,--defsym=MODEL_OTA_IMAGE_LINK_BASE=${IMG_PARTITION_ADDR}
             -T ${MODEL_OTA_LINKER_SCRIPT}
             ${_link_scripts}
             -o ${_image_elf}

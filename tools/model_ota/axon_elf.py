@@ -614,16 +614,10 @@ def create_parser() -> argparse.ArgumentParser:
     inspect.add_argument("--persistent-vars-cap", type=int)
     inspect.add_argument("--model-sym")
     inspect.add_argument(
-        "--partition-addr",
-        type=lambda x: int(x, 0),
-        required=True,
-        help="flash base the image is linked at; mixed into the contract hash",
-    )
-    inspect.add_argument(
         "--edgeai",
         action="store_true",
-        help="model is the backend of an Edge AI Lab solution, so the contract hash is computed "
-             "by the wired translation unit rather than emitted here",
+        help="model is the backend of an Edge AI Lab solution (metadata-only; contract hash "
+             "comes from the wired loader and image stub)",
     )
     inspect.add_argument(
         "--allocate-packed-output",

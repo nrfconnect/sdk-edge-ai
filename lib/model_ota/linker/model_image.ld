@@ -5,7 +5,7 @@
  *
  * Linker script for a standalone model partition image (Neuton or Axon).
  *
- * The image is linked at NRF_MODEL_PARTITION_ADDR (supplied via --defsym from the partition's
+ * The image is linked at MODEL_OTA_IMAGE_LINK_BASE (supplied via --defsym from the partition's
  * devicetree reg address). The header stub is placed first, at the base, followed by all
  * .rodata that survives --gc-sections - i.e. the compile-time model descriptor and the data
  * arrays it (and the header) reference. Everything unreferenced is garbage-collected, which
@@ -22,7 +22,7 @@ OUTPUT_ARCH(arm)
 
 SECTIONS
 {
-	. = NRF_MODEL_PARTITION_ADDR;
+	. = MODEL_OTA_IMAGE_LINK_BASE;
 	.model_image : {
 		__model_image_start = .;
 		KEEP(*(.model_image.header))

@@ -71,8 +71,6 @@ class InspectOutputTests(unittest.TestCase):
                         str(keep_json),
                         "--persistent-vars-cap",
                         "8",
-                        "--partition-addr",
-                        "0x102000",
                     ]
                 )
             self.assertEqual(result, 0)
@@ -144,8 +142,6 @@ class InspectOutputTests(unittest.TestCase):
                         str(private),
                         "--public-header",
                         str(public),
-                        "--partition-addr",
-                        "0x102000",
                         "--edgeai",
                     ]
                 )
@@ -179,8 +175,6 @@ class InspectOutputTests(unittest.TestCase):
                         str(public),
                         "--persistent-vars-cap",
                         "8",
-                        "--partition-addr",
-                        "0x102000",
                         "--allocate-packed-output",
                     ]
                 )

@@ -119,7 +119,6 @@ function(_model_ota_axon_slot)
     --private-header ${_private_h}
     --public-header ${_public_h}
     --keep-json ${_keep_json}
-    --partition-addr ${_partition_addr}
   )
   if(MI_FLAVOR STREQUAL "edgeai_axon")
     list(APPEND _inspect_cmd --edgeai)
@@ -194,7 +193,7 @@ function(_model_ota_axon_slot)
         MODEL_OTA_EDGEAI_SOLUTION_ID=${MI_SOLUTION_ID}
         MODEL_OTA_EDGEAI_AXON_MODEL_SRC=${_model_basename}
         MODEL_OTA_PARTITION_NODELABEL=${MI_PARTITION_NODELABEL}
-        NRF_MODEL_PARTITION_ADDR=${_partition_addr}
+        MODEL_OTA_IMAGE_LINK_BASE=${_partition_addr}
         MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u
       INCLUDES ${_work_dir} ${_model_dir}
       DEPENDS ${_meta_target})
@@ -211,7 +210,7 @@ function(_model_ota_axon_slot)
       DEFINES
         MODEL_OTA_AXON_TARGET=${MI_TARGET}
         MODEL_OTA_PARTITION_NODELABEL=${MI_PARTITION_NODELABEL}
-        NRF_MODEL_PARTITION_ADDR=${_partition_addr}
+        MODEL_OTA_IMAGE_LINK_BASE=${_partition_addr}
       INCLUDES ${_work_dir}
       DEPENDS ${_meta_target})
   endif()
@@ -245,7 +244,7 @@ function(_model_ota_axon_slot)
                              ${MODEL_OTA_MODULE_DIR}/include)
   target_compile_options(${_image_obj} PRIVATE "SHELL:-include \"${_private_h}\"")
   target_compile_definitions(${_image_obj} PRIVATE
-    NRF_MODEL_PARTITION_ADDR=${_partition_addr}
+    MODEL_OTA_IMAGE_LINK_BASE=${_partition_addr}
     MODEL_IMAGE_NAME_STR=\"${MI_NAME}\"
     MODEL_IMAGE_VERSION_U32=${_version_u32}u
     NRF_AXON_INTERLAYER_BUFFER_SIZE=${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE})

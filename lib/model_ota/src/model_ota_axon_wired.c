@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  *
  * Raw Axon partition loader. model_ota_axon_model() compiles one instance per TARGET with -D
- * MODEL_OTA_AXON_TARGET and MODEL_OTA_PARTITION_NODELABEL, then defines
- * model_ota_load_axon_<target>() (declared via model_ota_axon.h).
+ * MODEL_OTA_AXON_TARGET, MODEL_OTA_PARTITION_NODELABEL and MODEL_OTA_IMAGE_LINK_BASE, then
+ * defines model_ota_load_axon_<target>() (declared via model_ota_axon.h). The contract hash
+ * uses MODEL_OTA_IMAGE_LINK_BASE; the mapped partition pointer comes from devicetree.
  */
 
 #include "model_ota_axon_model_config.h"
@@ -27,17 +28,14 @@
 #error "MODEL_OTA_PARTITION_NODELABEL must be defined when compiling model_ota_axon_wired.c"
 #endif
 
-#ifndef NRF_MODEL_PARTITION_ADDR
-#error "NRF_MODEL_PARTITION_ADDR must be defined when compiling model_ota_axon_wired.c"
+#ifndef MODEL_OTA_IMAGE_LINK_BASE
+#error "MODEL_OTA_IMAGE_LINK_BASE must be defined when compiling model_ota_axon_wired.c"
 #endif
 
 MODEL_OTA_BUILD_ASSERT_MAPPED_PARTITION(MODEL_OTA_PARTITION_NODELABEL);
-BUILD_ASSERT((uintptr_t)MODEL_OTA_PARTITION_ADDR(MODEL_OTA_PARTITION_NODELABEL) ==
-		     NRF_MODEL_PARTITION_ADDR,
-	     "partition nodelabel address must match NRF_MODEL_PARTITION_ADDR");
+MODEL_OTA_BUILD_ASSERT_IMAGE_LINK_BASE(MODEL_OTA_PARTITION_NODELABEL);
 
-#define MODEL_OTA_AXON_CONTRACT_HASH                                                               \
-	MODEL_OTA_CONTRACT_HASH_AXON(MODEL_OTA_PARTITION_ADDR(MODEL_OTA_PARTITION_NODELABEL))
+#define MODEL_OTA_AXON_CONTRACT_HASH MODEL_OTA_CONTRACT_HASH_AXON(MODEL_OTA_IMAGE_LINK_BASE)
 
 MODEL_OTA_AXON_LOAD_DECL(MODEL_OTA_AXON_TARGET)
 {

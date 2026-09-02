@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  *
  * Edge AI Lab / Neuton-backend OTA-wired loader. model_ota_edgeai_neuton_model() compiles one
- * instance per solution with -D defines, #includes the generated model, then defines
+ * instance per solution with -D defines (including MODEL_OTA_PARTITION_NODELABEL and
+ * MODEL_OTA_IMAGE_LINK_BASE), #includes the generated model, then defines
  * nrf_edgeai_load_user_model_<SOLUTION_ID>().
  */
 
@@ -31,8 +32,8 @@
 #error "MODEL_OTA_NEUTON_NEURONS_CAP must be defined when compiling model_ota_edgeai_neuton_wired.c"
 #endif
 
-#ifndef NRF_MODEL_PARTITION_ADDR
-#error "NRF_MODEL_PARTITION_ADDR must be defined when compiling model_ota_edgeai_neuton_wired.c"
+#ifndef MODEL_OTA_IMAGE_LINK_BASE
+#error "MODEL_OTA_IMAGE_LINK_BASE must be defined when compiling model_ota_edgeai_neuton_wired.c"
 #endif
 
 #define MODEL_OTA_WIRED 1
@@ -46,16 +47,13 @@ static nrf_user_neuron_t model_neurons_cap_[MODEL_OTA_NEUTON_NEURONS_CAP];
 
 #include "model_ota_scale_select.h"
 
-#define MODEL_OTA_EDGEAI_NEUTON_CONTRACT_HASH                                                      \
-	MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON(                                                     \
-		MODEL_OTA_PARTITION_ADDR(MODEL_OTA_PARTITION_NODELABEL),                           \
-		MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),                                       \
-		MODEL_OTA_SOLUTION_CONTRACT_ARGS)
-
 MODEL_OTA_BUILD_ASSERT_MAPPED_PARTITION(MODEL_OTA_PARTITION_NODELABEL);
-BUILD_ASSERT((uintptr_t)MODEL_OTA_PARTITION_ADDR(MODEL_OTA_PARTITION_NODELABEL) ==
-		     NRF_MODEL_PARTITION_ADDR,
-	     "partition nodelabel address must match NRF_MODEL_PARTITION_ADDR");
+MODEL_OTA_BUILD_ASSERT_IMAGE_LINK_BASE(MODEL_OTA_PARTITION_NODELABEL);
+
+#define MODEL_OTA_EDGEAI_NEUTON_CONTRACT_HASH                                                      \
+	MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON(MODEL_OTA_IMAGE_LINK_BASE,                           \
+					      MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),       \
+					      MODEL_OTA_SOLUTION_CONTRACT_ARGS)
 
 MODEL_OTA_EDGEAI_LOAD_DECL(MODEL_OTA_EDGEAI_SOLUTION_ID)
 {
