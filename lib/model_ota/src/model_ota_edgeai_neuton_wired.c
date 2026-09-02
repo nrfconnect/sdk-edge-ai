@@ -63,8 +63,6 @@ MODEL_OTA_EDGEAI_LOAD_DECL(MODEL_OTA_EDGEAI_SOLUTION_ID)
 	};
 	enum model_image_result rc;
 
-	(void)model_neurons_;
-
 	if (out == NULL) {
 		return MODEL_IMAGE_ERR_CONTRACT_MISMATCH;
 	}

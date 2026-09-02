@@ -49,13 +49,8 @@
  * it emits is unused by construction - unlike in the stubs, where an unused definition would be a
  * real finding. The application compiles the same source with the same flags, so nothing is hidden.
  */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wunused-const-variable"
 
 #include STRINGIFY(MODEL_OTA_CONTRACT_PROBE_MODEL_SRC)
-
-#pragma GCC diagnostic pop
 
 #include "model_ota_scale_select.h"
 #endif /* MODEL_OTA_CONTRACT_PROBE_MODEL_SRC */
