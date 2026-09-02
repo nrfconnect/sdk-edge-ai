@@ -78,7 +78,7 @@ The solution ID hashed here is the ``SOLUTION_ID`` the CMake helper was called w
 
    None of these hashes is a security control — not the contract hash, whose FNV-1a is unkeyed, and not the unkeyed ``blake2s`` over the strings either. Nor is the image CRC an integrity check. All of them guard against accidents. Authenticity comes from MCUboot signature verification, which is where the final solution enforces it.
 
-**Binding table** (Axon only) — ``{name_hash, address}`` rows for each app-owned symbol the image was linked against (``nrf_axon_interlayer_buffer``, persistent vars, op extensions, ``axonpro_*``). The loader compares image addresses to the live table emitted by ``model_ota_axon_keep_refs.S``.
+**Binding table** (Axon only) — one device-wide ``{name_hash, address}`` table for every app-owned symbol any Axon image was linked against (``nrf_axon_interlayer_buffer``, persistent vars, op extensions, ``axonpro_*``). ``axon_elf.py binding-table`` unions the per-slot keep lists at finalize; ``model_ota_axon_keep_refs.S`` emits ``model_ota_axon_binding_table``, which ``model_image_load_axon()`` consults directly.
 
 Host tools
 **********
@@ -88,7 +88,7 @@ Under ``tools/model_ota/``:
 - ``patch_image_crc.py`` — patches CRC at offset 20
 - ``validate_model_image_layout.py`` — post-link build gate
 - ``elf_const.py`` — reads the compiler-folded contract hash out of a slot's contract probe
-- ``axon_elf.py`` — Axon probe inspect + ``PROVIDE()`` fragment from ``zephyr.elf``
+- ``axon_elf.py`` — Axon probe inspect, device-wide binding-table merge, and ``PROVIDE()`` fragment from ``zephyr.elf``
 - ``export_model_ota_context.py`` / ``model_ota_context.cmake`` — emit ``model_ota_context.json``
 - ``check_model_compat.py`` — pre-flash compatibility verdict, and the build's contract-hash gate
 
@@ -100,6 +100,8 @@ Include ``lib/model_ota/cmake/model_ota.cmake`` once, then:
 - ``model_ota_edgeai_neuton_model()`` — Edge AI Lab solution, Neuton backend
 - ``model_ota_edgeai_axon_model()`` — Edge AI Lab solution, Axon backend
 - ``model_ota_axon_model()`` — raw Axon model (no ``nrf_edgeai_t`` wrapper)
+- ``model_ota_finalize()`` — after all slot declarations; merges the Axon binding table and
+  exports ``model_ota_context.json`` once the application links
 
 Optional CMake cache variables for **out-of-tree** model partition builds against shipped
 firmware (see ``tools/model_ota/README.md``):

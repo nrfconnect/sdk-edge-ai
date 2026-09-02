@@ -103,11 +103,14 @@ function(_model_ota_axon_slot)
   set(_work_dir ${CMAKE_CURRENT_BINARY_DIR}/model_ota/${MI_TARGET})
   file(MAKE_DIRECTORY ${_work_dir})
 
+  set(_shared_include_dir ${CMAKE_CURRENT_BINARY_DIR}/model_ota/include)
+  file(MAKE_DIRECTORY ${_shared_include_dir})
+
   model_ota_axon_add_probe(_probe_o ${_work_dir} ${MI_HEADER} ${_header_name} ${_header_dir})
 
-  set(_private_h ${_work_dir}/axon_config.h)
-  set(_public_include_dir ${_work_dir}/include)
-  set(_public_h ${_public_include_dir}/model_ota/axon/${MI_TARGET}.h)
+  set(_private_h ${_work_dir}/model_ota_axon_model_config.h)
+  set(_keep_json ${_work_dir}/axon_keep.json)
+  set(_public_h ${_shared_include_dir}/model_ota/slots/${MI_TARGET}.h)
   set(_inspect_cmd
     ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_ELF} inspect
     --probe ${_probe_o}
@@ -115,6 +118,7 @@ function(_model_ota_axon_slot)
     --model-id ${MI_TARGET}
     --private-header ${_private_h}
     --public-header ${_public_h}
+    --keep-json ${_keep_json}
     --partition-addr ${_partition_addr}
   )
   if(MI_FLAVOR STREQUAL "edgeai_axon")
@@ -131,7 +135,7 @@ function(_model_ota_axon_slot)
   endif()
 
   add_custom_command(
-    OUTPUT ${_private_h} ${_public_h}
+    OUTPUT ${_private_h} ${_public_h} ${_keep_json}
     COMMAND ${_inspect_cmd}
     DEPENDS ${_probe_o} ${MODEL_OTA_AXON_ELF}
     COMMENT "Inspecting Axon model metadata (${MI_TARGET})"
@@ -139,7 +143,8 @@ function(_model_ota_axon_slot)
   )
 
   set(_meta_target ${MI_TARGET}_axon_metadata)
-  add_custom_target(${_meta_target} DEPENDS ${_private_h} ${_public_h})
+  add_custom_target(${_meta_target} DEPENDS ${_private_h} ${_public_h} ${_keep_json})
+  set_property(GLOBAL APPEND PROPERTY model_ota_axon_keep_json ${_keep_json})
 
   if(MI_FLAVOR STREQUAL "edgeai_axon")
     model_ota_solution_id_hash(${MI_SOLUTION_ID} _solution_id_hash)
@@ -166,6 +171,7 @@ function(_model_ota_axon_slot)
     WORK_DIR ${_work_dir}
     CONTRACT_PROBE ${_contract_probe_o}
     CONFIG_HEADER ${_private_h}
+    KEEP_JSON ${_keep_json}
     OUT_SLOT_JSON _context_slot)
   add_dependencies(${_meta_target} ${MI_TARGET}_contract_slot)
 
@@ -176,11 +182,7 @@ function(_model_ota_axon_slot)
     get_filename_component(_model_basename ${MI_MODEL_SRC} NAME)
 
     set(_wired_lib ota_edgeai_axon_${MI_TARGET})
-    string(TOUPPER ${MI_TARGET} _axon_token)
-    string(REGEX REPLACE "[^A-Z0-9]" "_" _axon_token "${_axon_token}")
 
-    # TODO: MODEL_OTA_AXON_TARGET and MODEL_OTA_AXON_TOKEN only exist because the wired TU includes
-    # the token-suffixed public header; force-including ${_private_h} instead removes both.
     model_ota_add_wired_library(
       LIB ${_wired_lib}
       SOURCE ${MODEL_OTA_EDGEAI_AXON_WIRED_SRC}
@@ -192,17 +194,14 @@ function(_model_ota_axon_slot)
         MODEL_OTA_EDGEAI_SOLUTION_ID=${MI_SOLUTION_ID}
         MODEL_OTA_EDGEAI_AXON_MODEL_SRC=${_model_basename}
         MODEL_OTA_PARTITION_NODELABEL=${MI_PARTITION_NODELABEL}
-        MODEL_OTA_AXON_TARGET=${MI_TARGET}
-        MODEL_OTA_AXON_TOKEN=${_axon_token}
+        NRF_MODEL_PARTITION_ADDR=${_partition_addr}
         MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u
-      INCLUDES ${_model_dir} ${_public_include_dir}
+      INCLUDES ${_work_dir} ${_model_dir}
       DEPENDS ${_meta_target})
   endif()
 
   if(MI_FLAVOR STREQUAL "axon" AND NOT _using_released_fw)
     set(_wired_lib ota_axon_${MI_TARGET}_wired)
-    string(TOUPPER ${MI_TARGET} _axon_token)
-    string(REGEX REPLACE "[^A-Z0-9]" "_" _axon_token "${_axon_token}")
 
     model_ota_add_wired_library(
       LIB ${_wired_lib}
@@ -211,33 +210,28 @@ function(_model_ota_axon_slot)
       DESCRIPTION "raw Axon ${MI_TARGET} (${_wired_lib}) partition loader"
       DEFINES
         MODEL_OTA_AXON_TARGET=${MI_TARGET}
-        MODEL_OTA_AXON_TOKEN=${_axon_token}
         MODEL_OTA_PARTITION_NODELABEL=${MI_PARTITION_NODELABEL}
-      INCLUDES ${_public_include_dir}
+        NRF_MODEL_PARTITION_ADDR=${_partition_addr}
+      INCLUDES ${_work_dir}
       DEPENDS ${_meta_target})
   endif()
 
   if(NOT _using_released_fw)
     set(_app_lib ota_axon_${MI_TARGET})
-    add_library(${_app_lib} STATIC ${MODEL_OTA_AXON_APP_STUB} ${MODEL_OTA_AXON_KEEP_REFS})
-    set_target_properties(${_app_lib} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${_work_dir})
+    add_library(${_app_lib} OBJECT ${MODEL_OTA_AXON_APP_STUB})
     target_link_libraries(${_app_lib} PRIVATE zephyr_interface)
     target_include_directories(${_app_lib} PRIVATE
                                ${MODEL_OTA_LIB_DIR}/src ${_header_dir}
                                ${MODEL_OTA_MODULE_DIR}/include)
     target_compile_options(${_app_lib} PRIVATE "SHELL:-include \"${_private_h}\"")
-    target_compile_definitions(${_app_lib} PRIVATE
-                               MODEL_OTA_AXON_KEEP_LABEL=model_ota_axon_keep_${MI_TARGET})
     set_source_files_properties(
-      ${MODEL_OTA_AXON_APP_STUB} ${MODEL_OTA_AXON_KEEP_REFS}
+      ${MODEL_OTA_AXON_APP_STUB}
       TARGET_DIRECTORY ${_app_lib}
       PROPERTIES OBJECT_DEPENDS "${MI_HEADER};${_private_h}")
     add_dependencies(${_app_lib} ${_meta_target} zephyr_generated_headers)
 
     target_link_libraries(app PRIVATE ${_app_lib})
-    target_include_directories(app PRIVATE ${_public_include_dir})
     add_dependencies(app ${_meta_target})
-    toolchain_ld_force_undefined_symbols(model_ota_axon_keep_${MI_TARGET})
   endif()
 
   set(_image_stub ${MODEL_OTA_AXON_IMAGE_STUB})
@@ -336,4 +330,54 @@ endfunction()
 
 function(model_ota_axon_model)
   _model_ota_axon_slot(FLAVOR axon ${ARGN})
+endfunction()
+
+function(model_ota_axon_binding_finalize)
+  model_ota_using_released_fw(_using_released_fw)
+  if(_using_released_fw)
+    return()
+  endif()
+
+  get_property(_keep_json_files GLOBAL PROPERTY model_ota_axon_keep_json)
+  if(NOT _keep_json_files)
+    return()
+  endif()
+
+  set(_shared_include_dir ${CMAKE_CURRENT_BINARY_DIR}/model_ota/include)
+  file(MAKE_DIRECTORY ${_shared_include_dir})
+  target_include_directories(app PRIVATE ${_shared_include_dir})
+
+  set(_binding_h ${_shared_include_dir}/model_ota/axon_binding_table.h)
+  set(_binding_cmd
+    ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_ELF} binding-table
+    -o ${_binding_h}
+  )
+  foreach(_keep_json ${_keep_json_files})
+    list(APPEND _binding_cmd --keep-json ${_keep_json})
+  endforeach()
+
+  add_custom_command(
+    OUTPUT ${_binding_h}
+    COMMAND ${_binding_cmd}
+    DEPENDS ${_keep_json_files} ${MODEL_OTA_AXON_ELF}
+    COMMENT "Merging Axon OTA binding table"
+    VERBATIM
+  )
+
+  set(_binding_lib model_ota_axon_binding)
+  if(NOT TARGET ${_binding_lib})
+    add_library(${_binding_lib} STATIC ${MODEL_OTA_AXON_KEEP_REFS})
+    target_link_libraries(${_binding_lib} PRIVATE zephyr_interface)
+    target_include_directories(${_binding_lib} PRIVATE ${MODEL_OTA_LIB_DIR}/src)
+    target_compile_options(${_binding_lib} PRIVATE "SHELL:-include \"${_binding_h}\"")
+    set_source_files_properties(
+      ${MODEL_OTA_AXON_KEEP_REFS}
+      TARGET_DIRECTORY ${_binding_lib}
+      PROPERTIES OBJECT_DEPENDS "${_binding_h}")
+    add_dependencies(${_binding_lib} zephyr_generated_headers)
+    target_link_libraries(app PRIVATE ${_binding_lib})
+  endif()
+
+  add_custom_target(model_ota_axon_binding_table DEPENDS ${_binding_h})
+  add_dependencies(${_binding_lib} model_ota_axon_binding_table)
 endfunction()

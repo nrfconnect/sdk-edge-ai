@@ -118,11 +118,11 @@ endfunction()
 #
 # model_ota_add_context_slot(TARGET <id> BACKEND <axon|neuton> PARTITION_NODELABEL <label>
 #                            NAME <str> WORK_DIR <dir> CONTRACT_PROBE <obj>
-#                            [CONFIG_HEADER <axon_config.h>] [NEURONS_CAP <n>]
-#                            OUT_SLOT_JSON <var>)
+#                            [CONFIG_HEADER <axon_config.h>] [KEEP_JSON <axon_keep.json>]
+#                            [NEURONS_CAP <n>] OUT_SLOT_JSON <var>)
 function(model_ota_add_context_slot)
   cmake_parse_arguments(CS ""
-    "TARGET;BACKEND;PARTITION_NODELABEL;NAME;WORK_DIR;CONTRACT_PROBE;CONFIG_HEADER;NEURONS_CAP;OUT_SLOT_JSON"
+    "TARGET;BACKEND;PARTITION_NODELABEL;NAME;WORK_DIR;CONTRACT_PROBE;CONFIG_HEADER;KEEP_JSON;NEURONS_CAP;OUT_SLOT_JSON"
     "" ${ARGN})
 
   if(NOT CS_TARGET OR NOT CS_BACKEND OR NOT CS_PARTITION_NODELABEL OR NOT CS_WORK_DIR
@@ -141,11 +141,14 @@ function(model_ota_add_context_slot)
   if(CS_CONFIG_HEADER)
     list(APPEND _emit_cmd --config ${CS_CONFIG_HEADER})
   endif()
+  if(CS_KEEP_JSON)
+    list(APPEND _emit_cmd --keep-json ${CS_KEEP_JSON})
+  endif()
 
   add_custom_command(
     OUTPUT ${_slot_json}
     COMMAND ${_emit_cmd}
-    DEPENDS ${CS_CONTRACT_PROBE} ${MODEL_OTA_CONTEXT_SLOT_TOOL} ${CS_CONFIG_HEADER}
+    DEPENDS ${CS_CONTRACT_PROBE} ${MODEL_OTA_CONTEXT_SLOT_TOOL} ${CS_CONFIG_HEADER} ${CS_KEEP_JSON}
     COMMENT "Emitting OTA context slot metadata (${CS_TARGET})"
     VERBATIM)
   add_custom_target(${CS_TARGET}_contract_slot DEPENDS ${_slot_json})

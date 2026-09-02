@@ -116,8 +116,13 @@ Edge AI Lab solutions with an Axon backend use `model_ota_edgeai_axon_model()` i
 Axon model, and the image additionally carries the solution's `nrf_edgeai_t` parameters. The
 wrapper itself stays compiled into the app; its `model.instance.p_void` and its parameters are
 patched at runtime by `nrf_edgeai_load_user_model_<id>()` from
-`lib/model_ota/src/model_ota_edgeai_axon_wired.c.in` (the `multi_model` sample's `wakeword`,
+`lib/model_ota/src/model_ota_edgeai_axon_wired.c` (the `multi_model` sample's `wakeword`,
 `classif_axon`, and `regress_axon` declarations exercise this path).
+
+Per-slot app-facing constants live in generated `model_ota/slots/<target>.h` headers
+(for example `NRF_AXON_MODEL_<NAME>_PACKED_OUTPUT_SIZE`). The device-wide binding table
+header is `model_ota/axon_binding_table.h`; both sit under the shared build include root
+`model_ota/include/`.
 
 Raw Axon per-image build steps wire app-owned RAM via `axon_elf.py provide` from `zephyr.elf`.
 By default the linked image's optional `packed_output_buf` field is NULL; pass
@@ -160,10 +165,9 @@ nrfutil device program --firmware gear_anomaly_model_partition.hex \
 - Build wiring: `lib/model_ota/cmake/model_ota.cmake` (single include),
   `lib/model_ota/cmake/model_ota_edgeai_neuton.cmake`,
   `lib/model_ota/cmake/model_ota_axon.cmake`, `lib/model_ota/cmake/model_ota_image.cmake`,
-  `lib/model_ota/src/model_ota_edgeai_neuton_wired.c.in`,
-  `lib/model_ota/src/model_ota_edgeai_neuton_image_stub.c`,
+  `lib/model_ota/src/model_ota_edgeai_neuton_wired.c`,
   `lib/model_ota/src/model_ota_axon_image_stub.c`,
   `lib/model_ota/src/model_ota_stub_macros.h`, `lib/model_ota/linker/model_image.ld`
 - Axon wiring: `tools/model_ota/axon_elf.py`, `tools/model_ota/emit_context_slot.py`
-- Edge AI Lab wired loaders: `lib/model_ota/src/model_ota_edgeai_neuton_wired.c.in`,
-  `lib/model_ota/src/model_ota_edgeai_axon_wired.c.in`, `include/model_ota/model_ota_edgeai.h`
+- Edge AI Lab wired loaders: `lib/model_ota/src/model_ota_edgeai_neuton_wired.c`,
+  `lib/model_ota/src/model_ota_edgeai_axon_wired.c`, `include/model_ota/model_ota_edgeai.h`

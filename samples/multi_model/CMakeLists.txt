@@ -120,5 +120,5 @@ if(CONFIG_MULTI_MODEL_AXON AND CONFIG_MODEL_OTA_AXON)
 endif()
 
 if(CONFIG_MODEL_OTA)
-  model_ota_context_finalize()
+  model_ota_finalize()
 endif()

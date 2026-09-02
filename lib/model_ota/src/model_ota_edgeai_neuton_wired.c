@@ -31,6 +31,10 @@
 #error "MODEL_OTA_NEUTON_NEURONS_CAP must be defined when compiling model_ota_edgeai_neuton_wired.c"
 #endif
 
+#ifndef NRF_MODEL_PARTITION_ADDR
+#error "NRF_MODEL_PARTITION_ADDR must be defined when compiling model_ota_edgeai_neuton_wired.c"
+#endif
+
 #define MODEL_OTA_WIRED 1
 
 #include "nrf_edgeai_user_types.h"
@@ -49,6 +53,9 @@ static nrf_user_neuron_t model_neurons_cap_[MODEL_OTA_NEUTON_NEURONS_CAP];
 		MODEL_OTA_SOLUTION_CONTRACT_ARGS)
 
 MODEL_OTA_BUILD_ASSERT_MAPPED_PARTITION(MODEL_OTA_PARTITION_NODELABEL);
+BUILD_ASSERT((uintptr_t)MODEL_OTA_PARTITION_ADDR(MODEL_OTA_PARTITION_NODELABEL) ==
+		     NRF_MODEL_PARTITION_ADDR,
+	     "partition nodelabel address must match NRF_MODEL_PARTITION_ADDR");
 
 MODEL_OTA_EDGEAI_LOAD_DECL(MODEL_OTA_EDGEAI_SOLUTION_ID)
 {

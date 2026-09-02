@@ -101,6 +101,7 @@ function(model_ota_edgeai_neuton_model)
         MODEL_OTA_EDGEAI_NEUTON_MODEL_SRC=${_model_basename}
         MODEL_OTA_PARTITION_NODELABEL=${MI_PARTITION_NODELABEL}
         MODEL_OTA_NEUTON_NEURONS_CAP=${MI_NEURONS_CAP}
+        NRF_MODEL_PARTITION_ADDR=${_partition_addr}
         MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u
       INCLUDES ${_model_dir})
   endif()

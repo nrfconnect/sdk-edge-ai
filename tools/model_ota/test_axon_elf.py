@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -15,7 +16,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import axon_elf
-from axon_elf import ElfSymbol, SymbolIndex
+from axon_elf import ElfSymbol, ProbeMetadata, SymbolIndex
 
 
 def symbol(
@@ -43,12 +44,13 @@ def basic_probe_symbols() -> list[ElfSymbol]:
 
 
 class InspectOutputTests(unittest.TestCase):
-    def test_inspect_emits_private_and_public_contract(self) -> None:
+    def test_inspect_emits_private_public_and_keep_json(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             probe = root / "probe.o"
             private = root / "private.h"
             public = root / "public.h"
+            keep_json = root / "keep.json"
             probe.write_bytes(b"not read due to mock")
             index = SymbolIndex.build(basic_probe_symbols())
             with patch("axon_elf.load_symbol_index", return_value=index):
@@ -58,13 +60,15 @@ class InspectOutputTests(unittest.TestCase):
                         "--probe",
                         str(probe),
                         "--header-name",
-                        'nrf_axon_model_demo.h',
+                        "nrf_axon_model_demo.h",
                         "--model-id",
                         "door bell-v2",
                         "--private-header",
                         str(private),
                         "--public-header",
                         str(public),
+                        "--keep-json",
+                        str(keep_json),
                         "--persistent-vars-cap",
                         "8",
                         "--partition-addr",
@@ -88,25 +92,37 @@ class InspectOutputTests(unittest.TestCase):
             self.assertIn("#define MODEL_OTA_AXON_KEEP_SYMBOL_COUNT 3", private_text)
             self.assertIn("#define MODEL_OTA_AXON_SYM_HASH_driver_call", private_text)
             self.assertNotIn("__model_image_end", private_text)
-            # Default (no --allocate-packed-output): packed_output_buf is never
-            # referenced by the linked OTA image (its packed_output_buf field is
-            # always NULL), so it must not be kept as app storage or exposed as a
-            # private-header symbol.
             self.assertIn("#define MODEL_OTA_AXON_PACKED_OUTPUT_ALLOC 0", private_text)
             self.assertNotIn("axon_model_demo_packed_output_buf", private_text)
             self.assertNotIn("MODEL_OTA_AXON_PACKED_OUTPUT_SYM", private_text)
+
+            public_text = public.read_text()
             self.assertIn(
                 "#define MODEL_OTA_AXON_DOOR_BELL_V2_PACKED_OUTPUT_BYTES 20",
-                public.read_text(),
+                public_text,
             )
             self.assertIn(
-                "#define MODEL_OTA_AXON_DOOR_BELL_V2_IMAGE_BASE 0x00102000u", public.read_text()
+                "#define MODEL_OTA_AXON_DOOR_BELL_V2_PERSISTENT_VARS_CAP 8",
+                public_text,
             )
-            self.assertIn("#define MODEL_OTA_AXON_DOOR_BELL_V2_CONTRACT_HASH", public.read_text())
-            self.assertIn("#define MODEL_OTA_AXON_DOOR_BELL_V2_KEEP_LABEL", public.read_text())
+            self.assertIn("#define NRF_AXON_MODEL_DEMO_PACKED_OUTPUT_SIZE", public_text)
+            self.assertNotIn("model_contract.h", public_text)
+            self.assertNotIn("IMAGE_BASE", public_text)
+            self.assertNotIn("KEEP_LABEL", public_text)
+            self.assertNotIn("CONTRACT_HASH", public_text)
 
-    def test_inspect_edgeai_omits_the_pure_axon_contract_hash(self) -> None:
-        """A wrapped solution's hash covers its pipeline, so only the wired unit can compute it."""
+            payload = json.loads(keep_json.read_text())
+            self.assertEqual(payload["target"], "door bell-v2")
+            self.assertEqual(
+                payload["keep_symbols"],
+                [
+                    "axon_model_demo_persistent_vars",
+                    "driver_call",
+                    "nrf_axon_interlayer_buffer",
+                ],
+            )
+
+    def test_inspect_edgeai_public_header_is_app_facing_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             probe = root / "probe.o"
@@ -135,8 +151,9 @@ class InspectOutputTests(unittest.TestCase):
                 )
             self.assertEqual(result, 0)
             public_text = public.read_text()
-            self.assertIn("#define MODEL_OTA_AXON_DEMO_IMAGE_BASE 0x00102000u", public_text)
-            self.assertNotIn("#define MODEL_OTA_AXON_DEMO_CONTRACT_HASH", public_text)
+            self.assertIn("#define MODEL_OTA_AXON_DEMO_PACKED_OUTPUT_BYTES 20", public_text)
+            self.assertNotIn("CONTRACT_HASH", public_text)
+            self.assertNotIn("IMAGE_BASE", public_text)
 
     def test_inspect_allocate_packed_output_wires_app_storage(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -193,6 +210,72 @@ class InspectOutputTests(unittest.TestCase):
             axon_elf.inspect_symbols(symbols)
 
 
+class BindingTableTests(unittest.TestCase):
+    def test_binding_table_merges_and_dedups(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            keep_a = root / "a.json"
+            keep_b = root / "b.json"
+            out = root / "binding.h"
+            keep_a.write_text(
+                json.dumps(
+                    {
+                        "target": "a",
+                        "keep_symbols": [
+                            "nrf_axon_interlayer_buffer",
+                            "driver_call",
+                        ],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            keep_b.write_text(
+                json.dumps(
+                    {
+                        "target": "b",
+                        "keep_symbols": [
+                            "nrf_axon_interlayer_buffer",
+                            "axon_model_demo_persistent_vars",
+                        ],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            result = axon_elf.main(
+                [
+                    "binding-table",
+                    "--keep-json",
+                    str(keep_a),
+                    "--keep-json",
+                    str(keep_b),
+                    "-o",
+                    str(out),
+                ]
+            )
+            self.assertEqual(result, 0)
+            text = out.read_text()
+            self.assertIn("#define MODEL_OTA_AXON_BINDING_SYMBOL_COUNT 3", text)
+            self.assertIn("MODEL_OTA_AXON_BINDING_REFS(X)", text)
+            self.assertIn("X(nrf_axon_interlayer_buffer)", text)
+
+    def test_binding_table_hash_collision_fails(self) -> None:
+        metadata = ProbeMetadata(
+            model_symbol="model_a",
+            persistent_required=0,
+            persistent_cap=0,
+            persistent_symbol=None,
+            packed_output_bytes=0,
+            packed_output_symbol=None,
+            packed_output_allocated=False,
+            keep_symbols=("sym_a", "sym_b"),
+        )
+        with patch("axon_elf.symbol_name_hash", side_effect=[1, 1]):
+            with self.assertRaisesRegex(ValueError, "hash collision"):
+                axon_elf.render_binding_table_header(list(metadata.keep_symbols))
+
+
 class ModelSymbolDiscoveryTests(unittest.TestCase):
     def test_read_only_candidate_is_preferred(self) -> None:
         symbols = [
@@ -235,6 +318,13 @@ class ModelSymbolDiscoveryTests(unittest.TestCase):
             axon_elf.discover_model_symbol(
                 SymbolIndex.build(symbols), "writable_override"
             )
+
+    def test_derive_axon_model_token_from_storage(self) -> None:
+        metadata = axon_elf.inspect_symbols(basic_probe_symbols(), persistent_vars_cap=8)
+        self.assertEqual(
+            axon_elf.derive_axon_model_token(metadata.model_symbol, metadata),
+            "DEMO",
+        )
 
 
 class ProvideTests(unittest.TestCase):

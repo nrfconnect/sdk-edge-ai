@@ -7,14 +7,13 @@
 """Emit build-time slot metadata for model_ota_context.json export.
 
 The contract hash is the compiler's own value, read back out of the slot's contract probe (see
-lib/model_ota/src/model_ota_contract_probe.c). With --config, Axon slots also publish caps and the
-binding table from the generated private axon_config.h; without it only contract_hash is emitted.
+lib/model_ota/src/model_ota_contract_probe.c). With --config, Axon slots also publish caps from
+the generated private axon_config.h; with --keep-json they also publish per-slot binding symbols.
 """
 from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -24,14 +23,11 @@ from model_contract import config_define
 OP_EXTENSION_PREFIX = "nrf_axon_nn_op_extension_"
 
 
-def axon_binding_symbols(config_header: Path) -> list[str]:
-    # TODO: audit/replace regex scraping of MODEL_OTA_AXON_KEEP_REFS(X) lines in the
-    # generated axon_config.h; prefer structured metadata from axon_elf.py inspect.
-    symbols: list[str] = []
-    for line in config_header.read_text(encoding="utf-8").splitlines():
-        match = re.match(r"\s*X\(([^)]+)\)", line)
-        if match:
-            symbols.append(match.group(1))
+def axon_binding_symbols(keep_json: Path) -> list[str]:
+    payload = json.loads(keep_json.read_text(encoding="utf-8"))
+    symbols = payload.get("keep_symbols")
+    if not isinstance(symbols, list) or not all(isinstance(entry, str) for entry in symbols):
+        raise SystemExit(f"{keep_json}: keep_symbols must be a JSON string array")
     return symbols
 
 
@@ -41,6 +37,8 @@ def main(argv=None) -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--config", type=Path,
                         help="Axon private axon_config.h (optional)")
+    parser.add_argument("--keep-json", type=Path,
+                        help="per-slot Axon keep-symbol manifest (optional)")
     args = parser.parse_args(argv)
 
     try:
@@ -59,7 +57,11 @@ def main(argv=None) -> int:
         slot["packed_output_cap"] = (
             config_define(args.config, "MODEL_OTA_AXON_PACKED_OUTPUT_BYTES") or 0
         )
-        slot["binding_symbols"] = axon_binding_symbols(args.config)
+
+    if args.keep_json is not None:
+        if not args.keep_json.is_file():
+            raise SystemExit(f"keep JSON not found: {args.keep_json}")
+        slot["binding_symbols"] = axon_binding_symbols(args.keep_json)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(slot, indent=2) + "\n", encoding="utf-8")

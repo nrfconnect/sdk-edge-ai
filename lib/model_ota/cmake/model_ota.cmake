@@ -8,10 +8,17 @@
 #   model_ota_edgeai_neuton_model() — Edge AI Lab solution, Neuton backend
 #   model_ota_edgeai_axon_model()   — Edge AI Lab solution, Axon backend
 #   model_ota_axon_model()          — raw Axon model (no nrf_edgeai_t wrapper)
-#   model_ota_context_finalize()    — export model_ota_context.json after link
+#   model_ota_finalize()            — Axon binding table + model_ota_context.json export
 
 include_guard(GLOBAL)
 
 include(${CMAKE_CURRENT_LIST_DIR}/model_ota_context.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/model_ota_edgeai_neuton.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/model_ota_axon.cmake)
+
+# Finalize model-only OTA after all slot declarations. Registers the device-wide Axon binding
+# table (when applicable) and exports model_ota_context.json once the application links.
+function(model_ota_finalize)
+  model_ota_axon_binding_finalize()
+  model_ota_context_finalize()
+endfunction()

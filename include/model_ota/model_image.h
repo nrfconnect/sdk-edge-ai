@@ -285,8 +285,6 @@ struct model_image_axon_expect {
 	uint32_t contract_hash;
 	uint32_t persistent_vars_cap;
 	uint32_t packed_output_cap; /**< allocated bytes; 0 when not allocated in app */
-	/** Live binding table from model_ota_axon_keep_refs.S: [count, hash0, addr0, ...]. */
-	const uint32_t *binding_table;
 };
 
 /**

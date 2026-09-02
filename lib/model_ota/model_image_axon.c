@@ -12,6 +12,9 @@
 
 LOG_MODULE_DECLARE(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
 
+/** Device-wide binding table from model_ota_axon_keep_refs.S; empty when no Axon slots exist. */
+extern const uint32_t model_ota_axon_binding_table[];
+
 static bool binding_entry_matches(const struct model_image_binding_entry *entry,
 				  const uint32_t *app_table)
 {
@@ -108,7 +111,7 @@ enum model_image_result model_image_load_axon(const uint8_t *partition_addr, siz
 		return MODEL_IMAGE_ERR_PACKED_OUTPUT_TOO_LARGE;
 	}
 
-	rc = model_image_verify_axon_binding(&hdr, expect->binding_table);
+	rc = model_image_verify_axon_binding(&hdr, model_ota_axon_binding_table);
 	if (rc != MODEL_IMAGE_OK) {
 		return rc;
 	}
