@@ -1,0 +1,13 @@
+patches:
+- author: Mateusz Michalek
+  date: '2026-08-20'
+  email: mateusz.michalek@nordicsemi.no
+  merge-pr: https://github.com/nrfconnect/sdk-mcuboot/pull/730
+  merge-status: false
+  module: bootloader/mcuboot
+  path: nrf-noup-boot-bootutil-image-scrub-mode.patch
+  sha256sum: 2b9716d10875c315c24a9c348fb73dfb5333ba49f9ef382d4e716a06143cc5f4
+  upstreamable: true
+  comments: |
+    Rebased from PR #730 onto current NCS mcuboot (c1d2d128).
+    Original GitHub patch targeted main@91821239 and did not apply cleanly.
