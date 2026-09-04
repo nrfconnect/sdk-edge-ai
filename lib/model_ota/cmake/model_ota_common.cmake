@@ -7,14 +7,9 @@
 
 include_guard(GLOBAL)
 
-get_filename_component(_model_ota_tools ${CMAKE_CURRENT_LIST_DIR}/../../../tools/model_ota ABSOLUTE)
-set(MODEL_OTA_TOOLS_DIR ${_model_ota_tools} CACHE INTERNAL "edge-ai model_ota host tools")
+set(MODEL_OTA_TOOLS_DIR ${ZEPHYR_EDGE_AI_MODULE_DIR}/tools/model_ota CACHE INTERNAL "edge-ai model_ota host tools")
 
-get_filename_component(_model_ota_lib ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
-set(MODEL_OTA_LIB_DIR ${_model_ota_lib} CACHE INTERNAL "edge-ai model_ota library sources")
-
-get_filename_component(_model_ota_module ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSOLUTE)
-set(MODEL_OTA_MODULE_DIR ${_model_ota_module} CACHE INTERNAL "edge-ai module root")
+set(MODEL_OTA_LIB_DIR ${ZEPHYR_EDGE_AI_MODULE_DIR}/lib/model_ota CACHE INTERNAL "edge-ai model_ota library sources")
 
 # Offset from partition base to the linked model image payload. Must match bootutil
 # IMAGE_HEADER_SIZE (see lib/model_ota/include/model_ota/model_image.h).
@@ -135,7 +130,7 @@ function(model_ota_contract_probe)
             ${_zephyr_cflags}
             -I${MODEL_OTA_LIB_DIR}/src
             -I${MODEL_OTA_LIB_DIR}/include
-            -I${MODEL_OTA_MODULE_DIR}/include
+            -I${ZEPHYR_EDGE_AI_MODULE_DIR}/include
             -include ${CMAKE_CURRENT_BINARY_DIR}/zephyr/include/generated/zephyr/autoconf.h
             -D${_flavor_def}
             -DMODEL_OTA_IMAGE_LINK_BASE=${CP_IMAGE_BASE}
