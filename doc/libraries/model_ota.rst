@@ -8,7 +8,7 @@ Overview
 
 ``lib/model_ota`` loads Neuton and Axon ML models from dedicated flash partitions at runtime, independently of the application image. Models are **linked partition images** (magic ``NEI\\0``, format version 12): the compiler/linker place the descriptor and weights at the partition base so intra-image pointers are absolute flash addresses (XIP).
 
-There is **no runtime OTA transport** in this library: getting an image onto the device is a flash-only operation (for example ``nrfutil device program`` on a partition ``.hex``). Integrity is **CRC-32/IEEE only** — there is no signature or authenticity check and no MCUboot involvement.
+There is **no runtime OTA transport** in this library: getting an image onto the device is a flash-only operation (for example ``nrfutil device program`` on a partition ``.hex``). Current images have no signature or authenticity check; authenticity enforcement by MCUboot will be added in future commits.
 
 Production update flow
 **********************
@@ -78,7 +78,7 @@ The solution ID hashed here is the ``SOLUTION_ID`` the CMake helper was called w
 
 .. note::
 
-   None of these hashes is a security control — not the contract hash, whose FNV-1a is unkeyed, and not the unkeyed ``blake2s`` over the strings either. Nor is the image CRC an integrity check. All of them guard against accidents. Authenticity comes from MCUboot signature verification, which is where the final solution enforces it.
+   None of these hashes is a security control — not the contract hash, whose FNV-1a is unkeyed, and not the unkeyed ``blake2s`` over the strings either. Nor is the image CRC an authenticity check. All of them guard against accidents. Authenticity enforcement by MCUboot will be added in future commits.
 
 **Binding table** (Axon only) — one device-wide ``{name_hash, address}`` table for every app-owned symbol any Axon image was linked against (``nrf_axon_interlayer_buffer``, persistent vars, op extensions, ``axonpro_*``). ``axon_elf.py binding-table`` unions the per-slot keep lists at finalize; ``model_ota_axon_keep_refs.S`` emits ``model_ota_axon_binding_table``, which ``model_image_load_axon()`` consults directly.
 
@@ -125,7 +125,7 @@ Known limitations
 *****************
 
 - No OTA transport, signing, A/B slots, or rollback
-- The loaders do not range-check the image's baked pointers: the partition base they were linked at is part of the contract hash, and containment is gated at build time by ``validate_model_image_layout.py``. A crafted image with a valid CRC and contract hash is therefore not contained — authenticity is MCUboot's job in the final solution
+- The loaders do not range-check the image's baked pointers: the partition base they were linked at is part of the contract hash, and containment is gated at build time by ``validate_model_image_layout.py``. A crafted image with a valid CRC and contract hash is therefore not contained — authenticity enforcement by MCUboot will be added in future commits
 - Axon images bind to app RAM addresses from the firmware they were linked against; binding check catches drift
 - The solution wrapper (DSP pipeline, decode interfaces) is not swappable — only the model payload and the ``nrf_edgeai_t`` parameters that travel with it
 - ``model_image_bind_edgeai_params()`` trusts the image it is handed: apart from comparing the extraction mask, it assumes the backend loader validated it first, and that the contract hash already covered the scaling geometry

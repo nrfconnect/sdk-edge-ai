@@ -92,6 +92,13 @@ function(_model_ota_axon_slot)
     set(MI_VERSION "1.0.0")
   endif()
 
+  model_ota_using_released_fw(_using_released_fw)
+  if(_using_released_fw AND NOT MODEL_OTA_FW_ELF)
+    message(FATAL_ERROR
+            "Out-of-tree Axon model images require MODEL_OTA_FW_ELF pointing to the "
+            "released zephyr.elf")
+  endif()
+
   model_ota_pack_version("${MI_VERSION}" _version_u32)
   dt_nodelabel(_partition_node NODELABEL ${MI_PARTITION_NODELABEL} REQUIRED)
   dt_reg_addr(_partition_addr PATH ${_partition_node})
@@ -173,8 +180,6 @@ function(_model_ota_axon_slot)
     KEEP_JSON ${_keep_json}
     OUT_SLOT_JSON _context_slot)
   add_dependencies(${_meta_target} ${MI_TARGET}_contract_slot)
-
-  model_ota_using_released_fw(_using_released_fw)
 
   if(MI_FLAVOR STREQUAL "edgeai_axon" AND NOT _using_released_fw)
     get_filename_component(_model_dir ${MI_MODEL_SRC} DIRECTORY)
