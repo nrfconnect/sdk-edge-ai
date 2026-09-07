@@ -43,14 +43,17 @@ Observability
 The application collects runtime observability metrics using the :ref:`nrf_edgeai_obsv_lib`.
 
 Enable metrics for each model independently (either option, or both):
+
 * ``CONFIG_MODELS_OBSERVABILITY_WW`` - Wakeword model
 * ``CONFIG_MODELS_OBSERVABILITY_KWS`` - Keyword spotting model
 
-The :file:`src/obsv/model_obsv.c` module does all the observability work.
-For each enabled model, it owns the observability context, registers the built-in metrics selected in :file:`observability.conf`, and binds the Memfault transport.
-The model files (:file:`src/ww/wakeword.c` and :file:`src/kws/kws.c`) only feed samples to this module.
+Each model has its own observability file: :file:`src/ww/ww_obsv.c` and :file:`src/kws/kws_obsv.c`.
+Each one creates the observability context, sizes and registers the metrics selected in :file:`observability.conf` for its own class and feature counts, and binds the Memfault transport.
+The model files (:file:`src/ww/wakeword.c` and :file:`src/kws/kws.c`) only feed samples to it.
+Use either file as the starting point for observing your own model.
 
-Because both models use the same metric set, the single output of the wakeword model is expanded into a synthetic two-class ``[1 - p, p]`` distribution before the probability metrics are updated.
+The wakeword model emits a single probability ``p``.
+The probability metrics are defined over a distribution, so the score is expanded into a two-class ``[1 - p, p]`` vector inside :file:`src/ww/ww_obsv.c`.
 
 Metrics are collected every 24 hours (see the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT`` Kconfig option) and sent to the `Memfault`_ using `Custom Data Recording <Memfault Custom Data Recording_>`_ registered by the :ref:`nrf_edgeai_obsv_lib`.
 
@@ -77,7 +80,7 @@ You can replace the bundled models using the `Text to Wake Word Detection <Nordi
       1. Replace the files inside :file:`src/kws/nrf_edgeai_generated` directory with files downloaded from `Nordic Edge AI Lab`_.
       #. In :c:func:`kws_init`, set the ``kws_model`` pointer using the model getter from the generated files.
       #. Update the ``keyword_detection_ctxs`` array in the :file:`src/kws/kws.c` file with keyword labels from :file:`src/kws/nrf_edgeai_generated/nrf_edgeai_user_model_labels.h` file and thresholds for keyword spotting.
-      #. When using the observability feature, set the ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` Kconfig option to number of keywords spotted plus 2 for auxiliary classes.
+      #. When using the observability feature, set the ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` Kconfig option in the :file:`observability.conf` file to number of keywords spotted plus 2 for auxiliary classes.
       #. Adjust the Kconfig options to tune keyword spotting postprocessing to selected model.
 
 Requirements
@@ -159,6 +162,7 @@ Check and configure the following library options that are used by the applicati
 
 * ``CONFIG_MEMFAULT_NCS_PROJECT_KEY`` - A key to your `Memfault`_ project
 * ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` - Number of classes the observed model predicts
+* ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS`` - Number of observability contexts, one per observed model
 * ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC`` - Interval of automatic metrics collection.
   For testing, use a shorter interval and enable server debug mode for the device in the  `Memfault`_ dashboard.
 
@@ -189,6 +193,9 @@ The application provides predefined :file:`observability.conf` configuration fil
 
 This file enables observability for both bundled models (``CONFIG_MODELS_OBSERVABILITY_WW`` and ``CONFIG_MODELS_OBSERVABILITY_KWS``), Bluetooth LE, Memfault Diagnostic Service and required dependencies.
 Enable only one of the two options to observe just the wakeword or just the keyword spotting model.
+
+The file also sets the memory sizing for the enabled scope: ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES``, ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS`` and the shared ``CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE``.
+When you observe only one model, lower these values as described in the comments in the file.
 
 Check :ref:`nrf:cmake_options` and use :makevar:`EXTRA_CONF_FILE` variable to include this configuration file.
 

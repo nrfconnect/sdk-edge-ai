@@ -8,62 +8,23 @@
 #include <stdint.h>
 
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/__assert.h>
+#include <zephyr/sys/util.h>
 #include <nrf_edgeai/nrf_edgeai.h>
 #include <nrf_edgeai/rt/nrf_edgeai_runtime.h>
 #include <nrf_edgeai/rt/nrf_edgeai_runtime_aux.h>
 
 #include "../dmic.h"
-#include "../model_utils.h"
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_WW)
-#include "../obsv/model_obsv.h"
-#endif
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "wakeword.h"
 
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_WW)
+#include "ww_obsv.h"
+#endif
+
 LOG_MODULE_REGISTER(ww);
 
-#define WW_NUM_CLASSES 1U
-
-/* The wakeword model emits a single probability p. For observability it is
- * expanded into a synthetic 2-class distribution [1 - p, p] = [absent, present]
- * so the probability metrics see a real distribution instead of a degenerate
- * single-class vector.
- */
-#define WW_OBSV_CLASSES 2U
-
-/* Mel feature vector length from the model DSP front end.
- */
-#define WW_NUM_FEATURES 40
-
 static nrf_edgeai_t *ww_model;
-
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_WW)
-
-static struct model_obsv ww_obsv;
-
-BUILD_ASSERT(CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES >= WW_OBSV_CLASSES,
-	     "Observability will not fit the synthesized wakeword classes");
-BUILD_ASSERT(WW_NUM_FEATURES <= MODEL_OBSV_MAX_FEATURES,
-	     "MODEL_OBSV_MAX_FEATURES must be >= WW_NUM_FEATURES");
-
-static int ww_obsv_init(nrf_edgeai_t *model)
-{
-	nrf_edgeai_obsv_model_info_t info;
-	int err;
-
-	/* Pass the model's real output count (1) so obsv_model_info_from_model's
-	 * assert holds, then advertise the synthetic 2-class count to observability.
-	 */
-	err = obsv_model_info_from_model(model, WW_NUM_CLASSES, &info);
-	if (err) {
-		return err;
-	}
-	info.num_classes = WW_OBSV_CLASSES;
-
-	return model_obsv_init(&ww_obsv, &info, WW_NUM_FEATURES);
-}
-
-#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_WW) */
 
 int ww_init(void)
 {
@@ -150,7 +111,7 @@ int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *co
 	const nrf_edgeai_dsp_feature_extraction_t *feats = nrf_edgeai_dsp_features_ctx(ww_model);
 
 	if (feats != NULL) {
-		model_obsv_update_features(&ww_obsv, feats->buffer.p_f32, feats->overall_num);
+		ww_obsv_update_features(feats->buffer.p_f32, feats->overall_num);
 	}
 #endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_WW) */
 
@@ -166,13 +127,7 @@ int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *co
 	*ww_detected = ww_postprocess();
 
 #if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_WW)
-	/* Expand the single wakeword score p into a synthetic 2-class distribution
-	 * [1 - p, p] = [absent, present] for the probability-stream metrics.
-	 */
-	const float p = ww_model->decoded_output.classif.probabilities.p_f32[0];
-	const float probs2[WW_OBSV_CLASSES] = {1.0f - p, p};
-
-	model_obsv_update_probs(&ww_obsv, probs2);
+	ww_obsv_update_probs(ww_model->decoded_output.classif.probabilities.p_f32[0]);
 #endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_WW) */
 
 	return 0;

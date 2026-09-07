@@ -87,10 +87,9 @@ config MODELS_OBSERVABILITY_KWS
 config MODELS_OBSERVABILITY
 	def_bool MODELS_OBSERVABILITY_WW || MODELS_OBSERVABILITY_KWS
 	help
-	  Auto-selected umbrella: set when observability is enabled for at least one model. Gates the
-	  shared model_obsv module (create/register all enabled built-in metrics + Memfault binding).
-	  The wakeword and keyword spotting model files guard their own wiring with
-	  MODELS_OBSERVABILITY_WW and MODELS_OBSERVABILITY_KWS respectively.
+	  Auto-selected umbrella: set when observability is enabled for at least one model. Each model
+	  has its own observability file (src/ww/ww_obsv.c, src/kws/kws_obsv.c) gated by its own
+	  option; this symbol only gates what is shared, such as the Memfault Diagnostic Service.
 
 config MODELS_OBSERVABILITY_MDS
 	def_bool y
@@ -98,18 +97,6 @@ config MODELS_OBSERVABILITY_MDS
 	depends on BT_MDS
 	depends on BT_SMP
 	depends on NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
-
-# Observability-owned memory sizing — these are private to observability, so they
-# scale automatically with the enabled models. Placed before "source Kconfig.zephyr"
-# so these app defaults take precedence over the library defaults. Override in a
-# .conf for a custom model whose keyword count differs from the bundled 12-class one.
-config NRF_EDGEAI_OBSV_MAX_CLASSES
-	default 12 if MODELS_OBSERVABILITY_KWS
-	default 2 if MODELS_OBSERVABILITY_WW
-
-config NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS
-	default 2 if MODELS_OBSERVABILITY_WW && MODELS_OBSERVABILITY_KWS
-	default 1 if MODELS_OBSERVABILITY
 
 endmenu
 

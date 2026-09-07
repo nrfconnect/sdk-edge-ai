@@ -8,18 +8,20 @@
 #include <stdint.h>
 
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/__assert.h>
+#include <zephyr/sys/util.h>
 #include <nrf_edgeai/nrf_edgeai.h>
 #include <nrf_edgeai/rt/nrf_edgeai_runtime.h>
 #include <nrf_edgeai/rt/nrf_edgeai_runtime_aux.h>
 
 #include "../dmic.h"
-#include "../model_utils.h"
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
-#include "../obsv/model_obsv.h"
-#endif
 #include "kws.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model_labels.h"
+
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
+#include "kws_obsv.h"
+#endif
 
 LOG_MODULE_REGISTER(kws);
 
@@ -49,34 +51,6 @@ static const struct keyword_detection_ctx keyword_detection_ctxs[] = {
 };
 
 static nrf_edgeai_t *kws_model;
-
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
-
-/* Mel feature vector length produced by the model DSP front end.
- */
-#define KWS_NUM_FEATURES 40
-
-static struct model_obsv kws_obsv;
-
-BUILD_ASSERT(CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES >= KEYWORDS_COUNT,
-	     "Observability will not fit all keyword spotting classes");
-BUILD_ASSERT(KWS_NUM_FEATURES <= MODEL_OBSV_MAX_FEATURES,
-	     "MODEL_OBSV_MAX_FEATURES must be >= KWS_NUM_FEATURES");
-
-static int kws_obsv_init(nrf_edgeai_t *model)
-{
-	nrf_edgeai_obsv_model_info_t info;
-	int err;
-
-	err = obsv_model_info_from_model(model, KEYWORDS_COUNT, &info);
-	if (err) {
-		return err;
-	}
-
-	return model_obsv_init(&kws_obsv, &info, KWS_NUM_FEATURES);
-}
-
-#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
 
 int kws_init(void)
 {
@@ -189,7 +163,7 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 	const nrf_edgeai_dsp_feature_extraction_t *feats = nrf_edgeai_dsp_features_ctx(kws_model);
 
 	if (feats != NULL) {
-		model_obsv_update_features(&kws_obsv, feats->buffer.p_f32, feats->overall_num);
+		kws_obsv_update_features(feats->buffer.p_f32, feats->overall_num);
 	}
 #endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
 
@@ -205,7 +179,7 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 	kws_postprocess(prediction);
 
 #if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
-	model_obsv_update_probs(&kws_obsv, kws_model->decoded_output.classif.probabilities.p_f32);
+	kws_obsv_update_probs(kws_model->decoded_output.classif.probabilities.p_f32);
 #endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
 
 	return 0;
