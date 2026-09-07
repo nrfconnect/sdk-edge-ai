@@ -16,7 +16,9 @@ This release is tagged as ``NRF-EDGEAI-RELEASE-3.0.0`` (internal release commit 
 This is a major release.
 
 The runtime major version was raised from 2 to 3, which makes it incompatible with solutions generated for the v2.x runtime.
+
 * This release contains the following breaking changes:
+
   * Solutions and applications built for the 2.x runtime do not work with this release.
     Retrain your model and export a new solution with Nordic Edge AI Lab 3.0.0.
     :c:func:`nrf_edgeai_is_runtime_compatible` compares the major version of the runtime library against the solution, so a solution created for a 2.x runtime causes :c:func:`nrf_edgeai_init` to fail with ``NRF_EDGEAI_ERR_INCOMPATIBLE``.
@@ -45,11 +47,13 @@ The runtime major version was raised from 2 to 3, which makes it incompatible wi
   * :c:func:`nrf_edgeai_dsp_features_ctx` to obtain read-only access to the DSP feature extraction context, so computed features can be used from the application.
 
 * Updated:
+
   * Feature processing was split into two separate pipeline stages: DSP feature extraction and feature scaling.
   * :c:func:`nrf_edgeai_run_inference` keeps the previous single-call workflow working.
     If features have not been processed yet, it invokes :c:func:`nrf_edgeai_process_features` internally and propagates its status code unchanged.
 
 * Fixed:
+
   * :c:func:`nrf_edgeai_feed_inputs` now rejects calls on a context that was never successfully initialized, returning ``NRF_EDGEAI_ERR_UNINITIALIZED`` instead of forwarding the data to an uninitialized input window context.
 
 Known issues
