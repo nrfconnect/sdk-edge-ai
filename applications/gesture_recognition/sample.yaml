@@ -188,6 +188,7 @@ tests:
       - FILE_SUFFIX=release
       - CONFIG_BLE_MODE_NONE=y
       - CONFIG_BT=n
+      - SB_CONFIG_NETCORE_EMPTY=y
   # This configuration is not working yet.
   # It's added so that shield is correctly rendered in the documentation.
   applications.gesture_recognition.shield:
