@@ -18,11 +18,11 @@ config DATA_COLLECTION_MODE
 
 choice NRF_EDGEAI_GESTURE_RECOGNITION_MODEL
 	prompt "Edge AI model backend"
-	default NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON if SOC_NRF54LM20B
+	default NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON if SOC_NRF54LM20B || SOC_NRF7120
 	default NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_NEUTON
 	help
-	  Select which model implementation to use. Axon (NPU) is only available
-	  on nRF54L20 (nrf54lm20b). Other boards use Neuton (CPU).
+	  Select which model implementation to use. Axon (NPU) is only available on
+	  Axon-equipped devices (nRF54LM20B, nRF7120). Other boards use Neuton (CPU).
 
 config NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_NEUTON
 	bool "Neuton (CPU)"
@@ -31,7 +31,7 @@ config NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_NEUTON
 
 config NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON
 	bool "Axon (NPU)"
-	depends on SOC_NRF54LM20B
+	depends on SOC_NRF54LM20B || SOC_NRF7120
 	select NRF_AXON
 	help
 	  Use the Axon model. Only available on Axon-enabled devices.
