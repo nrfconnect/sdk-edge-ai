@@ -61,6 +61,12 @@ typedef enum nrf_edgeai_err_e
 
     /** Incompatibilty error */
     NRF_EDGEAI_ERR_INCOMPATIBLE = -7,
+
+    /** The operation failed because the context was not initialized */
+    NRF_EDGEAI_ERR_UNINITIALIZED = -8,
+
+    /** The operation failed because the context was in wrong state */
+    NRF_EDGEAI_ERR_WRONG_STATE = -9,
 } nrf_edgeai_err_t;
 
 #ifdef __cplusplus

@@ -8,17 +8,20 @@
 #include <stdint.h>
 
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/__assert.h>
+#include <zephyr/sys/util.h>
 #include <nrf_edgeai/nrf_edgeai.h>
+#include <nrf_edgeai/rt/nrf_edgeai_runtime.h>
 #include <nrf_edgeai/rt/nrf_edgeai_runtime_aux.h>
-#include <nrf_edgeai_obsv/nrf_edgeai_obsv.h>
-#include <nrf_edgeai_obsv/nrf_edgeai_obsv_memfault.h>
-#include <nrf_edgeai_obsv/nrf_edgeai_obsv_metrics.h>
 
 #include "../dmic.h"
-#include "../model_utils.h"
 #include "kws.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model_labels.h"
+
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
+#include "kws_obsv.h"
+#endif
 
 LOG_MODULE_REGISTER(kws);
 
@@ -49,59 +52,6 @@ static const struct keyword_detection_ctx keyword_detection_ctxs[] = {
 
 static nrf_edgeai_t *kws_model;
 
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
-
-static nrf_edgeai_obsv_ctx_t kws_ctx;
-
-static uint32_t kws_pd_buf[NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(KEYWORDS_COUNT) / sizeof(uint32_t)];
-static uint32_t kws_tm_buf[NRF_EDGEAI_OBSV_TM_STORAGE_BYTES(KEYWORDS_COUNT) / sizeof(uint32_t)];
-static nrf_edgeai_obsv_metric_t kws_pd;
-static nrf_edgeai_obsv_metric_t kws_tm;
-
-BUILD_ASSERT(CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES >= KEYWORDS_COUNT,
-	     "Observability will not fit all keyword spotting classes");
-
-static int kws_obsv_init(nrf_edgeai_t *model)
-{
-	nrf_edgeai_obsv_model_info_t info;
-	int err;
-
-	err = obsv_model_info_from_model(model, KEYWORDS_COUNT, &info);
-	if (err) {
-		return err;
-	}
-
-	err = nrf_edgeai_obsv_init(&kws_ctx, &info);
-	if (err) {
-		LOG_ERR("Observability init failed (err %d)", err);
-		return err;
-	}
-
-	nrf_edgeai_obsv_metric_pd_create(&kws_pd, kws_pd_buf, KEYWORDS_COUNT);
-	nrf_edgeai_obsv_metric_tm_create(&kws_tm, kws_tm_buf, KEYWORDS_COUNT);
-	err = nrf_edgeai_obsv_register(&kws_ctx, &kws_pd, NULL);
-	if (err) {
-		LOG_ERR("PD metric registration failed (err %d)", err);
-		return err;
-	}
-
-	err = nrf_edgeai_obsv_register(&kws_ctx, &kws_tm, NULL);
-	if (err) {
-		LOG_ERR("TM metric registration failed (err %d)", err);
-		return err;
-	}
-
-	err = nrf_edgeai_obsv_memfault_init(&kws_ctx);
-	if (err) {
-		LOG_ERR("Memfault transport init failed (err %d)", err);
-		return err;
-	}
-
-	return 0;
-}
-
-#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY) */
-
 int kws_init(void)
 {
 	kws_model = nrf_edgeai_user_model_36712();
@@ -116,9 +66,9 @@ int kws_init(void)
 		return -ENOENT;
 	}
 
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
 	return kws_obsv_init(kws_model);
-#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY) */
+#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
 
 	return 0;
 }
@@ -196,6 +146,27 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 		return -EPERM;
 	}
 
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
+	/* Extract the mel feature vector before inference and feed it to the
+	 * FEATURES-stream metrics (mel energy / spectral descriptors). run_inference
+	 * reuses these features, so the explicit call adds no extra DSP work.
+	 */
+	err = nrf_edgeai_process_features(kws_model);
+	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
+		/* Feature window not complete yet. */
+		return -EBUSY;
+	} else if (err) {
+		LOG_ERR("Failed to process features (err %d)", err);
+		return -EPERM;
+	}
+
+	const nrf_edgeai_dsp_feature_extraction_t *feats = nrf_edgeai_dsp_features_ctx(kws_model);
+
+	if (feats != NULL) {
+		kws_obsv_update_features(feats->buffer.p_f32, feats->overall_num);
+	}
+#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
+
 	err = nrf_edgeai_run_inference(kws_model);
 	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
 		/* Skip output extraction, not enough data. */
@@ -207,13 +178,9 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 
 	kws_postprocess(prediction);
 
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY)
-	err = nrf_edgeai_obsv_update_probs(&kws_ctx,
-					   kws_model->decoded_output.classif.probabilities.p_f32);
-	if (err) {
-		LOG_ERR("Failed to update obsv (err %d)", err);
-	}
-#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY) */
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS)
+	kws_obsv_update_probs(kws_model->decoded_output.classif.probabilities.p_f32);
+#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
 
 	return 0;
 }
