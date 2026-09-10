@@ -153,6 +153,11 @@ int kws_obsv_init(nrf_edgeai_t *model)
 
 void kws_obsv_update_features(const float *feats, uint16_t n)
 {
+    if (n != KWS_OBSV_FEATURES) {
+        LOG_ERR("Invalid number of features (expected %d, got %d)", KWS_OBSV_FEATURES, n);
+        return;
+    }
+
 	int err = nrf_edgeai_obsv_update_features(&ctx, feats, n);
 
 	if (err) {
