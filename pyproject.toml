@@ -1,0 +1,19 @@
+[project]
+name = "sdk-edge-ai"
+version = "0.0.0"
+requires-python = ">=3.10"
+
+[dependency-groups]
+docs = [
+    "doxmlparser",
+    "python-dotenv",
+    "sphinx>=7.2,<8.2",
+    "sphinx-copybutton",
+    "sphinx-ncs-theme==0.7.4",
+    "sphinx-tabs>=3.4",
+    "west",
+]
+
+[tool.uv]
+package = false
+default-groups = ["docs"]
