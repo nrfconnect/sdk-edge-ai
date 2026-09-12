@@ -36,27 +36,7 @@
 # include <ironside_zephyr/se/uicr_periphconf.h>
 #elif defined(CONFIG_SOC_NRF54LM20B)
 # define NRF_AXON_NVM_TYPE NRF_AXON_NVM_RRAM
-/**
- * @FIXME!!! zephyr/soc/nordic/nrf54l/Kconfig file specifies
- * config SOC_NRF54LM20B_CPUAPP
- *  select SOC_NRF54L_CPUAPP_COMMON
- *  select SOC_COMPATIBLE_NRF54LM20B
- *  select SOC_COMPATIBLE_NRF54LM20B_CPUAPP
- *  select ARMV8_M_DSP
- *  select CPU_HAS_ARM_MPU
- *  select CPU_HAS_ARM_SAU
- *  select CPU_HAS_FPU
- *  select HAS_SWO
- *
- * This results in both
- * NRF54LM20A_XXAA AND NRF54LM20B_XXAA being defined.
- * in modules\hal\nordic\nrfx\bsp\stable\mdk\nrf.h, defining NRF54LM20A_XXAA
- * causes the 20A MDK files to be included, not the 20B, so
- * we don't see axon definitions.
- *
- * When this is resolved, set NRF_AXON_IN_MDK to 1.
- */
-# define NRF_AXON_IN_MDK 0 /* should be 1! */
+# define NRF_AXON_IN_MDK 1
 #endif
 
 #if (NRF_AXON_NVM_TYPE) == (NRF_AXON_NVM_RRAM)
@@ -236,14 +216,28 @@ static void axon_platform_irq_handler(void *data)
 #define AXON_REG_ENABLE_OFFSET 0x400
 static void axon_enable(void)
 {
-# if !NRF_AXON_IN_MDK
+#if !NRF_AXON_IN_MDK
 	*(uint32_t *)((int8_t *)AXON_BASE_ADDR+AXON_REG_ENABLE_OFFSET) |= 1;
 
-# else
+#else
 	NRF_AXONS_Type *nrf_axons = (NRF_AXONS_Type *)((int8_t *)AXON_BASE_ADDR);
 
 	nrf_axons->ENABLE |= (AXONS_ENABLE_EN_Enabled << AXONS_ENABLE_EN_Pos);
-# endif
+#  if 0
+	/* @FIXME!!! ON 54LM20B, READY BIT IS NEVER SET! */
+	uint32_t read_wait_cnt = 0;
+
+	while ((nrf_axons->STATUS & (AXONS_STATUS_READY_Ready << AXONS_STATUS_READY_Pos)) == 0) {
+		read_wait_cnt++;
+		if (read_wait_cnt > 100) {
+			break;
+		}
+	}
+	nrf_axon_platform_printf(
+		"axon read status %d times before ready, ENABLE = 0x%x, STATUS = 0x%x\n",
+		read_wait_cnt, nrf_axons->ENABLE, nrf_axons->STATUS);
+#  endif
+#endif
 
 	/* Register an event starting now to make RRAM stay in standby mode. */
 #if (NRF_AXON_NVM_TYPE) == (NRF_AXON_NVM_RRAM)

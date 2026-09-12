@@ -167,7 +167,8 @@ typedef struct  {
  *
  * @param[in] argc number of elements in args. Must equal
  * sizeof(nrf_axon_nn_op_extension_base1_args_s)/sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
- * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s,
+ *            with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_softmax(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
@@ -180,7 +181,8 @@ nrf_axon_result_e nrf_axon_nn_op_extension_softmax(
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_base1_args_s)/
  *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
- * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s,
+ *            with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
@@ -201,8 +203,8 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid(
  * will massage the original values to perform the additional multiply
  * by some combination of increasing the multiplier or decreasing the shift.
  *
- * @param[in][out] multiplier input values are 1st multplied by this.
- * @param[in][out] shift input values are then rounded by this many bits.
+ * @param[in,out] multiplier input values are 1st multplied by this.
+ * @param[in,out] shift input values are then rounded by this many bits.
  */
 void nrf_axon_compiler_sig_tanh_dequant_consts(int32_t *multiplier, uint8_t *shift);
 
@@ -259,7 +261,8 @@ typedef struct  {
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_base1_args_s)/
  *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
- * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s,
+ *            with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_v2(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
@@ -273,7 +276,8 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_v2(
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_sig_tanh_args_s)/
  *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
- * @param[in] args up-casted nrf_axon_nn_op_extension_sig_tanh_args_s, with parameters to the function.
+ * @param[in] args up-casted nrf_axon_nn_op_extension_sig_tanh_args_s,
+ *            with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_dequantize_input(uint16_t argc,
 	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
@@ -286,7 +290,8 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_dequantize_input(uint16_t arg
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_base1_args_s)/
  *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
- * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s,
+ *            with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_tanh(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
@@ -299,7 +304,8 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh(
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_base1_args_s)/
  *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
- * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s, with parameters to the function.
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base1_args_s,
+ *            with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_tanh_v2(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
@@ -313,7 +319,8 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh_v2(
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_sig_tanh_args_s)/
  *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
- * @param[in] args up-casted nrf_axon_nn_op_extension_sig_tanh_args_s, with parameters to the function.
+ * @param[in] args up-casted nrf_axon_nn_op_extension_sig_tanh_args_s,
+ *            with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_tanh_dequantize_input(uint16_t argc,
 	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
@@ -324,7 +331,8 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh_dequantize_input(uint16_t argc,
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_base2_args_s)/
  *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
- * @param[in] args up-casted nrf_axon_nn_op_extension_base2_args_s, with parameters to the function.
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base2_args_s,
+ *            with parameters to the function.
  */
 nrf_axon_result_e nrf_axon_nn_op_extension_reshape(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);

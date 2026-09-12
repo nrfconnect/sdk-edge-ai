@@ -11,7 +11,7 @@
 #include "drivers/axon/nrf_axon_nn_infer_test.h"
 #include "axon/nrf_axon_platform.h"
 #include "axon/nrf_axon_logging.h"
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 # include "axon/nrf_axon_platform_simulator.h"
 #endif
 
@@ -25,6 +25,7 @@ static void unpack_vector32(int32_t *unpacked, const int32_t *packed,
 	uint16_t extra_stride =
 		(unpacked_stride - (packed_dimensions->width * packed_dimensions->byte_width)) /
 	packed_dimensions->byte_width;
+
 	for (int ch_ndx = 0; ch_ndx < (packed_dimensions->channel_cnt * batch_cnt); ch_ndx++) {
 		for (int height_ndx = 0; height_ndx < packed_dimensions->height; height_ndx++) {
 			for (int width_ndx = 0; width_ndx < packed_dimensions->width; width_ndx++) {
@@ -119,7 +120,7 @@ static void unpack_vector(void *unpacked, const void *packed,
  * returns number of mismatches (0 on exact match).
  */
 static int test_compare_1_output(const nrf_axon_nn_model_layer_dimensions_s *packed_dimensions,
-	uint16_t batch_cnt, uint16_t output_stride, const int8_t *output,
+	uint16_t output_stride, const int8_t *output,
 	const int8_t *expected_output)
 {
 	int max_error = 0;
@@ -127,7 +128,8 @@ static int test_compare_1_output(const nrf_axon_nn_model_layer_dimensions_s *pac
 	int success_cnt = 0;
 	uint16_t extra_stride = output_stride -
 		packed_dimensions->width * packed_dimensions->byte_width;
-	uint16_t batch_times_channel = batch_cnt * packed_dimensions->channel_cnt;
+	uint16_t batch_times_channel = packed_dimensions->batch_cnt *
+		packed_dimensions->channel_cnt;
 	int result = 0;
 
 	for (int ch_ndx = 0; ch_ndx < batch_times_channel; ch_ndx++) {
@@ -204,30 +206,24 @@ static int test_compare_results(const nrf_axon_nn_compiled_model_s *compiled_mod
 	const int8_t *packed_output, const int8_t **expected_output_list)
 {
 	int result = 0;
-	uint16_t output_stride = compiled_model->output_stride;
-	const nrf_axon_nn_model_layer_dimensions_s *output_dimensions =
-		&compiled_model->output_dimensions;
-	const int8_t *output = compiled_model->output_ptr;
-	uint16_t batch_cnt = NRF_AXON_LAYER_MODEL_OUTPUT_BATCH_CNT(compiled_model);
-	int output_ndx = 0;
-
-	while (1) {
+	uint16_t output_stride;
+	const nrf_axon_nn_model_layer_dimensions_s *output_dimensions;
+	const int8_t *output;
+	uint16_t batch_cnt;
+	for (int output_ndx = 0; output_ndx < compiled_model->output_cnt;
+			output_ndx++) {
+		output_stride = compiled_model->outputs[output_ndx].stride;
+		output_dimensions = &compiled_model->outputs[output_ndx].dimensions;
+		output = compiled_model->outputs[output_ndx].ptr;
+		batch_cnt = compiled_model->outputs[output_ndx].dimensions.batch_cnt;
 		if (NULL != packed_output) {
 			/* packed output */
 			output_stride = output_dimensions->byte_width * output_dimensions->width;
 			output = packed_output +
 				nrf_axon_nn_offset_to_output_ndx(compiled_model, output_ndx);
 		}
-		result += test_compare_1_output(output_dimensions, batch_cnt, output_stride,
+		result += test_compare_1_output(output_dimensions, output_stride,
 			output, expected_output_list[output_ndx]);
-		if (output_ndx == NRF_AXON_COMPILED_MODEL_EXTRA_OUTPUT_CNT(compiled_model)) {
-			break; /* last output */
-		}
-		/* initialize to unpacked output */
-		output_stride = compiled_model->extra_outputs[output_ndx].stride;
-		output_dimensions = &compiled_model->extra_outputs[output_ndx].dimensions;
-		output = compiled_model->extra_outputs[output_ndx].ptr;
-		output_ndx++;
 	}
 	return result;
 }
@@ -237,18 +233,17 @@ void nrf_axon_layer_model_results_to_buffer(
 	int8_t *to_buffer)
 {
 	uint16_t row_width_in_bytes =
-		compiled_layer_model->base.output_dimensions.byte_width *
-		compiled_layer_model->base.output_dimensions.width;
-	uint16_t channels_batchs = compiled_layer_model->base.output_dimensions.channel_cnt *
-		NRF_AXON_LAYER_MODEL_OUTPUT_BATCH_CNT((&compiled_layer_model->base));
-	int8_t *from_buffer = compiled_layer_model->base.output_ptr;
-
-	uint16_t output_height = compiled_layer_model->base.output_dimensions.height;
+		compiled_layer_model->base.outputs[0].dimensions.byte_width *
+		compiled_layer_model->base.outputs[0].dimensions.width;
+	uint16_t channels_batchs = compiled_layer_model->base.outputs[0].dimensions.channel_cnt *
+		compiled_layer_model->base.outputs[0].dimensions.batch_cnt;
+	int8_t *from_buffer = compiled_layer_model->base.outputs[0].ptr;
+	uint16_t output_height = compiled_layer_model->base.outputs[0].dimensions.height;
 
 	for (uint16_t batch_ch_ndx = 0; batch_ch_ndx < channels_batchs; batch_ch_ndx++) {
 		for (uint16_t height_ndx = 0; height_ndx < output_height; height_ndx++) {
 			memcpy(to_buffer, from_buffer, row_width_in_bytes);
-			from_buffer += compiled_layer_model->base.output_stride;
+			from_buffer += compiled_layer_model->base.outputs[0].stride;
 			to_buffer += row_width_in_bytes;
 		}
 	}
@@ -295,15 +290,15 @@ static int run_layer_test_vector(const nrf_axon_nn_compiled_model_s *compiled_mo
 	nrf_axon_platform_reserve_for_user();
 	unpack_vector(compiled_model->inputs[0].ptr, packed_input,
 		&compiled_model->inputs[0].dimensions, compiled_model->inputs[0].stride,
-		NRF_AXON_LAYER_MODEL_INPUT_BATCH_CNT(compiled_model));
+		compiled_model->inputs[0].dimensions.batch_cnt);
 	unpack_vector(compiled_model->inputs[1].ptr, packed_input1,
 		&compiled_model->inputs[1].dimensions, compiled_model->inputs[1].stride,
-		NRF_AXON_LAYER_MODEL_INPUT_BATCH_CNT(compiled_model));
+		compiled_model->inputs[1].dimensions.batch_cnt);
 
 	/* do the inference. don't provide the input vector as it has already
 	 * been transferred to the proper location
 	 */
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	nrf_axon_simulator_perfmodel_enable();
 	nrf_axon_simulator_perfmodel_init();
 #endif
@@ -321,7 +316,7 @@ static int run_layer_test_vector(const nrf_axon_nn_compiled_model_s *compiled_mo
 	if (test_compare_results(compiled_model, NULL, &expected_output) > 0) {
 		result = NRF_AXON_RESULT_FAILURE;
 	}
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	profiling_ticks = (uint32_t)nrf_axon_simulator_perfmodel_get_cycles();
 	nrf_axon_simulator_perfmodel_disable();
 #endif
@@ -367,7 +362,7 @@ static int run_test_vector_sync(const nrf_axon_nn_compiled_model_s *compiled_mod
 	 * or transferred to another buffer.
 	 */
 	nrf_axon_platform_clear_profiling_gpio();
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	profiling_ticks = (uint32_t) nrf_axon_simulator_perfmodel_get_cycles();
 #else
 	profiling_ticks = nrf_axon_platform_get_ticks() - profiling_ticks;
@@ -440,13 +435,97 @@ static int run_test_vector_async(nrf_axon_nn_model_async_inference_wrapper_s *mo
 		packed_output_ptr, expected_output_list) > 0) {
 		result = NRF_AXON_RESULT_FAILURE;
 	}
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	profiling_ticks = (uint32_t)nrf_axon_simulator_perfmodel_get_cycles();
 #endif
 	/* get the label. */
 	nrf_axon_print_test_inference_results(model_wrapper->compiled_model,
 		packed_output_ptr, profiling_ticks);
 
+	return result;
+}
+
+static int single_layer_model_infer(
+	const nrf_axon_nn_compiled_model_s *this_full_model,
+	const nrf_axon_nn_compiled_model_layer_s *this_1_layer_model,
+	const nrf_axon_nn_model_test_info_s *test_vectors,
+	uint32_t *test_case_ndx,
+	uint32_t *test_pass_cnt,
+	uint32_t *test_fail_cnt)
+{
+	int result = 0;
+
+	/* make sure this layer is populated */
+	if (this_1_layer_model == NULL) {
+		return result;
+	}
+	/* layers are only supported in sync mode, so just validate them;
+	 * don't need to bind them.
+	 */
+	result = nrf_axon_nn_model_validate(&this_1_layer_model->base);
+	if (result < 0) {
+		return result;
+	}
+	nrf_axon_platform_printf("\r\nTEST:\t%s\tSTART CASE NO\t%d\n",
+		test_vectors->test_name, *test_case_ndx);
+	nrf_axon_platform_printf("\nTest inference %s vector %d layer %d\n",
+		this_1_layer_model->base.model_name, 0, this_1_layer_model->layer_ndx);
+
+	const int8_t *packed_input = NULL;
+	const int8_t *packed_input1 = NULL;
+
+	if (this_1_layer_model->base.inputs[0].node_id < 0) {
+		/*
+		 * external input. Use the full-models address since a layer model
+		 * might be offset from the start of the input (due to an unpack
+		 * or split operation)
+		 */
+		int8_t model_input_ndx = -1 * (this_1_layer_model->base.inputs[0].node_id + 1);
+
+		packed_input = test_vectors->full_model_input_vectors[model_input_ndx]
+			+ (this_1_layer_model->base.inputs[0].ptr
+			- this_full_model->inputs[0].ptr);
+	} else {
+		/* internal input.*/
+		packed_input =
+			test_vectors->layer_vectors[this_1_layer_model->base.inputs[0].node_id];
+	}
+	if (this_1_layer_model->base.input_cnt > 1) {
+		if (this_1_layer_model->base.inputs[1].node_id < 0) {
+			/**
+			 * external input. Use the full-models address since a layer model
+			 * might be offset from the start of the input (due to an unpack
+			 * or split operation)
+			 */
+			int8_t model_input_ndx = -1 *
+				(this_1_layer_model->base.inputs[1].node_id + 1);
+
+			packed_input1 = test_vectors->full_model_input_vectors[model_input_ndx];
+		} else {
+			/* internal input.*/
+			packed_input1 =
+				test_vectors->layer_vectors[
+				this_1_layer_model->base.inputs[1].node_id];
+		}
+	}
+
+#if NRF_AXON_SIMULATION
+	nrf_axon_simulator_perfmodel_init();
+#endif
+
+	if (run_layer_test_vector(&this_1_layer_model->base, packed_input,
+		packed_input1,
+		test_vectors->layer_vectors[this_1_layer_model->layer_ndx]) ==
+		NRF_AXON_RESULT_SUCCESS) {
+		nrf_axon_platform_printf("\r\nTEST:\t%s\tCASE NO\t%d\tRESULT:\t%s\n",
+			test_vectors->test_name, *test_case_ndx, "PASS");
+		(*test_pass_cnt)++;
+	} else {
+		nrf_axon_platform_printf("\r\nTEST:\t%s\tCASE NO\t%d\tRESULT:\t%s\n",
+			test_vectors->test_name, *test_case_ndx, "FAIL");
+		(*test_fail_cnt)++;
+	}
+	(*test_case_ndx)++;
 	return result;
 }
 
@@ -474,11 +553,6 @@ static int run_test_vectors_1_model(const nrf_axon_nn_compiled_model_s *this_ful
 	/* 1st loop. Process compiled-in full model test vectors */
 
 #if END_TO_END_INFERENCE_ENABLED
-	if (this_full_model->external_input_ndx < 0) {
-		nrf_axon_platform_printf("ERROR! model lacks an external input!\n");
-		return -1;
-	}
-
 	/* Will alternate between async and sync inference,
 	 * just to exercise both paths in this test.
 	 */
@@ -494,7 +568,7 @@ static int run_test_vectors_1_model(const nrf_axon_nn_compiled_model_s *this_ful
 			use_async_inference ? "async" : "sync");
 		const int8_t *input_ptr = test_vectors->full_model_input_vectors[vector_ndx];
 
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 		if (vector_ndx == 0) {
 			nrf_axon_simulator_perfmodel_enable();
 			nrf_axon_simulator_perfmodel_init();
@@ -510,8 +584,7 @@ static int run_test_vectors_1_model(const nrf_axon_nn_compiled_model_s *this_ful
 			result = run_test_vector_sync(the_model_wrapper.compiled_model,
 				input_ptr, this_model_expected_outputs);
 		}
-		this_model_expected_outputs += 1 +
-			NRF_AXON_COMPILED_MODEL_EXTRA_OUTPUT_CNT(the_model_wrapper.compiled_model);
+		this_model_expected_outputs += the_model_wrapper.compiled_model->output_cnt;
 
 		if (result == NRF_AXON_RESULT_SUCCESS) {
 			nrf_axon_platform_printf("\r\nTEST:\t%s\tCASE NO\t%d\tRESULT:\t%s\n",
@@ -533,61 +606,22 @@ static int run_test_vectors_1_model(const nrf_axon_nn_compiled_model_s *this_ful
 	}
 	/* init the persistent variables 1 time only for the layers. */
 	nrf_axon_nn_model_init_vars(this_full_model);
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	nrf_axon_simulator_perfmodel_enable();
 #endif
 	for (int layer_ndx = 0; layer_ndx < model_layers_count; layer_ndx++) {
-		const nrf_axon_nn_compiled_model_layer_s *this_1_layer_model =
-			compiled_1_layer_models[layer_ndx];
-
-		/* make sure this layer is populated */
-		if (this_1_layer_model == NULL) {
-			continue;
-		}
-		/* layers are only supported in sync mode, so just validate them;
-		 * don't need to bind them.
-		 */
-		result = nrf_axon_nn_model_validate(&this_1_layer_model->base);
+		result = single_layer_model_infer(
+			this_full_model,
+			compiled_1_layer_models[layer_ndx],
+			test_vectors,
+			test_case_ndx, test_pass_cnt, test_fail_cnt);
 		if (result < 0) {
 			return result;
 		}
-		nrf_axon_platform_printf("\r\nTEST:\t%s\tSTART CASE NO\t%d\n",
-			test_vectors->test_name, *test_case_ndx);
-		nrf_axon_platform_printf("\nTest inference %s vector %d layer %d\n",
-			this_1_layer_model->base.model_name, 0, layer_ndx);
-
-		const int8_t *packed_input = this_1_layer_model->input0_layer_ndx < 0 ?
-			test_vectors->full_model_input_vectors[0] :
-			NULL == compiled_1_layer_models[this_1_layer_model->input0_layer_ndx] ?
-			NULL :
-			test_vectors->layer_vectors[this_1_layer_model->input0_layer_ndx];
-		const int8_t *packed_input1 = this_1_layer_model->base.input_cnt < 2 ?
-			NULL : /* only 1 input */
-			this_1_layer_model->input1_layer_ndx < 0 ?
-			test_vectors->full_model_input_vectors[0] :
-			NULL == compiled_1_layer_models[this_1_layer_model->input1_layer_ndx] ?
-			NULL :
-			test_vectors->layer_vectors[this_1_layer_model->input1_layer_ndx];
-
-#if AXON_SIMULATION
-		nrf_axon_simulator_perfmodel_init();
-#endif
-
-		if (run_layer_test_vector(&this_1_layer_model->base, packed_input, packed_input1,
-				test_vectors->layer_vectors[this_1_layer_model->layer_ndx]) ==
-				NRF_AXON_RESULT_SUCCESS) {
-			nrf_axon_platform_printf("\r\nTEST:\t%s\tCASE NO\t%d\tRESULT:\t%s\n",
-				test_vectors->test_name, (*test_case_ndx), "PASS");
-			(*test_pass_cnt)++;
-		} else {
-			nrf_axon_platform_printf("\r\nTEST:\t%s\tCASE NO\t%d\tRESULT:\t%s\n",
-				test_vectors->test_name, (*test_case_ndx)++, "FAIL");
-			(*test_fail_cnt)++;
-		}
-		(*test_case_ndx)++;
 	} /* for layer_ndx */
 	return result;
 }
+
 int nrf_axon_nn_run_test_vectors(const nrf_axon_nn_compiled_model_s **compiled_full_models,
 	const char *test_group_name, uint16_t models_count,
 	const nrf_axon_nn_compiled_model_layer_s **compiled_1_layer_models[],

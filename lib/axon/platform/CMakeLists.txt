@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-if (${NOT_A_ZEPHYR_BUILD})
+if(${NOT_A_ZEPHYR_BUILD})
   if(NOT CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE)
     set(CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE 8000000) # make this big enough for the compiler to handle any model
   endif()
@@ -18,7 +18,7 @@ if (${NOT_A_ZEPHYR_BUILD})
   )
 
   add_library(nrf-axon-platform EXCLUDE_FROM_ALL)
-	set_target_properties(nrf-axon-platform PROPERTIES LINKER_LANGUAGE C)
+  set_target_properties(nrf-axon-platform PROPERTIES LINKER_LANGUAGE C)
 
   target_sources(nrf-axon-platform
     PRIVATE
@@ -28,11 +28,10 @@ if (${NOT_A_ZEPHYR_BUILD})
   )
 
   message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
-  message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
-  
+
   if(CMAKE_SYSTEM_NAME STREQUAL "Generic")
     # no operating system platform specific source files to include
-  elseif (MSVC OR WIN32) 
+  elseif(MSVC OR WIN32) 
     target_sources(nrf-axon-platform
       PRIVATE
         src/simulator/nrf_axon_platform_simulator_windows.c
@@ -61,22 +60,23 @@ if (${NOT_A_ZEPHYR_BUILD})
 
   target_compile_definitions(nrf-axon-platform-interface
     INTERFACE
-      ${PLATFORM_DEFAULT_COMPILE_DEFS}  
+      ${PLATFORM_DEFAULT_COMPILE_DEFS}
+      NRF_AXON_SIMULATION=1
   )
-  # if this wasn't a dev build, need to supply the nrf-axon-simulator-internal library here.
-  if (NOT (DEFINED ENV{NRF_AXON_DEV_BUILD})  AND NOT (DEFINED NRF_AXON_DEV_BUILD))
-		# CMAKE_SYSTEM_NAME will be Linux, Windows, or Darwin (for MacOS)
-		message(STATUS  "linking imported library " ${CMAKE_CURRENT_SOURCE_DIR}/bin/simulator/${CMAKE_SYSTEM_NAME}/${CMAKE_STATIC_LIBRARY_PREFIX}nrf-axon-simulator-internal${CMAKE_STATIC_LIBRARY_SUFFIX})
-		add_library(nrf-axon-simulator-internal STATIC IMPORTED GLOBAL)
-		# Add the dependency for the pre-built library
-		if(UNIX AND NOT APPLE)
-			target_link_libraries(nrf-axon-simulator-internal INTERFACE m)
-		endif()    
-		set_property(
-			TARGET nrf-axon-simulator-internal
-			PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/bin/simulator/${CMAKE_SYSTEM_NAME}/${CMAKE_STATIC_LIBRARY_PREFIX}nrf-axon-simulator-internal${CMAKE_STATIC_LIBRARY_SUFFIX}
-		)
-	endif()  
+  # ifthis wasn't a dev build, need to supply the nrf-axon-simulator-internal library here.
+  if(NOT (DEFINED ENV{NRF_AXON_DEV_BUILD})  AND NOT (DEFINED NRF_AXON_DEV_BUILD))
+    # CMAKE_SYSTEM_NAME will be Linux, Windows, or Darwin (for MacOS)
+    message(STATUS  "linking imported library " ${CMAKE_CURRENT_SOURCE_DIR}/bin/simulator/${CMAKE_SYSTEM_NAME}/${CMAKE_STATIC_LIBRARY_PREFIX}nrf-axon-simulator-internal${CMAKE_STATIC_LIBRARY_SUFFIX})
+    add_library(nrf-axon-simulator-internal STATIC IMPORTED GLOBAL)
+    # Add the dependency for the pre-built library
+    if(UNIX AND NOT APPLE)
+      target_link_libraries(nrf-axon-simulator-internal INTERFACE m)
+    endif()
+    set_property(
+      TARGET nrf-axon-simulator-internal
+      PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/bin/simulator/${CMAKE_SYSTEM_NAME}/${CMAKE_STATIC_LIBRARY_PREFIX}nrf-axon-simulator-internal${CMAKE_STATIC_LIBRARY_SUFFIX}
+    )
+  endif()
 else()
   # else a zephyr build
   message(STATUS "CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE " ${CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE})
@@ -84,11 +84,11 @@ else()
 
   if(NOT CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE)
     # interlayer buffer is not in use
-	  set(CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE 0)
+    set(CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE 0)
   endif()
   if(NOT CONFIG_NRF_AXON_PSUM_BUFFER_SIZE)
     # psum buffer is not in use
-	  set(CONFIG_NRF_AXON_PSUM_BUFFER_SIZE 0) 
+    set(CONFIG_NRF_AXON_PSUM_BUFFER_SIZE 0) 
   endif()
 
   zephyr_sources(
@@ -102,10 +102,8 @@ else()
   )
 
   zephyr_compile_definitions(
-      ${PLATFORM_DEFAULT_COMPILE_DEFS}  
-      NRF_AXON_INTERLAYER_BUFFER_MEMREGION="\""${CONFIG_NRF_AXON_INTERLAYER_BUFFER_MEMREGION_NAME}"\""
+    ${PLATFORM_DEFAULT_COMPILE_DEFS}
+    NRF_AXON_INTERLAYER_BUFFER_MEMREGION="\""${CONFIG_NRF_AXON_INTERLAYER_BUFFER_MEMREGION_NAME}"\""
   )
 
 endif()
-
-

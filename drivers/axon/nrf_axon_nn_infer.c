@@ -16,23 +16,6 @@ nrf_axon_nn_async_inference_status_e nrf_axon_nn_get_model_infer_status(
 	return model_wrapper->infer_status;
 }
 
-int8_t nrf_axon_nn_model_1st_external_input_ndx(const nrf_axon_nn_compiled_model_s *the_model)
-{
-	for (uint8_t input_ndx = 0; input_ndx < the_model->input_cnt; input_ndx++) {
-		if (the_model->inputs[input_ndx].is_external) {
-			return (int8_t)input_ndx;
-		}
-	}
-	return -1;
-}
-const nrf_axon_nn_compiled_model_input_s *nrf_axon_nn_model_1st_external_input(
-	const nrf_axon_nn_compiled_model_s *the_model)
-{
-	int8_t input_ndx = nrf_axon_nn_model_1st_external_input_ndx(the_model);
-
-	return input_ndx < 0 ? NULL : &the_model->inputs[input_ndx];
-}
-
 /*
 * callback function invoked by the driver in the interrupt context when the model inferency
 * has completed. context is the model handle.
@@ -49,25 +32,37 @@ static void classify_complete_callback(nrf_axon_result_e result, void *callback_
 	}
 }
 
-nrf_axon_result_e nrf_axon_nn_populate_input_vector(
-	const nrf_axon_nn_compiled_model_s *compiled_model,
-	const int8_t *input_vector)
+nrf_axon_result_e nrf_axon_nn_populate_input_vectors(
+	const nrf_axon_nn_compiled_model_s *compiled_model)
 {
-	if (input_vector == NULL) {
+	if (compiled_model->input_vector_list == NULL) {
 		return NRF_AXON_RESULT_SUCCESS;
 	}
-	if (compiled_model->external_input_ndx < 0) {
-		/* no external input! */
-		nrf_axon_platform_printf("ERROR! MODEL LACKS AN EXTERNAL INPUT!\n");
-		return NRF_AXON_RESULT_INVALID_MODEL;
+	for (int16_t input_ndx = 0; input_ndx < compiled_model->input_cnt; input_ndx++) {
+		if (compiled_model->input_vector_list[input_ndx] == NULL) {
+			continue;
+		}
+		const nrf_axon_nn_compiled_model_input_s *the_input =
+			&compiled_model->inputs[input_ndx];
+		uint32_t input_size = the_input->stride * the_input->dimensions.height *
+			the_input->dimensions.channel_cnt * the_input->dimensions.batch_cnt;
+
+		memcpy(the_input->ptr, compiled_model->input_vector_list[input_ndx], input_size);
 	}
-	const nrf_axon_nn_compiled_model_input_s *the_input =
-		&compiled_model->inputs[compiled_model->external_input_ndx];
-	uint32_t input_size = the_input->stride * the_input->dimensions.height *
-		the_input->dimensions.channel_cnt;
-	memcpy(the_input->ptr, input_vector, input_size);
 
 	return NRF_AXON_RESULT_SUCCESS;
+}
+
+/**
+ * In async mode, this is the callback to copy the input vectors to the to the interlayer buffer
+ * immediately prior to inference. The axon mutex is owned at this time, preventing other queued
+ * jobs from starting, so this needs to be as quick as possible.
+ */
+static void copy_input_callback(void *callback_context)
+{
+	nrf_axon_nn_model_async_inference_wrapper_s *model_wrapper =
+		(nrf_axon_nn_model_async_inference_wrapper_s *)callback_context;
+	nrf_axon_nn_populate_input_vectors(model_wrapper->compiled_model);
 }
 
 /**
@@ -87,15 +82,14 @@ static void copy_result_callback(void *callback_context)
  * A starts an asynchronous inference on the provided vector.
  * If the vector is NULL, assumption is that input buffer is already populated.
  */
-nrf_axon_result_e nrf_axon_nn_model_infer_async(
+nrf_axon_result_e nrf_axon_nn_model_infer_async_multi_inputs(
 	nrf_axon_nn_model_async_inference_wrapper_s *model_wrapper,
-	const int8_t *input_vector,
+	const int8_t **input_vector_list,
 	int8_t *output_buffer,
 	void (*inference_callback)(nrf_axon_result_e result, void *callback_context),
 	void *callback_context)
 {
 	nrf_axon_result_e result;
-	const nrf_axon_nn_compiled_model_s *compiled_model = model_wrapper->compiled_model;
 
 	if (model_wrapper->infer_status == NRF_AXON_NN_ASYNC_INFERENCE_STATUS_ACTIVE) {
 		/* model still busy w/ a prior inference */
@@ -103,10 +97,6 @@ nrf_axon_result_e nrf_axon_nn_model_infer_async(
 	}
 
 	model_wrapper->infer_status = NRF_AXON_NN_ASYNC_INFERENCE_STATUS_ACTIVE;
-	result = nrf_axon_nn_populate_input_vector(compiled_model, input_vector);
-	if (result < 0) {
-		return result;
-	}
 
 	model_wrapper->queued_cmd_buf_wrapper.cmd_buf_info = &model_wrapper->cmd_buf_info;
 	model_wrapper->queued_cmd_buf_wrapper.callback_context = (void *)model_wrapper;
@@ -118,24 +108,16 @@ nrf_axon_result_e nrf_axon_nn_model_infer_async(
 	model_wrapper->callback_context = callback_context;
 
 	/* give the driver the input and output buffer locations and sizes*/
-	if (input_vector == NULL) {
+	if (input_vector_list == NULL) {
 		/* advanced option. inputs are already populated. user knows that axon is idle. */
-		model_wrapper->queued_cmd_buf_wrapper.input_buffer = NULL;
-		model_wrapper->queued_cmd_buf_wrapper.input_size = 0;
-		model_wrapper->queued_cmd_buf_wrapper.input_vector = NULL;
+		model_wrapper->queued_cmd_buf_wrapper.copy_input_function = NULL;
 	} else {
-		const nrf_axon_nn_compiled_model_input_s *model_input =
-			nrf_axon_nn_model_1st_external_input(compiled_model);
-		if (NULL == model_input) {
-			nrf_axon_platform_printf("ERROR: no external input to model %s\n",
-				compiled_model->model_name);
-			return NRF_AXON_RESULT_FAILURE;
+		if (input_vector_list != model_wrapper->compiled_model->input_vector_list) {
+			/* copy it over */
+			memcpy(model_wrapper->compiled_model->input_vector_list, input_vector_list,
+			sizeof(input_vector_list) * model_wrapper->compiled_model->input_cnt);
 		}
-		model_wrapper->queued_cmd_buf_wrapper.input_buffer = model_input->ptr;
-		model_wrapper->queued_cmd_buf_wrapper.input_size =
-			model_input->dimensions.byte_width*model_input->dimensions.channel_cnt *
-			model_input->dimensions.height*model_input->dimensions.width;
-		model_wrapper->queued_cmd_buf_wrapper.input_vector = input_vector;
+		model_wrapper->queued_cmd_buf_wrapper.copy_input_function = copy_input_callback;
 	}
 	model_wrapper->queued_cmd_buf_wrapper.copy_result_function =
 		output_buffer == NULL ? NULL : copy_result_callback;
@@ -144,9 +126,19 @@ nrf_axon_result_e nrf_axon_nn_model_infer_async(
 	return result;
 }
 
-nrf_axon_result_e nrf_axon_nn_model_infer_sync(
-	const nrf_axon_nn_compiled_model_s *compiled_model,
+nrf_axon_result_e nrf_axon_nn_model_infer_async(
+	nrf_axon_nn_model_async_inference_wrapper_s *model_wrapper,
 	const int8_t *input_vector,
+	int8_t *output_buffer,
+	void (*inference_callback)(nrf_axon_result_e result, void *callback_context),
+	void *callback_context)
+{
+	return nrf_axon_nn_model_infer_async_multi_inputs(model_wrapper, &input_vector,
+		output_buffer, inference_callback, callback_context);
+}
+
+nrf_axon_result_e nrf_axon_nn_model_infer_sync_multi_inputs(
+	const nrf_axon_nn_compiled_model_s *compiled_model,
 	int8_t *output_buffer)
 {
 	nrf_axon_result_e result;
@@ -163,7 +155,7 @@ nrf_axon_result_e nrf_axon_nn_model_infer_sync(
 	if (!nrf_axon_platform_reserve_for_user()) {
 		return NRF_AXON_RESULT_MUTEX_FAILED; /* should never happen! */
 	}
-	result = nrf_axon_nn_populate_input_vector(compiled_model, input_vector);
+	result = nrf_axon_nn_populate_input_vectors(compiled_model);
 	if (result < 0) {
 		nrf_axon_platform_free_reservation_from_user();
 		return result;
@@ -184,6 +176,15 @@ nrf_axon_result_e nrf_axon_nn_model_infer_sync(
 	return result;
 }
 
+nrf_axon_result_e nrf_axon_nn_model_infer_sync(
+	const nrf_axon_nn_compiled_model_s *compiled_model,
+	const int8_t *input_vector,
+	int8_t *output_buffer)
+{
+	compiled_model->input_vector_list[0] = input_vector;
+	return nrf_axon_nn_model_infer_sync_multi_inputs(compiled_model, output_buffer);
+}
+
 static uint16_t findmax8(const int8_t *buffer, const nrf_axon_nn_model_layer_dimensions_s *dim_ptr,
 	uint16_t stride, int32_t *score)
 {
@@ -193,7 +194,9 @@ static uint16_t findmax8(const int8_t *buffer, const nrf_axon_nn_model_layer_dim
 
 	for (uint16_t ch_ndx = 0; ch_ndx < dim_ptr->channel_cnt; ch_ndx++) {
 		for (uint16_t height_ndx = 0; height_ndx < dim_ptr->height; height_ndx++) {
+
 			for (uint16_t width_ndx = 0; width_ndx < dim_ptr->width; width_ndx++) {
+
 				if (*buffer > max_value) {
 					max_value = *buffer;
 					max_value_ndx = width_ndx +
@@ -268,30 +271,16 @@ static uint16_t findmax32(const int32_t *buffer,
 int nrf_axon_nn_offset_to_output_ndx(const nrf_axon_nn_compiled_model_s *compiled_model,
 	uint8_t output_ndx)
 {
-#define CEIL_4(a_number) ((a_number & 3) ? ((a_number >> 2) + 1) << 2 : a_number)
 	/* short circuit the most likely path */
 	if (output_ndx == 0) {
-		return output_ndx;
+		return 0;
 	}
 
 	/* prevent out of range. */
-	if (output_ndx >= (compiled_model->extra_output_cnt + 1)) {
+	if (output_ndx >= (compiled_model->output_cnt)) {
 		return -1; /* illegal index */
 	}
-	/* some up the sizes */
-	int result = CEIL_4(compiled_model->output_dimensions.byte_width *
-		compiled_model->output_dimensions.channel_cnt *
-		compiled_model->output_dimensions.height *
-		compiled_model->output_dimensions.width);
-	for (int extra_output_ndx = 0; extra_output_ndx < (output_ndx - 1); extra_output_ndx++) {
-		result += CEIL_4(
-			compiled_model->extra_outputs[extra_output_ndx].dimensions.byte_width *
-			compiled_model->extra_outputs[extra_output_ndx].dimensions.channel_cnt *
-			compiled_model->extra_outputs[extra_output_ndx].dimensions.height *
-			compiled_model->extra_outputs[extra_output_ndx].dimensions.width);
-	}
-
-	return result;
+	return compiled_model->outputs[output_ndx].packed_buffer_offset;
 }
 
 /**
@@ -314,34 +303,28 @@ static void copy_unpacked_to_packed_buffer(const nrf_axon_nn_model_layer_dimensi
 }
 
 void nrf_axon_nn_copy_output_to_packed_buffer(
-	const nrf_axon_nn_compiled_model_s *compiled_model, void *to_buffer)
+	const nrf_axon_nn_compiled_model_s *compiled_model, int8_t *to_buffer)
 {
-	/* copy the 1st output...*/
-	copy_unpacked_to_packed_buffer(&compiled_model->output_dimensions,
-		compiled_model->output_stride, compiled_model->output_ptr, (int8_t *)to_buffer);
-	if (0 == NRF_AXON_COMPILED_MODEL_EXTRA_OUTPUT_CNT(compiled_model)) {
-		return;
-	}
-	for (int extra_output_ndx = 0;
-		extra_output_ndx < NRF_AXON_COMPILED_MODEL_EXTRA_OUTPUT_CNT(compiled_model);
-		extra_output_ndx++) {
+	for (int output_ndx = 0;
+		output_ndx < compiled_model->output_cnt;
+		output_ndx++) {
 		copy_unpacked_to_packed_buffer(
-			&compiled_model->extra_outputs[extra_output_ndx].dimensions,
-			compiled_model->extra_outputs[extra_output_ndx].stride,
-			compiled_model->extra_outputs[extra_output_ndx].ptr,
+			&compiled_model->outputs[output_ndx].dimensions,
+			compiled_model->outputs[output_ndx].stride,
+			compiled_model->outputs[output_ndx].ptr,
 			(int8_t *)to_buffer +
-			nrf_axon_nn_offset_to_output_ndx(compiled_model, extra_output_ndx + 1));
+			compiled_model->outputs[output_ndx].packed_buffer_offset);
 	}
 }
-
 /*
  * find the maxvalue in io_buffer and return its index
+ * legacy function for single output models.
  */
 int16_t nrf_axon_nn_get_classification(const nrf_axon_nn_compiled_model_s *compiled_model,
 	const int8_t *packed_output, const char **label, int32_t *score)
 {
 	const nrf_axon_nn_model_layer_dimensions_s *output_dim_ptr =
-		&compiled_model->output_dimensions;
+		&compiled_model->outputs[0].dimensions;
 	const int8_t *output;
 	uint16_t output_stride;
 
@@ -351,8 +334,8 @@ int16_t nrf_axon_nn_get_classification(const nrf_axon_nn_compiled_model_s *compi
 		output_stride = output_dim_ptr->width * output_dim_ptr->byte_width;
 	} else {
 		/* extract the output from the interlayer buffer, could be unpacked. */
-		output_stride = compiled_model->output_stride;
-		output = (int8_t *)compiled_model->output_ptr;
+		output_stride = compiled_model->outputs[0].stride;
+		output = (int8_t *)compiled_model->outputs[0].ptr;
 	}
 	static const char *label_not_applicable = "N/A";
 
@@ -361,7 +344,7 @@ int16_t nrf_axon_nn_get_classification(const nrf_axon_nn_compiled_model_s *compi
 	}
 	int16_t result;
 
-	switch (compiled_model->output_dimensions.byte_width) {
+	switch (compiled_model->outputs[0].dimensions.byte_width) {
 	case 1:
 		result = findmax8((int8_t *)output, output_dim_ptr, output_stride, score);
 		break;
@@ -433,14 +416,14 @@ nrf_axon_result_e nrf_axon_nn_model_validate(const nrf_axon_nn_compiled_model_s 
 #if NRF_AXON_INTERLAYER_BUFFER_SIZE
 		if (sizeof(nrf_axon_interlayer_buffer) < compiled_model->interlayer_buffer_needed) {
 			nrf_axon_platform_printf(
-				"init model %s failed! interlayer buffer too small! Allocated %d, need %d\n",
+				"validate model %s failed! interlayer buffer too small! Allocated %d, need %d\n",
 				compiled_model->model_name, sizeof(nrf_axon_interlayer_buffer),
 				compiled_model->interlayer_buffer_needed);
 			return NRF_AXON_RESULT_BUFFER_TOO_SMALL;
 		}
 #else
 		nrf_axon_platform_printf(
-			"init model %s failed! interlayer buffer not defined! add "
+			"validate model %s failed! interlayer buffer not defined! add "
 			"CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE=%d to the prj.conf file!\n",
 			compiled_model->model_name, compiled_model->interlayer_buffer_needed);
 		return NRF_AXON_RESULT_BUFFER_TOO_SMALL;
@@ -451,17 +434,26 @@ nrf_axon_result_e nrf_axon_nn_model_validate(const nrf_axon_nn_compiled_model_s 
 #if NRF_AXON_PSUM_BUFFER_SIZE
 		if (sizeof(nrf_axon_psum_buffer) < compiled_model->psum_buffer_needed) {
 			nrf_axon_platform_printf(
-				"init model %s failed! psum buffer too small! Allocated %d, need %d\n",
+				"validate model %s failed! psum buffer too small! Allocated %d, need %d\n",
 				compiled_model->model_name, sizeof(nrf_axon_psum_buffer),
 				compiled_model->psum_buffer_needed);
 			return NRF_AXON_RESULT_BUFFER_TOO_SMALL;
 		}
 #else
-		nrf_axon_platform_printf("init model %s failed! psum buffer not defined!"
+		nrf_axon_platform_printf("validate model %s failed! psum buffer not defined!"
 			"add CONFIG_NRF_AXON_PSUM_BUFFER_SIZE=%d to the prj.conf file!\n",
 			compiled_model->model_name, compiled_model->psum_buffer_needed);
 		return NRF_AXON_RESULT_BUFFER_TOO_SMALL;
 #endif
+	}
+
+	if (compiled_model->min_driver_version_required >
+		NRF_AXON_VERSION) {
+		nrf_axon_platform_printf("validate model %s failed!\nCurrent driver "
+			"version 0x%x is lower than version required by the model 0x%x\n",
+			compiled_model->model_name, NRF_AXON_VERSION,
+			compiled_model->min_driver_version_required);
+		return NRF_AXON_RESULT_DRIVER_VERSION_TOO_OLD;
 	}
 	return NRF_AXON_RESULT_SUCCESS;
 }
