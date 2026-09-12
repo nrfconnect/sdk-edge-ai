@@ -67,9 +67,9 @@ static void quantize_and_convert(const float *values, int8_t *target,
 static void dequantize(const int8_t *values, const size_t length, float *target,
 		       const nrf_axon_nn_compiled_model_s *model)
 {
-	const uint32_t deq_mult = model->output_dequant_mult;
-	const uint8_t deq_round = model->output_dequant_round;
-	const int8_t deq_zp = model->output_dequant_zp;
+	const uint32_t deq_mult = model->outputs[0].dequant_mult;
+	const uint8_t deq_round = model->outputs[0].dequant_round;
+	const int8_t deq_zp = model->outputs[0].dequant_zp;
 	const float scale = (float)deq_mult / (float)(1 << deq_round);
 
 	for (size_t i = 0; i < length; i++) {
@@ -110,7 +110,7 @@ static void sync_flow(void)
 		const float sample_value = sample_values[i];
 
 		quantize_and_convert(&sample_value, input_buffer,
-				     &model_hello_axon.inputs[model_hello_axon.external_input_ndx]);
+				     &model_hello_axon.inputs[0]);
 
 		result = nrf_axon_nn_model_infer_sync(&model_hello_axon, input, output);
 		if (result != NRF_AXON_RESULT_SUCCESS) {
@@ -170,7 +170,7 @@ static void async_flow(void)
 		void *cb_context = output;
 
 		quantize_and_convert(&sample_value, input,
-				     &model_hello_axon.inputs[model_hello_axon.external_input_ndx]);
+				     &model_hello_axon.inputs[0]);
 
 		current_async_sample_value = sample_values[i];
 		result = nrf_axon_nn_model_infer_async(&async_wrapper, input, output,
@@ -192,10 +192,10 @@ int main(void)
 	LOG_INF("Hello Axon sample");
 	LOG_INF("Initializing Axon NPU");
 
-	__ASSERT(model_hello_axon.inputs[model_hello_axon.external_input_ndx]
+	__ASSERT(model_hello_axon.inputs[0]
 				 .dimensions.byte_width == 1,
 		 "Model input data type different than expected");
-	__ASSERT(model_hello_axon.output_dimensions.byte_width == 1,
+	__ASSERT(model_hello_axon.outputs[0].dimensions.byte_width == 1,
 		 "Model output data type different than expected");
 
 	result = nrf_axon_platform_init();

@@ -1,16 +1,18 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: person_det
- * Axon Neural Network Compiler Version: 1.2.0
+ * Axon Neural Network Compiler Version: 2.0.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <stdalign.h>
+#include "drivers/axon/nrf_axon_nn_infer.h"
 
 #define NRF_AXON_MODEL_PERSON_DET_MAX_IL_BUFFER_USED 225280
 #define NRF_AXON_MODEL_PERSON_DET_MAX_PSUM_BUFFER_USED 0
-static_assert(NRF_AXON_MODEL_PERSON_DET_MAX_IL_BUFFER_USED < (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
-static_assert(NRF_AXON_VERSION >= 0x00010200, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
+static_assert(NRF_AXON_MODEL_PERSON_DET_MAX_IL_BUFFER_USED <= (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
+static_assert(NRF_AXON_VERSION >= 0x00010501, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
 // size of axon_model_const_person_det: 159584
 const static struct {
 	int8_t l00_filters[432];
@@ -129,9 +131,10 @@ const static struct {
 
 extern nrf_axon_result_e nrf_axon_nn_op_extension_resize_nearest_neighbor(void* , uint16_t , void* );
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_person_det[23531] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_person_det[23540] = {
 // segment 0,length 16111,Axon NN
-0x1fff3eef,
+0x1fff3eef,0x00003ef2,
 0x16000080,0x000c00a0,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x024300a0,0x00005000,0x00030003,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_person_det.l00_filters,0x00330002,0x00000009,0x00060050,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00060050,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0xf000),0x00030050,0x00000000,0x01000100,0x0000fff9,0x00001abe,0x00000000,0x02020000,0x00000000,0x00000005,0x00001301,
 0x01000180,0x00000003,0x00000000,
 0x010001a4,0x00000000,0x0002c192,
@@ -5834,12 +5837,14 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_person_det[23531] = {
 0x01000164,0x00004d59,0x0000bfed,
 0x01000164,0xfffff364,0x0000ec97,
 0x01000164,0x0000319f,0x0000c8a7,
+0x0000000,
 // segment 1,length 9,CPU(software)
-0x2fff0009,
+0x2fff0009,0x0000000c,
 0x00000001,
 (NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_resize_nearest_neighbor,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2600),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2a00),0x00050004,0x000a0008,0x00200020,0x00000008,
+0x0000000,
 // segment 2,length 969,Axon NN
-0x1fff03c9,
+0x1fff03c9,0x000003cc,
 0x0f000080,0x0008000a,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x1400),0x0033000c,0x00000060,0x0008000a,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2a00),0x00330020,0x00000050,0x00000000,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00050000,0x0008000a,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x1400),0x0003000c,0x00000060,0x00000000,
 0x060000c4,0x0011fbc1,0x00010000,0x01010000,0x03010000,0x00010f03,0x00000006,0x29c66a28,
 0x01000180,0x00000002,0x80000000,
@@ -6156,12 +6161,14 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_person_det[23531] = {
 0x01000164,0x00002d5f,0x000129b4,
 0x01000164,0x0000d61a,0x00007ba0,
 0x01000164,0x00003c2b,0x00010f63,
+0x0000000,
 // segment 3,length 9,CPU(software)
-0x2fff0009,
+0x2fff0009,0x0000000c,
 0x00000001,
 (NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_resize_nearest_neighbor,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2600),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2c00),0x000a0008,0x00140010,0x00100010,0x0000000c,
+0x0000000,
 // segment 4,length 6428,Axon NN
-0x1fff191c,
+0x1fff191c,0x0000191e,
 0x0f000080,0x00100014,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2c00),0x00330014,0x00000140,0x00100014,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00330010,0x00000140,0x00000000,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00050000,0x00100014,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00030014,0x00000140,0x00000000,
 0x060000c4,0x0010111b,0x00010000,0x01010000,0x03010000,0x00010f03,0x00000006,0x676e2837,
 0x01000180,0x00000002,0x80000000,
@@ -8274,67 +8281,91 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_person_det[23531] = {
 0x01000164,0xfffd2ca0,0x0000c72c,
 0x01000164,0xffffefe0,0x00005900,
 };
-#define NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE 17280
+#define NRF_AXON_MODEL_PERSON_DET_INPUT_VECTOR_CNT 1
+NRF_AXON_MODEL_APP_STORAGE const int8_t *person_det_input_vector_list[NRF_AXON_MODEL_PERSON_DET_INPUT_VECTOR_CNT];
+const nrf_axon_nn_compiled_model_input_s person_det_inputs[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 128,
+      .width = 160,
+      .channel_cnt = 3,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .quant_mult = 24454344,
+    .node_id = -1,
+    .stride = 160,
+    .quant_round = 19,
+    .quant_zp = -7,
+  }, /* 0 */
+}; /* inputs */
+
+#define NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE 7560
 
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-  uint32_t axon_model_person_det_packed_output_buf[NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
+NRF_AXON_MODEL_APP_STORAGE uint32_t person_det_packed_output_buf[NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
-const nrf_axon_compiled_model_output_s person_det_extra_outputs[] = {
+const nrf_axon_compiled_model_output_s person_det_outputs[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2c00),
+    .packed_buffer_offset = 0,
+    .packed_size = 5760,
+    .dimensions = {
+      .height = 16,
+      .width = 20,
+      .channel_cnt = 18,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .dequant_mult = 0,
+    .node_id = 0,
+    .dequant_round = 0,
+    .dequant_zp = 0,
+    .stride = 20,
+  },
   {
     .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x600),
+    .packed_buffer_offset = 5760,
+    .packed_size = 1440,
     .dimensions = {
       .height = 8,
       .width = 10,
       .channel_cnt = 18,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .dequant_mult = 70372304,
-    .dequant_round = 29,
+    .dequant_mult = 4398269,
+    .node_id = 0,
+    .dequant_round = 25,
     .dequant_zp = 48,
     .stride = 12,
   },
   {
     .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .packed_buffer_offset = 7200,
+    .packed_size = 360,
     .dimensions = {
       .height = 4,
       .width = 5,
       .channel_cnt = 18,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .dequant_mult = 57879368,
-    .dequant_round = 29,
+    .dequant_mult = 3617460,
+    .node_id = 0,
+    .dequant_round = 25,
     .dequant_zp = 41,
     .stride = 8,
   },
 };
 const nrf_axon_nn_compiled_model_s model_person_det = {
-    .compiler_version = 0x00010200,
+    .compiler_version = 0x00020000,
     .model_name = "person_det",
     .labels = NULL,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 128,
-          .width = 160,
-          .channel_cnt = 3,
-          .byte_width = 1,
-        },
-        .quant_mult = 24454344,
-        .stride = 160,
-        .quant_round = 19,
-        .quant_zp = -7,
-        .is_external = true,
-      }, // 0
-    }, // inputs
+    .inputs = person_det_inputs,
+    .input_vector_list = person_det_input_vector_list,
     .input_cnt = 1,
-    .external_input_ndx = 0,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2c00),
-#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-    .packed_output_buf = (int8_t*)axon_model_person_det_packed_output_buf,
-#else
-    .packed_output_buf = NULL,
-#endif
 
     .interlayer_buffer_needed = NRF_AXON_MODEL_PERSON_DET_MAX_IL_BUFFER_USED,
     .psum_buffer_needed = NRF_AXON_MODEL_PERSON_DET_MAX_PSUM_BUFFER_USED,
@@ -8342,25 +8373,17 @@ const nrf_axon_nn_compiled_model_s model_person_det = {
 
     .model_const_ptr = &axon_model_const_person_det,
     .model_const_size = sizeof(axon_model_const_person_det),
-    .cmd_buffer_len = 23531,
+    .cmd_buffer_len = 23540,
     .persistent_vars = {
       .count = 0,
     },
-
-    .output_dimensions = {
-      .height = 16,
-      .width = 20,
-      .channel_cnt = 18,
-      .byte_width = 1,
-    },
-    .output_dequant_mult = 57879368,
-    .output_dequant_round = 29,
-    .output_dequant_zp = 41,
-    .output_stride = 20,
+    .output_cnt = 3,
+    .outputs = person_det_outputs,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)person_det_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = false,
-    .extra_output_cnt = 2,
-    .extra_outputs = person_det_extra_outputs,
-    .min_driver_version_required = 0x00010200,
 };
 #ifdef __cplusplus
 }
