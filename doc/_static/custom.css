@@ -35,3 +35,20 @@ p.plantuml > img {
 section.numbered-step > h4::before {
     content: counter(step-count-h4, lower-alpha);
 }
+
+/* Known issues: sphinx_rtd_theme styles dl > dt with the cyan header only for
+ * non-.simple definition lists. Short issues (one paragraph in dd) get
+ * class="simple" and would otherwise look like plain bold text. */
+.rst-content dl.simple[class*="v1-"] > dt,
+.rst-content dl.simple[class*="v2-"] > dt,
+.rst-content dl.simple[class*="v3-"] > dt {
+    display: table;
+    margin: 6px 0;
+    font-size: 90%;
+    line-height: normal;
+    background: #e7f2fa;
+    color: #2980b9;
+    border-top: 3px solid #6ab0de;
+    padding: 6px;
+    position: relative;
+}

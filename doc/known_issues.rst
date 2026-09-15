@@ -7,8 +7,9 @@ Known issues
    :local:
    :depth: 2
 
-Known issues listed on this page are valid for the current state of development.
-For the list of potential issues found regarding Axon NPU, see the :ref:`axon_npu_changelog` page.
+
+Known issues listed on this page and tagged with the selected release are valid for that release.
+Use the release filter to view known issues for a specific release.
 A known issue can list one or both of the following entries:
 
 * **Affected platforms:**
@@ -20,15 +21,16 @@ A known issue can list one or both of the following entries:
   Some known issues have a workaround.
   Sometimes, they are discovered later and added over time.
 
+.. known-issues-filter::
 
-List of known issues for v2.3.0 release
-***************************************
+.. rst-class:: v2-3-0
 
-NCSDK-40932: In :ref:`app_gesture_recognition` DFU fails on Thingy53
+NCSDK-40932: DFU fails on Thingy:53 in the Gesture Recognition application
   When using the Device Firmware Update (DFU) feature in the :ref:`Gesture Recognition application <app_gesture_recognition>` on Thingy:53, the DFU process fails.
 
-List of known issues for v2.2.0 release
-***************************************
+  **Affected platforms:** Thingy:53
+
+.. rst-class:: v2-2-0
 
 NCSDK-40250: Bootloader Serial Recovery mode is disabled in release configurations on Thingy:53
   In the :ref:`Gesture Recognition application <app_gesture_recognition>`, bootloader Serial Recovery mode is disabled in release configurations.
@@ -44,8 +46,7 @@ NCSDK-40250: Bootloader Serial Recovery mode is disabled in release configuratio
 
   **Affected platforms:** Thingy:53
 
-List of known issues for v2.1.0 release
-***************************************
+.. rst-class:: v2-1-0
 
 NCSDK-39297: CMake duplicates the board configuration directory in ``CONF_FILE`` paths when used with the nRF Connect for VS Code GUI
   The application's CMake setup sets ``APPLICATION_CONFIG_DIR`` to ``configuration/<board>_<qualifiers>/``, which causes Zephyr to resolve ``CONF_FILE`` relative to that directory instead of the application root.
@@ -66,8 +67,7 @@ NCSDK-39297: CMake duplicates the board configuration directory in ``CONF_FILE``
 
       west build -b nrf54l15tag/nrf54l15/cpuapp -- -DCONF_FILE=prj_release.conf
 
-List of known issues for v2.0.0 release
-***************************************
+.. rst-class:: v2-0-0
 
 DRGN-27788: Bluetooth LE disables RRAM low-latency mode when using AXON NPU and Bluetooth LE simultaneously on the nRF54LM20B SoC
   When running AXON and Bluetooth LE together on nRF54LM20B, Bluetooth LE might disable RRAM low-latency mode during radio activity, which may slow or corrupt an ongoing inference.

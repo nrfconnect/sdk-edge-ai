@@ -75,6 +75,7 @@ extensions = [
     'sphinxcontrib.plantuml',
     'sphinxcontrib.mermaid',
     'sphinx.ext.graphviz',
+    'known_issues_filter',
     'edge_ai_project_info',
 ]
 
