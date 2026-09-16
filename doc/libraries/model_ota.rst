@@ -130,12 +130,10 @@ set (``axon_elf.py provide`` needs a released ELF).
 SMP upload coordination
 ***********************
 
-When ``CONFIG_MODEL_OTA_SMP`` is enabled, each OTA-wired loader
-(``nrf_edgeai_load_user_model_<solution_id>()``) registers its MCUboot image index through
-``model_ota_smp_register()`` before reading the model image, so uploads are coordinated even
-when the partition holds an invalid image. A registration failure other than ``-EALREADY``
-fails the load. Image indices are derived from the ``nordic,mcuboot-image`` bootchain in
-devicetree (:file:`include/model_ota/model_ota_partition.h`).
+When ``CONFIG_MODEL_OTA_SMP`` is enabled, each OTA-wired model declares its MCUboot image index in a linker-built iterable section.
+The model OTA library registers its MCUmgr callback during system initialization and searches this table when an upload arrives, before the application loads or uses any model.
+Image indices are derived from the ``nordic,mcuboot-image`` bootchain in devicetree (:file:`include/model_ota/model_ota_partition.h`).
+The initialization rejects image index zero and duplicate model image indices.
 
 Inference guard (``CONFIG_MODEL_OTA``)
 **************************************
@@ -185,7 +183,7 @@ Enforcement:
 Upload arbitration (``model_ota_smp.c``)
 ========================================
 
-All registered slots share one state machine, because the guard is device-wide
+All declared model slots share one state machine, because the guard is device-wide
 and MCUmgr keeps a single upload session. It is driven by ``img_mgmt`` events:
 
 - **DFU_CHUNK** at offset 0 for a model image calls

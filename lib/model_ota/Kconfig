@@ -89,13 +89,6 @@ config MODEL_OTA_SMP
 
 if MODEL_OTA_SMP
 
-config MODEL_OTA_SMP_MAX_SLOTS
-	int "Maximum number of MCUboot model image slots"
-	default 4
-	range 1 16
-	help
-	  Upper bound on entries passed to model_ota_smp_register().
-
 config MODEL_OTA_SMP_DRAIN_RETRY_WINDOW_MS
 	int "Window to keep inference blocked for an upload retry (ms)"
 	default 30000

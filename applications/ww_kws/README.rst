@@ -103,7 +103,7 @@ Partition-resident models are optional via ``SB_CONFIG_APP_MODEL_OTA`` (set in :
 ``SB_CONFIG_APP_MODEL_OTA`` propagates to ``CONFIG_APP_MODEL_OTA`` on the ww_kws image.
   Models are loaded from ``model_storage_ww`` / ``model_storage_kws`` at boot instead of being compiled into the app.
   Also builds MCUboot-signed model images and enables SMP model upload (with inference paused during upload).
-  Applies the model devicetree overlay and :file:`model_ota.conf` from :file:`sysbuild.cmake`.
+  Applies the model and MCUboot overlays from :file:`sysbuild.cmake`.
 
 Build combinations:
 
@@ -124,8 +124,7 @@ Packaging and first-time provisioning
 --------------------------------------
 
 Model partition images are built when ``SB_CONFIG_APP_MODEL_OTA`` is enabled.
-Pass :file:`sysbuild_model_ota.conf` as ``SB_EXTRA_CONF_FILE`` (:file:`model_ota.conf` is applied
-to the ww_kws image automatically):
+Pass :file:`sysbuild_model_ota.conf` as ``SB_EXTRA_CONF_FILE``:
 
 .. code-block:: console
 

@@ -14,8 +14,6 @@
 
 #include "model_ota_stub_macros.h"
 
-#include <errno.h>
-
 #include <model_ota/model_contract.h>
 #include <model_ota/model_image.h>
 #include <model_ota/model_ota_edgeai.h>
@@ -60,10 +58,9 @@ MODEL_OTA_PARTITION_ASSERT(MODEL_OTA_PARTITION_NODELABEL);
 #define MODEL_OTA_SMP_SLOT_NAME STRINGIFY(MODEL_OTA_PARTITION_NODELABEL)
 #endif
 
-static const struct model_ota_smp_slot model_ota_smp_slot = {
-	.image_index = MODEL_OTA_IMAGE_INDEX(MODEL_OTA_PARTITION_NODELABEL),
-	.name = MODEL_OTA_SMP_SLOT_NAME,
-};
+MODEL_OTA_SMP_SLOT_DEFINE(model_ota_smp_slot,
+			  MODEL_OTA_IMAGE_INDEX(MODEL_OTA_PARTITION_NODELABEL),
+			  MODEL_OTA_SMP_SLOT_NAME);
 #endif
 
 #define MODEL_OTA_EDGEAI_AXON_CONTRACT_HASH                                                        \
@@ -89,16 +86,6 @@ MODEL_OTA_EDGEAI_LOAD_DECL(MODEL_OTA_EDGEAI_SOLUTION_ID)
 	}
 
 	*out = NULL;
-
-#if IS_ENABLED(CONFIG_MODEL_OTA_SMP)
-	{
-		int smp_rc = model_ota_smp_register(&model_ota_smp_slot);
-
-		if (smp_rc != 0 && smp_rc != -EALREADY) {
-			return MODEL_IMAGE_ERR_AXON_VALIDATE;
-		}
-	}
-#endif
 
 	rc = model_image_load_axon(partition_addr, partition_size, &expect, &model);
 	if (rc != MODEL_IMAGE_OK) {

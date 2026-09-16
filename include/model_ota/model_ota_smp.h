@@ -11,6 +11,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <zephyr/sys/iterable_sections.h>
+
 /**
  * @file
  * @brief Coordinate MCUboot SMP model uploads with the built-in inference guard.
@@ -21,8 +23,8 @@
  * in application or library code. The functions in this header expose upload
  * state for application policy (LEDs, reboot prompts) only — not for protection.
  *
- * OTA-wired model loaders register their slot automatically from devicetree-derived
- * image indices. Applications only need to set an optional upload notify callback.
+ * OTA-wired models declare their devicetree-derived image indices in a linker-built
+ * iterable section. Applications only need to set an optional upload notify callback.
  *
  * Requires ``CONFIG_MODEL_OTA_SMP`` (MCUboot, MCUMGR image management, and upload hooks).
  */
@@ -35,17 +37,12 @@ struct model_ota_smp_slot {
 	const char *name;
 };
 
-/**
- * @brief Register one model partition for SMP upload coordination.
- *
- * Called from the OTA-wired model loaders, before the model image is read, so
- * that uploads are coordinated even when the partition holds an invalid image.
- *
- * @retval 0 on success.
- * @retval -EALREADY if the image index is already registered.
- * @retval negative errno on other failures.
- */
-int model_ota_smp_register(const struct model_ota_smp_slot *slot);
+/** Declare one model image in the linker-built SMP protection table. */
+#define MODEL_OTA_SMP_SLOT_DEFINE(var_name, image_idx, slot_name)                                  \
+	static const STRUCT_SECTION_ITERABLE(model_ota_smp_slot, var_name) = {                     \
+		.image_index = (image_idx),                                                         \
+		.name = (slot_name),                                                                \
+	}
 
 /** Informational: true when a model upload finished and reset is required. */
 bool model_ota_smp_is_pending_reset(void);

@@ -8,7 +8,6 @@ include(${APP_DIR}/../../lib/model_ota/cmake/model_ota_sysbuild.cmake)
 
 if(SB_CONFIG_APP_MODEL_OTA)
 	set_config_bool(${DEFAULT_IMAGE} CONFIG_APP_MODEL_OTA y)
-	add_overlay_config(${DEFAULT_IMAGE} ${APP_DIR}/model_ota.conf)
 	add_overlay_dts(${DEFAULT_IMAGE}
 			${APP_DIR}/boards/nrf54lm20dk_nrf54lm20b_cpuapp_model_ota.overlay)
 	add_overlay_dts(mcuboot

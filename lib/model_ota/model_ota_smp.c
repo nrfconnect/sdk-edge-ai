@@ -7,6 +7,7 @@
 #include <model_ota/model_ota_smp.h>
 #include <model_ota/model_ota_guard.h>
 
+#include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/mgmt/mcumgr/mgmt/callbacks.h>
@@ -18,7 +19,7 @@ LOG_MODULE_REGISTER(model_ota_smp, CONFIG_MODEL_OTA_LOG_LEVEL);
 
 /*
  * The inference guard is device-wide and MCUmgr keeps a single upload session
- * (g_img_mgmt_state), so all registered slots share one state machine under one
+ * (g_img_mgmt_state), so all linker-declared slots share one state machine under one
  * lock. img_mgmt events drive it:
  *
  * IDLE        Guard READY, nothing reserved.
@@ -48,36 +49,30 @@ enum smp_upload_state {
 	SMP_UPLOAD_LOCKED,
 };
 
-struct model_ota_smp_slot_state {
-	uint8_t image_index;
-	const char *name;
-};
-
 static void drain_retry_window_expired(struct k_work *work);
 
 static K_MUTEX_DEFINE(smp_lock);
 static K_WORK_DELAYABLE_DEFINE(drain_retry_work, drain_retry_window_expired);
 
-static struct model_ota_smp_slot_state registered_slots[CONFIG_MODEL_OTA_SMP_MAX_SLOTS];
-static size_t registered_slot_count;
-static bool smp_initialized;
 static model_ota_smp_upload_notify_cb upload_notify_cb;
 static enum smp_upload_state upload_state;
 /** Model slot of the session tracked by @ref upload_state; NULL when IDLE. */
-static struct model_ota_smp_slot_state *upload_slot;
+static const struct model_ota_smp_slot *upload_slot;
+/** False when the linker-built slot table is invalid; all image uploads are then rejected. */
+static bool slot_table_valid;
 
-static struct model_ota_smp_slot_state *slot_for_image(uint8_t image_index)
+static const struct model_ota_smp_slot *slot_for_image(uint8_t image_index)
 {
-	for (size_t i = 0; i < registered_slot_count; i++) {
-		if (registered_slots[i].image_index == image_index) {
-			return &registered_slots[i];
+	STRUCT_SECTION_FOREACH(model_ota_smp_slot, slot) {
+		if (slot->image_index == image_index) {
+			return slot;
 		}
 	}
 
 	return NULL;
 }
 
-static const char *slot_name(const struct model_ota_smp_slot_state *slot)
+static const char *slot_name(const struct model_ota_smp_slot *slot)
 {
 	if (slot == NULL || slot->name == NULL) {
 		return "Unnamed";
@@ -129,7 +124,7 @@ static void lock_until_reset(bool upload_completed)
 	}
 }
 
-static enum mgmt_cb_return reserve_guard(struct model_ota_smp_slot_state *slot, int32_t *rc)
+static enum mgmt_cb_return reserve_guard(const struct model_ota_smp_slot *slot, int32_t *rc)
 {
 	switch (upload_state) {
 	case SMP_UPLOAD_IDLE:
@@ -206,7 +201,7 @@ static enum mgmt_cb_return handle_dfu_chunk(const struct img_mgmt_upload_check *
 					    int32_t *rc)
 {
 	const struct img_mgmt_upload_req *req = upload_check->req;
-	struct model_ota_smp_slot_state *slot;
+	const struct model_ota_smp_slot *slot;
 
 	if (req == NULL) {
 		return MGMT_CB_OK;
@@ -309,27 +304,32 @@ static enum mgmt_cb_return model_ota_smp_callback(uint32_t event, enum mgmt_cb_r
 
 	k_mutex_lock(&smp_lock, K_FOREVER);
 
-	switch (event) {
-	case MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK:
-		if (data != NULL && data_size == sizeof(struct img_mgmt_upload_check)) {
-			ret = handle_dfu_chunk(data, rc);
+	if (event == MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK && !slot_table_valid) {
+		*rc = MGMT_ERR_EBADSTATE;
+		ret = MGMT_CB_ERROR_RC;
+	} else {
+		switch (event) {
+			case MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK:
+				if (data != NULL && data_size == sizeof(struct img_mgmt_upload_check)) {
+					ret = handle_dfu_chunk(data, rc);
+				}
+				break;
+
+			case MGMT_EVT_OP_IMG_MGMT_DFU_STARTED:
+				handle_dfu_started();
+				break;
+
+			case MGMT_EVT_OP_IMG_MGMT_DFU_PENDING:
+				handle_dfu_pending();
+				break;
+
+			case MGMT_EVT_OP_IMG_MGMT_DFU_STOPPED:
+				handle_dfu_stopped();
+				break;
+
+			default:
+				break;
 		}
-		break;
-
-	case MGMT_EVT_OP_IMG_MGMT_DFU_STARTED:
-		handle_dfu_started();
-		break;
-
-	case MGMT_EVT_OP_IMG_MGMT_DFU_PENDING:
-		handle_dfu_pending();
-		break;
-
-	case MGMT_EVT_OP_IMG_MGMT_DFU_STOPPED:
-		handle_dfu_stopped();
-		break;
-
-	default:
-		break;
 	}
 
 	k_mutex_unlock(&smp_lock);
@@ -343,39 +343,46 @@ static struct mgmt_callback model_ota_smp_mgmt_cb = {
 		     MGMT_EVT_OP_IMG_MGMT_DFU_PENDING | MGMT_EVT_OP_IMG_MGMT_DFU_STOPPED),
 };
 
-int model_ota_smp_register(const struct model_ota_smp_slot *slot)
+static int model_ota_smp_init(void)
 {
-	if (slot == NULL || slot->image_index == 0U) {
-		return -EINVAL;
-	}
+	size_t slot_count = 0;
 
-	k_mutex_lock(&smp_lock, K_FOREVER);
+	/*
+	 * Register before validating the table so a bad model-slot configuration
+	 * fails closed: the application still boots, but image uploads are refused.
+	 */
+	mgmt_callback_register(&model_ota_smp_mgmt_cb);
 
-	if (registered_slot_count >= CONFIG_MODEL_OTA_SMP_MAX_SLOTS) {
-		k_mutex_unlock(&smp_lock);
-		return -ENOMEM;
-	}
-
-	for (size_t i = 0; i < registered_slot_count; i++) {
-		if (registered_slots[i].image_index == slot->image_index) {
-			k_mutex_unlock(&smp_lock);
-			return -EALREADY;
+	STRUCT_SECTION_FOREACH(model_ota_smp_slot, slot) {
+		if (slot->image_index == 0U) {
+			LOG_ERR("%s model uses reserved MCUboot image index 0", slot_name(slot));
+			LOG_ERR("All image uploads disabled due to invalid model slot table");
+			return 0;
 		}
+
+		STRUCT_SECTION_FOREACH(model_ota_smp_slot, other) {
+			if (other == slot) {
+				break;
+			}
+
+			if (other->image_index == slot->image_index) {
+				LOG_ERR("%s and %s models share MCUboot image index %u",
+					slot_name(other), slot_name(slot), slot->image_index);
+				LOG_ERR("All image uploads disabled due to invalid model slot table");
+				return 0;
+			}
+		}
+
+		slot_count++;
 	}
 
-	registered_slots[registered_slot_count].image_index = slot->image_index;
-	registered_slots[registered_slot_count].name = slot->name;
-	registered_slot_count++;
-
-	if (!smp_initialized) {
-		mgmt_callback_register(&model_ota_smp_mgmt_cb);
-		smp_initialized = true;
-	}
-
-	k_mutex_unlock(&smp_lock);
+	slot_table_valid = true;
+	LOG_DBG("Protecting %u model SMP slots", (unsigned int)slot_count);
 
 	return 0;
 }
+
+SYS_INIT(model_ota_smp_init, APPLICATION, 0);
 
 bool model_ota_smp_is_pending_reset(void)
 {

@@ -20,5 +20,6 @@ zephyr_library_sources_ifdef(CONFIG_MODEL_OTA_SMP model_ota_guard.c)
 zephyr_library_sources_ifdef(CONFIG_MODEL_OTA_NEUTON model_image_neuton.c)
 zephyr_library_sources_ifdef(CONFIG_MODEL_OTA_AXON model_image_axon.c)
 zephyr_library_sources_ifdef(CONFIG_MODEL_OTA_SMP model_ota_smp.c)
+zephyr_linker_sources_ifdef(CONFIG_MODEL_OTA_SMP SECTIONS linker/model_ota_smp.ld)
 
 zephyr_library_link_libraries_ifdef(CONFIG_BOOTLOADER_MCUBOOT MCUBOOT_BOOTUTIL)
