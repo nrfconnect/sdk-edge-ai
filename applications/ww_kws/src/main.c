@@ -13,7 +13,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-#include "ble/ble_mds.h"
+#include "ble/ble_app.h"
 #include "control_output.h"
 #include "dmic.h"
 #include "kws/kws.h"

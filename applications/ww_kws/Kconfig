@@ -99,6 +99,41 @@ config MODELS_OBSERVABILITY_MDS
 
 endif # MODELS_OBSERVABILITY
 
+config WW_KWS_MEMFAULT_FOTA
+	bool "Align Bluetooth DIS with Memfault identity for Device Manager FOTA"
+	depends on BT_DIS
+	depends on BT_DIS_SETTINGS
+	depends on HW_ID_LIBRARY
+	depends on MEMFAULT
+	depends on NCS_SAMPLE_MCUMGR_BT_OTA_DFU
+	help
+	  When enabled, persist the SoC HW ID as the Bluetooth DIS serial number
+	  so nRF Connect Device Manager can match the device in Memfault release
+	  management.
+
 endmenu
+
+if WW_KWS_MEMFAULT_FOTA
+
+config MEMFAULT_NCS_FW_VERSION
+	default "$(APP_VERSION_TWEAK_STRING)"
+
+config MCUBOOT_IMGTOOL_SIGN_VERSION
+	default MEMFAULT_NCS_FW_VERSION
+	help
+	  MCUboot imgtool sign version for the application image (image 0).
+	  Model images use VERSION.ww / VERSION.kws for major.minor.patch and encode
+	  the application VERSION in imgtool's numeric +build field.
+
+config BT_DIS_FW_REV_STR
+	default MEMFAULT_NCS_FW_VERSION
+
+config BT_DIS_SW_REV_STR
+	default MEMFAULT_NCS_FW_TYPE
+
+config BT_DIS_HW_REV_STR
+	default MEMFAULT_NCS_HW_VERSION
+
+endif # WW_KWS_MEMFAULT_FOTA
 
 source "Kconfig.zephyr"

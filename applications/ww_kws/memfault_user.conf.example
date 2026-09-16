@@ -1,0 +1,11 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+# Copy to memfault_user.conf and set your Memfault project key.
+# Pass it last so observability.conf does not override it:
+#
+#   -DEXTRA_CONF_FILE="memfault_fota.conf;observability.conf;memfault_user.conf"
+
+CONFIG_MEMFAULT_NCS_PROJECT_KEY="your-memfault-project-key-here"
