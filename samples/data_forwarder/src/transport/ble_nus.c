@@ -30,6 +30,13 @@ static const struct bt_data sd[] = {
 
 static size_t nus_mtu;
 
+static const struct bt_le_adv_param *const adv_param = BT_LE_ADV_CONN_FAST_2;
+
+static int ble_adv_start(void)
+{
+	return bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+}
+
 static void nus_recv_cb(struct bt_conn *conn, const uint8_t *const data, uint16_t len)
 {
 	ARG_UNUSED(conn);
@@ -88,7 +95,7 @@ static void recycled(void)
 {
 	int err;
 
-	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	err = ble_adv_start();
 	if (err) {
 		LOG_ERR("Advertising start failed (err %d)", err);
 	}
@@ -146,7 +153,7 @@ int transport_init(struct proto_transport *out_transport)
 		return err;
 	}
 
-	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	err = ble_adv_start();
 	if (err) {
 		LOG_ERR("Advertising start failed (err %d)", err);
 		return err;
