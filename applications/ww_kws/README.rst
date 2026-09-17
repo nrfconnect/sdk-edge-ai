@@ -78,11 +78,11 @@ You can replace the bundled models using the `Text to Wake Word Detection <Nordi
 Requirements
 ************
 
-The application supports the following development kit:
+The application supports the following development kits:
 
 .. table-from-sample-yaml::
 
-The application also requires PDM digital microphone connected to the pins specified in the :file:`boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay` file.
+The application also requires PDM digital microphone connected to the pins specified in the board overlay file (:file:`boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay` or :file:`boards/nrf7120dk_nrf7120_cpuapp.overlay`).
 The application is expecting audio data to be provided on left channel.
 
 Pin mapping
@@ -95,17 +95,23 @@ The following table show how to connect this module to the DK:
 .. list-table::
    :header-rows: 1
 
-   * - Adafurit DMIC
+   * - Adafruit DMIC
      - nRF54LM20 DK
+     - nRF7120 DK
    * - ``3V``
+     - ``VDD:IO``
      - ``VDD:IO``
    * - ``GND``
      - ``GND``
+     - ``GND``
    * - ``SEL``
+     - ``GND``
      - ``GND``
    * - ``CLK``
      - ``P1.4``
+     - ``P1.4``
    * - ``DAT``
+     - ``P1.5``
      - ``P1.5``
 
 The ``SEL`` pin is responsible for selecting audio channel and connecting it to ground selects left channel.
