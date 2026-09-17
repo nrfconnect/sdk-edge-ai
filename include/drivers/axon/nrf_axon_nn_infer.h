@@ -14,11 +14,12 @@ extern "C" {
 #include "nrf_axon_driver.h"
 
 /**
-* model_ota: app-owned RAM storage (persistent vars are runtime feedback state and must never
-* live in flash). NRF_AXON_MODEL_APP_STORAGE expands to "extern" when this header is compiled
-* as part of an OTA-wired model (see lib/model_ota/src/model_ota_axon_app_stub.c and
-* model_ota_axon_image_stub.c); it is empty otherwise , matching the non-OTA build of this generated model.
-*/
+ * model_ota: app-owned RAM storage (persistent vars are runtime feedback state and must never
+ * live in flash). NRF_AXON_MODEL_APP_STORAGE expands to "extern" when this header is compiled
+ * as part of an OTA-wired model (see lib/model_ota/src/model_ota_axon_app_stub.c and
+ * model_ota_axon_image_stub.c); it is empty otherwise, matching the non-OTA build of
+ * this generated model.
+ */
 #ifndef NRF_AXON_MODEL_APP_STORAGE
 # define NRF_AXON_MODEL_APP_STORAGE
 #endif
@@ -29,31 +30,34 @@ typedef struct {
 	uint16_t height;
 	uint16_t width;
 	uint16_t channel_cnt;
+	int16_t batch_cnt;
 	uint8_t byte_width;
 } nrf_axon_nn_model_layer_dimensions_s;
 
 /**
  * Describes 1 input to a model.
  */
-typedef struct {
+typedef struct nrf_axon_nn_compiled_model_input_tag_s {
 	/**< location of the input during inference. */
 	int8_t *ptr;
-	/**< dimensions of the input */
+	/** dimensions of the input */
 	nrf_axon_nn_model_layer_dimensions_s dimensions;
-	/**< quantization parameter (multiplier):
+	/** quantization parameter (multiplier):
 	 * quantized_input = (float_input * quant_mult)/ 2^^quant_round + quant_zp.
 	 * quant_mult/(1>>quant_round) is the inverse quantization scaling factor.
 	 */
 	uint32_t quant_mult;
-	/**< distance (in bytes) between the start of each row of input. */
-	uint16_t stride;
-	/**< quantization parameter (rounding bits) */
-	uint8_t quant_round;
-	/**< quantization parameter (zero point) */
-	int8_t quant_zp;
-	/**< populated externally or internal to model (from another layer or persistent variable)
+	/**
+	 * ID # of the input. These will be negative for complete models,
+	 * can be positive for layer models (indicating an internal input)
 	 */
-	bool is_external;
+	int16_t node_id;
+	/** distance (in bytes) between the start of each row of input. */
+	uint16_t stride;
+	/** quantization parameter (rounding bits) */
+	uint8_t quant_round;
+	/** quantization parameter (zero point) */
+	int8_t quant_zp;
 } nrf_axon_nn_compiled_model_input_s;
 
 /**
@@ -77,13 +81,17 @@ typedef struct {
  *
  * This structure describes their dimensions and dequantizaton parameters.
  * If a dedicated buffer is allocated to hold the outputs, the packed outputs will be stored
- * in order of declaration. Each node's output will begin on a 32bit boundary, so there can be up to
- * 3bytes of padding between the end of the prior node's output and the beginning of the next node's
- * output.
+ * in order of declaration. Each node's output will begin on a 32bit boundary, so there can be
+ * up to 3 bytes of padding between the end of the prior node's output and the beginning of the
+ * next node's output.
  */
 typedef struct nrf_axon_compiled_model_output_tag_s {
-	/**< address in memory where this output is placed in its raw form. */
+	/**< address in interlayer buffer where this output is placed in its raw form. */
 	int8_t *ptr;
+	/* offset into the packed buffer of this output */
+	uint32_t packed_buffer_offset;
+	/* packed size of this output */
+	uint32_t packed_size;
 	nrf_axon_nn_model_layer_dimensions_s dimensions;
 	/**< dequantization :
 	 * float_output = (quant_output - output_dequant_zp) * output_dequant_mult /
@@ -91,13 +99,16 @@ typedef struct nrf_axon_compiled_model_output_tag_s {
 	 * output_dequant_mult)/(1>>output_dequant_round) is the output quantization
 	 * scaling factor.
 	 */
-	/**< dequantization multiplier. */
+	/* dequantization multiplier. */
 	uint32_t dequant_mult;
+	/* node id of the output */
+	int16_t node_id;
 	/**< dequantization rounding bits. */
 	uint8_t dequant_round;
 	/**< dequantization zero point. */
 	int8_t dequant_zp;
-	/**< length in bytes of the distance between the start of rows in the unpacked
+	/*
+	 * length in bytes of the distance between the start of rows in the unpacked
 	 * output in the interlayer byffer.
 	 */
 	uint16_t stride;
@@ -107,34 +118,30 @@ typedef struct nrf_axon_compiled_model_output_tag_s {
  * Compiled model structure output by the nn compiler.
  * Most of the fields are consumed by driver APIs; users do not need to access them directly.
 */
-#define NRF_AXON_NN_MAX_MODEL_INPUTS 2
 typedef struct nrf_axon_nn_compiled_model_tag_s  {
-	/**< version of the compiler that generated the model. bits 23:16 => major,
+	/*
+	 * version of the compiler that generated the model. bits 23:16 => major,
 	 * bits 15:8 => minor, bits 8:0 => patch
 	 */
 	uint32_t compiler_version;
-	/**< name of the model provided by user at compilation time.*/
+	/*  name of the model provided by user at compilation time.*/
 	const char *model_name;
-	/**< optional list of text labels the correspond to classification indices.
+	/*
+	 * optional list of text labels that correspond to classification indices.
 	 * Applies to single dimension classification models only.
 	 */
 	const char **labels;
-	/**< Inputs to the model. */
-	nrf_axon_nn_compiled_model_input_s inputs[NRF_AXON_NN_MAX_MODEL_INPUTS];
-	/**< number of valid inputs[] */
-	uint8_t input_cnt;
-	/**< index into inputs[] of the external input (the 1 that needs to
-	 * be populated before inference).
+	/**< Inputs to the model, sized to input_cnt. */
+	const nrf_axon_nn_compiled_model_input_s *inputs;
+	/*
+	 * list of ptrs to model input vectors that is sized to input_cnt that
+	 * is provisioned by the model.
+	 * Each index is the input vector for the corresponding entry in inputs[].
+	 * User is required to populate this list before calling inference APIs.
 	 */
-	int8_t external_input_ndx;
-	/**< location in interlayer buffer that model output resides, unpacked,
-	 * for output ndx 0.
-	 */
-	int8_t *output_ptr;
-	/**< optional dedicated buffer that output can be packed and copied to by the driver,
-	 * after inference completes.
-	 */
-	int8_t *packed_output_buf;
+	const int8_t **input_vector_list;
+	/**< number of inputs */
+	int16_t input_cnt;
 	/**< amount of interlayer buffer used by this model. Is checked against available buffer
 	 * size by nrf_axon_nn_model_validate().
 	 */
@@ -164,70 +171,38 @@ typedef struct nrf_axon_nn_compiled_model_tag_s  {
 		/**<  number of persistent vars. */
 		uint16_t count;
 	} persistent_vars;
-	/**< Describes the dimensions of the model output. */
-	nrf_axon_nn_model_layer_dimensions_s output_dimensions;
-
-	/**< dequantization :
-	 * float_output = (quant_output - output_dequant_zp) * output_dequant_mult /
-	 *                 2^^output_dequant_round
-	 * output_dequant_mult)/(1>>output_dequant_round) is the output quantization
-	 * scaling factor.
+	/* number of model outputs pointed to by outputs */
+	uint16_t output_cnt;
+	/* pointer to the outputs of the model */
+	const nrf_axon_compiled_model_output_s *outputs;
+	/**< optional dedicated buffer that output can be packed and copied to by the driver,
+	 * after inference completes.
 	 */
-	/**< dequantization multiplier for output ndx 0. */
-	uint32_t output_dequant_mult;
-	/**< dequantization rounding bits for output ndx 0. */
-	uint8_t output_dequant_round;
-	/**< dequantization zero point for output ndx 0. */
-	int8_t output_dequant_zp;
-	/**< length in bytes of the distance between the start of rows in the unpacked output
-	 * in the interlayer byffer for output ndx 0.
-	 */
-	uint16_t output_stride;
-	/**< layer model is a superset of the full model. If true, this can be treated as a
+	int8_t *packed_output_buf;
+	/* model requires this version of the driver or later to execute properly. */
+	uint32_t min_driver_version_required;
+	/*
+	 * layer model is a superset of the full model. If true, this can be treated as a
 	 * nrf_axon_nn_compiled_model_layer_s.
 	 */
 	bool is_layer_model;
-	/**
-	 * introduced with compiler version 1.2.0, multiple output tensors are supported.
-	 * Verify compiler_version >= 0x10101 before accessing these fields.
-	 */
-	/**< number of additional model outputs pointed to by extra_outputs */
-	uint16_t extra_output_cnt;
-	/**< pointer to the additional outputs of the model */
-	const nrf_axon_compiled_model_output_s *extra_outputs;
-	/**< model requires this version of the driver or later to execute properly. */
-	uint32_t min_driver_version_required;
 } nrf_axon_nn_compiled_model_s;
 
-#define NRF_AXON_COMPILED_MODEL_EXTRA_OUTPUT_CNT(compiled_model) \
-	(compiled_model->compiler_version >= 0x10200 ? compiled_model->extra_output_cnt : 0)
-
 /**
- * @brief returns the nrf_axon_nn_compiled_model_input_s instance of the model's input that is
- * external.
+ * @brief Populates input_vector_list[input_no] with input_vector
  *
- * The 1st layer in a model can have multiple inputs; one that is internal (ie, VarHandle for
- * streaming models), and 1 that is external. This will find which input needs to be populated
- * explicitly before inference begins.
- *
- * @param[in] the_model Model to find the external input for.
- * @retval index into the_model->inputs[] for the model's external input.
+ * input_vector_list must be populated before performing inference.
+ * @param[in] model to update.
+ * @param[in] input_no index of the input to update.
+ * @param[in] input_vector pointer to the input vector.
  */
-int8_t nrf_axon_nn_model_1st_external_input_ndx(
-	const nrf_axon_nn_compiled_model_s *the_model);
-
-/**
- * @brief returns the index of the model's input that is external.
- *
- * The 1st layer in a model can have multiple inputs; one that is internal (ie, VarHandle for
- * streaming models), and 1 that is external. This will find which input needs to be populated
- * explicitly before inference begins.
- *
- * @param[in] the_model Model to find the external input for.
- * @retval instance in the_model->inputs[] of the model's external input.
- */
-const nrf_axon_nn_compiled_model_input_s *nrf_axon_nn_model_1st_external_input(
-	const nrf_axon_nn_compiled_model_s *the_model);
+static inline void nrf_axon_nn_set_input_vector(const nrf_axon_nn_compiled_model_s *compiled_model,
+	uint16_t input_no, const int8_t *input_vector)
+{
+	if (input_no < compiled_model->input_cnt) {
+		compiled_model->input_vector_list[input_no] = input_vector;
+	}
+}
 
 /**
  * @brief Sanity check of a compiled model.
@@ -260,7 +235,7 @@ int nrf_axon_nn_model_init_vars(
 	const nrf_axon_nn_compiled_model_s *compiled_model);
 
 /**
- * @brief Blocking inference function of a compiled model.
+ * @brief Blocking inference function of a compiled model that has only one input.
  *
  * - Reserves Axon for its exclusive access (using nrf_axon_platform_reserve_for_user()).
  * - Copies the input_vector to its location in the interlayer buffer. This input_vector is assumed
@@ -286,6 +261,7 @@ int nrf_axon_nn_model_init_vars(
  * @param[in] input_vector Packed input that is copied to the model's input_ptr prior to inference.
  *            Can be NULL (see above).
  * @param[out] output_buffer Buffer to hold the packed output result. Can be NULL (see above).
+ *              Must be sized to hold all the outputs.
  * @retval 0 on success, are a negative error code.
  */
 nrf_axon_result_e nrf_axon_nn_model_infer_sync(
@@ -293,6 +269,42 @@ nrf_axon_result_e nrf_axon_nn_model_infer_sync(
 	const int8_t *input_vector,
 	int8_t *output_buffer);
 
+/**
+ * @brief Blocking inference function of a compiled model with multiple inputs.
+ *
+ * - Reserves Axon for its exclusive access (using nrf_axon_platform_reserve_for_user()).
+ * - Copies the input_vector to its location in the interlayer buffer. This input_vector is assumed
+ *   to be packed in memory.
+ * - Performs the inference.
+ * - copies and packs unpacked output from interlayer buffer to output_buffer (optional)
+ * - Frees Axon for other users.
+ * - Returns to user.
+ *
+ * The compiled_model->input_vector_list must be populated with the addresses of the various
+ * inputs. Use nrf_axon_nn_set_input_vector to populate input_vector_list.
+ *
+ * If input_vector_list or any of its entries is NULL, the user has to copy the model input to
+ * the correct location in the interlayer buffer (specified by the compiled_model).
+ * In a dynamic system where there are other threads utilizing axon and/or asynchronous inference
+ * is occurring, the user must 1st call nrf_axon_platform_reserve_for_user() prior to accessing the
+ * interlayer_buffer, then invoke this function.
+ *
+ * Similarly, output_buffer cannot be NULL in a dynamic system as there is no way to retain control
+ * of axon after inference completes.
+ *
+ * Cannot be called from interrupt context.
+ *
+ * @param[in] compiled_model The compiled model to perform inference on that has been validated by
+ *            calling nrf_axon_nn_model_validate(compiled_model).
+ * @param[out] output_buffer buffer to hold the packed output results. Can be NULL
+ *             (see above). Must be sized to hold all the output layers of the model.
+ *             The offset into output_buffer for each output is returned by
+ *             nrf_axon_nn_offset_to_output_ndx()
+ * @retval 0 on success, are a negative error code.
+ */
+nrf_axon_result_e nrf_axon_nn_model_infer_sync_multi_inputs(
+	const nrf_axon_nn_compiled_model_s *compiled_model,
+	int8_t *output_buffer);
 
 /**
  * @brief Asynchronous inference states
@@ -324,8 +336,9 @@ typedef struct {
 	void (*inference_callback)(nrf_axon_result_e result, void *callback_context);
 	/**< Passthrough parameter to the user callback function. */
 	void *callback_context;
-	/**< populated and managed by the driver. dedicated buffer outside the interlayer buffer for
-	 * storing model output.
+	/*
+	 * populated and managed by the driver. dedicated buffers outside the interlayer buffer
+	 * for storing model outputs.
 	 */
 	int8_t *output_buffer;
 	/**< Indicates completion status of infernce. Use nrf_axon_nn_get_model_async_infer_status
@@ -341,9 +354,9 @@ typedef struct {
  * Model is ready to be inferred upon completion.
  * Called once per model at start-up.
  *
- * @param[out] the_model Allocated nrf_axon_nn_model_inference_wrapper_s instance in static
- *             (non-stack) memory that will be passed to inference functions.
- * @param[in] compiled_model Pointer to compiled model that will be bound to the_model.
+ * @param[out] model_wrapper Allocated @ref nrf_axon_nn_model_async_inference_wrapper_s instance
+ *             in static (non-stack) memory that will be passed to inference functions.
+ * @param[in] compiled_model Pointer to compiled model that will be bound to @p model_wrapper.
  * @retval 0 on success or a negative error code.
 */
 nrf_axon_result_e nrf_axon_nn_model_async_init(
@@ -371,8 +384,10 @@ nrf_axon_nn_async_inference_status_e nrf_axon_nn_get_model_async_infer_status(
  * so the results have to be copied by the driver to the output_buffer before invoking the
  * user callback.
  *
- * @param[in] model_wrapper Model to run inference on, initialized via a one-time call to nrf_axon_nn_model_async_init.
- * @param[in] input_vector Input to run inference on. It is not consumed immediately so has to be in memory that is valid as long as inference is occurring.
+ * @param[in] model_wrapper Model to run inference on, initialized via a one-time call to
+ *            nrf_axon_nn_model_async_init.
+ * @param[in] input_vector Input to run inference on. It is not consumed immediately so has to
+ *            be in memory that is valid as long as inference is occurring.
  * @param[in] output_buffer buffer to copy inference results to.
  * @param[in] inference_callback Function to invoke when inference has completed.
  * @param[in] callback_context Opaque pointer provided to inference_callback.
@@ -387,6 +402,12 @@ nrf_axon_result_e nrf_axon_nn_model_infer_async(
 	void (*inference_callback)(nrf_axon_result_e result, void *callback_context),
 	void *callback_context);
 
+nrf_axon_result_e nrf_axon_nn_model_infer_async_multi_inputs(
+	nrf_axon_nn_model_async_inference_wrapper_s *model_wrapper,
+	const int8_t **input_vector_list,
+	int8_t *output_buffer,
+	void (*inference_callback)(nrf_axon_result_e result, void *callback_context),
+	void *callback_context);
 /**
  * @brief Gets the inference results for a classification model.
  *
@@ -397,7 +418,8 @@ nrf_axon_result_e nrf_axon_nn_model_infer_async(
  * @param[in] compiled_model Model to get results for.
  * @param[in] packed_output Location of model output. If NULL, output is looked for in the
  *            interlayer buffer. This is not safe in dynamic systems.
- * @param[out] label Text of the classification label (if labels were provided in the compiled model).
+ * @param[out] label Text of the classification label (if labels were provided in the
+ *            compiled model).
  * @param[out] score Score of the highest scoring classification.
  * @retval Index of highest scoring classification.
  */
@@ -420,13 +442,12 @@ int16_t nrf_axon_nn_get_classification(
  * occurring or will occur (ie, a simple one model system).
  *
  * @param[in] compiled_model model to copy input for.
- * @param[in] input_vector vector to copy
+ * @param[in] input_vector_list list of vectors to copy to each input.
  * @retval 0 on success, or a negative error code. Note: errors due to multiple users of axon are
  *         not detected.
  */
-nrf_axon_result_e nrf_axon_nn_populate_input_vector(
-	const nrf_axon_nn_compiled_model_s *compiled_model,
-	const int8_t *input_vector);
+nrf_axon_result_e nrf_axon_nn_populate_input_vectors(
+	const nrf_axon_nn_compiled_model_s *compiled_model);
 
 /**
  * @brief Returns the offset into the packed output buffer filled for the start of a particular
@@ -447,7 +468,7 @@ int nrf_axon_nn_offset_to_output_ndx(
 
 /**
  * @brief Copies and packs the model inference output from the common interlayer buffer to the
- *        users dedicated buffer to_buffer.
+ *        user's dedicated buffer to_buffer.
  *
  * It is not recommended for users to invoke this function directly. The inference APIs handle
  * copying the output results in a safe manner that do not risk corrupting the current or future
@@ -457,13 +478,11 @@ int nrf_axon_nn_offset_to_output_ndx(
  * caller knows a-priori that no other inferences are occurring or will occur (ie, a simple one
  * model system).
  * @param[in] compiled_model model that just completed inference to copy output from.
- * @param[out] to_buffer allocated buffer to copy output to. Must be sized to store all the outputs
- *             in the model, with each output starting on the next 32bit boundary after the prior
- *             one.
+ * @param[out] to_buffer List of ptrs that corresponds to each of the outputs.
 */
 void nrf_axon_nn_copy_output_to_packed_buffer(
 	const nrf_axon_nn_compiled_model_s *compiled_model,
-	void *to_buffer);
+	int8_t *to_buffer);
 
 #ifdef __cplusplus
 } /* extern "C" { */

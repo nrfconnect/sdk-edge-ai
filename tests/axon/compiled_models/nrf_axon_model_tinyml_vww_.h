@@ -1,16 +1,18 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_vww
- * Axon Neural Network Compiler Version: 1.5.0
+ * Axon Neural Network Compiler Version: 2.0.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <stdalign.h>
+#include "drivers/axon/nrf_axon_nn_infer.h"
 
 #define NRF_AXON_MODEL_TINYML_VWW_MAX_IL_BUFFER_USED 46080
 #define NRF_AXON_MODEL_TINYML_VWW_MAX_PSUM_BUFFER_USED 0
 static_assert(NRF_AXON_MODEL_TINYML_VWW_MAX_IL_BUFFER_USED <= (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
-static_assert(NRF_AXON_VERSION >= 0x00010200, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
+static_assert(NRF_AXON_VERSION >= 0x00010501, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
 
 const char* labels_tinyml_vww[] = {
 "NON_PERSON",
@@ -85,9 +87,10 @@ extern const int8_t axonpro_int8_packing_filter[4];
 
 extern nrf_axon_result_e nrf_axon_nn_op_extension_softmax(void* , uint16_t , void* );
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww[12836] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww[12839] = {
 // segment 0,length 12825,Axon NN
-0x1fff3219,
+0x1fff3219,0x0000321c,
 0x16000080,0x00150060,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x03f30060,0x00002400,0x00030003,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_vww.l00_filters,0x00330002,0x00000009,0x000a0030,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x000a0030,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x6c00),0x00030030,0x00000000,0x00000001,0x0000ff80,0x000020ee,0x00000000,0x02020000,0x00000000,0x00000005,0x00001301,
 0x01000180,0x00000003,0x00000000,
 0x010001a4,0x00000000,0x000049f0,
@@ -4415,44 +4418,63 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_vww[12836] = {
 0x010001a8,0x00005868,0x00000000,
 0x020001c8,0x80000000,0x00000000,0x7fffffff,
 0x000000f0,0x00000100,
+0x0000000,
 // segment 1,length 9,CPU(software)
-0x2fff0009,
+0x2fff0009,0x0000000c,
 0x00000001,
 (NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_softmax,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x500),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x40000000,0x00010001,0x00020002,0x00000004,
 };
+#define NRF_AXON_MODEL_TINYML_VWW_INPUT_VECTOR_CNT 1
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_vww_input_vector_list[NRF_AXON_MODEL_TINYML_VWW_INPUT_VECTOR_CNT];
+const nrf_axon_nn_compiled_model_input_s tinyml_vww_inputs[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 96,
+      .width = 96,
+      .channel_cnt = 3,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .quant_mult = 133693432,
+    .node_id = -1,
+    .stride = 96,
+    .quant_round = 19,
+    .quant_zp = -128,
+  }, /* 0 */
+}; /* inputs */
+
 #define NRF_AXON_MODEL_TINYML_VWW_PACKED_OUTPUT_SIZE 8
 
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-NRF_AXON_MODEL_APP_STORAGE uint32_t axon_model_tinyml_vww_packed_output_buf[NRF_AXON_MODEL_TINYML_VWW_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
+NRF_AXON_MODEL_APP_STORAGE uint32_t tinyml_vww_packed_output_buf[NRF_AXON_MODEL_TINYML_VWW_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
+const nrf_axon_compiled_model_output_s tinyml_vww_outputs[] = {
+  {
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .packed_buffer_offset = 0,
+    .packed_size = 8,
+    .dimensions = {
+      .height = 1,
+      .width = 2,
+      .channel_cnt = 1,
+      .batch_cnt = 1,
+      .byte_width = 4,
+    },
+    .dequant_mult = 0,
+    .node_id = 0,
+    .dequant_round = 0,
+    .dequant_zp = 0,
+    .stride = 8,
+  },
+};
 const nrf_axon_nn_compiled_model_s model_tinyml_vww = {
-    .compiler_version = 0x00010500,
+    .compiler_version = 0x00020000,
     .model_name = "tinyml_vww",
     .labels = labels_tinyml_vww,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 96,
-          .width = 96,
-          .channel_cnt = 3,
-          .byte_width = 1,
-        },
-        .quant_mult = 133693432,
-        .stride = 96,
-        .quant_round = 19,
-        .quant_zp = -128,
-        .is_external = true,
-      }, // 0
-    }, // inputs
+    .inputs = tinyml_vww_inputs,
+    .input_vector_list = tinyml_vww_input_vector_list,
     .input_cnt = 1,
-    .external_input_ndx = 0,
-    .output_ptr = (int8_t*)nrf_axon_interlayer_buffer,
-#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-    .packed_output_buf = (int8_t*)axon_model_tinyml_vww_packed_output_buf,
-#else
-    .packed_output_buf = NULL,
-#endif
 
     .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_VWW_MAX_IL_BUFFER_USED,
     .psum_buffer_needed = NRF_AXON_MODEL_TINYML_VWW_MAX_PSUM_BUFFER_USED,
@@ -4460,25 +4482,17 @@ const nrf_axon_nn_compiled_model_s model_tinyml_vww = {
 
     .model_const_ptr = &axon_model_const_tinyml_vww,
     .model_const_size = sizeof(axon_model_const_tinyml_vww),
-    .cmd_buffer_len = 12836,
+    .cmd_buffer_len = 12839,
     .persistent_vars = {
       .count = 0,
     },
-
-    .output_dimensions = {
-      .height = 1,
-      .width = 2,
-      .channel_cnt = 1,
-      .byte_width = 4,
-    },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 8,
+    .output_cnt = 1,
+    .outputs = tinyml_vww_outputs,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_vww_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = false,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-    .min_driver_version_required = 0x00010200,
 };
 #ifdef __cplusplus
 }

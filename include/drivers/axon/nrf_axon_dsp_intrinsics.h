@@ -21,11 +21,12 @@ extern "C" {
 #include <stdbool.h>
 #include "nrf_axon_driver.h"
 
+#define NRF_AXON_DSP_VECTOR_MULTPLE (4)
+
 /**
  * @brief Many Axon dsp intrinsic functions require vector lengths to be a multiple of 4.
  * Use this macro to round a number up to the next multiple of 4.
  */
-#define NRF_AXON_DSP_VECTOR_MULTPLE (4)
 #define NRF_AXON_DSP_VECTOR_LENGTH_CEIL(vector_length) (NRF_AXON_DSP_VECTOR_MULTPLE * \
 	(((vector_length)+NRF_AXON_DSP_VECTOR_MULTPLE-1)/NRF_AXON_DSP_VECTOR_MULTPLE))
 
@@ -50,9 +51,9 @@ typedef enum {
  * @param length_log2 number of complex numbers log2.
  * @param half_output true if only the 1st half of the fft output should be written (ie, below
  *        nyquist frequency)
- * @param round_by_length_log2 if true, the output will be rounded by length_log2 bits. This prevents
- *        internal saturation when the input uses its full 24bits.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param round_by_length_log2 if true, the output will be rounded by length_log2 bits.
+ *        This prevents internal saturation when the input uses its full 24bits.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -82,14 +83,14 @@ nrf_axon_result_e nrf_axon_fft_24(
  * @param half_output true if only the 1st half of the fft output should be written (ie, below
  *        nyquist frequency)
  * @param rounding_bits Any additional rounding that should be performed on the output.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
  *        Set to false if axon will not be used immediately after to free axon for other users
  *        and/or power down if idle.
  * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
-*/
+ */
 nrf_axon_result_e nrf_axon_fft_power_24(
 	const int32_t *in_ptr,
 	int32_t *out_ptr,
@@ -115,7 +116,7 @@ nrf_axon_result_e nrf_axon_fft_power_24(
  * @param filter_length length of the filter (in elements). Must be a at least 12, a multiple of 4
  *        and the last coefficient must be 0. 0 pad as necessary to meet these requirements.
  * @param rounding_bits number of bits to round the output by.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -149,13 +150,13 @@ nrf_axon_result_e nrf_axon_fir_24_24_24(
  * @param filter_length length of the filter (in elements). Must be a at least 12, a multiple of 4
  *        and the last coefficient must be 0. 0 pad as necessary to meet these requirements.
  * @param rounding_bits number of bits to round the output by.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
  *        Set to false if axon will not be used immediately after to free axon for other users
  *        and/or power down if idle.
-*
+ *
  * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
  */
 nrf_axon_result_e nrf_axon_fir_24_16_24(
@@ -176,7 +177,7 @@ nrf_axon_result_e nrf_axon_fir_24_16_24(
  * @param length length of the input (in elements). Must be a multiple of 2, at least 4, and
  *        maximum of 512.
  *        overlap/overwrite input.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -203,7 +204,7 @@ nrf_axon_result_e nrf_axon_sqrt_24(
  *        Output can overlap/overwrite input.
  * @param length length of the input/output (in elements). Must be a multiple of 2, at least 2, and
  *        maximum of 512.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -232,7 +233,7 @@ nrf_axon_result_e nrf_axon_logn_11p12(
  *        Output can overlap/overwrite input.
  * @param length length of the input/output (in elements). Must be a multiple of 2, at least 2, and
  *        maximum of 512.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -259,7 +260,7 @@ nrf_axon_result_e nrf_axon_exp_11p12(
  * @param length  Number of elements in the vectors (data samples). Must be a multiple of 2, at
  *        least 4, and no greater than 512. Does not include the stride.
  * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 31.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -289,7 +290,7 @@ nrf_axon_result_e nrf_axon_xspys_24_24_24(
  *        least 4, and no greater than 512. Does not include the stride.
  * @param rounding_bits  Number of bits to round after summing the squares. 0 => no rounding,
  *        maximum of 31.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -320,7 +321,7 @@ nrf_axon_result_e nrf_axon_abs_24_24_24(
  * @param length  Number of elements in the vectors (data samples). Must be a multiple of 2, at
  *        least 4, and no greater than 512. Does not include the stride.
  * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 31.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -350,7 +351,7 @@ nrf_axon_result_e nrf_axon_xspys_24_24_24_input_stride2(
  * @param length  Number of elements in the vectors (data samples). Must be a multiple of 2, at
  *        least 4, and no greater than 512. Does not include the stride.
  * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 31.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -379,7 +380,7 @@ nrf_axon_result_e nrf_axon_xsmys_24_24_24(
  * @param length  Number of elements in the vectors (data samples). Must be a multiple of 2, at
  *        least 4, and no greater than 512. Does not include the stride.
  * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 31.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -408,13 +409,13 @@ nrf_axon_result_e nrf_axon_xty_24_24_24(
  * @param length  Number of elements in the vectors (data samples). Must be a multiple of 2, at
  *        least 4, and no greater than 512. Does not include the stride.
  * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 31.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
  *        Set to false if axon will not be used immediately after to free axon for other users
  *        and/or power down if idle.
-*
+ *
  * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
  */
 nrf_axon_result_e nrf_axon_xpy_24_24_24(
@@ -462,7 +463,7 @@ nrf_axon_result_e nrf_axon_xmy_24_24_24(
  * @param x_ptr x vector input. 24bit integers unpacked.
  * @param a_scalar Pointer to "a" scalar value. 24bit integers unpacked.
  * @param b_scalar Pointer to "b" scalar value. 24bit integers unpacked.
- * @param out_ptr output vector. 24bit integers unpacked, no extra stride, and rounded by
+ * @param output output vector. 24bit integers unpacked, no extra stride, and rounded by
  *        rounding_bits. output can overlap either or both inputs.
  * @param length  Number of elements in the vectors (data samples). Must be a multiple of 2, at
  *        least 4, and no greater than 512. Does not include the stride.
@@ -496,14 +497,14 @@ nrf_axon_result_e nrf_axon_axpb_24_24(
  * @param x_ptr x vector input. 8bit integers.
  * @param a_scalar "a" scalar value to multiply with input , 32bit integer.
  * @param b_scalar "b" scalar value to add to input, 32bit integer.
- * @param out_ptr output vector. 16bit integers, no extra stride, and rounded by
+ * @param output output vector. 16bit integers, no extra stride, and rounded by
  *        rounding_bits. output can overlap input.
  * @param height  Height of the input/output in rows. Should be less than width for optimal
  *        performance.
  * @param width  Width of the input/output in elements. Should be greater than height for
  *        optimal performance. If not a muultiple of 2, output width will be 0 padded rounded
  *        to the next multiple of 2. Maximum 1024.
- * @param bool input_is_packed if true, input has no padding between rows. if false,
+ * @param input_is_packed if true, input has no padding between rows. if false,
  *        input rows start on 32bit boundaries (n/a when width is a multiple of 4)
  * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 32.
  * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
@@ -536,14 +537,14 @@ nrf_axon_result_e nrf_axon_axpb_2d_8_16(
  * @param x_ptr x vector input. 16bit integers.
  * @param a_scalar "a" scalar value to multiply with input , 32bit integer.
  * @param b_scalar "b" scalar value to add to input, 32bit integer.
- * @param out_ptr output vector. 16bit integers unpacked, no extra stride, and rounded by
+ * @param output output vector. 16bit integers unpacked, no extra stride, and rounded by
  *        rounding_bits. output can overlap either or both inputs.
  * @param height  Height of the input/output in rows. Should be less than width for optimal
  *        performance.
  * @param width  Width of the input/output in elements. Should be greater than height for
  *        optimal performance. If not a muultiple of 2, output width will be 0 padded rounded
  *        to the next multiple of 2. Maximum 512.
- * @param bool input_is_packed if true, input has no padding between rows. if false,
+ * @param input_is_packed if true, input has no padding between rows. if false,
  *        input rows start on 32bit boundaries (n/a when width is a multiple of 2)
  * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 31.
  * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
@@ -668,6 +669,12 @@ nrf_axon_result_e nrf_axon_mar_24_24_32(
  * @param length  Number of elements in the vectors (data samples). Must be a multiple of 4, at
  *        least 8, and no greater than 512.
  * @param rounding_bits  Number of bits to round the output by. 0 => no rounding, maximum of 31.
+ * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param keep_reservation set to true if there are subsequent axon operations to execute
+ *        immediately on completion. true prevents axon from be taken by another user and/or
+ *        being powered off.
+ *        Set to false if axon will not be used immediately after to free axon for other users
+ *        and/or power down if idle.
  *
  * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
  */
@@ -1125,7 +1132,7 @@ nrf_axon_result_e nrf_axon_l2norm_16_24(
  * @param x_ptr x vector input. 16bit integers packed.
  * @param y_ptr y vector input. 16bit integers packed.
  * @param out_ptr location to place output. Can safely overlap either input
- * @param length number of of elements in the input vectors. Maximum value is 512.
+ * @param length number of elements in the input vectors. Maximum value is 512.
  * @param rounding_bits number of bits to round the output by.
  * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
@@ -1161,7 +1168,7 @@ nrf_axon_result_e nrf_axon_xty_16_16_32(
  * @param x_ptr x vector input. 16bit integers packed.
  * @param y_ptr y vector input. 16bit integers packed.
  * @param out_ptr location to place output. Can safely overlap either input
- * @param length number of of elements in the input vectors. Maximum value is 512.
+ * @param length number of elements in the input vectors. Maximum value is 512.
  * @param rounding_bits number of bits to round the output by.
  * @param output_extra_stride number of gap words between each output.
  * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
@@ -1194,8 +1201,7 @@ nrf_axon_result_e nrf_axon_xty_16_16_32_output_stride(
  * is preferred for better performance.
  * @param set_val int16 signed extended to 32bits to set the memory to.
  * @param out_ptr location to place output. Can safely overlap either input
- * @param length number of of elements in the input vectors. Maximum value is 512.
- * @param rounding_bits number of bits to round the output by.
+ * @param length number of elements in the input vectors. Maximum value is 512.
  * @param output_extra_stride number of gap words between each output.
  * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
@@ -1219,8 +1225,8 @@ nrf_axon_result_e nrf_axon_memset_32_output_stride(
  * Used to convert 32bit output into 24bit input needed by many axon dsp operations.
  * @param x_ptr x vector input. 16bit integers packed.
  * @param out_ptr location to place output. Can safely overlap either input
- * @param length number of of elements in the input vector.
- * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param length number of elements in the input vector.
+ * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or
  *        being powered off.
@@ -1243,6 +1249,13 @@ nrf_axon_result_e nrf_axon_saturate_32_24(
  *        Must be sized to a multiple of 4 bytes.
  * @param length number of elements to saturate. If not a multiple of 4, the remaining padding
  *        bytes up to a multiple of 4 will be undefined.
+ * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
+ * @param keep_reservation set to true if there are subsequent axon operations to execute
+ *        immediately on completion. true prevents axon from be taken by another user and/or
+ *        being powered off.
+ *        Set to false if axon will not be used immediately after to free axon for other users
+ *        and/or power down if idle.
+ * @return kAxonResultSuccess on success or a negative error code (see nrf_axon_result_e)
  */
 nrf_axon_result_e nrf_axon_saturate_32_8(
 	const int32_t *in_ptr,
@@ -1277,7 +1290,7 @@ nrf_axon_result_e nrf_axon_saturate_32_8(
  * @param filter_height height of the filter shape (in elements). Minimum 4, maximum 256,
  *        input_height * decimation_width <= 512
  *        input_height >= filter_height.
- * @param decimation_width combined decimation factor and input/filter width.
+ * @param decimate_width combined decimation factor and input/filter width.
  *        minimum 2, maximum 16.
  * @param rounding_bits number of bits to round the output by.
  * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
@@ -1325,7 +1338,7 @@ nrf_axon_result_e nrf_axon_fir_2d_16_16_32_decimate(
  * @param filter_height height of the filter shape (in elements). Minimum 2, maximum 16,
  *        input_height * decimation_width <= 512
  *        input_height >= filter_height.
- * @param decimation_width combined decimation factor and input/filter width.
+ * @param decimate_width combined decimation factor and input/filter width.
  *        minimum 2, maximum 16.
  * @param rounding_bits number of bits to round the output by.
  * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
@@ -1490,7 +1503,7 @@ nrf_axon_result_e nrf_axon_fir_16_16_32_1024_256_decimate_4(
  * @param filter_height height of the filter shape (in elements). Minimum 2, maximum 16,
  *        input_height * decimation_width <= 512
  *        input_height >= filter_height.
- * @param decimation_width combined decimation factor and input/filter width.
+ * @param decimate_width combined decimation factor and input/filter width.
  *        minimum 2, maximum 16.
  * @param rounding_bits number of bits to round the output by.
  * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
@@ -1541,7 +1554,7 @@ nrf_axon_result_e nrf_axon_fir_cplx_2d_16_16_24_decimate(
  * @param filter_height height of the filter shape (in elements). Minimum 2, maximum 16,
  *        input_height * decimation_width <= 512
  *        input_height >= filter_height.
- * @param decimation_width combined decimation factor and input/filter width.
+ * @param decimate_width combined decimation factor and input/filter width.
  *        minimum 2, maximum 16.
  * @param rounding_bits number of bits to round the output by.
  * @param block_mode recommnended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
@@ -1577,7 +1590,7 @@ nrf_axon_result_e nrf_axon_fir_cplx_2d_16_16_32_decimate(
  *        input_height * decimation_width <= 512
  *        input_height >= filter_height.
  * @param width width of the input shape. If not a multiple of 4 padding bytes will be
- *        placeced at the end of each output row.
+ *        placed at the end of each output row.
  * @param block_mode recommended to be set to NRF_AXON_SYNC_MODE_BLOCKING_POLLING.
  * @param keep_reservation set to true if there are subsequent axon operations to execute
  *        immediately on completion. true prevents axon from be taken by another user and/or

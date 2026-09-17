@@ -215,6 +215,7 @@ class CpuSoftmax(CpuExtension):
             (len(bin(int(max(abs(op_max), abs(op_min))))) - 2)
         previous_operator_object.SetScaleshiftMaxRange(scaleshift_max_range)
         previous_operator_object.SetOpBitwidth(np.int32)
+        previous_operator_object.SetLayerOutputRadix(12) #setting the output layer radix
         return 0
 
 

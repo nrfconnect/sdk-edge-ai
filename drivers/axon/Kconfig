@@ -39,5 +39,5 @@ config NRF_AXON_PSUM_BUFFER_SIZE
 	  partial sum buffer. See the model header file for the size needed.
 
 config NRF_AXON_MODEL_NAME
-	string "Name of the model to use in axon/test/inference."
+	string "Name of the model to use in tests/axon/inference."
 	depends on NRF_AXON

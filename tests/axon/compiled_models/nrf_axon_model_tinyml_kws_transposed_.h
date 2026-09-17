@@ -1,16 +1,18 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_kws_transposed
- * Axon Neural Network Compiler Version: 1.5.0
+ * Axon Neural Network Compiler Version: 2.0.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <stdalign.h>
+#include "drivers/axon/nrf_axon_nn_infer.h"
 
 #define NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_MAX_IL_BUFFER_USED 9708
 #define NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_MAX_PSUM_BUFFER_USED 0
 static_assert(NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_MAX_IL_BUFFER_USED <= (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
-static_assert(NRF_AXON_VERSION >= 0x00010200, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
+static_assert(NRF_AXON_VERSION >= 0x00010501, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
 
 const char* labels_tinyml_kws_transposed[] = {
 "DOWN",
@@ -59,9 +61,10 @@ extern const int8_t axonpro_int8_packing_filter[4];
 
 extern nrf_axon_result_e nrf_axon_nn_op_extension_softmax(void* , uint16_t , void* );
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed[2818] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed[2821] = {
 // segment 0,length 2807,Axon NN
-0x1fff0af7,
+0x1fff0af7,0x00000afa,
 0x10000080,0x000a0031,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x06c30031,0x00040000,0x0004000a,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_kws_transposed.l00_filters,0x00630040,0x00000028,0x00000000,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00050019,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x1ec),0x0003001c,0x0000008c,0x01010405,0x0000fffd,
 0x030000c8,0x00010000,0x02020000,0x03010000,0x00011703,
 0x01000180,0x00000003,0x00000000,
@@ -984,44 +987,63 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_kws_transposed[
 0x010001a8,0x00007496,0x00000000,
 0x020001c8,0x80000000,0x00000000,0x7fffffff,
 0x000000f0,0x00000100,
+0x0000000,
 // segment 1,length 9,CPU(software)
-0x2fff0009,
+0x2fff0009,0x0000000c,
 0x00000001,
 (NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_softmax,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x40000000,0x00010001,0x0002000c,0x00000004,
 };
+#define NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_INPUT_VECTOR_CNT 1
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_kws_transposed_input_vector_list[NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_INPUT_VECTOR_CNT];
+const nrf_axon_nn_compiled_model_input_s tinyml_kws_transposed_inputs[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 10,
+      .width = 49,
+      .channel_cnt = 1,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .quant_mult = 592986,
+    .node_id = -1,
+    .stride = 49,
+    .quant_round = 19,
+    .quant_zp = -3,
+  }, /* 0 */
+}; /* inputs */
+
 #define NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_PACKED_OUTPUT_SIZE 48
 
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-NRF_AXON_MODEL_APP_STORAGE uint32_t axon_model_tinyml_kws_transposed_packed_output_buf[NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
+NRF_AXON_MODEL_APP_STORAGE uint32_t tinyml_kws_transposed_packed_output_buf[NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
+const nrf_axon_compiled_model_output_s tinyml_kws_transposed_outputs[] = {
+  {
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .packed_buffer_offset = 0,
+    .packed_size = 48,
+    .dimensions = {
+      .height = 1,
+      .width = 12,
+      .channel_cnt = 1,
+      .batch_cnt = 1,
+      .byte_width = 4,
+    },
+    .dequant_mult = 0,
+    .node_id = 0,
+    .dequant_round = 0,
+    .dequant_zp = 0,
+    .stride = 48,
+  },
+};
 const nrf_axon_nn_compiled_model_s model_tinyml_kws_transposed = {
-    .compiler_version = 0x00010500,
+    .compiler_version = 0x00020000,
     .model_name = "tinyml_kws_transposed",
     .labels = labels_tinyml_kws_transposed,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 10,
-          .width = 49,
-          .channel_cnt = 1,
-          .byte_width = 1,
-        },
-        .quant_mult = 592986,
-        .stride = 49,
-        .quant_round = 19,
-        .quant_zp = -3,
-        .is_external = true,
-      }, // 0
-    }, // inputs
+    .inputs = tinyml_kws_transposed_inputs,
+    .input_vector_list = tinyml_kws_transposed_input_vector_list,
     .input_cnt = 1,
-    .external_input_ndx = 0,
-    .output_ptr = (int8_t*)nrf_axon_interlayer_buffer,
-#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-    .packed_output_buf = (int8_t*)axon_model_tinyml_kws_transposed_packed_output_buf,
-#else
-    .packed_output_buf = NULL,
-#endif
 
     .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_MAX_IL_BUFFER_USED,
     .psum_buffer_needed = NRF_AXON_MODEL_TINYML_KWS_TRANSPOSED_MAX_PSUM_BUFFER_USED,
@@ -1029,25 +1051,17 @@ const nrf_axon_nn_compiled_model_s model_tinyml_kws_transposed = {
 
     .model_const_ptr = &axon_model_const_tinyml_kws_transposed,
     .model_const_size = sizeof(axon_model_const_tinyml_kws_transposed),
-    .cmd_buffer_len = 2818,
+    .cmd_buffer_len = 2821,
     .persistent_vars = {
       .count = 0,
     },
-
-    .output_dimensions = {
-      .height = 1,
-      .width = 12,
-      .channel_cnt = 1,
-      .byte_width = 4,
-    },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 48,
+    .output_cnt = 1,
+    .outputs = tinyml_kws_transposed_outputs,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_kws_transposed_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = false,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-    .min_driver_version_required = 0x00010200,
 };
 #ifdef __cplusplus
 }
