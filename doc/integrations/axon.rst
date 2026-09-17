@@ -66,16 +66,16 @@ Power Management
 ================
 
 The Axon NPU is automatically put in a low power state when not in use.
-You do not need to complete any additional power management steps. 
+You do not need to complete any additional power management steps.
 
 Other System Resources
 ======================
 
-The Axon NPU driver executes both in the caller's thread and in a workqueue. 
+The Axon NPU driver executes both in the caller's thread and in a workqueue.
 Jobs are initiated in the caller's thread, interrupts are processed in the workqueue, and in synchornous mode, job completion is signaled with a semaphore.
 In asynchronous mode, your callback is invoked on job completion; you are responsible for signaling your own thread.
-A mutex is used to serialize access to the Axon NPU hardware. 
-The workqueue, interrupt, semaphore, and mutex are all initialized by the function ``nrf_axon_platform_init``, which is called once at start up. 
+A mutex is used to serialize access to the Axon NPU hardware.
+The workqueue, interrupt, semaphore, and mutex are all initialized by the function ``nrf_axon_platform_init``, which is called once at start up.
 The initialization process is described in the following sections.
 
 Integration steps
@@ -179,10 +179,11 @@ Follow these steps to execute inference with a compiled Axon model:
 
       input_vector[input_channel_cnt][input_height][input_width]
 
-   The input to populate externally is identified by
-   ``nrf_axon_model_<model_name>.external_input_ndx``.
+   Populate all entries in ``model_<model_name>.inputs[]`` array.
+   You must map each data source to the correct input.
+   As of Axon 2.0.0, a model can have only one input and future releases will support multiple inputs per model.
 
-   The input element size is defined by ``inputs[external_input_ndx].byte_width``:
+   For each input index ``input_ndx``, the input element size is defined by ``inputs[input_ndx].byte_width``:
 
    * ``1`` for ``int8``
    * ``2`` for ``int16``
@@ -192,23 +193,22 @@ Follow these steps to execute inference with a compiled Axon model:
       The data ordering in Axon NPU input and output buffers differs from TFLite.
       Axon NPU stores data with channels being the outermost dimension, while TFLite stores data with channels as the innermost dimension.
 
-#. Prepare an output buffer outside of the interlayer buffer, sized to hold the packed output::
+#. Prepare an output buffer outside of the interlayer buffer, sized to hold the entire packed output.
+   For models with multiple outputs, the buffer must be sized to store all the outputs, with all but the last output size rounded up to a multiple of 4.
+   The preprocessor macro ``NRF_AXON_MODEL_<model_name>_PACKED_OUTPUT_SIZE`` provides this size in bytes.
+   The combined output buffer must be 32-bit aligned to support outputs of type ``int32`` and ``int16``.
 
-      output_buffer[output_channel_cnt][output_height][output_width]
-
-   Output dimension information is available in
-   ``nrf_axon_model_<model_name>.output_dimensions``.
-   The output rank ordering is channels, height, width.
-
-   The model also declares an internal output buffer in
-   ``nrf_axon_model_<model_name>.packed_output_buf``.
-
-   To allocate and use this buffer, define the following macro before including the model header file
+   The model header can also allocate an internal output buffer.
+   You must still pass it as the output_buffer argument of the inference call.
+   To allocate this buffer, define the following macro before including the model header file:
 
    .. code-block:: c
 
       #define NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER 1
       #include "nrf_axon_model_<model_name>_.h"
+
+   A pointer to this buffer is stored in the ``model_<model_name>::packed_output_buf`` field.
+   This reference is ``NULL`` if the preprocessor macro ``NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER`` has not been set to 1.
 
 #. Submit the inference request using the appropriate API for the selected execution mode.
 
@@ -238,7 +238,10 @@ Follow these steps to execute inference with a compiled Axon model:
          #. Observe that when the registered completion callback is invoked, the ``output_buffer`` is populated with the inference results.
 
    In both modes, the driver fills and drains the interlayer buffer in a thread‑safe manner.
-   The dimensions of the output tensor are provided in the ``nrf_axon_model_<model_name>.output_dimensions`` field, and the output data is ordered in channels, height, width format.
+
+   The offset (in bytes) to each output's data in the packed output buffer is stored in the field ``model_<model_name>.outputs[output_ndx].packed_buffer_offset``.
+
+   The dimensions of the output tensors are provided in the ``nrf_axon_model_<model_name>.outputs[].dimensions`` field, and the output data is ordered in channels, height, width format.
    This ordering differs from TensorFlow Lite, which uses height, width, channels.
 
 Optional variations
@@ -267,7 +270,7 @@ To provide input data directly to the model buffer, complete the following steps
     .. code-block:: c
 
       const nrf_axon_nn_compiled_model_input_info_s *model_input =
-          nrf_axon_nn_model_1st_external_input(&nrf_axon_model_<model_name>);
+          &nrf_axon_model_<model_name>.inputs[0];
 
 #. Copy the input data to the model input address.
 
@@ -304,7 +307,7 @@ Ensure you have completed the following:
 #. Updated the following Kconfig values in the application's :file:`prj.conf` file:
 
    * Enable the ``NRF_AXON`` Kconfig option.
-   * Set ``NRF_AXON_INTERLAYER_BUFFER_SIZE`` to the maximum value needed across all models in the application. 
+   * Set ``NRF_AXON_INTERLAYER_BUFFER_SIZE`` to the maximum value needed across all models in the application.
      This value is printed near the top of the compiled model header file.
 
 #. Initialized driver one time at start-up.

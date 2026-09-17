@@ -214,6 +214,10 @@ Elementwise operators
        | Maximum width extended to 2048 with version 1.4.0
      - Axon NPU
      - 1.0.0
+   * - Subtract
+     - Vector operation with broadcast on height and/or width
+     - Axon NPU
+     - 2.0.0
 
 Tensor manipulation operators
 =============================
@@ -267,11 +271,15 @@ Recurrent operators
        | Command buffer rolled up in v1.5.0, which significantly reduces model size
      - Axon NPU | CPU
      - 1.4.0
-   * - Unidirectional Sequence LSTM (unfused)
-     - | Experimental support as of v1.5.0
+   * - Unfused LSTM
+     - | Supported as of v2.0.0
        | Only the unrolled form is supported
      - Axon NPU | CPU
-     - 1.5.0
+     - 2.0.0
+   * - Unfused Gated Recurrent Unit (GRU)
+     - | Only the unrolled form is supported
+     - Axon NPU | CPU
+     - 2.0.0
 
 Model design recommendations
 ****************************
