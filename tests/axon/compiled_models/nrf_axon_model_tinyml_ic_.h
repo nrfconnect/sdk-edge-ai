@@ -1,16 +1,18 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_ic
- * Axon Neural Network Compiler Version: 1.5.0
+ * Axon Neural Network Compiler Version: 2.0.1
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <stdalign.h>
+#include "drivers/axon/nrf_axon_nn_infer.h"
 
 #define NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED 52224
 #define NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED 0
 static_assert(NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED <= (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
-static_assert(NRF_AXON_VERSION >= 0x00010200, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
+static_assert(NRF_AXON_VERSION >= 0x00010501, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
 
 const char* labels_tinyml_ic[] = {
 "AIRPLANE",
@@ -57,9 +59,10 @@ extern const int8_t axonpro_int8_packing_filter[4];
 
 extern nrf_axon_result_e nrf_axon_nn_op_extension_softmax(void* , uint16_t , void* );
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic[9670] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic[9673] = {
 // segment 0,length 9659,Axon NN
-0x1fff25bb,
+0x1fff25bb,0x000025be,
 0x16000080,0x00110020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x0c030020,0x00000400,0x00030003,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l00_filters,0x00330002,0x00000009,0x00100020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00100020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0xc00),0x00030020,0x00000000,0x01000101,0x0000ff80,0xfffffe34,0x00000000,0x01010000,0x00000000,0x00000005,0x00001301,
 0x01000180,0x00000003,0x00000000,
 0x010001a4,0x00000000,0x00004a0e,
@@ -3761,44 +3764,63 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic[9670] = {
 0x010001a8,0x0001fce4,0x00000000,
 0x020001c8,0x80000000,0x00000000,0x7fffffff,
 0x000000f0,0x00000100,
+0x0000000,
 // segment 1,length 9,CPU(software)
-0x2fff0009,
+0x2fff0009,0x0000000c,
 0x00000001,
 (NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_softmax,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x40000000,0x00010001,0x0002000a,0x00000004,
 };
+#define NRF_AXON_MODEL_TINYML_IC_INPUT_VECTOR_CNT 1
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list[NRF_AXON_MODEL_TINYML_IC_INPUT_VECTOR_CNT];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 32,
+      .width = 32,
+      .channel_cnt = 3,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .quant_mult = 524288,
+    .node_id = -1,
+    .stride = 32,
+    .quant_round = 19,
+    .quant_zp = -128,
+  }, /* 0 */
+}; /* inputs */
+
 #define NRF_AXON_MODEL_TINYML_IC_PACKED_OUTPUT_SIZE 40
 
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-NRF_AXON_MODEL_APP_STORAGE uint32_t axon_model_tinyml_ic_packed_output_buf[NRF_AXON_MODEL_TINYML_IC_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
+NRF_AXON_MODEL_APP_STORAGE uint32_t tinyml_ic_packed_output_buf[NRF_AXON_MODEL_TINYML_IC_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs[] = {
+  {
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .packed_buffer_offset = 0,
+    .packed_size = 40,
+    .dimensions = {
+      .height = 1,
+      .width = 10,
+      .channel_cnt = 1,
+      .batch_cnt = 1,
+      .byte_width = 4,
+    },
+    .dequant_mult = 536870912,
+    .node_id = 14,
+    .dequant_round = 29,
+    .dequant_zp = 0,
+    .stride = 40,
+  },
+};
 const nrf_axon_nn_compiled_model_s model_tinyml_ic = {
-    .compiler_version = 0x00010500,
+    .compiler_version = 0x00020001,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 32,
-          .width = 32,
-          .channel_cnt = 3,
-          .byte_width = 1,
-        },
-        .quant_mult = 524288,
-        .stride = 32,
-        .quant_round = 19,
-        .quant_zp = -128,
-        .is_external = true,
-      }, // 0
-    }, // inputs
+    .inputs = tinyml_ic_inputs,
+    .input_vector_list = tinyml_ic_input_vector_list,
     .input_cnt = 1,
-    .external_input_ndx = 0,
-    .output_ptr = (int8_t*)nrf_axon_interlayer_buffer,
-#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-    .packed_output_buf = (int8_t*)axon_model_tinyml_ic_packed_output_buf,
-#else
-    .packed_output_buf = NULL,
-#endif
 
     .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
     .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
@@ -3806,25 +3828,17 @@ const nrf_axon_nn_compiled_model_s model_tinyml_ic = {
 
     .model_const_ptr = &axon_model_const_tinyml_ic,
     .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 9670,
+    .cmd_buffer_len = 9673,
     .persistent_vars = {
       .count = 0,
     },
-
-    .output_dimensions = {
-      .height = 1,
-      .width = 10,
-      .channel_cnt = 1,
-      .byte_width = 4,
-    },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 40,
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = false,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-    .min_driver_version_required = 0x00010200,
 };
 #ifdef __cplusplus
 }

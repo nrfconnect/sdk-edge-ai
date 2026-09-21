@@ -109,7 +109,7 @@ def scale_error(data_, scaling_shift):
     Data_: Dataset before quantizing.
     Scaling_Shift : Number of the left shifts for quantizing float input.
     """
-    data_ += 1e-8  # to avoid divide by zero errors
+    data_ += 1e-32  # to avoid divide by zero errors
     scaling_shift = np.int32(scaling_shift)
     if bool(np.array(data_).any()):
         error = (((np.round(data_*(2**scaling_shift)) /
@@ -1762,7 +1762,7 @@ def get_unit_test_model_name(test_op_info_dict):
             model_name = model_name + \
                 f"_alpha_{float_to_str(test_op_info_dict['ALPHA'])}"
 
-    if OP_TYPE == "Multiply" or OP_TYPE == "Add":
+    if OP_TYPE in ["Add", "Multiply", "Subtract"]:
         if 'BROADCAST_AXIS' in test_op_info_dict:
             broadcast_axis_string = get_string_from_array_values(
                 test_op_info_dict['BROADCAST_AXIS'])
@@ -1783,12 +1783,16 @@ def get_unit_test_model_name(test_op_info_dict):
             model_name = model_name + \
                 f"_block_size_{block_size_string}"
 
-    if OP_TYPE == "Lstm" or OP_TYPE == "LstmV2":
+    if OP_TYPE in ["Lstm", "LstmV2", "Gru"]:
         if 'UNITS' in test_op_info_dict:
             units_string = get_string_from_array_values(
                 test_op_info_dict['UNITS'])
             model_name = model_name + \
                 f"_units_{units_string}"
+        return_sequence = test_op_info_dict.get("RETURN_SEQUENCES", False)
+        if return_sequence:
+            model_name = model_name + \
+                "_return_seq"
 
     return model_name.lower()
 

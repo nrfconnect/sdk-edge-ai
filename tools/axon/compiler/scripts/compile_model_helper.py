@@ -574,11 +574,11 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 ops_kernel_shape.height, ops_kernel_shape.width = ops_kernel_shape.width, ops_kernel_shape.height
                 ops_padding_details.pad_right, ops_padding_details.pad_bottom = ops_padding_details.pad_bottom, ops_padding_details.pad_right
                 ops_padding_details.pad_top, ops_padding_details.pad_left = ops_padding_details.pad_left, ops_padding_details.pad_top
-            if (op_name == "UNIDIRECTIONAL_SEQUENCE_LSTM"):
-                # LSTM dimensions: channel_cnt = batch, height = time_steps, width = input features/ output units
-                ops_ip_shape.height, ops_op_shape.height = ops_ip_shape.width, ops_op_shape.width
-                ops_ip_shape.width, ops_op_shape.width = ops_ip_shape.depth, ops_op_shape.depth
-                ops_ip_shape.depth, ops_op_shape.depth = ops_ip_shape.batch, ops_op_shape.batch
+            # if (op_name == "UNIDIRECTIONAL_SEQUENCE_LSTM"):
+            #     # LSTM dimensions: channel_cnt = batch, height = time_steps, width = input features/ output units
+            #     ops_ip_shape.height, ops_op_shape.height = ops_ip_shape.width, ops_op_shape.width
+            #     ops_ip_shape.width, ops_op_shape.width = ops_ip_shape.depth, ops_op_shape.depth
+            #     ops_ip_shape.depth, ops_op_shape.depth = ops_ip_shape.batch, ops_op_shape.batch
 
             # fill up the models struct here
             """
@@ -626,13 +626,15 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].byte_width = input_datatype_enum.value
                     model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx} = {model_descriptor_layer_struct[0].input_ids[input_idx]}, "
                     model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_{shape_text} = {model_descriptor_layer_struct[0].input_dimensions[input_idx].channel_cnt, model_descriptor_layer_struct[0].input_dimensions[input_idx].height, model_descriptor_layer_struct[0].input_dimensions[input_idx].width, model_descriptor_layer_struct[0].input_dimensions[input_idx].byte_width}, "
-                    if new_op['axon_ip_axis_offset'] is not None:
+                    if new_op['axon_ip_axis_offset'] and new_op['axon_ip_ops'][input_idx] in new_op['axon_ip_axis_offset']:
                         model_descriptor_layer_struct[0].input_split_offsets[
-                            input_idx].axis = operators_detail_graph[input_operator_index]['axon_ip_axis_offset'][0]
+                            # input_idx].axis = operators_detail_graph[input_operator_index]['axon_ip_axis_offset'][0]
+                            input_idx].axis = new_op['axon_ip_axis_offset'][new_op['axon_ip_ops'][input_idx]][0]
                         model_descriptor_layer_struct[0].input_split_offsets[
-                            input_idx].offset = operators_detail_graph[input_operator_index]['axon_ip_axis_offset'][1]
+                            # input_idx].offset = operators_detail_graph[input_operator_index]['axon_ip_axis_offset'][1]
+                            input_idx].offset = new_op['axon_ip_axis_offset'][new_op['axon_ip_ops'][input_idx]][1]
                         model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_ip_axis = {model_descriptor_layer_struct[0].input_split_offsets[input_idx].axis}, "
-                        model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_ip_offset = {model_descriptor_layer_struct[0].input_split_offsets[input_idx].axis}, "
+                        model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_{input_idx}_ip_offset = {model_descriptor_layer_struct[0].input_split_offsets[input_idx].offset}, "
                     else:
                         model_descriptor_layer_struct[0].input_split_offsets[input_idx].axis = 0
                         model_descriptor_layer_struct[0].input_split_offsets[input_idx].offset = 0
@@ -651,8 +653,10 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0 = {model_descriptor_layer_struct[0].input_ids[0]}, "
                 model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0_shapes_(C,H,W,DW) = {model_descriptor_layer_struct[0].input_dimensions[0].channel_cnt, model_descriptor_layer_struct[0].input_dimensions[0].height, model_descriptor_layer_struct[0].input_dimensions[0].width, model_descriptor_layer_struct[0].input_dimensions[0].byte_width}, "
                 if new_op['axon_ip_axis_offset'] is not None:
-                    model_descriptor_layer_struct[0].input_split_offsets[0].axis = new_op['axon_ip_axis_offset'][0]
-                    model_descriptor_layer_struct[0].input_split_offsets[0].offset = new_op['axon_ip_axis_offset'][1]
+                    model_descriptor_layer_struct[0].input_split_offsets[0].axis = new_op[
+                        'axon_ip_axis_offset'][new_op['axon_ip_ops'][0]][0]
+                    model_descriptor_layer_struct[0].input_split_offsets[0].offset = new_op[
+                        'axon_ip_axis_offset'][new_op['axon_ip_ops'][0]][1]
                     model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0_ip_axis = {model_descriptor_layer_struct[0].input_split_offsets[0].axis}, "
                     model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_id_0_ip_offset = {model_descriptor_layer_struct[0].input_split_offsets[0].offset}, "
                 else:
@@ -716,6 +720,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             #     tensor_details[new_op['op_tensors'][0]]['quantization'])
             layer_op_q = options.GetOpQuantizationParameters()
             layer_output_radix = options.GetLayerOutputRadix()
+            file_content += line_info + \
+                "_LAYER_OUTPUT_RADIX "+str(layer_output_radix)
             layer_op_scale, layer_op_zeropoint = layer_op_q['scales'], layer_op_q['zero_points']
             layer_op_scaleshift = util.optimized_ip_scaling_shift(
                 layer_op_scale, 8, 30, 31, op_zp=layer_op_zeropoint)[1]

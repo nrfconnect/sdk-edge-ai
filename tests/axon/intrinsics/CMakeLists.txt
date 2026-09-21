@@ -1,10 +1,5 @@
-#
-# Copyright (c) 2024, Nordic Semiconductor ASA. All Rights Reserved.
-#
-# The information contained herein is confidential property of Nordic Semiconductor ASA.
-# The use, copying, transfer or disclosure of such information is prohibited except by
-# express written agreement with Nordic Semiconductor ASA.
-#
+# SPDX-License-Identifier: Apache-2.0
+
 cmake_minimum_required(VERSION 3.20.0)
 
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)

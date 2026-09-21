@@ -16,11 +16,15 @@ extern uint8_t ML_LOGGING_DISABLE_PRINT;
 /**
  * @brief group of functions for printing vectors of different formats out the console.
  * The printed format is:
+ * @code
  * <type of vector_ptr> <name>[<count>]=\r\n
  * {<vector_ptr[0]>,<vector_ptr[1]>, <...>,<vector_ptr[count-1]>}\r\n
+ * @endcode
  * For example
+ * @code
  * int32_t my_int32_vector[10]=
  * {1,-1,3,0,7,-1000,-10,8,9,10}
+ * @endcode
  *
  * @param[in] name Symbol name of the vector.
  * @param[in] vector_ptr pointer to the vector to print.
@@ -54,6 +58,10 @@ void nrf_axon_print_int32_vector(const char *name, const int32_t *vector_ptr, ui
 void nrf_axon_print_int16_vector(const char *name, const int16_t *vector_ptr, uint32_t count, uint8_t stride);
 /**
  * @brief prints an int32 circular vector in decimal.
+ * @param[in] name Symbol name of the vector.
+ * @param[in] vector_ptr pointer to the vector to print.
+ * @param[in] count Number of elements in vector_ptr to print.
+ * @param[in] stride Number of elements to move by after each print.
  * @param[in] start_offset is the 1st element printed. Wraps to element 0 after count-start_offset
  */
 void nrf_axon_print_int16_circ_buffer(const char *name, const int16_t *vector_ptr, uint32_t count, uint8_t stride, uint32_t start_offset);
@@ -64,6 +72,9 @@ void nrf_axon_print_int8_vector(const char *name, const int8_t *vector_ptr, uint
 
 /**
  * @brief prints an vector in decimal.
+ * @param[in] name Symbol name of the vector.
+ * @param[in] vector_ptr pointer to the vector to print.
+ * @param[in] count Number of elements in vector_ptr to print.
  * @param[in] element_size determines the type of the input (4=int32, 2=int16, 1=int8)
  */
 void nrf_axon_print_vector(const char *name, const uint8_t *vector_ptr, uint32_t count, uint8_t element_size);
@@ -72,7 +83,9 @@ void nrf_axon_print_vector(const char *name, const uint8_t *vector_ptr, uint32_t
  * @brief Group of funcitons for comparing 2 vectors
  *
  * Prints a message in the format:
- * verify <msg>...
+ * @code
+ * verify msg...
+ * @endcode
  * Logs an error whenever abs(output[ndx] - expected_output[ndx]) > margin.
  *
  * @param[in] msg Initial message to display before starting the comparison.

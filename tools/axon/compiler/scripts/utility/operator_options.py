@@ -388,6 +388,16 @@ class OperatorOptions:
             raise KeyError(-920)
         return True
 
+    def find_constant_tensor_index(self, input_op_graph_info, op_graph_info):
+        constant_tensor_index = []
+        tensor_location = None
+        for ndx, ip_tensor_idx in enumerate(op_graph_info['ip_tensors']):
+            if ip_tensor_idx in input_op_graph_info['op_tensors']:
+                continue
+            constant_tensor_index.append(ip_tensor_idx)
+            tensor_location = ndx
+        return constant_tensor_index, tensor_location
+
     @classmethod
     def check_tensor_constraints(cls, tensor_type, tensor, constraints=default_tensor_constraints, transpose_check=False):
         error_text = ""
@@ -599,8 +609,8 @@ class OperatorOptions:
 
         min_error_ndx = np.argmin(self.scale_shifts)
         single_scaleshift = self.scale_shifts[min_error_ndx]
-        self.scale_multipliers = abs(
-            np.round(scale*2**single_scaleshift.astype(np.float32))).astype(np.int32)
+        self.scale_multipliers = np.round(
+            scale*2**single_scaleshift.astype(np.float32)).astype(np.int32)
         errors_ = util.scale_error(scale, single_scaleshift)
         min_error_ndx = np.argmax(errors_)
         self.scale_shifts = np.array([single_scaleshift], dtype=np.int8)
@@ -870,8 +880,6 @@ class OperatorOptions:
         array_name = info_string[9:]
         self.scale_multipliers = scale_q
         self.scale_shift = scale_shift
-        if (self.activation == "CustomPrepareSoftmax"):
-            scale_shift -= 12  # PrepareSoftmaxActivation generates a q.12 output
         if (scale_q.size == 0):
             # file_string += "\nconst int32_t *"+array_name.lower()+"_scale_q = NULL"
             file_string += info_string.lower()+"_scale_q NULL"
@@ -2118,11 +2126,14 @@ class AddOptions(OperatorOptions):
     scale_q = None
     multipliers_calculated = None
     add_with_constant = None
+    constant_location = None
 
     def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
         self.InitOperatorOption(operator_code, operator, operation_detail,
                                 tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper)
         # self.kernel_shape = TensorShape(np.array([]))
+        # we assume initially that the constant, if present will be located at the 1 location
+        self.constant_location = 1
         self.kernel_bytewidth_enum = tflite_axon_enum_wrapper.GetAxonByteWidthEnum(
             self.kernel_bitwidth)
         self.option = tflite.AddOptions()
@@ -2133,20 +2144,32 @@ class AddOptions(OperatorOptions):
         self.add_with_constant = False
         if operator_graph is not None:
             operator_graph_info = operator_graph[operation_detail['index']]
-            self.ip1_q = tensor_details[operator_graph[operator_graph_info['inputs']
-                                                       [0]]['op_tensors'][0]]['quantization_parameters']
-            # self.ip2_q = tensor_details[operator_graph[operator_graph_info['inputs']
-            #                                            [1]]['op_tensors'][0]]['quantization_parameters']
             if len(operator_graph_info['inputs']) > 1:
+                self.ip1_q = tensor_details[operator_graph[operator_graph_info['inputs']
+                                                           [0]]['op_tensors'][0]]['quantization_parameters']
                 self.ip2_q = tensor_details[operator_graph[operator_graph_info['inputs']
                                                            [1]]['op_tensors'][0]]['quantization_parameters']
-            elif len(operator_graph_info['ip_tensors']) > 1:
+            else:
+                assert (len(operator_graph_info['ip_tensors']) >
+                        1), "Merging operator has incorrect number of ip tensors."
+                self.add_with_constant = True
+                input_op_index = operator_graph_info['inputs'][0]
+                constant_tensor_index, self.constant_location = self.find_constant_tensor_index(
+                    operator_graph[input_op_index], operator_graph_info)
+                assert len(
+                    constant_tensor_index) == 1, "Can only handle merge operations with one constant."
+                self.ip1_q = tensor_details[operator_graph_info['ip_tensors']
+                                            [0]]['quantization_parameters']
                 # this is because of a constant input to the add operation, need to be handled properly
                 self.ip2_q = tensor_details[operator_graph_info['ip_tensors']
                                             [1]]['quantization_parameters']
-                # get the filter here as well
+                # get the filter here as well for the constant which may not always be the second ip tensor
                 self.filter_tensor = tflite_interpreter.get_tensor(
-                    operator_graph_info['ip_tensors'][1])
+                    constant_tensor_index[0])
+                if self.constant_location == 0:
+                    # the constant is not the second input, therefore the input shape picked up for the operation is the constant which is incorrect.
+                    # update the input shape here to reflect the operation input which is the same as the operation output
+                    self.ip_shape = self.op_shape
                 if len(self.filter_tensor.shape) != self.ip_shape.shape_size:
                     const_shape = [1] * (len(self.ip_shape.shape) - len(
                         self.filter_tensor.shape)) + list(self.filter_tensor.shape)
@@ -2154,11 +2177,13 @@ class AddOptions(OperatorOptions):
                     const_shape = self.filter_tensor.shape
                 self.kernel_shape = TensorShape(
                     const_shape, shape_rank=self.ip_shape.shape_size)
-                self.add_with_constant = True
+
                 # get the input zero point of the constant tensor here.
-                self.ip_q = copy.deepcopy(
-                    tensor_details[operator_graph_info['ip_tensors'][1]]['quantization_parameters'])
+                self.ip_q = copy.deepcopy(self.ip2_q)
                 self.ip_q_zeropoint = copy.deepcopy(self.ip_q['zero_points'])
+            if operator_code == tflite.BuiltinOperator.SUB:
+                # negate the scale value of the second input
+                self.ip2_q['scales'] = self.ip2_q['scales'] * -1
 
     def CalculateBPrime(self):
         bias_prime_scale_shift = self.scale_shifts[0]
@@ -2224,11 +2249,18 @@ class AddOptions(OperatorOptions):
             self.scale_ip2, 8, self.scaleshift_max_range, 15, self.op_zeropoint, zp_bit_limit=31)
         self.scale_shifts = np.array(
             [min(self.scale_shift_op_1, self.scale_shift_op_2)], dtype=np.int8)
-        self.scale_a = abs(
-            np.round(self.scale_ip1*2**self.scale_shifts[0].astype(np.float32))).astype(np.int32)
-        self.scale_b = abs(
-            np.round(self.scale_ip2*2**self.scale_shifts[0].astype(np.float32))).astype(np.int32)
-        self.scale_multipliers = np.array([self.scale_a[0], self.scale_b[0]])
+        self.scale_a = np.round(
+            self.scale_ip1*2**self.scale_shifts[0].astype(np.float32)).astype(np.int32)
+        self.scale_b = np.round(
+            self.scale_ip2*2**self.scale_shifts[0].astype(np.float32)).astype(np.int32)
+        if self.constant_location:
+            self.scale_multipliers = np.array(
+                [self.scale_a[0], self.scale_b[0]])
+        else:
+            # the input is getting subtracted from the constant, swapping the scale a and b values
+            # so that the input multiplier is at zero index and the constant is at index 1
+            self.scale_multipliers = np.array(
+                [self.scale_b[0], self.scale_a[0]])
         self.ip_zeropoint = 0
         self.ip_q_zeropoint[0] = self.ip_zeropoint
         self.op_q_zeropoint = self.op_zeropoint
@@ -2242,6 +2274,13 @@ class AddOptions(OperatorOptions):
     #             self.CalculateMultiplierandScaleshift()
     #         self.filter_tensor = (self.filter_tensor * self.scale_b).astype(np.int32)
     #     return self.transpose_tensor_if_needed(self.filter_tensor, self.transpose_kernel)
+
+
+class SubtractOptions(AddOptions):
+
+    def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
+        super().__init__(operator_code, operator, operation_detail, tensor_details,
+                         tflite_interpreter, operator_graph, tflite_axon_enum_wrapper)
 
 
 class PadOptions(OperatorOptions):
@@ -2599,6 +2638,24 @@ class StridedSliceOptions(OperatorOptions):
                 self.ip_shape.get_shape()[i] = 0
 
     @classmethod
+    def is_strided_slice_a_passthrough(cls, tflite_interpreter, op_graph, strided_slice_op_index):
+        ip_tensor_ndx = op_graph[strided_slice_op_index]['inputs'][0]
+        op_tensor_ndx = op_graph[strided_slice_op_index]['outputs'][0]
+        ip_shape = tflite_interpreter.get_tensor_details()[
+            ip_tensor_ndx]['shape']
+        op_shape = tflite_interpreter.get_tensor_details()[
+            op_tensor_ndx]['shape']
+        ip_length = TensorShape(ip_shape).get_length()
+        op_length = TensorShape(op_shape).get_length()
+        if ip_length == op_length:
+            return True
+
+        if strided_slice_op_index != 0:
+            if op_graph[strided_slice_op_index-1]['op_name'] == "UNIDIRECTIONAL_SEQUENCE_LSTM":
+                if op_shape[-1] == ip_shape[-1] and op_shape[-2] == 1:
+                    return True
+
+    @classmethod
     def same_input_output_length(cls, tflite_interpreter, input, output):
         # check if this strided slice can be a reshape op
         # ip_shape = TensorShape(tflite_interpreter.get_tensor(input[0]).shape)
@@ -2650,7 +2707,18 @@ class StridedSliceOptions(OperatorOptions):
             self.new_axis_mask = self.mask_for_transpose(self.new_axis_mask)
             self.shrink_axis_mask = self.mask_for_transpose(
                 self.shrink_axis_mask)
-
+            # also update the Strided Slice op to be a passthrough and update the input and output shape of the UNIDIRECTIONAL LSTM to reflect the correct output shape
+            if operator_graph_info['operator_support'] == OperatorSupportEnum.PASSTHROUGH:
+                self.operator_name = "PASSTHROUGH_" + self.operator_name
+                self.error = True
+                self.error_action = "CONTINUE"
+                self.error_text = "STRIDED_SLICE is converted to a PASSTHROUGH OP as it is after a fused LSTM layer indicating no return_sequences"
+                return
+        elif self.MAX_NUM_AXIS == 2:
+            # just add the third channel begin, end and stride values to be 0
+            self.begin = np.append(self.begin, 0)
+            self.end = np.append(self.end, 0)
+            self.stride = np.append(self.stride, 1)
         self.convert_mask_to_shape_info(self.begin_mask, self.begin, "begin")
         self.convert_mask_to_shape_info(self.end_mask, self.end, "end")
         if self.ellipsis_mask:
@@ -2678,7 +2746,6 @@ class StridedSliceOptions(OperatorOptions):
             self.error = True
             self.error_action = "CONTINUE"
             self.error_text = "STRIDED_SLICE is converted to RESHAPE"
-            # operation_detail['op_name'] = "RESHAPE"
 
     def SetStridedSliceFilterTensors(self):
         self.stride_slice_filter_tensor = []
@@ -2846,12 +2913,14 @@ class SplitVOptions(StridedSliceOptions):
 class MultiplyOptions(OperatorOptions):
     multiply_with_constant = None
     constant_ip_q = None
+    constant_location = None
 
     def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, model_wrapper_ffi):
         self.InitOperatorOption(operator_code, operator, operation_detail,
                                 tensor_details, tflite_interpreter, operator_graph, model_wrapper_ffi)
         self.option = tflite.MulOptions()
         self.multiply_with_constant = False
+        self.constant_location = 1
         self.option.Init(self.bytes, self.pos)
         # FIXME use the TFLITE_OP_AXON_OP_MAP to get the enum name of the operation
         self.axons_operation_enum = "NRF_AXON_NN_OP_MULTIPLY"
@@ -2860,11 +2929,17 @@ class MultiplyOptions(OperatorOptions):
             operator_graph_info = operator_graph[operation_detail['index']]
             # the layer inputs and the number of tensor inputs to the multiply operation must be same
             # if they are not, the multiplication is happening with a constant
+            # also the constant may not be the second tensor in the inputs so need to figure out the actual tensor index
+
             if (len(operator_graph_info['inputs']) == 1) and (len(operator_graph_info['ip_tensors']) == 2):
                 self.multiply_with_constant = True
+                input_op_index = operator_graph_info['inputs'][0]
+                constant_tensor_index, self.constant_location = self.find_constant_tensor_index(
+                    operator_graph[input_op_index], operator_graph_info)
                 # populate the filter tensor with the constant value
                 self.filter_tensor = tflite_interpreter.get_tensor(
-                    operator_graph_info['ip_tensors'][1])
+                    constant_tensor_index[0])
+                # operator_graph_info['ip_tensors'][1])
                 if len(self.filter_tensor.shape) != self.ip_shape.shape_size:
                     const_shape = [1] * (len(self.ip_shape.shape) - len(
                         self.filter_tensor.shape)) + list(self.filter_tensor.shape)
@@ -2873,7 +2948,11 @@ class MultiplyOptions(OperatorOptions):
                 self.kernel_shape = TensorShape(const_shape)
                 # get the input zero point of the constant tensor here.
                 self.constant_ip_q = copy.deepcopy(
-                    tensor_details[operator_graph_info['ip_tensors'][1]]['quantization_parameters'])
+                    tensor_details[constant_tensor_index[0]]['quantization_parameters'])
+                if self.constant_location == 0:
+                    # the constant is not the second input, therefore the input shape picked up for the operation is the constant which is incorrect.
+                    # update the input shape here to reflect the operation input which is the same as the ooperation output
+                    self.ip_shape = self.op_shape
 
     def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
         scale_q = (self.ip_q['scales'] *
@@ -3136,6 +3215,12 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
         self.bias_shape = TensorShape(self.bias_tensor.shape)
         self.op_shape = TensorShape(
             self.inputs_and_outputs['OUTPUT_DATA']['shape'])
+
+        # for the fused LSTM the input and output shapes have to be adjusted in order for it to match with batches, timesteps, features, where batch=1
+        self.ip_shape.height, self.op_shape.height = self.ip_shape.width, self.op_shape.width
+        self.ip_shape.width, self.op_shape.width = self.ip_shape.depth, self.op_shape.depth
+        self.ip_shape.depth, self.op_shape.depth = self.ip_shape.batch, self.op_shape.batch
+
         self.ip_bitwidth = self.inputs_and_outputs['INPUT_DATA']['dtype'].type
         self.op_bitwidth = self.inputs_and_outputs['OUTPUT_DATA']['dtype'].type
         self.kernel_bitwidth = self.inputs_and_outputs['INPUT_TO_INPUT_WEIGHTS']['dtype'].type
@@ -3148,6 +3233,17 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
         self.operator_name = self.operation_detail['op_name']
         self.pad_info = PadDetails()
         self.tflite_axon_enum_wrapper = tflite_axon_enum_wrapper
+
+        # check here if the next operator is a strided slice
+        if operator_graph and operation_detail['index'] + 1 < len(operator_graph) and operator_graph[operation_detail['index']+1]['op_name'] == 'STRIDED_SLICE':
+            # check if the output shape of the strided slice is 1 in the timestep dimension.
+            strided_slice_op_shape = tensor_details[operator_graph[operation_detail['index']+1]
+                                                    ['op_tensors'][0]]['shape']
+            # ensure that the features which is the last index of the shapes matches and the timestep is one for the strided slice output
+            # the features count is the same and the output timestep is 1
+            if strided_slice_op_shape[-1] == self.op_shape.shape[-1] and strided_slice_op_shape[-2] == 1 and operator_graph[operation_detail['index']+1]['operator_support'] == OperatorSupportEnum.PASSTHROUGH:
+                self.op_shape = TensorShape(strided_slice_op_shape)
+                self.inputs_and_outputs['OUTPUT_DATA']['shape'] = strided_slice_op_shape
 
     def GetInputsAndOutputsInfo(self, idx_array, slot_map):
         all_tensor_details = self.interpreter.get_tensor_details()
@@ -3311,6 +3407,12 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
     def GetActivationFunctionType(self):
         # this is to get the "fused" activation function, it is "None" for UnidirectionalSequanceLSTM
         return "None"
+
+    def SetOutputShape(self, new_op_shape):
+        new_tensor_shape = TensorShape(new_op_shape)
+        self.op_shape = new_tensor_shape
+        self.inputs_and_outputs[LSTM_OUTPUT_SLOTS_LIST[0]
+                                ]['shape'] = new_op_shape
 
 
 class CpuOperatorOptions(OperatorOptions):
@@ -3806,6 +3908,8 @@ class SupportedOperators:
     unfused_lstm_cell_block = None
     unfused_lstm_fc_roots_per_timestep = None
     new_ops_inserted = None
+    reuse_fc_filters_flag = None
+    weight_to_fc = None
 
     @classmethod
     def get_tf_graph_index_from_tf_op_index(cls, op_graph, tf_index):
@@ -3858,6 +3962,7 @@ class SupportedOperators:
                                     tflite.BuiltinOperator.UNIDIRECTIONAL_SEQUENCE_LSTM: UnidirectionalSequenceLSTMOptions,
                                     tflite.BuiltinOperator.UNPACK: UnpackOptions,
                                     tflite.BuiltinOperator.PACK: PackOptions,
+                                    tflite.BuiltinOperator.SUB: SubtractOptions,
                                     }
         self.pass_through_operators = [
             tflite.BuiltinOperator.QUANTIZE,
@@ -3885,6 +3990,8 @@ class SupportedOperators:
         self.unfused_lstm_cell_block = []
         self.unfused_lstm_fc_roots_per_timestep = []
         self.new_ops_inserted = False
+        self.reuse_fc_filters_flag = False
+        self.weight_to_fc = {}
 
         if tflite_interpreter is not None:
             self.tflite_interpreter = tflite_interpreter
@@ -3974,10 +4081,9 @@ class SupportedOperators:
                     if not (PadOptions.is_channel_pad(self.tflite_interpreter, self.operators_detail_graph[i]['inputs'])):
                         self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PARTIALLY_SUPPORTED
                 elif self.operators_detail_graph[i]['op_name'] == "STRIDED_SLICE":
-                    if StridedSliceOptions.same_input_output_length(self.tflite_interpreter, self.operators_detail_graph[i]['inputs'],  self.operators_detail_graph[i]['outputs']):
+                    if StridedSliceOptions.is_strided_slice_a_passthrough(self.tflite_interpreter, self.operators_detail_graph, i):
                         self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
                         self.pass_through_ops_present = True
-                    # check here if the operation could be a passthrough operation?
                 # TODO or self.operators_detail_graph[i]['op_name'] == "SPLIT":
                 elif self.operators_detail_graph[i]['op_name'] == "SPLIT_V":
                     # TODO determine if this is an equal split or not, if it is not an equal split we need to handle it using strided slice or else they can be a passthrough op
@@ -3993,6 +4099,12 @@ class SupportedOperators:
                     self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
                     self.pass_through_ops_present = True
                     self.equal_splits_axis_offset_ops_present = True
+                elif self.operators_detail_graph[i]['op_name'] == "FULLY_CONNECTED":
+                    # store all the fc layer indices with weights as their key values and then use this to populate the reuse_filters_flag when creating the graph info
+                    weights_idx = self.operators_detail_graph[i]['inputs'][1]
+                    self.weight_to_fc.setdefault(weights_idx, []).append(i)
+                    if len(self.weight_to_fc[weights_idx]) > 1:
+                        self.reuse_fc_filters_flag = True
                 if self.operators_detail_graph[i]["operator_options"] == CpuOperatorOptions:
                     # by default all the CPU operations are supported
                     # but certain operations might be determined to be passthroughs
@@ -4294,9 +4406,18 @@ class SupportedOperators:
                         for op_ndx in ops['outputs']:
                             if op_ndx in seen_ops:
                                 continue
+                            new_graph[op_ndx]['axon_ip_axis_offset'] = {}
                             if tensor_ndx in new_graph[op_ndx]['ip_tensors']:
-                                # found the op
-                                new_graph[op_ndx]['axon_ip_axis_offset'] = [
+                                # found the op @
+                                if len(new_graph[op_ndx]['inputs']) > 1:
+                                    # figure out which input op has this ip tensor
+                                    for loc, i in enumerate(new_graph[op_ndx]['inputs']):
+                                        if tensor_ndx in new_graph[i]['op_tensors']:
+                                            input_op_index = i
+                                            break
+                                else:
+                                    input_op_index = new_graph[op_ndx]['inputs'][0]
+                                new_graph[op_ndx]['axon_ip_axis_offset'][input_op_index] = [
                                     axon_axis, offsets]
                                 offsets += split_by
                                 seen_ops.add(op_ndx)
@@ -4328,21 +4449,31 @@ class SupportedOperators:
             fused_lstm_layer = UnfusedLSTMOptions.fuse_lstm_in_one_layer(
                 new_graph, self.tflite_interpreter, self.unfused_lstm_cell_block)
 
-        if self.unfused_lstm_fc_roots_per_timestep:
-            # for all the FCs after the first one mark them to use the filter of the first FC
-            first_fc_ops = self.unfused_lstm_fc_roots_per_timestep[0]
-            fc_filters = []
-            for ndx, per_timestep in enumerate(self.unfused_lstm_fc_roots_per_timestep):
-                for fc in per_timestep:
-                    filter_index = new_graph[fc['index']]['ip_tensors'][1]
+        if self.reuse_fc_filters_flag:
+            for weights in self.weight_to_fc:
+                if len(self.weight_to_fc[weights]) == 1:
+                    continue
+                for ndx, fc_index in enumerate(self.weight_to_fc[weights]):
                     if ndx:
-                        if filter_index in fc_filters:
-                            new_graph[fc['index']]['reuse_filters_flag'] = first_fc_ops[fc_filters.index(
-                                filter_index)]['index']
+                        new_graph[fc_index]['reuse_filters_flag'] = self.weight_to_fc[weights][0]
                     else:
-                        fc_filters.append(filter_index)
-                        # indicates the op whose offsets have to be copied
-                        new_graph[fc['index']]['reuse_filters_flag'] = 0
+                        new_graph[fc_index]['reuse_filters_flag'] = 0
+
+        # if self.unfused_lstm_fc_roots_per_timestep:
+        #     # for all the FCs after the first one mark them to use the filter of the first FC
+        #     first_fc_ops = self.unfused_lstm_fc_roots_per_timestep[0]
+        #     fc_filters = []
+        #     for ndx, per_timestep in enumerate(self.unfused_lstm_fc_roots_per_timestep):
+        #         for fc in per_timestep:
+        #             filter_index = new_graph[fc['index']]['ip_tensors'][1]
+        #             if ndx:
+        #                 if filter_index in fc_filters:
+        #                     new_graph[fc['index']]['reuse_filters_flag'] = first_fc_ops[fc_filters.index(
+        #                         filter_index)]['index']
+        #             else:
+        #                 fc_filters.append(filter_index)
+        #                 # indicates the op whose offsets have to be copied
+        #                 new_graph[fc['index']]['reuse_filters_flag'] = 0
 
         # get the axon layer nums at this point, and update the graph with ops that are not being supported on axon currently
         axon_layer_num = -1
@@ -4395,6 +4526,14 @@ class SupportedOperators:
                                       if i >= 0 else i for i in ops['axon_ip_ops']]
                 ops['axon_op_ops'] = [new_graph[i]['axon_layer_num']
                                       if i >= 0 else i for i in ops['axon_op_ops']]
+                if ops['axon_ip_axis_offset']:
+                    # need to update the actual axon ip axis offset
+                    updated_axon_ip_axis_offset = {}
+                    for input_idx, input_graph_index in enumerate(ops['inputs']):
+                        if input_graph_index in ops['axon_ip_axis_offset']:
+                            updated_axon_ip_axis_offset[ops['axon_ip_ops'][input_idx]] = \
+                                ops['axon_ip_axis_offset'][input_graph_index]
+                    ops['axon_ip_axis_offset'] = updated_axon_ip_axis_offset
 
         self.nodes_info = {'op_nodes': op_nodes, 'ip_nodes': ip_nodes,
                            'split_nodes': split_nodes, 'merge_nodes': merge_nodes, 'op_graph': new_graph}
@@ -4441,7 +4580,8 @@ class SupportedOperators:
         axon_layer_num = []
         layer_ndx = []
         seen = set()
-        if ( not self.new_ops_inserted ): #this is added as indexing op graphs is incorrect if new ops have been added
+        # this is added as indexing op graphs is incorrect if new ops have been added
+        if (not self.new_ops_inserted):
             for output_tensor in self.model_output_tensor_indices:
                 # all the
                 producer_indices = [ndx for ndx, node in enumerate(

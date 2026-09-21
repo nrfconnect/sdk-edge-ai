@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
+#include "./nrf_axon_nn_op_extensions_const.h"
 #include "axon/nrf_axon_platform.h"
 #include "drivers/axon/nrf_axon_nn_op_extensions.h"
 #include "drivers/axon/nrf_axon_nn_infer.h"
@@ -168,20 +169,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_softmax(uint16_t argc,
 #define SIGMOID_TANH_OPTIMIZED 1
 
 #if SIGMOID_TANH_OPTIMIZED
-/**
- * LUT for sigmoid for inputs 0 to 8 stored as q3.12.
- * 256 values spaced by 128.
- * - shift input right by 7 to get table index.
- * - inputs > 8 (q3.12 8 << 12) are saturated to 1.
- * - inputs < 0 are 1 - the positive value.
- * For LUT index less than 150, interpolation is done by:
- * - Bitwise AND the input with 0x7f
- * - multiply the result with sigmoid_interp_multiplier[lut_ndx]
- * - right shift by 7.
- * - Add to the lut entry.
- */
-static const uint16_t sigmoid_lut[256] = {8192,8320,8448,8576,8703,8831,8958,9084,9211,9336,9462,9586,9710,9833,9956,10078,10198,10318,10437,10555,10672,10788,10902,11015,11128,11239,11348,11457,11564,11669,11773,11876,11978,12078,12176,12273,12369,12463,12555,12646,12735,12823,12909,12994,13077,13159,13239,13318,13395,13471,13545,13617,13689,13758,13826,13893,13958,14022,14085,14146,14206,14264,14321,14377,14431,14484,14536,14587,14636,14684,14731,14777,14822,14865,14908,14949,14990,15029,15067,15105,15141,15177,15211,15245,15277,15309,15340,15370,15400,15428,15456,15483,15509,15535,15559,15584,15607,15630,15652,15673,15694,15715,15735,15754,15772,15791,15808,15825,15842,15858,15874,15889,15904,15918,15932,15946,15959,15971,15984,15996,16008,16019,16030,16041,16051,16061,16071,16080,16089,16098,16107,16115,16123,16131,16139,16146,16154,16161,16167,16174,16180,16187,16193,16198,16204,16209,16215,16220,16225,16230,16234,16239,16243,16248,16252,16256,16260,16264,16267,16271,16274,16278,16281,16284,16287,16290,16293,16296,16298,16301,16304,16306,16308,16311,16313,16315,16317,16319,16321,16323,16325,16327,16329,16330,16332,16334,16335,16337,16338,16340,16341,16342,16343,16345,16346,16347,16348,16349,16350,16351,16352,16353,16354,16355,16356,16357,16358,16359,16359,16360,16361,16362,16362,16363,16364,16364,16365,16365,16366,16367,16367,16368,16368,16369,16369,16370,16370,16370,16371,16371,16372,16372,16372,16373,16373,16373,16374,16374,16374,16375,16375,16375,16375,16376,16376,16376,16376,16377,16377,16377,16377,16378,16378,16378,16378,16378,};
-static const uint8_t sigmoid_interp_multiplier[] = {128,128,128,127,128,127,126,127,125,126,124,124,123,123,122,120,120,119,118,117,116,114,113,113,111,109,109,107,105,104,103,102,100,98,97,96,94,92,91,89,88,86,85,83,82,80,79,77,76,74,72,72,69,68,67,65,64,63,61,60,58,57,56,54,53,52,51,49,48,47,46,45,43,43,41,41,39,38,38,36,36,34,34,32,32,31,30,30,28,28,27,26,26,24,25,23,23,22,21,21,21,20,19,18,19,17,17,17,16,16,15,15,14,14,14,13,12,13,12,12,11,11,11,10,10,10,9,9,9,9,8,8,8,8,7,8,7,6,7,6,7,6,5,6,5,6,5,5,5,4,5,4,5,4,4,4,4,3,4,3,4,3,3,3,3,3,3,2,3,3,2,2,3,2,2,2,2,2,2,2,2,2,1,2,2,1,2,1,2,1,1,1,2,};
+
 /* entries in the interpolation multiply table are left shifted this ammount */
 #define SIGMOID_INTERP_SHIFT 7
 
@@ -201,14 +189,17 @@ static inline int16_t sigmoid_optimized(int16_t in_data)
 {
 	int32_t in_data_abs =  in_data < 0 ? -in_data : in_data;
 	int32_t out_data;
+
 	if (in_data_abs >= SIGMOID_LUT_MAX_INPUT) {
 		out_data = sigmoid_lut[255];
 	} else {
 		uint8_t lut_ndx = in_data_abs >> SIGMOID_LUT_SHIFT;
+
 		out_data = sigmoid_lut[lut_ndx];
 		if (lut_ndx < SIGMOID_INTER_MAX_NDX) {
-			// interpolate intermediate points
-			out_data += ((in_data_abs & SIGMOID_INTERP_MASK) * sigmoid_interp_multiplier[lut_ndx]) >> SIGMOID_INTERP_SHIFT;
+			/* interpolate intermediate points */
+			out_data += ((in_data_abs & SIGMOID_INTERP_MASK) *
+				sigmoid_interp_multiplier[lut_ndx]) >> SIGMOID_INTERP_SHIFT;
 		}
 	}
 	if (in_data < 0) {
@@ -220,10 +211,12 @@ static inline int16_t sigmoid_optimized(int16_t in_data)
 static inline float sigmoid_float(int16_t in_data)
 {
 	float scratch = in_data;
+
 	/*
-		* sigmoid(x) = 1/(1+exp(-x))
-		*/
-	scratch /= (float)(1 << NRF_AXON_SIG_TANH_INPUT16_RADIX); /* input is q.12, convert to float */
+	 * sigmoid(x) = 1/(1+exp(-x))
+	 */
+	/* input is q.12, convert to float */
+	scratch /= (float)(1 << NRF_AXON_SIG_TANH_INPUT16_RADIX);
 	scratch = (float)exp(-scratch); /* now have exp(x) */
 	scratch = 1/(1+scratch); /* have float sigmoid(x) */
 	return scratch;
@@ -291,7 +284,8 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 
 				switch (base1_args->remaining_args.output_bytewidth) {
 				case 1: /* quantized output. scales between 0 and 1. */
-					out_data = (out_data >> (NRF_AXON_SIG_TANH_OUTPUT16_RADIX - 8)) - 128;
+					out_data = (out_data >>
+						(NRF_AXON_SIG_TANH_OUTPUT16_RADIX - 8)) - 128;
 					if (out_data > 127) {
 						out_data = 127;
 					}
@@ -304,7 +298,8 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 					output_ptr.i16++;
 					break;
 				case 4: /* q1.30 output */
-					*output_ptr.i32 = out_data << (NRF_AXON_SIG_TANH_OUTPUT16_RADIX + 6);
+					*output_ptr.i32 = out_data <<
+						(NRF_AXON_SIG_TANH_OUTPUT16_RADIX + 6);
 					output_ptr.i32++;
 					break;
 				default:
@@ -315,6 +310,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 				}
 #else
 				float out_data = sigmoid_float(in_data);
+
 				switch (base1_args->remaining_args.output_bytewidth) {
 				case 1: /* quantized output. scales between 0 and 1. */
 					out_data = (float)round(out_data * 256.0f) - 128;
@@ -322,7 +318,8 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 					output_ptr.i8++;
 					break;
 				case 2: /* q1.14 output */
-					*output_ptr.i16 = (int16_t)(out_data * (1 << NRF_AXON_SIG_TANH_OUTPUT16_RADIX));
+					*output_ptr.i16 = (int16_t)(out_data *
+						(1 << NRF_AXON_SIG_TANH_OUTPUT16_RADIX));
 					output_ptr.i16++;
 					break;
 				case 4: /* q1.30 output */
@@ -416,20 +413,6 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_dequantize_input(uint16_t arg
 
 #if SIGMOID_TANH_OPTIMIZED
 
-/**
- * LUT for tanh for inputs 0 to 4 stored as q1.14.
- * 256 values spaced by 64.
- * - shift input right by 6 to get table index.
- * - inputs > 4 (q3.12 4 << 12) are saturated to 1.
- * - input < 0 are -1 * the positive value.
- * For LUT index less than ~180, interpolation is done by:
- * - Bitwise AND the input with 0x3f
- * - multiply the result with tanh_interp_multiplier[lut_ndx]
- * - right shift by 6.
- * - Add to the lut entry.
- */
-static const uint16_t tanh_lut[256] = {0,256,512,767,1023,1277,1532,1785,2037,2289,2539,2789,3036,3283,3528,3771,4013,4252,4490,4726,4960,5191,5420,5647,5871,6093,6312,6529,6743,6954,7163,7369,7571,7771,7968,8162,8353,8541,8726,8908,9087,9262,9435,9604,9771,9934,10095,10252,10406,10557,10706,10851,10993,11132,11269,11402,11533,11661,11785,11908,12027,12144,12258,12369,12478,12584,12688,12789,12888,12984,13078,13170,13260,13347,13432,13515,13595,13674,13751,13826,13898,13969,14038,14105,14171,14234,14296,14356,14415,14472,14528,14582,14634,14685,14735,14783,14830,14876,14920,14963,15005,15046,15085,15124,15161,15197,15232,15267,15300,15332,15363,15394,15423,15452,15480,15507,15533,15559,15584,15608,15631,15654,15676,15697,15718,15738,15757,15776,15795,15812,15830,15847,15863,15879,15894,15909,15923,15937,15951,15964,15977,15989,16001,16013,16024,16035,16046,16056,16066,16076,16085,16094,16103,16112,16120,16128,16136,16143,16151,16158,16165,16171,16178,16184,16190,16196,16202,16208,16213,16218,16223,16228,16233,16238,16242,16246,16251,16255,16259,16263,16266,16270,16273,16277,16280,16283,16286,16289,16292,16295,16298,16300,16303,16305,16308,16310,16312,16315,16317,16319,16321,16323,16325,16327,16328,16330,16332,16333,16335,16336,16338,16339,16341,16342,16343,16344,16346,16347,16348,16349,16350,16351,16352,16353,16354,16355,16356,16357,16358,16358,16359,16360,16361,16361,16362,16363,16363,16364,16365,16365,16366,16366,16367,16368,16368,16369,16369,16369,16370,16370,16371,16371,16372,16372,16372,16373,};
-static const uint8_t tanh_interp_multiplier[] = {128,128,127,128,127,127,126,126,126,125,125,123,123,122,121,121,119,119,118,117,115,114,113,112,111,109,108,107,105,104,103,101,100,98,97,95,94,92,91,89,87,86,84,83,81,80,78,77,75,74,72,71,69,68,66,65,64,62,61,59,58,57,55,54,53,52,50,49,48,47,46,45,43,42,41,40,39,38,37,36,35,34,33,33,31,31,30,29,28,28,27,26,25,25,24,23,23,22,21,21,20,19,19,18,18,17,17,16,16,15,15,14,14,14,13,13,13,12,12,11,11,11,10,10,10,9,9,9,8,9,8,8,8,7,7,7,7,7,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,4,4,4,3,4,3,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,0,1,0,1,};
 #define TANH_INTERP_SHIFT 6
 /* lut table indexes greater than this do not do interpolation because the difference is < 1 */
 #define TANH_INTER_MAX_NDX sizeof(tanh_interp_multiplier)
@@ -447,14 +430,17 @@ static inline int16_t tanh_optimized(int16_t in_data)
 {
 	int32_t in_data_abs =  in_data < 0 ? -in_data : in_data;
 	int32_t out_data;
+
 	if (in_data_abs >= TANH_LUT_MAX_INPUT) {
 		out_data = tanh_lut[255];
 	} else {
 		uint8_t lut_ndx = in_data_abs >> TANH_LUT_SHIFT;
+
 		out_data = tanh_lut[lut_ndx];
 		if (lut_ndx < TANH_INTER_MAX_NDX) {
-			// interpolate intermediate points
-			out_data += ((in_data_abs & TANH_INTERP_MASK) * tanh_interp_multiplier[lut_ndx]) >> TANH_INTERP_SHIFT;
+			/* interpolate intermediate points */
+			out_data += ((in_data_abs & TANH_INTERP_MASK) *
+				tanh_interp_multiplier[lut_ndx]) >> TANH_INTERP_SHIFT;
 		}
 	}
 	if (in_data < 0) {
@@ -536,7 +522,8 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 
 				switch (base1_args->remaining_args.output_bytewidth) {
 				case 1: /* quantized output. scales between -1 and 1. */
-					out_data = (out_data >> (NRF_AXON_SIG_TANH_OUTPUT16_RADIX - 7));
+					out_data = (out_data >>
+						(NRF_AXON_SIG_TANH_OUTPUT16_RADIX - 7));
 					if (out_data > 127) {
 						out_data = 127;
 					}
@@ -548,7 +535,8 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 					output_ptr.i16++;
 					break;
 				case 4: /* q1.30 output */
-					*output_ptr.i32 = out_data << (NRF_AXON_SIG_TANH_OUTPUT16_RADIX + 6);
+					*output_ptr.i32 = out_data <<
+						(NRF_AXON_SIG_TANH_OUTPUT16_RADIX + 6);
 					output_ptr.i32++;
 					break;
 				default:
@@ -559,6 +547,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 				}
 #else
 				float out_data = tanh_float(*input_ptr);
+
 				switch (base1_args->remaining_args.output_bytewidth) {
 				case 1: /* quantized output. scales between -1 and 1. */
 					out_data = roundf(out_data * 128.0f); /* quantized */
@@ -566,7 +555,8 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 					output_ptr.i8++;
 					break;
 				case 2: /* q1.14 output */
-					*output_ptr.i16 = (int16_t)(out_data * (1 << NRF_AXON_SIG_TANH_OUTPUT16_RADIX));
+					*output_ptr.i16 = (int16_t)(out_data *
+						(1 << NRF_AXON_SIG_TANH_OUTPUT16_RADIX));
 					output_ptr.i16++;
 					break;
 				case 4: /* q1.30 output */

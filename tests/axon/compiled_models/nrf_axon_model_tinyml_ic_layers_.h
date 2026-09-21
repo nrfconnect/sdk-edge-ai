@@ -1,16 +1,19 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_ic
- * Axon Neural Network Compiler Version: 1.5.0
+ * Axon Neural Network Compiler Version: 2.0.1
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <stdalign.h>
+#include "drivers/axon/nrf_axon_nn_infer.h"
 #if (AXON_LAYER_TEST_START_LAYER<=0) && (AXON_LAYER_TEST_STOP_LAYER>=0)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_0_0[1024] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_0[1025] = {
 // segment 0,length 1023,Axon NN
-0x1fff03ff,
+0x1fff03ff,0x00000402,
 0x16000080,0x00110020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x0c030020,0x00000400,0x00030003,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l00_filters,0x00330002,0x00000009,0x00100020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00100020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0xc00),0x00030020,0x00000000,0x01000101,0x0000ff80,0xfffffe34,0x00000000,0x01010000,0x00000000,0x00000005,0x00001301,
 0x01000180,0x00000003,0x00000000,
 0x010001a4,0x00000000,0x00004a0e,
@@ -409,69 +412,78 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_0_0[1024] = 
 0x020000d0,0x03010000,0x00011703,0x00000201,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_0_0 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 32,
-          .width = 32,
-          .channel_cnt = 3,
-          .byte_width = 1,
-        },
-        .quant_mult = 524288,
-        .stride = 32,
-        .quant_round = 19,
-        .quant_zp = -128,
-        .is_external = true,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = 0,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0xc00),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_0_0,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 1024,
-    .persistent_vars = {
-      .count = 0,
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_0[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_0[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 32,
+      .width = 32,
+      .channel_cnt = 3,
+      .batch_cnt = 1,
+      .byte_width = 1,
     },
+    .quant_mult = 524288,
+    .node_id = -1,
+    .stride = 32,
+    .quant_round = 19,
+    .quant_zp = -128,
+  }, /* 0 */
+}; /* inputs */
 
-    .output_dimensions = {
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_0[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0xc00),
+    .dimensions = {
       .height = 32,
       .width = 32,
       .channel_cnt = 16,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 32,
+    .dequant_mult = 330457,
+    .node_id = 0,
+    .dequant_round = 23,
+    .dequant_zp = -128,
+    .stride = 32,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_0 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_0,
+    .input_vector_list = tinyml_ic_input_vector_list_0,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_0,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 1025,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_0,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 0,
-  .input0_layer_ndx = -1,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=1) && (AXON_LAYER_TEST_STOP_LAYER>=1)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_1_1[1024] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_1[1025] = {
 // segment 0,length 1023,Axon NN
-0x1fff03ff,
+0x1fff03ff,0x00000402,
 0x16000080,0x00110020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0xc00),0x0c030020,0x00000400,0x00030003,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l01_filters,0x0033000f,0x00000009,0x00100020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00100020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4c00),0x00030020,0x00000000,0x01000101,0x0000ff80,0xfffde9c9,0x00000000,0x01010000,0x00000000,0x00000005,0x00001301,
 0x01000180,0x00000003,0x00000000,
 0x010001a4,0x00000000,0x000056fb,
@@ -870,66 +882,75 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_1_1[1024] = 
 0x020000d0,0x03010000,0x00011703,0x00000201,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_1_1 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0xc00),
-        .dimensions = {
-          .height = 32,
-          .width = 32,
-          .channel_cnt = 16,
-          .byte_width = 1,
-        },
-        .stride = 32,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4c00),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_1_1,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 1024,
-    .persistent_vars = {
-      .count = 0,
-    },
-
-    .output_dimensions = {
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_1[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_1[] = {
+  {/* 0 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0xc00),
+    .dimensions = {
       .height = 32,
       .width = 32,
       .channel_cnt = 16,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 32,
+    .node_id = 0,
+    .stride = 32,
+  }, /* 0 */
+}; /* inputs */
+
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_1[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4c00),
+    .dimensions = {
+      .height = 32,
+      .width = 32,
+      .channel_cnt = 16,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .dequant_mult = 639993,
+    .node_id = 1,
+    .dequant_round = 23,
+    .dequant_zp = -128,
+    .stride = 32,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_1 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_1,
+    .input_vector_list = tinyml_ic_input_vector_list_1,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_1,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 1025,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_1,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 1,
-  .input0_layer_ndx = 0,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=2) && (AXON_LAYER_TEST_STOP_LAYER>=2)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_2_2[1023] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_2[1024] = {
 // segment 0,length 1022,Axon NN
-0x1fff03fe,
+0x1fff03fe,0x00000400,
 0x16000080,0x00110020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4c00),0x0c030020,0x00000400,0x00030003,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l02_filters,0x0033000f,0x00000009,0x00100020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00100020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x8c00),0x00030020,0x00000000,0x01000101,0x0000ff80,0xffff3960,0x00000000,0x01010000,0x00000000,0x00000005,0x00001301,
 0x01000180,0x00000002,0x80000000,
 0x010001a4,0x00000000,0x00043cca,
@@ -1328,66 +1349,75 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_2_2[1023] = 
 0x020000d0,0x03010000,0x00011c03,0x00000201,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_2_2 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4c00),
-        .dimensions = {
-          .height = 32,
-          .width = 32,
-          .channel_cnt = 16,
-          .byte_width = 1,
-        },
-        .stride = 32,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x8c00),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_2_2,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 1023,
-    .persistent_vars = {
-      .count = 0,
-    },
-
-    .output_dimensions = {
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_2[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_2[] = {
+  {/* 0 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4c00),
+    .dimensions = {
       .height = 32,
       .width = 32,
       .channel_cnt = 16,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 32,
+    .node_id = 1,
+    .stride = 32,
+  }, /* 0 */
+}; /* inputs */
+
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_2[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x8c00),
+    .dimensions = {
+      .height = 32,
+      .width = 32,
+      .channel_cnt = 16,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .dequant_mult = 27969622,
+    .node_id = 2,
+    .dequant_round = 28,
+    .dequant_zp = 4,
+    .stride = 32,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_2 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_2,
+    .input_vector_list = tinyml_ic_input_vector_list_2,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_2,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 1024,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_2,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 2,
-  .input0_layer_ndx = 1,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=3) && (AXON_LAYER_TEST_STOP_LAYER>=3)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_3_3[37] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_3[38] = {
 // segment 0,length 36,Axon NN
-0x1fff0024,
+0x1fff0024,0x00000026,
 0x0f000080,0x00200020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x8c00),0x00330020,0x00000400,0x00200020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0xc00),0x00330010,0x00000400,0x00000000,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00050000,0x00200020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00030020,0x00000400,0x00000000,
 0x060000c4,0x000b596d,0x00010000,0x01010000,0x03010000,0x00010d03,0x00000006,0x18be4172,
 0x01000180,0x00000003,0x00000000,
@@ -1395,77 +1425,87 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_3_3[37] = {
 0x010001c8,0xfff00000,0xfff00000,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_3_3 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x8c00),
-        .dimensions = {
-          .height = 32,
-          .width = 32,
-          .channel_cnt = 16,
-          .byte_width = 1,
-        },
-        .stride = 32,
-        .is_external = false,
-      }, // 0
-      {// 1
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0xc00),
-        .dimensions = {
-          .height = 32,
-          .width = 32,
-          .channel_cnt = 16,
-          .byte_width = 1,
-        },
-        .stride = 32,
-        .is_external = false,
-      }, // 1
-    }, // inputs
-    .input_cnt = 2,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)nrf_axon_interlayer_buffer,
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_3_3,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 37,
-    .persistent_vars = {
-      .count = 0,
-    },
-
-    .output_dimensions = {
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_3[2];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_3[] = {
+  {/* 0 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x8c00),
+    .dimensions = {
       .height = 32,
       .width = 32,
       .channel_cnt = 16,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 32,
+    .node_id = 2,
+    .stride = 32,
+  }, /* 0 */
+  {/* 1 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0xc00),
+    .dimensions = {
+      .height = 32,
+      .width = 32,
+      .channel_cnt = 16,
+      .batch_cnt = 0,
+      .byte_width = 1,
+    },
+    .node_id = 0,
+    .stride = 32,
+  }, /* 1 */
+}; /* inputs */
+
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_3[] = {
+  {
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 32,
+      .width = 32,
+      .channel_cnt = 16,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .dequant_mult = 427363,
+    .node_id = 3,
+    .dequant_round = 23,
+    .dequant_zp = -128,
+    .stride = 32,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_3 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_3,
+    .input_vector_list = tinyml_ic_input_vector_list_3,
+    .input_cnt = 2,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_3,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 38,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_3,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 3,
-  .input0_layer_ndx = 2,
-  .input1_layer_ndx = 0,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=4) && (AXON_LAYER_TEST_STOP_LAYER>=4)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_4_4[1010] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_4[1011] = {
 // segment 0,length 1009,Axon NN
-0x1fff03f1,
+0x1fff03f1,0x000003f4,
 0x16000080,0x00200020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x0c030020,0x00000400,0x00030003,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l04_filters,0x0033000f,0x00000009,0x00100010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00100010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),0x00030010,0x00000000,0x00010001,0x0000ff80,0xffff3ac4,0x00000000,0x02020000,0x00000000,0x00000005,0x00001301,
 0x01000180,0x00000003,0x00000000,
 0x010001a4,0x00000000,0x00005a1b,
@@ -1849,66 +1889,75 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_4_4[1010] = 
 0x020000d0,0x03010000,0x00011703,0x00000201,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_4_4 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 32,
-          .width = 32,
-          .channel_cnt = 16,
-          .byte_width = 1,
-        },
-        .stride = 32,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_4_4,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 1010,
-    .persistent_vars = {
-      .count = 0,
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_4[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_4[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 32,
+      .width = 32,
+      .channel_cnt = 16,
+      .batch_cnt = 1,
+      .byte_width = 1,
     },
+    .node_id = 3,
+    .stride = 32,
+  }, /* 0 */
+}; /* inputs */
 
-    .output_dimensions = {
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_4[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),
+    .dimensions = {
       .height = 16,
       .width = 16,
       .channel_cnt = 32,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 16,
+    .dequant_mult = 383131,
+    .node_id = 4,
+    .dequant_round = 23,
+    .dequant_zp = -128,
+    .stride = 16,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_4 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_4,
+    .input_vector_list = tinyml_ic_input_vector_list_4,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_4,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 1011,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_4,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 4,
-  .input0_layer_ndx = 3,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=5) && (AXON_LAYER_TEST_STOP_LAYER>=5)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_5_5[1009] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_5[1010] = {
 // segment 0,length 1008,Axon NN
-0x1fff03f0,
+0x1fff03f0,0x000003f2,
 0x16000080,0x00100010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),0x18030010,0x00000100,0x00030003,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l05_filters,0x0033001f,0x00000009,0x00100010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00100010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x6000),0x00030010,0x00000000,0x01010101,0x0000ff80,0xfffdae95,0x00000000,0x01010000,0x00000000,0x00000005,0x00001301,
 0x01000180,0x00000002,0x80000000,
 0x010001a4,0x00000000,0x00060135,
@@ -2292,66 +2341,75 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_5_5[1009] = 
 0x020000d0,0x03010000,0x00011c03,0x00000201,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_5_5 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),
-        .dimensions = {
-          .height = 16,
-          .width = 16,
-          .channel_cnt = 32,
-          .byte_width = 1,
-        },
-        .stride = 16,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x6000),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_5_5,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 1009,
-    .persistent_vars = {
-      .count = 0,
-    },
-
-    .output_dimensions = {
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_5[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_5[] = {
+  {/* 0 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),
+    .dimensions = {
       .height = 16,
       .width = 16,
       .channel_cnt = 32,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 16,
+    .node_id = 4,
+    .stride = 16,
+  }, /* 0 */
+}; /* inputs */
+
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_5[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x6000),
+    .dimensions = {
+      .height = 16,
+      .width = 16,
+      .channel_cnt = 32,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .dequant_mult = 30365108,
+    .node_id = 5,
+    .dequant_round = 28,
+    .dequant_zp = 4,
+    .stride = 16,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_5 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_5,
+    .input_vector_list = tinyml_ic_input_vector_list_5,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_5,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 1010,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_5,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 5,
-  .input0_layer_ndx = 4,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=6) && (AXON_LAYER_TEST_STOP_LAYER>=6)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_6_6[234] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_6[235] = {
 // segment 0,length 233,Axon NN
-0x1fff00e9,
+0x1fff00e9,0x000000ec,
 0x0f000080,0x000a001f,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x0b430040,0x00040400,0x00010010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l06_filters,0x01230020,0x00000010,0x00000000,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00050000,0x000a0010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),0x00030010,0x00000100,0x00000000,
 0x030000c8,0x00010000,0x01020000,0x03010000,0x00011a03,
 0x01000180,0x00000002,0x80000000,
@@ -2427,66 +2485,75 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_6_6[234] = {
 0x01000164,0xffffce06,0x00014b85,
 0x01000164,0xffffd9ba,0x0002c19c,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_6_6 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 32,
-          .width = 32,
-          .channel_cnt = 16,
-          .byte_width = 1,
-        },
-        .stride = 32,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_6_6,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 234,
-    .persistent_vars = {
-      .count = 0,
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_6[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_6[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 32,
+      .width = 32,
+      .channel_cnt = 16,
+      .batch_cnt = 1,
+      .byte_width = 1,
     },
+    .node_id = 3,
+    .stride = 32,
+  }, /* 0 */
+}; /* inputs */
 
-    .output_dimensions = {
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_6[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),
+    .dimensions = {
       .height = 16,
       .width = 16,
       .channel_cnt = 32,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 16,
+    .dequant_mult = 3003888,
+    .node_id = 6,
+    .dequant_round = 26,
+    .dequant_zp = -17,
+    .stride = 16,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_6 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_6,
+    .input_vector_list = tinyml_ic_input_vector_list_6,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_6,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 235,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_6,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 6,
-  .input0_layer_ndx = 3,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=7) && (AXON_LAYER_TEST_STOP_LAYER>=7)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_7_7[37] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_7[38] = {
 // segment 0,length 36,Axon NN
-0x1fff0024,
+0x1fff0024,0x00000026,
 0x0f000080,0x00100010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),0x00330010,0x00000100,0x00100010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x6000),0x00330020,0x00000100,0x00000000,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00050000,0x00100010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00030010,0x00000100,0x00000000,
 0x060000c4,0x0000b96b,0x00010000,0x01010000,0x03010000,0x00010d03,0x00000006,0x43ff1ae8,
 0x01000180,0x00000003,0x00000000,
@@ -2494,77 +2561,87 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_7_7[37] = {
 0x010001c8,0xfff00000,0xfff00000,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_7_7 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),
-        .dimensions = {
-          .height = 16,
-          .width = 16,
-          .channel_cnt = 32,
-          .byte_width = 1,
-        },
-        .stride = 16,
-        .is_external = false,
-      }, // 0
-      {// 1
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x6000),
-        .dimensions = {
-          .height = 16,
-          .width = 16,
-          .channel_cnt = 32,
-          .byte_width = 1,
-        },
-        .stride = 16,
-        .is_external = false,
-      }, // 1
-    }, // inputs
-    .input_cnt = 2,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)nrf_axon_interlayer_buffer,
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_7_7,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 37,
-    .persistent_vars = {
-      .count = 0,
-    },
-
-    .output_dimensions = {
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_7[2];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_7[] = {
+  {/* 0 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x4000),
+    .dimensions = {
       .height = 16,
       .width = 16,
       .channel_cnt = 32,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 16,
+    .node_id = 6,
+    .stride = 16,
+  }, /* 0 */
+  {/* 1 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x6000),
+    .dimensions = {
+      .height = 16,
+      .width = 16,
+      .channel_cnt = 32,
+      .batch_cnt = 0,
+      .byte_width = 1,
+    },
+    .node_id = 5,
+    .stride = 16,
+  }, /* 1 */
+}; /* inputs */
+
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_7[] = {
+  {
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 16,
+      .width = 16,
+      .channel_cnt = 32,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .dequant_mult = 446578,
+    .node_id = 7,
+    .dequant_round = 23,
+    .dequant_zp = -128,
+    .stride = 16,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_7 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_7,
+    .input_vector_list = tinyml_ic_input_vector_list_7,
+    .input_cnt = 2,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_7,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 38,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_7,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 7,
-  .input0_layer_ndx = 6,
-  .input1_layer_ndx = 5,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=8) && (AXON_LAYER_TEST_STOP_LAYER>=8)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_8_8[2002] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_8[2003] = {
 // segment 0,length 2001,Axon NN
-0x1fff07d1,
+0x1fff07d1,0x000007d4,
 0x16000080,0x00100010,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x18030010,0x00000100,0x00030003,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l08_filters,0x0033001f,0x00000009,0x00080008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00080008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),0x00030008,0x00000000,0x00010001,0x0000ff80,0xfffcaf51,0x00000000,0x02020000,0x00000000,0x00000005,0x00001301,
 0x01000180,0x00000003,0x00000000,
 0x010001a4,0x00000000,0x000026db,
@@ -3332,66 +3409,75 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_8_8[2002] = 
 0x020000d0,0x03010000,0x00011703,0x00000201,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_8_8 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 16,
-          .width = 16,
-          .channel_cnt = 32,
-          .byte_width = 1,
-        },
-        .stride = 16,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_8_8,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 2002,
-    .persistent_vars = {
-      .count = 0,
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_8[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_8[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 16,
+      .width = 16,
+      .channel_cnt = 32,
+      .batch_cnt = 1,
+      .byte_width = 1,
     },
+    .node_id = 7,
+    .stride = 16,
+  }, /* 0 */
+}; /* inputs */
 
-    .output_dimensions = {
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_8[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),
+    .dimensions = {
       .height = 8,
       .width = 8,
       .channel_cnt = 64,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 8,
+    .dequant_mult = 238657,
+    .node_id = 8,
+    .dequant_round = 23,
+    .dequant_zp = -128,
+    .stride = 8,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_8 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_8,
+    .input_vector_list = tinyml_ic_input_vector_list_8,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_8,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 2003,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_8,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 8,
-  .input0_layer_ndx = 7,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=9) && (AXON_LAYER_TEST_STOP_LAYER>=9)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_9_9[2001] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_9[2002] = {
 // segment 0,length 2000,Axon NN
-0x1fff07d0,
+0x1fff07d0,0x000007d2,
 0x16000080,0x00080008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),0x18030008,0x00000040,0x00030003,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l09_filters,0x0033003f,0x00000009,0x00080008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00080008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x3000),0x00030008,0x00000000,0x01010101,0x0000ff80,0xffff2ce1,0x00000000,0x01010000,0x00000000,0x00000005,0x00001301,
 0x01000180,0x00000002,0x80000000,
 0x010001a4,0x00000000,0x000a99d7,
@@ -4159,66 +4245,75 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_9_9[2001] = 
 0x020000d0,0x03010000,0x00011d03,0x00000201,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_9_9 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),
-        .dimensions = {
-          .height = 8,
-          .width = 8,
-          .channel_cnt = 64,
-          .byte_width = 1,
-        },
-        .stride = 8,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x3000),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_9_9,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 2001,
-    .persistent_vars = {
-      .count = 0,
-    },
-
-    .output_dimensions = {
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_9[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_9[] = {
+  {/* 0 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),
+    .dimensions = {
       .height = 8,
       .width = 8,
       .channel_cnt = 64,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 8,
+    .node_id = 8,
+    .stride = 8,
+  }, /* 0 */
+}; /* inputs */
+
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_9[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x3000),
+    .dimensions = {
+      .height = 8,
+      .width = 8,
+      .channel_cnt = 64,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .dequant_mult = 116631792,
+    .node_id = 9,
+    .dequant_round = 29,
+    .dequant_zp = -2,
+    .stride = 8,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_9 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_9,
+    .input_vector_list = tinyml_ic_input_vector_list_9,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_9,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 2002,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_9,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 9,
-  .input0_layer_ndx = 8,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=10) && (AXON_LAYER_TEST_STOP_LAYER>=10)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_10_10[226] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_10[227] = {
 // segment 0,length 225,Axon NN
-0x1fff00e1,
+0x1fff00e1,0x000000e4,
 0x0f000080,0x0008000f,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x16830020,0x00040100,0x00010020,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l10_filters,0x02430040,0x00000020,0x00000000,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00050000,0x00080008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),0x00030008,0x00000040,0x00000000,
 0x030000c8,0x00010000,0x01020000,0x03010000,0x00011903,
 0x01000180,0x00000002,0x80000000,
@@ -4291,66 +4386,75 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_10_10[226] =
 0x01000164,0xfffee245,0x0000cc46,
 0x01000164,0xffff6b8a,0x0000cd42,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_10_10 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 16,
-          .width = 16,
-          .channel_cnt = 32,
-          .byte_width = 1,
-        },
-        .stride = 16,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_10_10,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 226,
-    .persistent_vars = {
-      .count = 0,
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_10[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_10[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 16,
+      .width = 16,
+      .channel_cnt = 32,
+      .batch_cnt = 1,
+      .byte_width = 1,
     },
+    .node_id = 7,
+    .stride = 16,
+  }, /* 0 */
+}; /* inputs */
 
-    .output_dimensions = {
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_10[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),
+    .dimensions = {
       .height = 8,
       .width = 8,
       .channel_cnt = 64,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 8,
+    .dequant_mult = 2813818,
+    .node_id = 10,
+    .dequant_round = 25,
+    .dequant_zp = 38,
+    .stride = 8,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_10 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_10,
+    .input_vector_list = tinyml_ic_input_vector_list_10,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_10,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 227,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_10,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 10,
-  .input0_layer_ndx = 7,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=11) && (AXON_LAYER_TEST_STOP_LAYER>=11)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_11_11[37] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_11[38] = {
 // segment 0,length 36,Axon NN
-0x1fff0024,
+0x1fff0024,0x00000026,
 0x0f000080,0x00080008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),0x00330008,0x00000040,0x00080008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x3000),0x00330040,0x00000040,0x00000000,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00050000,0x00080008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00030008,0x00000040,0x00000000,
 0x060000c4,0xfffa95db,0x00010000,0x01010000,0x03010000,0x00010e03,0x00000006,0x6d6b2a3c,
 0x01000180,0x00000003,0x00000000,
@@ -4358,77 +4462,87 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_11_11[37] = 
 0x010001c8,0xffe00000,0xffe00000,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_11_11 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),
-        .dimensions = {
-          .height = 8,
-          .width = 8,
-          .channel_cnt = 64,
-          .byte_width = 1,
-        },
-        .stride = 8,
-        .is_external = false,
-      }, // 0
-      {// 1
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x3000),
-        .dimensions = {
-          .height = 8,
-          .width = 8,
-          .channel_cnt = 64,
-          .byte_width = 1,
-        },
-        .stride = 8,
-        .is_external = false,
-      }, // 1
-    }, // inputs
-    .input_cnt = 2,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)nrf_axon_interlayer_buffer,
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_11_11,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 37,
-    .persistent_vars = {
-      .count = 0,
-    },
-
-    .output_dimensions = {
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_11[2];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_11[] = {
+  {/* 0 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),
+    .dimensions = {
       .height = 8,
       .width = 8,
       .channel_cnt = 64,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 8,
+    .node_id = 10,
+    .stride = 8,
+  }, /* 0 */
+  {/* 1 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x3000),
+    .dimensions = {
+      .height = 8,
+      .width = 8,
+      .channel_cnt = 64,
+      .batch_cnt = 0,
+      .byte_width = 1,
+    },
+    .node_id = 9,
+    .stride = 8,
+  }, /* 1 */
+}; /* inputs */
+
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_11[] = {
+  {
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 8,
+      .width = 8,
+      .channel_cnt = 64,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .dequant_mult = 1065933,
+    .node_id = 11,
+    .dequant_round = 23,
+    .dequant_zp = -128,
+    .stride = 8,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_11 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_11,
+    .input_vector_list = tinyml_ic_input_vector_list_11,
+    .input_cnt = 2,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_11,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 38,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_11,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 11,
-  .input0_layer_ndx = 10,
-  .input1_layer_ndx = 9,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=12) && (AXON_LAYER_TEST_STOP_LAYER>=12)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_12_12[36] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_12[37] = {
 // segment 0,length 35,Axon NN
-0x1fff0023,
+0x1fff0023,0x00000026,
 0x0500007c,0x00000004,0x00080008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x18030008,0x00000040,0x00080008,
 0x00000098,0x003b0040,
 0x000000a0,0x00010001,
@@ -4439,66 +4553,75 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_12_12[36] = 
 0x000001cc,0xff000000,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_12_12 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 8,
-          .width = 8,
-          .channel_cnt = 64,
-          .byte_width = 1,
-        },
-        .stride = 8,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x1100),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_12_12,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 36,
-    .persistent_vars = {
-      .count = 0,
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_12[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_12[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 8,
+      .width = 8,
+      .channel_cnt = 64,
+      .batch_cnt = 1,
+      .byte_width = 1,
     },
+    .node_id = 11,
+    .stride = 8,
+  }, /* 0 */
+}; /* inputs */
 
-    .output_dimensions = {
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_12[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x1100),
+    .dimensions = {
       .height = 1,
       .width = 1,
       .channel_cnt = 64,
+      .batch_cnt = 1,
       .byte_width = 1,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 4,
+    .dequant_mult = 1065933,
+    .node_id = 12,
+    .dequant_round = 23,
+    .dequant_zp = -128,
+    .stride = 4,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_12 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_12,
+    .input_vector_list = tinyml_ic_input_vector_list_12,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_12,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 37,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_12,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 12,
-  .input0_layer_ndx = 11,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=13) && (AXON_LAYER_TEST_STOP_LAYER>=13)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_13_13[61] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_13[62] = {
 // segment 0,length 60,Axon NN
-0x1fff003c,
+0x1fff003c,0x0000003e,
 0x10000080,0x00010100,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x1100),0x01830400,0x00000000,0x00010004,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axonpro_int8_packing_filter,0x00330001,0x00000004,0x00000000,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)NULL,0x00150000,0x00010040,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00030040,0x00000040,0x00000000,0x00000000,
 0x030000c8,0x00000000,0x01040000,0x00000000,0x00000003,
 0x000000d8,0x00000001,
@@ -4512,198 +4635,215 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_13_13[61] = 
 0x020001c8,0x80000000,0x00000000,0x7fffffff,
 0x000000f0,0x00000100,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_13_13 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x1100),
-        .dimensions = {
-          .height = 1,
-          .width = 1,
-          .channel_cnt = 64,
-          .byte_width = 1,
-        },
-        .stride = 4,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_13_13,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 61,
-    .persistent_vars = {
-      .count = 0,
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_13[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_13[] = {
+  {/* 0 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x1100),
+    .dimensions = {
+      .height = 1,
+      .width = 1,
+      .channel_cnt = 64,
+      .batch_cnt = 1,
+      .byte_width = 1,
     },
+    .node_id = 12,
+    .stride = 4,
+  }, /* 0 */
+}; /* inputs */
 
-    .output_dimensions = {
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_13[] = {
+  {
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),
+    .dimensions = {
       .height = 1,
       .width = 10,
       .channel_cnt = 1,
+      .batch_cnt = 1,
       .byte_width = 4,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 40,
+    .dequant_mult = 536870912,
+    .node_id = 13,
+    .dequant_round = 17,
+    .dequant_zp = 0,
+    .stride = 40,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_13 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_13,
+    .input_vector_list = tinyml_ic_input_vector_list_13,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_13,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 62,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_13,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 13,
-  .input0_layer_ndx = 12,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=14) && (AXON_LAYER_TEST_STOP_LAYER>=14)
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_14_14[10] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_14[11] = {
 // segment 0,length 9,CPU(software)
-0x2fff0009,
+0x2fff0009,0x0000000c,
 0x00000001,
 (NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_softmax,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x40000000,0x00010001,0x0002000a,0x00000004,
 };
-const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_14_14 = {
-  .base = {
-    .compiler_version = 0x00010500,
-    .model_name = "tinyml_ic",
-    .labels = labels_tinyml_ic,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),
-        .dimensions = {
-          .height = 1,
-          .width = 10,
-          .channel_cnt = 1,
-          .byte_width = 4,
-        },
-        .stride = 40,
-        .is_external = false,
-      }, // 0
-    }, // inputs
-    .input_cnt = 1,
-    .external_input_ndx = -1,
-    .output_ptr = (int8_t*)nrf_axon_interlayer_buffer,
-    .packed_output_buf = NULL,
-
-    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
-    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
-    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_14_14,
-
-    .model_const_ptr = &axon_model_const_tinyml_ic,
-    .model_const_size = sizeof(axon_model_const_tinyml_ic),
-    .cmd_buffer_len = 10,
-    .persistent_vars = {
-      .count = 0,
-    },
-
-    .output_dimensions = {
+NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_14[1];
+const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_14[] = {
+  {/* 0 */
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),
+    .dimensions = {
       .height = 1,
       .width = 10,
       .channel_cnt = 1,
+      .batch_cnt = 1,
       .byte_width = 4,
     },
-    .output_dequant_mult = 1,
-    .output_dequant_round = 20,
-    .output_dequant_zp = 0,
-    .output_stride = 40,
+    .node_id = 13,
+    .stride = 40,
+  }, /* 0 */
+}; /* inputs */
+
+const nrf_axon_compiled_model_output_s tinyml_ic_outputs_14[] = {
+  {
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 1,
+      .width = 10,
+      .channel_cnt = 1,
+      .batch_cnt = 1,
+      .byte_width = 4,
+    },
+    .dequant_mult = 536870912,
+    .node_id = 14,
+    .dequant_round = 29,
+    .dequant_zp = 0,
+    .stride = 40,
+  },
+};
+const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_14 = {
+  .base = {
+    .compiler_version = 0x00020001,
+    .model_name = "tinyml_ic",
+    .labels = labels_tinyml_ic,
+    .inputs = tinyml_ic_inputs_14,
+    .input_vector_list = tinyml_ic_input_vector_list_14,
+    .input_cnt = 1,
+
+    .interlayer_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_IL_BUFFER_USED,
+    .psum_buffer_needed = NRF_AXON_MODEL_TINYML_IC_MAX_PSUM_BUFFER_USED,
+    .cmd_buffer_ptr = cmd_buffer_tinyml_ic_14,
+
+    .model_const_ptr = &axon_model_const_tinyml_ic,
+    .model_const_size = sizeof(axon_model_const_tinyml_ic),
+    .cmd_buffer_len = 11,
+    .persistent_vars = {
+      .count = 0,
+    },
+    .output_cnt = 1,
+    .outputs = tinyml_ic_outputs_14,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)tinyml_ic_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = true,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-  },// .base
+  },
   .layer_ndx = 14,
-  .input0_layer_ndx = 13,
-  .input1_layer_ndx = -1,
-  .input_batch_cnt = 1,
-  .output_batch_cnt = 1,
 };
 #endif
 #define MODEL_tinyml_ic_FIRST_COMPUTE_LAYER (0)
 nrf_axon_nn_compiled_model_layer_s const *model_tinyml_ic_layer_list[] = {
 	#if (AXON_LAYER_TEST_START_LAYER<=0) && (AXON_LAYER_TEST_STOP_LAYER>=0)
-  &model_tinyml_ic_0_0,
+  &model_tinyml_ic_0,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=1) && (AXON_LAYER_TEST_STOP_LAYER>=1)
-  &model_tinyml_ic_1_1,
+  &model_tinyml_ic_1,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=2) && (AXON_LAYER_TEST_STOP_LAYER>=2)
-  &model_tinyml_ic_2_2,
+  &model_tinyml_ic_2,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=3) && (AXON_LAYER_TEST_STOP_LAYER>=3)
-  &model_tinyml_ic_3_3,
+  &model_tinyml_ic_3,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=4) && (AXON_LAYER_TEST_STOP_LAYER>=4)
-  &model_tinyml_ic_4_4,
+  &model_tinyml_ic_4,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=5) && (AXON_LAYER_TEST_STOP_LAYER>=5)
-  &model_tinyml_ic_5_5,
+  &model_tinyml_ic_5,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=6) && (AXON_LAYER_TEST_STOP_LAYER>=6)
-  &model_tinyml_ic_6_6,
+  &model_tinyml_ic_6,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=7) && (AXON_LAYER_TEST_STOP_LAYER>=7)
-  &model_tinyml_ic_7_7,
+  &model_tinyml_ic_7,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=8) && (AXON_LAYER_TEST_STOP_LAYER>=8)
-  &model_tinyml_ic_8_8,
+  &model_tinyml_ic_8,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=9) && (AXON_LAYER_TEST_STOP_LAYER>=9)
-  &model_tinyml_ic_9_9,
+  &model_tinyml_ic_9,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=10) && (AXON_LAYER_TEST_STOP_LAYER>=10)
-  &model_tinyml_ic_10_10,
+  &model_tinyml_ic_10,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=11) && (AXON_LAYER_TEST_STOP_LAYER>=11)
-  &model_tinyml_ic_11_11,
+  &model_tinyml_ic_11,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=12) && (AXON_LAYER_TEST_STOP_LAYER>=12)
-  &model_tinyml_ic_12_12,
+  &model_tinyml_ic_12,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=13) && (AXON_LAYER_TEST_STOP_LAYER>=13)
-  &model_tinyml_ic_13_13,
+  &model_tinyml_ic_13,
 #else
   NULL,
 #endif
 #if (AXON_LAYER_TEST_START_LAYER<=14) && (AXON_LAYER_TEST_STOP_LAYER>=14)
-  &model_tinyml_ic_14_14,
+  &model_tinyml_ic_14,
 #else
   NULL,
 #endif

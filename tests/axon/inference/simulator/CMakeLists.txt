@@ -1,10 +1,5 @@
-#
-# Copyright (c) 2024, Nordic Semiconductor ASA. All Rights Reserved.
-#
-# The information contained herein is confidential property of Nordic Semiconductor ASA.
-# The use, copying, transfer or disclosure of such information is prohibited except by
-# express written agreement with Nordic Semiconductor ASA.
-#
+# SPDX-License-Identifier: Apache-2.0
+
 cmake_minimum_required(VERSION 3.10.0)
 
 project(nrf_axon_app_test_nn_inference VERSION 0.1.0 LANGUAGES C)
