@@ -74,3 +74,12 @@ int transport_init(struct proto_transport *out_transport)
 	LOG_INF("UART transport ready");
 	return 0;
 }
+
+bool transport_is_connected(void)
+{
+	return true;
+}
+
+void transport_wait_connected(void)
+{
+}

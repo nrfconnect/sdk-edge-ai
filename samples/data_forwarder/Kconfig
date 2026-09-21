@@ -104,6 +104,14 @@ config DATA_FWD_EXTRA_SENSOR_BME688
 	  Extend streamed samples with temperature, humidity, and pressure from BME688 at its native
 	  rate by upsampling (repeating the latest reading between fetches).
 
+config DATA_FWD_START_RETRY_MS
+	int "Sensor/session start retry interval (ms)"
+	range 10 10000
+	default 100
+	help
+	  Delay between retries when sensor or protocol session start fails while
+	  a transport link is up.
+
 config DATA_FWD_PROTO_MAX_CHANNELS
 	default 9 if DATA_FWD_SENSOR_BMI270 && DATA_FWD_EXTRA_SENSOR_BME688
 	default 6 if DATA_FWD_SENSOR_BMI270

@@ -39,7 +39,36 @@ extern "C" {
 int data_fwd_sensor_init(void);
 
 /**
+ * @brief Start sensor sampling.
+ *
+ * Enables periodic sampling in the selected sensor driver.
+ *
+ * @retval 0 Success.
+ * @retval -errno Negative error code on failure.
+ */
+int data_fwd_sensor_start(void);
+
+/**
+ * @brief Stop sensor sampling.
+ *
+ * Disables periodic sampling in the selected sensor driver. Implementations stop
+ * the fetch timer and reset the internal sample-ready semaphore with
+ * @c k_sem_reset(), clearing any pending tick signalled before stop.
+ *
+ * @note Do not call this while @ref data_fwd_sensor_fetch() is blocked in another
+ *       context: @c k_sem_reset() aborts outstanding takes with @c -EAGAIN.
+ *
+ * @retval 0 Success.
+ * @retval -errno Negative error code on failure.
+ */
+int data_fwd_sensor_stop(void);
+
+/**
  * @brief Read one sample from the sensor into @p values.
+ *
+ * Blocks until the next sample period elapses. Call @ref data_fwd_sensor_start()
+ * before fetching and @ref data_fwd_sensor_stop() when sampling is no longer
+ * needed.
  *
  * @note This function is blocking until sensor values are available.
  *
