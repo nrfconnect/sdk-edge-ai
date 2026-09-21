@@ -233,8 +233,7 @@ int main(void)
 
 	nrf_axon_result_e result;
 	const nrf_axon_nn_compiled_model_s *model = &model_person_det;
-	const nrf_axon_nn_compiled_model_input_s *model_inputs =
-		nrf_axon_nn_model_1st_external_input(model);
+	const nrf_axon_nn_compiled_model_input_s *model_inputs = &model->inputs[0];
 
 	const struct device *video = DEVICE_DT_GET(DT_NODELABEL(arducam_mega));
 	struct video_buffer *vbufs[2];

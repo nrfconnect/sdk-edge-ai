@@ -7,15 +7,15 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 #include <drivers/axon/nrf_axon_driver.h>
-#include <drivers/axon/nrf_axon_nn_infer.h>
 #include <axon/nrf_axon_platform.h>
-
 #include "generated/nrf_axon_model_okay_nordic.h"
+
 #include "instrumentation.h"
 #include "mel_test_vector.h"
 
@@ -87,9 +87,9 @@ static int axon_result_to_neg_errno(nrf_axon_result_e result)
 static void dequantize(const int8_t *values, size_t length, float *target,
 		       const nrf_axon_nn_compiled_model_s *model)
 {
-	const uint32_t deq_mult = model->output_dequant_mult;
-	const uint8_t deq_round = model->output_dequant_round;
-	const int8_t deq_zp = model->output_dequant_zp;
+	const uint32_t deq_mult = model->outputs[0].dequant_mult;
+	const uint8_t deq_round = model->outputs[0].dequant_round;
+	const int8_t deq_zp = model->outputs[0].dequant_zp;
 
 	for (size_t i = 0; i < length; i++) {
 		target[i] = (values[i] - deq_zp) * ((float)deq_mult / (1 << deq_round));
@@ -98,8 +98,8 @@ static void dequantize(const int8_t *values, size_t length, float *target,
 
 static const nrf_axon_nn_compiled_model_input_s *get_ww_input_desc(void)
 {
-	return &model_axon_user_instance_wakeword
-			.inputs[model_axon_user_instance_wakeword.external_input_ndx];
+	return &model_okay_nordic
+			.inputs[0];
 }
 
 static int init_axon_platform_and_model(void)
@@ -113,13 +113,13 @@ static int init_axon_platform_and_model(void)
 		return axon_result_to_neg_errno(result);
 	}
 
-	err = nrf_axon_nn_model_init_vars(&model_axon_user_instance_wakeword);
+	err = nrf_axon_nn_model_init_vars(&model_okay_nordic);
 	if (err != 0) {
 		LOG_ERR("Model persistent vars init failed (err %d)", err);
 		return -EINVAL;
 	}
 
-	result = nrf_axon_nn_model_validate(&model_axon_user_instance_wakeword);
+	result = nrf_axon_nn_model_validate(&model_okay_nordic);
 	if (result != NRF_AXON_RESULT_SUCCESS) {
 		LOG_ERR("Model validation failed (err %d)", result);
 		return axon_result_to_neg_errno(result);
@@ -247,7 +247,7 @@ static int run_window_sweep(int8_t (*inputs)[INPUT_SIZE], int8_t (*outputs)[OUTP
 	for (int w = 0; w < NUM_WINDOWS; w++) {
 		inst_infer_begin();
 		nrf_axon_result_e result = nrf_axon_nn_model_infer_sync(
-			&model_axon_user_instance_wakeword, inputs[w], outputs[w]);
+			&model_okay_nordic, inputs[w], outputs[w]);
 		inst_infer_end();
 
 		if (result != NRF_AXON_RESULT_SUCCESS) {
@@ -277,9 +277,9 @@ static int run_inference_continuously(int8_t (*inputs)[INPUT_SIZE], int8_t (*out
 		}
 
 		dequantize(outputs[NUM_WINDOWS - 1], OUTPUT_SIZE, prediction,
-			   &model_axon_user_instance_wakeword);
+			   &model_okay_nordic);
 
-		log_window_results(outputs, &model_axon_user_instance_wakeword);
+		log_window_results(outputs, &model_okay_nordic);
 
 		iteration++;
 
@@ -297,7 +297,7 @@ int main(void)
 	static int8_t inputs[NUM_WINDOWS][INPUT_SIZE];
 	static int8_t outputs[NUM_WINDOWS][OUTPUT_SIZE];
 
-	LOG_INF("Model: %s", model_axon_user_instance_wakeword.model_name);
+	LOG_INF("Model: %s", model_okay_nordic.model_name);
 	LOG_INF("Input size: %d", INPUT_SIZE);
 	LOG_INF("Output size: %d", OUTPUT_SIZE);
 	LOG_INF("%d captured frames -> %d sliding windows", NUM_FRAMES, NUM_WINDOWS);

@@ -233,25 +233,18 @@ static void decode_head(const struct model_head_desc *desc,
 void decode_init(const nrf_axon_nn_compiled_model_s *model)
 {
 	__ASSERT_NO_MSG(model);
-	__ASSERT_NO_MSG(ARRAY_SIZE(head_descs) == model->extra_output_cnt + 1);
+	__ASSERT_NO_MSG(ARRAY_SIZE(head_descs) == model->output_cnt);
 
 	for (size_t i = 0; i < ARRAY_SIZE(head_descs); i++) {
 		const uint8_t output_idx = head_descs[i].output_idx;
 
-		if (output_idx == 0) {
-			lut_init(&luts[output_idx], model->output_dequant_mult,
-				 model->output_dequant_round, model->output_dequant_zp);
-		} else {
-			__ASSERT_NO_MSG(output_idx - 1 <= model->extra_output_cnt);
+		__ASSERT_NO_MSG(output_idx < model->output_cnt);
 
-			const uint8_t extra_output_idx = output_idx - 1;
+		const nrf_axon_compiled_model_output_s *model_output =
+			&model->outputs[output_idx];
 
-			const nrf_axon_compiled_model_output_s *model_output =
-				&model->extra_outputs[extra_output_idx];
-
-			lut_init(&luts[output_idx], model_output->dequant_mult,
-				 model_output->dequant_round, model_output->dequant_zp);
-		}
+		lut_init(&luts[output_idx], model_output->dequant_mult,
+				model_output->dequant_round, model_output->dequant_zp);
 	}
 }
 
@@ -259,7 +252,7 @@ size_t decode_output(const nrf_axon_nn_compiled_model_s *model, const int8_t *pa
 		     struct detection_box *boxes, const size_t boxes_size)
 {
 	__ASSERT_NO_MSG(model);
-	__ASSERT_NO_MSG(ARRAY_SIZE(head_descs) == model->extra_output_cnt + 1);
+	__ASSERT_NO_MSG(ARRAY_SIZE(head_descs) == model->output_cnt);
 	__ASSERT_NO_MSG(packed_data);
 	__ASSERT_NO_MSG(boxes);
 
@@ -267,7 +260,7 @@ size_t decode_output(const nrf_axon_nn_compiled_model_s *model, const int8_t *pa
 	size_t ncand = 0;
 
 	const nrf_axon_nn_model_layer_dimensions_s *in_dims =
-		&model->inputs[model->external_input_ndx].dimensions;
+		&model->inputs[0].dimensions;
 	const struct model_input_size input_size = {
 		.width = (float)in_dims->width,
 		.height = (float)in_dims->height,
@@ -276,10 +269,9 @@ size_t decode_output(const nrf_axon_nn_compiled_model_s *model, const int8_t *pa
 	for (size_t i = 0; i < ARRAY_SIZE(head_descs); i++) {
 		const uint8_t output_idx = head_descs[i].output_idx;
 		const nrf_axon_nn_model_layer_dimensions_s *out_dims =
-			output_idx == 0 ? &model->output_dimensions
-					: &model->extra_outputs[output_idx - 1].dimensions;
+					&model->outputs[output_idx].dimensions;
 		const int8_t *packed_output =
-			packed_data + nrf_axon_nn_offset_to_output_ndx(model, output_idx);
+			packed_data + model->outputs[output_idx].packed_buffer_offset;
 
 		decode_head(&head_descs[i], &input_size, out_dims, packed_output, cand, &ncand);
 	}
