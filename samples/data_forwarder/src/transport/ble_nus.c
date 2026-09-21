@@ -18,6 +18,7 @@ LOG_MODULE_REGISTER(transport, CONFIG_LOG_DEFAULT_LEVEL);
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
 static struct bt_conn *current_conn;
+static K_SEM_DEFINE(connected_sem, 0, 1);
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -74,6 +75,8 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 	bt_gatt_exchange_mtu(conn, &params);
 
+	k_sem_give(&connected_sem);
+
 	LOG_INF("BLE connected");
 }
 
@@ -87,6 +90,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	}
 
 	nus_mtu = 0;
+	k_sem_reset(&connected_sem);
 
 	LOG_INF("BLE disconnected");
 }
@@ -165,4 +169,14 @@ int transport_init(struct proto_transport *out_transport)
 
 	LOG_INF("BLE NUS transport ready");
 	return 0;
+}
+
+bool transport_is_connected(void)
+{
+	return current_conn != NULL;
+}
+
+void transport_wait_connected(void)
+{
+	(void)k_sem_take(&connected_sem, K_FOREVER);
 }

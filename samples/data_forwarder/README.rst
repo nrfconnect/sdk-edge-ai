@@ -25,14 +25,18 @@ The default configuration on the nRF54L15 TAG reads a 6-axis BMI270 IMU and appe
 Overview
 ********
 
-The sample periodically reads data from an on-board sensor and forwards it to a host over :ref:`nrf:nus_service_readme` (default) or UART.
+The sample reads data from an on-board sensor and forwards it to a host over :ref:`nrf:nus_service_readme` (default) or UART.
 By default, the sample uses CBOR messages wrapped in COBS framing, as defined in :file:`cddl/data_forwarder.cddl`.
-Session metadata is sent periodically so a host can join an active stream.
+While a streaming session is active, session metadata is sent periodically so a host can join the stream.
 
 The sample performs the following operations:
 
-* Initializes the selected sensor driver and starts sampling at a fixed rate.
-* Encodes each sample and sends it through the configured transport.
+#. Initializes the sensor driver without starting periodic sampling.
+#. Waits until the configured transport is ready to carry data.
+#. Starts sensor sampling and a protocol session.
+#. Encodes each sample and sends it through the transport.
+
+If the sensor or the session fails to start while the link is up, the sample retries after the period configured with the ``CONFIG_DATA_FWD_START_RETRY_MS`` Kconfig option.
 
 Transport
 =========
@@ -42,9 +46,14 @@ Select the transport using the ``DATA_FWD_TRANSPORT`` Kconfig option.
 
 Bluetooth LE NUS
    Sample uses :ref:`nrf:nus_service_readme` for sending the protocol frames.
+   The sensors are sampled only while a central is connected.
+   Before that, advertising is enabled and the sensors remain stopped.
+   When the link drops, the sample stops the protocol session and the sensors, then waits for the next connection.
+   This keeps the sensors off while no host is collecting data.
 
 UART transport
    Sample uses UART for sending the protocol frames.
+   The data link is always treated as connected, so sampling starts after initialization and continues until the device is reset.
 
    .. note::
       UART transport is not available on the nRF54L15 TAG device without any external UART-to-USB converter.
@@ -185,8 +194,20 @@ Testing
       :class: highlight
 
       transport: BLE NUS transport ready
-      data_forwarder: Data forwarder started (sid 8779774)
+      data_forwarder: Data forwarder started
       transport: BLE connected
+      data_forwarder: Sampling session started (sid 8779774)
+
+   Sensor data is sent only after ``Sampling session started``.
+   When the central disconnects, the log continues with:
+
+   .. parsed-literal::
+      :class: highlight
+
+      transport: BLE disconnected
+      data_forwarder: Connection terminated
+
+   The device then advertises again and waits for the next connection before sampling.
 
 Collecting data on the host
 ===========================
