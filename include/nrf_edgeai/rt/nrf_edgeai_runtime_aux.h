@@ -5,7 +5,7 @@
  */
 /**
  *
- * @defgroup nrf_edgeai_runtime_aux nRF Edge AI Lab Runtime Auxiliary API 
+ * @defgroup nrf_edgeai_runtime_aux nRF Edge AI Lab Runtime Auxiliary API
  * @{
  *
  * @ingroup nrf_edgeai_runtime
@@ -23,28 +23,29 @@ extern "C" {
 
 /**
  * @brief Get number of Neuton model neurons
- * 
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  */
-uint16_t nrf_edgeai_model_neuton_neurons_num(const nrf_edgeai_t* p_edgeai);
+uint16_t nrf_edgeai_model_neuton_neurons_num(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get number of Neuton model weights
- * 
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  */
-uint16_t nrf_edgeai_model_neuton_weights_num(const nrf_edgeai_t* p_edgeai);
+uint16_t nrf_edgeai_model_neuton_weights_num(const nrf_edgeai_t *p_edgeai);
 
 /**
- * @brief Initialize persistent variable buffers for Axon model. 
- * Should be called at the start of each streaming session for streaming-style models, 
- * can be called separately if persistent vars need to be re-initialized without re-initializing the whole model (e.g. between streaming sessions).
- * 
+ * @brief Initialize persistent variable buffers for Axon model.
+ * Should be called at the start of each streaming session for streaming-style models,
+ * can be called separately if persistent vars need to be re-initialized without re-initializing the
+ * whole model (e.g. between streaming sessions).
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- * 
+ *
  * @return Operational status code @ref nrf_edgeai_err_t
  */
-nrf_edgeai_err_t nrf_edgeai_model_axon_init_persistent_vars(nrf_edgeai_t* p_edgeai);
+nrf_edgeai_err_t nrf_edgeai_model_axon_init_persistent_vars(nrf_edgeai_t *p_edgeai);
 
 #ifdef __cplusplus
 }

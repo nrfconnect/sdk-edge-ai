@@ -28,30 +28,33 @@ extern "C" {
  * @param[in]       p_input   Pointer to the input vector
  * @param[in]       num       Number of samples in input vector
  * @param[in, out]  p_ctx     Optional pointer to the statistics context, this function will use
- *                            <pre> p_ctx->value.sum and/or p_ctx->value.var </pre> for calculation if it exist,
- *                            the calculated value of variance will be written to context for further use
+ *                            <pre> p_ctx->value.sum and/or p_ctx->value.var </pre>
+ *                            for calculation if it exist, the calculated value of variance will be
+ *                            written to context for further use
  *
  * @return  flt32_t  Skewness value of the vector
  */
-flt32_t nrf_dsp_skew_f32(const flt32_t* p_input, uint16_t num, nrf_dsp_stat_ctx_f32_t* p_ctx);
+flt32_t nrf_dsp_skew_f32(const flt32_t *p_input, uint16_t num, nrf_dsp_stat_ctx_f32_t *p_ctx);
 
 /**
- * @brief Calculate Skewness value of a floating-point vector ​​using values ​​in increments of 'stride'.
+ * @brief Calculate Skewness value of a floating-point vector ​​using values ​​in increments
+ * of 'stride'.
  * @note Can return NRF_DSP_ZERO_DIV_FLAG if NRF_DSP_ENABLE_RUNTIME_CHECKS is defined.
  *
  * @param[in]       p_input   Pointer to the input vector
  * @param[in]       num       Number of samples with 'stride' in input vector
  * @param[in]       stride    Vector element offset stride
  * @param[in, out]  p_ctx     Optional pointer to the statistics context, this function will use
- *                            <pre> p_ctx->value.sum and/or p_ctx->value.var </pre> for calculation if it exist,
- *                            the calculated value of variance will be written to context for further use
+ *                            <pre> p_ctx->value.sum and/or p_ctx->value.var </pre>
+ *                            for calculation if it exist, the calculated value of variance will be
+ *                            written to context for further use
  *
  * @return  flt32_t  Skewness value of the vector
  */
-flt32_t nrf_dsp_skew_f32_s(const flt32_t*          p_input,
-                           uint16_t                num,
-                           size32_t                stride,
-                           nrf_dsp_stat_ctx_f32_t* p_ctx);
+flt32_t nrf_dsp_skew_f32_s(const flt32_t	  *p_input,
+			   uint16_t		   num,
+			   size32_t		   stride,
+			   nrf_dsp_stat_ctx_f32_t *p_ctx);
 
 /**
  * @brief Calculate Skewness of values of a INT8 vector.
@@ -60,12 +63,13 @@ flt32_t nrf_dsp_skew_f32_s(const flt32_t*          p_input,
  * @param[in]       p_input   Pointer to the input vector
  * @param[in]       num       Number of samples in input vector
  * @param[in, out]  p_ctx     Optional pointer to the statistics context, this function will use
- *                            <pre> p_ctx->value.sum and/or p_ctx->value.var </pre> for calculation if it exist,
- *                            the calculated value of variance will be written to context for further use
+ *                            <pre> p_ctx->value.sum and/or p_ctx->value.var </pre>
+ *                            for calculation if it exist, the calculated value of variance will be
+ *                            written to context for further use
  *
  * @return  int16_t  Skewness value of the vector in integer format with high float correlation
  */
-int16_t nrf_dsp_skew_i8(const int8_t* p_input, uint16_t num, nrf_dsp_stat_ctx_i8_t* p_ctx);
+int16_t nrf_dsp_skew_i8(const int8_t *p_input, uint16_t num, nrf_dsp_stat_ctx_i8_t *p_ctx);
 
 /**
  * @brief Calculate Skewness of values of a INT16 vector.
@@ -74,12 +78,13 @@ int16_t nrf_dsp_skew_i8(const int8_t* p_input, uint16_t num, nrf_dsp_stat_ctx_i8
  * @param[in]       p_input   Pointer to the input vector
  * @param[in]       num       Number of samples in input vector
  * @param[in, out]  p_ctx     Optional pointer to the statistics context, this function will use
- *                            <pre> p_ctx->value.sum and/or p_ctx->value.var </pre> for calculation if it exist,
- *                            the calculated value of variance will be written to context for further use
+ *                            <pre> p_ctx->value.sum and/or p_ctx->value.var </pre>
+ *                            for calculation if it exist, the calculated value of variance will be
+ *                            written to context for further use
  *
  * @return  int32_t  Skewness value of the vector in integer format with high float correlation
  */
-int32_t nrf_dsp_skew_i16(const int16_t* p_input, uint16_t num, nrf_dsp_stat_ctx_i16_t* p_ctx);
+int32_t nrf_dsp_skew_i16(const int16_t *p_input, uint16_t num, nrf_dsp_stat_ctx_i16_t *p_ctx);
 
 #ifdef __cplusplus
 }

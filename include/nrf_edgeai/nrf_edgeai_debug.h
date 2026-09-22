@@ -17,7 +17,7 @@
 
 /**
  * @brief Logging macro, can be enabled by setting NRF_EDGEAI_LOG_ENABLE to 1
- * 
+ *
  */
 #ifndef NRF_EDGEAI_LOG_ENABLE
 #define NRF_EDGEAI_LOG_ENABLE 0
@@ -28,11 +28,11 @@
 #define NRF_EDGEAI_LOG(...) printf(__VA_ARGS__)
 #else
 #define NRF_EDGEAI_LOG(...)
-#endif  // NRF_DSP_LOG_ENABLE
+#endif /* NRF_DSP_LOG_ENABLE */
 
 /**
  * @brief Assertion macro, can be enabled by setting NRF_EDGEAI_ASSERT_ENABLE to 1
- * 
+ *
  */
 #ifndef NRF_EDGEAI_ASSERT_ENABLE
 #define NRF_EDGEAI_ASSERT_ENABLE 0
@@ -43,7 +43,7 @@
 #define nrf_edgeai_assert(x) assert(x)
 #else
 #define nrf_edgeai_assert(x) ((void)(x))
-#endif  // NRF_EDGEAI_ASSERT_ENABLE
+#endif /* NRF_EDGEAI_ASSERT_ENABLE */
 
 #endif /* _NRF_EDGEAI_DEBUG_H_ */
 

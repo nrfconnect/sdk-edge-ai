@@ -18,7 +18,7 @@
 
 /**
  * @brief Macro for return values ​​to indicate potential divide-by-zero in the DSP functions
- * 
+ *
  */
 #ifndef NRF_DSP_ZERO_DIV_FLAG
 #define NRF_DSP_ZERO_DIV_FLAG 0
@@ -35,11 +35,11 @@
 #define NRF_DSP_RETURN_IF(is_true, ret_val) RETURN_IF(is_true, ret_val)
 #else
 #define NRF_DSP_RETURN_IF(is_true, ret_val) ;
-#endif  // NRF_DSP_ENABLE_RUNTIME_CHECKS
+#endif /* NRF_DSP_ENABLE_RUNTIME_CHECKS */
 
 /**
  * @brief Logging macro, can be enabled by setting NRF_DSP_LOG_ENABLE to 1
- * 
+ *
  */
 #ifndef NRF_DSP_LOG_ENABLE
 #define NRF_DSP_LOG_ENABLE 0
@@ -50,11 +50,11 @@
 #define NRF_DSP_LOG(...) printf(__VA_ARGS__)
 #else
 #define NRF_DSP_LOG(...)
-#endif  // NRF_DSP_LOG_ENABLE
+#endif /* NRF_DSP_LOG_ENABLE */
 
 /**
  * @brief Assertion macro, can be enabled by setting NRF_DSP_ASSERT_ENABLE to 1
- * 
+ *
  */
 #ifndef NRF_DSP_ASSERT_ENABLE
 #define NRF_DSP_ASSERT_ENABLE 0
@@ -65,7 +65,7 @@
 #define nrf_dsp_assert(x) assert(x)
 #else
 #define nrf_dsp_assert(x) ;
-#endif  // NRF_DSP_ASSERT_ENABLE
+#endif /* NRF_DSP_ASSERT_ENABLE */
 
 #endif /* _NRF_DSP_DEBUG_H_ */
 

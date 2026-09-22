@@ -24,10 +24,9 @@ extern "C" {
  * @endcode
  * where \<mode\> specifies the windowing/data type strategy.
  */
-#define NRF_EDGEAI_DECLARE_INPUT_FEED_INTERFACE(interface_name)                                 \
-    nrf_edgeai_err_t nrf_edgeai_input_feed_##interface_name(nrf_edgeai_input_t* p_input_ctx,    \
-                                                            void*               p_input_values, \
-                                                            uint16_t            num_values)
+#define NRF_EDGEAI_DECLARE_INPUT_FEED_INTERFACE(interface_name)  \
+	nrf_edgeai_err_t nrf_edgeai_input_feed_##interface_name( \
+		nrf_edgeai_input_t *p_input_ctx, void *p_input_values, uint16_t num_values)
 
 /**
  * @brief Feed input data without windowing.
@@ -72,7 +71,8 @@ NRF_EDGEAI_DECLARE_INPUT_FEED_INTERFACE(discrete_window_masked_f32);
  * @brief Feed input data using sliding windowing.
  *
  * These functions feed input data into the input context using a sliding window strategy,
- * maintaining a moving window of recent input values. Masked variants allow selective feature feeding.
+ * maintaining a moving window of recent input values.
+ * Masked variants allow selective feature feeding.
  *
  * @param[in,out] p_input_ctx   Pointer to the input context structure (@ref nrf_edgeai_input_t).
  * @param[in]     p_input_values Pointer to the input values buffer.

@@ -9,7 +9,7 @@
  * @{
  * @ingroup nrf_dsp_statistic
  *
- * @brief Root Difference Square is also used as an estimate for a time series complexity 
+ * @brief Root Difference Square is also used as an estimate for a time series complexity
  *        (A more complex time series has more peaks, valleys etc.).
  *
  */
@@ -30,10 +30,11 @@ extern "C" {
  *
  * @return  flt32_t  Root Difference Square value in the vector
  */
-flt32_t nrf_dsp_rds_f32(const flt32_t* p_input, uint16_t num);
+flt32_t nrf_dsp_rds_f32(const flt32_t *p_input, uint16_t num);
 
 /**
- * @brief Calculates Root Difference Square value of a floating-point vector ​​using values ​​in increments of 'stride'.
+ * @brief Calculates Root Difference Square value of a floating-point vector ​​using values
+ * ​​in increments of 'stride'.
  *
  * @param[in]   p_input   Pointer to the input vector
  * @param[in]   num       Number of samples with 'stride' in input vector
@@ -41,7 +42,7 @@ flt32_t nrf_dsp_rds_f32(const flt32_t* p_input, uint16_t num);
  *
  * @return  flt32_t  Root Difference Square value in the vector
  */
-flt32_t nrf_dsp_rds_f32_s(const flt32_t* p_input, uint16_t num, size32_t stride);
+flt32_t nrf_dsp_rds_f32_s(const flt32_t *p_input, uint16_t num, size32_t stride);
 
 /**
  * @brief Calculates Root Difference Square value of a INT8 fixed-point vector.
@@ -51,10 +52,11 @@ flt32_t nrf_dsp_rds_f32_s(const flt32_t* p_input, uint16_t num, size32_t stride)
  *
  * @return  int16_t  Root Difference Square value in the vector
  */
-int16_t nrf_dsp_rds_i8(const int8_t* p_input, uint16_t num);
+int16_t nrf_dsp_rds_i8(const int8_t *p_input, uint16_t num);
 
 /**
- * @brief Calculates Root Difference Square value of a INT8 fixed-point vector ​​using values ​​in increments of 'stride'.
+ * @brief Calculates Root Difference Square value of a INT8 fixed-point vector ​​using values
+ * ​​in increments of 'stride'.
  *
  * @param[in]   p_input   Pointer to the input vector
  * @param[in]   num       Number of samples with 'stride' in input vector
@@ -62,7 +64,7 @@ int16_t nrf_dsp_rds_i8(const int8_t* p_input, uint16_t num);
  *
  * @return  int16_t  Root Difference Square value in the vector
  */
-int16_t nrf_dsp_rds_i8_s(const int8_t* p_input, uint16_t num, size32_t stride);
+int16_t nrf_dsp_rds_i8_s(const int8_t *p_input, uint16_t num, size32_t stride);
 
 /**
  * @brief Calculates Root Difference Square value of a INT16 fixed-point vector.
@@ -72,10 +74,11 @@ int16_t nrf_dsp_rds_i8_s(const int8_t* p_input, uint16_t num, size32_t stride);
  *
  * @return  int32_t  Root Difference Square value in the vector
  */
-int32_t nrf_dsp_rds_i16(const int16_t* p_input, uint16_t num);
+int32_t nrf_dsp_rds_i16(const int16_t *p_input, uint16_t num);
 
 /**
- * @brief Calculates Root Difference Square value of a INT16 fixed-point vector ​​using values ​​in increments of 'stride'.
+ * @brief Calculates Root Difference Square value of a INT16 fixed-point vector ​​using values
+ * ​​in increments of 'stride'.
  *
  * @param[in]   p_input   Pointer to the input vector
  * @param[in]   num       Number of samples with 'stride' in input vector
@@ -83,7 +86,7 @@ int32_t nrf_dsp_rds_i16(const int16_t* p_input, uint16_t num);
  *
  * @return  int32_t  Root Difference Square value in the vector
  */
-int32_t nrf_dsp_rds_i16_s(const int16_t* p_input, uint16_t num, size32_t stride);
+int32_t nrf_dsp_rds_i16_s(const int16_t *p_input, uint16_t num, size32_t stride);
 
 #ifdef __cplusplus
 }

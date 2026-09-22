@@ -14,13 +14,13 @@
  * @param[in] ret_val     The value to be returned if the checks fails
  */
 #ifndef RETURN_IF
-#define RETURN_IF(is_true, ret_val)        \
-    do                                     \
-    {                                      \
-        if ((is_true)) { return ret_val; } \
-    }                                      \
-    while (0)
-#endif  // RETURN_IF
+#define RETURN_IF(is_true, ret_val)     \
+	do {                            \
+		if ((is_true)) {        \
+			return ret_val; \
+		}                       \
+	} while (0)
+#endif /* RETURN_IF */
 
 /**
  * @brief Creates a bit mask from one unit among the remaining zeros (for example 00..00000010).
@@ -136,7 +136,7 @@
  * @return         Offset of a field in the provided type.
  */
 #ifndef OFFSET_OF
-#define OFFSET_OF(type, field) ((unsigned long)&(((type*)0)->field))
+#define OFFSET_OF(type, field) ((unsigned long)&(((type *)0)->field))
 #endif
 
 #endif /* _NRF_EDGEAI_MACRO_H_ */

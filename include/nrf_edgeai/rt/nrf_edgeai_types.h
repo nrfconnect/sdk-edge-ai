@@ -21,70 +21,71 @@ extern "C" {
 struct nrf_edgeai_s;
 typedef struct nrf_edgeai_s nrf_edgeai_t;
 
-/***********************************************************************************************************************
-nRF Edge AI processing interfaces types
-***********************************************************************************************************************/
+/***************************************************************************************************
+ * nRF Edge AI processing interfaces types
+ **************************************************************************************************/
 
 /**
- * @brief Setup internal data structures for processing input features(data), 
+ * @brief Setup internal data structures for processing input features(data),
  *          collecting data windows, etc
  *
- * @param[in, out] p_input_ctx     Pointer to the input processing context @ref nrf_edgeai_input_t 
- * 
+ * @param[in, out] p_input_ctx     Pointer to the input processing context @ref nrf_edgeai_input_t
+ *
  * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
-typedef nrf_edgeai_err_t (*nrf_edgeai_iface_input_init_t)(nrf_edgeai_input_t* p_input_ctx);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_input_init_t)(nrf_edgeai_input_t *p_input_ctx);
 
 /**
  * @brief Feed and collect input features to internal data structures for further processing
- * 
+ *
  * @param[in, out] p_input_ctx     Pointer to the input processing context @ref nrf_edgeai_input_t
  * @param[in] p_input_values       Input features data array
  * @param[in] num_values           Number of input features in the array
- * 
+ *
  * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
-typedef nrf_edgeai_err_t (*nrf_edgeai_iface_feed_inputs_t)(nrf_edgeai_input_t* p_input_ctx,
-                                                           void*               p_input_values,
-                                                           uint16_t            num_values);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_feed_inputs_t)(nrf_edgeai_input_t *p_input_ctx,
+							   void		      *p_input_values,
+							   uint16_t	       num_values);
 
 /**
  * @brief Init model inference engine
- * 
+ *
  * @param[in, out] p_edgeai     Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- * 
+ *
  * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
- * 
+ *
  */
-typedef nrf_edgeai_err_t (*nrf_edgeai_iface_init_inference_t)(nrf_edgeai_t* p_edgeai);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_init_inference_t)(nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Run model inference
- * 
+ *
  * @param[in, out] p_edgeai     Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- * 
+ *
  * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
- * 
+ *
  */
-typedef nrf_edgeai_err_t (*nrf_edgeai_iface_run_inference_t)(nrf_edgeai_t* p_edgeai);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_run_inference_t)(nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Propagate raw model output neurons to the output values structure
- * 
+ *
  * @param[in, out] p_model    Pointer to model context @ref nrf_edgeai_model_t
- * 
+ *
  */
-typedef void (*nrf_edgeai_iface_propagate_outputs_t)(nrf_edgeai_model_t* p_model);
+typedef void (*nrf_edgeai_iface_propagate_outputs_t)(nrf_edgeai_model_t *p_model);
 
 /**
  * @brief Decode raw model outputs to human-readable format depending on the model task
- * 
+ *
  * @param[in] p_model_output      Pointer to model output structure @ref nrf_edgeai_model_t
- * @param[out] p_decoded_output   Pointer to decoded output structure @ref nrf_edgeai_decoded_output_t
- * 
+ * @param[out] p_decoded_output   Pointer to decoded output structure @ref
+ * nrf_edgeai_decoded_output_t
+ *
  */
-typedef void (*nrf_edgeai_iface_decode_outputs_t)(nrf_edgeai_model_output_t*   p_model_output,
-                                                  nrf_edgeai_decoded_output_t* p_decoded_output);
+typedef void (*nrf_edgeai_iface_decode_outputs_t)(nrf_edgeai_model_output_t   *p_model_output,
+						  nrf_edgeai_decoded_output_t *p_decoded_output);
 
 /**
  * @brief Process input features for model inference, DSP processing, filtering, etc

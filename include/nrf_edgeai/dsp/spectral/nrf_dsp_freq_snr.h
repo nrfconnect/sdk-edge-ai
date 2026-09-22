@@ -22,36 +22,38 @@ extern "C" {
 #endif
 
 /**
- * @brief Compute signal-to-noise ratio for provided frequencies in floating-point amplitude spectrum,
- *           signal represent provided frequencies, noise is everything else
- * 
+ * @brief Compute signal-to-noise ratio for provided frequencies in floating-point amplitude
+ * spectrum, signal represent provided frequencies, noise is everything else
+ *
  * @param[in] p_amplitude_spectrum      Pointer to amplitude spectrum vector
  * @param[in] num                       Number of bins/samples in amplitude spectrum
- * @param[in] p_freq_indicies           Pointer to frequency indicies (bins) for which SNR will be computed
+ * @param[in] p_freq_indicies           Pointer to frequency indicies (bins) for which SNR will be
+ * computed
  * @param[in] freq_indicies_num         Number of frequency indicies provided
- *  
- * @return int16_t SNR of provided frequencies 
+ *
+ * @return int16_t SNR of provided frequencies
  */
 flt32_t nrf_dsp_freq_snr_f32(flt32_t  p_amplitude_spectrum[],
-                             uint16_t num,
-                             uint16_t p_freq_indicies[],
-                             uint16_t freq_indicies_num);
+			     uint16_t num,
+			     uint16_t p_freq_indicies[],
+			     uint16_t freq_indicies_num);
 
 /**
  * @brief Compute signal-to-noise ratio for provided frequencies in fixed-point amplitude spectrum,
  *           signal represent provided frequencies, noise is everything else
- * 
+ *
  * @param[in] p_amplitude_spectrum      Pointer to amplitude spectrum vector
  * @param[in] num                       Number of bins/samples in amplitude spectrum
- * @param[in] p_freq_indicies           Pointer to frequency indicies (bins) for which SNR will be computed
+ * @param[in] p_freq_indicies           Pointer to frequency indicies (bins) for which SNR will be
+ * computed
  * @param[in] freq_indicies_num         Number of frequency indicies provided
- *  
- * @return int16_t SNR of provided frequencies 
+ *
+ * @return int16_t SNR of provided frequencies
  */
 int16_t nrf_dsp_freq_snr_i16(int16_t  p_amplitude_spectrum[],
-                             uint16_t num,
-                             uint16_t p_freq_indicies[],
-                             uint16_t freq_indicies_num);
+			     uint16_t num,
+			     uint16_t p_freq_indicies[],
+			     uint16_t freq_indicies_num);
 #ifdef __cplusplus
 }
 #endif

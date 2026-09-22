@@ -21,9 +21,9 @@
 extern "C" {
 #endif
 
-/***********************************************************************************************************************
+/***************************************************************************************************
  * nRF Edge AI runtime public API
- ***********************************************************************************************************************/
+ **************************************************************************************************/
 
 /**
  * @brief Set up the internal components of the Edge AI runtime
@@ -34,7 +34,7 @@ extern "C" {
  *
  * @return Operation status code @ref nrf_edgeai_err_t
  */
-nrf_edgeai_err_t nrf_edgeai_init(nrf_edgeai_t* p_edgeai);
+nrf_edgeai_err_t nrf_edgeai_init(nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief  Feed raw input data to prepare it for signal processing & model inference
@@ -106,93 +106,94 @@ nrf_edgeai_err_t nrf_edgeai_process_features(nrf_edgeai_t *p_edgeai);
  */
 nrf_edgeai_err_t nrf_edgeai_run_inference(nrf_edgeai_t *p_edgeai);
 
-/***********************************************************************************************************************
-Utility variables and functions
-***********************************************************************************************************************/
+/***************************************************************************************************
+ * Utility variables and functions
+ **************************************************************************************************/
 
 /**
- * @brief Get neural network input data type @ref nrf_edgeai_input_type_t 
- * 
+ * @brief Get neural network input data type @ref nrf_edgeai_input_type_t
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- * 
+ *
  */
-nrf_edgeai_input_type_t nrf_edgeai_input_type(const nrf_edgeai_t* p_edgeai);
+nrf_edgeai_input_type_t nrf_edgeai_input_type(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get number of unique input features on which the model was trained,
  *         e.g for features {x, y, z} -> number of unique input features = 3
- * 
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- *  
+ *
  */
-uint16_t nrf_edgeai_uniq_inputs_num(const nrf_edgeai_t* p_edgeai);
+uint16_t nrf_edgeai_uniq_inputs_num(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get input features window size in feature samples(vectors),
  *         e.g for input window {x0, y0, z0, ..., xn, yn, zn} -> window size = n
- * 
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- * 
+ *
  */
-uint16_t nrf_edgeai_input_window_size(const nrf_edgeai_t* p_edgeai);
+uint16_t nrf_edgeai_input_window_size(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get number of subwindows in the input window
- * 
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- * 
+ *
  */
-uint8_t nrf_edgeai_input_subwindows_num(const nrf_edgeai_t* p_edgeai);
+uint8_t nrf_edgeai_input_subwindows_num(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get number of model outputs (predicted targets)
- * 
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  */
-uint16_t nrf_edgeai_model_outputs_num(const nrf_edgeai_t* p_edgeai);
+uint16_t nrf_edgeai_model_outputs_num(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get model type @ref nrf_edgeai_model_type_t
- * 
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  */
-nrf_edgeai_model_type_t nrf_edgeai_model_type(const nrf_edgeai_t* p_edgeai);
+nrf_edgeai_model_type_t nrf_edgeai_model_type(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get model task @ref nrf_edgeai_model_task_t
- * 
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  */
-nrf_edgeai_model_task_t nrf_edgeai_model_task(const nrf_edgeai_t* p_edgeai);
+nrf_edgeai_model_task_t nrf_edgeai_model_task(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get solution ID in string format
- * 
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  */
-const char* nrf_edgeai_solution_id_str(const nrf_edgeai_t* p_edgeai);
+const char *nrf_edgeai_solution_id_str(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get solution runtime version
- * 
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
  */
-nrf_edgeai_rt_version_t nrf_edgeai_solution_runtime_version(const nrf_edgeai_t* p_edgeai);
+nrf_edgeai_rt_version_t nrf_edgeai_solution_runtime_version(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get Edge AI runtime library version
- * 
+ *
  */
 nrf_edgeai_rt_version_t nrf_edgeai_runtime_version(void);
 
 /**
- * @brief Check if the Edge AI runtime library version is compatible with the solution runtime version
- * 
+ * @brief Check if the Edge AI runtime library version is compatible with the solution runtime
+ * version
+ *
  * @param[in] p_edgeai  Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- * 
+ *
  * @return true if compatible, false otherwise
  */
-bool nrf_edgeai_is_runtime_compatible(const nrf_edgeai_t* p_edgeai);
+bool nrf_edgeai_is_runtime_compatible(const nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Get DSP feature extraction context
