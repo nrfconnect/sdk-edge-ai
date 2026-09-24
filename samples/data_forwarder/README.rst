@@ -247,7 +247,7 @@ Use one of the following workflows to capture sensor data on your host computer:
          a. Go to the :guilabel:`Data acquisition` tab.
          #. In the :guilabel:`Collect data` panel, set the desired values and click :guilabel:`Start sampling`.
 
-            .. figure:: ../edge_impulse/data_forwarder/images/ei_data_acquisition.png
+            .. figure:: images/ei_data_acquisition.png
                :scale: 80 %
                :alt: Sampling under Data acquisition in Edge Impulse studio
 
@@ -255,7 +255,7 @@ Use one of the following workflows to capture sensor data on your host computer:
 
          #. Observe the received sample data on the raw data graph under the panel.
 
-            .. figure:: ../edge_impulse/data_forwarder/images/ei_start_sampling.png
+            .. figure:: images/ei_start_sampling.png
                :scale: 80 %
                :alt: Sampling example
 
