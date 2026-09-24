@@ -24,7 +24,7 @@ This release is based on the |NCS| release v3.3.0-preview2.
 
   * :ref:`Hello Axon sample application <sample_hello_axon>`, along with documentation, demonstrating how to run neural model inference on the Axon NPU using the Axon NPU driver.
   * :ref:`Hello Edge Impulse sample application <hello_ei_sample>` demonstrating neural network inference using an |EI| machine learning model on the CPU and Axon NPU..
-  * :ref:`Data forwarder sample application <ei_data_forwarder_sample>` demonstrating how to forward sensor data to |EIS|.
+  * Edge Impulse data forwarder sample application demonstrating how to forward sensor data to |EIS|.
   * :ref:`Documentation for the Edge Impulse integration <edge_impulse_integration>`, with instructions for preparing and deploying |EI| machine learning models and using them in |EAI| applications.
   * Edge Impulse SDK v1.88.1 integrated into the |EAI| west manifest.
   * :ref:`Documentation for setting up the environment <setting_up_environment>`, depending on |EAI| use case.
@@ -34,7 +34,7 @@ This release is based on the |NCS| release v3.3.0-preview2.
   * :ref:`Gesture Recognition application <app_gesture_recognition>`, demonstrating how to use an nRF Edge AI model to recognize hand gestures from motion sensor data and expose them as standard HID inputs over Bluetooth® Low Energy.
     The application supports two execution backends: Neuton and Axon NPU.
   * Axon v1.0.1 support:
-    
+
     * :ref:`Axon NPU compiler toolchain <axon_npu_tflite_compiler>`, located in :file:`tools/axon/compiler/scripts`.
       See the :ref:`axon_npu_changelog` for details.
     * :ref:`Axon NPU driver<axon_driver>` and :ref:`library code <lib_axon>`, located in :file:`drivers/axon` and :file:`lib/axon`.
