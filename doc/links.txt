@@ -36,26 +36,6 @@
 .. _`EdgeAI Inference Runner`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model_creating_pipeline/run_inference_on_the_desktop.html
 .. _`Signal Processing Block`: https://docs.nordicsemi.com/r/bundle/edge-ai-lab/page/model_creating_pipeline/signal_processing.html
 
-
-.. ### tmp
-
-..
-       _`Simulated sensor driver`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/drivers/sensor_sim.html
-..
-       _`Peripheral MDS sample: Testing`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/samples/bluetooth/peripheral_mds/README.html#testing
-..
-       _`Configuring devicetree`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/nrf/app_dev/config_and_build/hardware/index.html#configuring-devicetree
-
-
-..
-       _`Video`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/hardware/peripherals/video.html
-..
-       _`Devicetree overlays`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/build/dts/howtos.html#use-devicetree-overlays
-..
-       _`CRC`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/services/crc/index.html
-..
-       _`Ring Buffers`: https://nrfconnectdocs.nordicsemi.com/ncs/|ncs_version_number|/zephyr/kernel/data_structures/ring_buffers.html
-
 .. ### Source: memfault.com
 
 .. _`Memfault`: https://memfault.com/
