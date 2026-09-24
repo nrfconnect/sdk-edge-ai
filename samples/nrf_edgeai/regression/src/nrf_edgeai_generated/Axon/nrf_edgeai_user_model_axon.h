@@ -1,16 +1,18 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: axon_user_instance_36025
- * Axon Neural Network Compiler Version: 1.3.0
+ * Axon Neural Network Compiler Version: 2.0.1
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <stdalign.h>
+#include "drivers/axon/nrf_axon_nn_infer.h"
 
 #define NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_MAX_IL_BUFFER_USED 64
 #define NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_MAX_PSUM_BUFFER_USED 0
 static_assert(NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_MAX_IL_BUFFER_USED <= (NRF_AXON_INTERLAYER_BUFFER_SIZE), "nrf_axon_interlayer_buffer TOO SMALL!!!!\n");
-static_assert(NRF_AXON_VERSION >= 0x00010200, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
+static_assert(NRF_AXON_VERSION >= 0x00010501, "MODEL REQUIRES FEATURES NOT SUPPORTED BY THIS DRIVER VERSION!!! UPGRADE THE AXON DRIVER!!!");
 // size of axon_model_const_axon_user_instance_36025: 3604
 const static struct {
 	int8_t l00_weights[576];
@@ -34,9 +36,10 @@ const static struct {
 };
 
 
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_axon_user_instance_36025[92] = {
+NRF_AXON_CMD_BUFFER_ALIGN
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_axon_user_instance_36025[93] = {
 // segment 0,length 91,Axon NN
-0x1fff005b,
+0x1fff005b,0x0000005e,
 0x02000080,0x00010009,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00330009,
 0x02000090,0x00400009,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_axon_user_instance_36025.l00_weights,0x00330001,
 0x050000a0,0x00010040,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_axon_user_instance_36025.l00_biasp,0x00050100,0x00010040,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00030040,
@@ -69,39 +72,57 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_axon_user_instance_360
 0x000001a8,0x00005991,
 0x000000f0,0x00000100,
 };
+#define NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_INPUT_VECTOR_CNT 1
+NRF_AXON_MODEL_APP_STORAGE const int8_t *axon_user_instance_36025_input_vector_list[NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_INPUT_VECTOR_CNT];
+const nrf_axon_nn_compiled_model_input_s axon_user_instance_36025_inputs[] = {
+  {/* 0 */
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .dimensions = {
+      .height = 1,
+      .width = 9,
+      .channel_cnt = 1,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .quant_mult = 133693432,
+    .node_id = -1,
+    .stride = 9,
+    .quant_round = 19,
+    .quant_zp = -128,
+  }, /* 0 */
+}; /* inputs */
+
 #define NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_PACKED_OUTPUT_SIZE 4
 
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-  uint32_t axon_model_axon_user_instance_36025_packed_output_buf[NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
+NRF_AXON_MODEL_APP_STORAGE uint32_t axon_user_instance_36025_packed_output_buf[NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
+const nrf_axon_compiled_model_output_s axon_user_instance_36025_outputs[] = {
+  {
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
+    .packed_buffer_offset = 0,
+    .packed_size = 4,
+    .dimensions = {
+      .height = 1,
+      .width = 1,
+      .channel_cnt = 1,
+      .batch_cnt = 1,
+      .byte_width = 1,
+    },
+    .dequant_mult = 2077652,
+    .node_id = 3,
+    .dequant_round = 23,
+    .dequant_zp = -128,
+    .stride = 1,
+  },
+};
 const nrf_axon_nn_compiled_model_s model_axon_user_instance_36025 = {
-    .compiler_version = 0x00010300,
+    .compiler_version = 0x00020001,
     .model_name = "axon_user_instance_36025",
     .labels = NULL,
-    .inputs = {
-      {// 0
-        .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-        .dimensions = {
-          .height = 1,
-          .width = 9,
-          .channel_cnt = 1,
-          .byte_width = 1,
-        },
-        .quant_mult = 133693432,
-        .stride = 9,
-        .quant_round = 19,
-        .quant_zp = -128,
-        .is_external = true,
-      }, // 0
-    }, // inputs
+    .inputs = axon_user_instance_36025_inputs,
+    .input_vector_list = axon_user_instance_36025_input_vector_list,
     .input_cnt = 1,
-    .external_input_ndx = 0,
-    .output_ptr = (int8_t*)nrf_axon_interlayer_buffer,
-#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
-    .packed_output_buf = (int8_t*)axon_model_axon_user_instance_36025_packed_output_buf,
-#else
-    .packed_output_buf = NULL,
-#endif
 
     .interlayer_buffer_needed = NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_MAX_IL_BUFFER_USED,
     .psum_buffer_needed = NRF_AXON_MODEL_AXON_USER_INSTANCE_36025_MAX_PSUM_BUFFER_USED,
@@ -109,25 +130,17 @@ const nrf_axon_nn_compiled_model_s model_axon_user_instance_36025 = {
 
     .model_const_ptr = &axon_model_const_axon_user_instance_36025,
     .model_const_size = sizeof(axon_model_const_axon_user_instance_36025),
-    .cmd_buffer_len = 92,
+    .cmd_buffer_len = 93,
     .persistent_vars = {
       .count = 0,
     },
-
-    .output_dimensions = {
-      .height = 1,
-      .width = 1,
-      .channel_cnt = 1,
-      .byte_width = 1,
-    },
-    .output_dequant_mult = 132969728,
-    .output_dequant_round = 29,
-    .output_dequant_zp = -128,
-    .output_stride = 4,
+    .output_cnt = 1,
+    .outputs = axon_user_instance_36025_outputs,
+#if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
+    .packed_output_buf = (int8_t *)axon_user_instance_36025_packed_output_buf,
+#endif
+    .min_driver_version_required = 0x00010501,
     .is_layer_model = false,
-    .extra_output_cnt = 0,
-    .extra_outputs = NULL,
-    .min_driver_version_required = 0x00010200,
 };
 #ifdef __cplusplus
 }
