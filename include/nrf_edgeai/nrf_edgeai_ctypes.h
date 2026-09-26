@@ -33,34 +33,39 @@ typedef size_t size32_t;
 /**
  * @brief Generic NRF EDGEAI operation status code
  */
-typedef enum nrf_edgeai_err_e
-{
-    /** Operation is in progress */
-    NRF_EDGEAI_ERR_INPROGRESS = 126,
+typedef enum nrf_edgeai_err_e {
+	/** Operation is in progress */
+	NRF_EDGEAI_ERR_INPROGRESS = 126,
 
-    /** Operation successful */
-    NRF_EDGEAI_ERR_SUCCESS = 0,
+	/** Operation successful */
+	NRF_EDGEAI_ERR_SUCCESS = 0,
 
-    /** The operation failed with an unspecified error */
-    NRF_EDGEAI_ERR_UNSPECIFIED_ERROR = -1,
+	/** The operation failed with an unspecified error */
+	NRF_EDGEAI_ERR_UNSPECIFIED_ERROR = -1,
 
-    /** The argument supplied to the operation was invalid */
-    NRF_EDGEAI_ERR_INVALID_ARGUMENT = -2,
+	/** The argument supplied to the operation was invalid */
+	NRF_EDGEAI_ERR_INVALID_ARGUMENT = -2,
 
-    /** The argument supplied to the operation was NULL */
-    NRF_EDGEAI_ERR_NULL_ARGUMENT = -3,
+	/** The argument supplied to the operation was NULL */
+	NRF_EDGEAI_ERR_NULL_ARGUMENT = -3,
 
-    /** The requested operation was not available */
-    NRF_EDGEAI_ERR_UNAVAILABLE = -4,
+	/** The requested operation was not available */
+	NRF_EDGEAI_ERR_UNAVAILABLE = -4,
 
-    /** The operation or service not supported */
-    NRF_EDGEAI_ERR_NOT_SUPPORTED = -5,
+	/** The operation or service not supported */
+	NRF_EDGEAI_ERR_NOT_SUPPORTED = -5,
 
-    /** Wrong memory alignment */
-    NRF_EDGEAI_ERR_WRONG_MEM_ALIGNMENT = -6,
+	/** Wrong memory alignment */
+	NRF_EDGEAI_ERR_WRONG_MEM_ALIGNMENT = -6,
 
-    /** Incompatibilty error */
-    NRF_EDGEAI_ERR_INCOMPATIBLE = -7,
+	/** Incompatibilty error */
+	NRF_EDGEAI_ERR_INCOMPATIBLE = -7,
+
+	/** The operation failed because the context was not initialized */
+	NRF_EDGEAI_ERR_UNINITIALIZED = -8,
+
+	/** The operation failed because the context was in wrong state */
+	NRF_EDGEAI_ERR_WRONG_STATE = -9,
 } nrf_edgeai_err_t;
 
 #ifdef __cplusplus

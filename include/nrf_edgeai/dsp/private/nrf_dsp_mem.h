@@ -19,10 +19,10 @@ extern "C" {
  *
  * @return  int32_t  4x INT8 values
  */
-__NRF_DSP_STATIC_FORCEINLINE int32_t read_i8x4(int8_t const* p_input)
+__NRF_DSP_STATIC_FORCEINLINE int32_t read_i8x4(int8_t const *p_input)
 {
-    return ((int32_t)(p_input[3] & 0x0FF) << 24) | ((int32_t)(p_input[2] & 0x0FF) << 16) |
-           ((int32_t)(p_input[1] & 0x0FF) << 8) | (p_input[0] & 0x0FF);
+	return ((int32_t)(p_input[3] & 0x0FF) << 24) | ((int32_t)(p_input[2] & 0x0FF) << 16) |
+	       ((int32_t)(p_input[1] & 0x0FF) << 8) | (p_input[0] & 0x0FF);
 }
 
 /**
@@ -32,9 +32,9 @@ __NRF_DSP_STATIC_FORCEINLINE int32_t read_i8x4(int8_t const* p_input)
  *
  * @return  int32_t  2x INT16 values
  */
-__NRF_DSP_STATIC_FORCEINLINE int32_t read_i16x2(int16_t const* p_input)
+__NRF_DSP_STATIC_FORCEINLINE int32_t read_i16x2(int16_t const *p_input)
 {
-    return ((int32_t)p_input[1] << 16) | (p_input[0] & 0x0FFFF);
+	return ((int32_t)p_input[1] << 16) | (p_input[0] & 0x0FFFF);
 }
 
 #ifdef __cplusplus

@@ -29,10 +29,11 @@ extern "C" {
  *
  * @return  flt32_t  Absolute Maximum value in the vector
  */
-flt32_t nrf_dsp_absmax_f32(const flt32_t* p_input, uint16_t num);
+flt32_t nrf_dsp_absmax_f32(const flt32_t *p_input, uint16_t num);
 
 /**
- * @brief Finds Absolute Maximum value of a floating-point vector ​​using values ​​in increments of 'stride'.
+ * @brief Finds Absolute Maximum value of a floating-point vector ​​using values ​​in
+ * increments of 'stride'.
  *
  * @param[in]   p_input   Pointer to the input vector
  * @param[in]   num       Number of samples with 'stride' in input vector
@@ -40,7 +41,7 @@ flt32_t nrf_dsp_absmax_f32(const flt32_t* p_input, uint16_t num);
  *
  * @return  flt32_t  Absolute Maximum value in the vector
  */
-flt32_t nrf_dsp_absmax_f32_s(const flt32_t* p_input, uint16_t num, size32_t stride);
+flt32_t nrf_dsp_absmax_f32_s(const flt32_t *p_input, uint16_t num, size32_t stride);
 
 /**
  * @brief Finds Absolute Maximum value of a INT8 fixed-point vector.
@@ -50,10 +51,11 @@ flt32_t nrf_dsp_absmax_f32_s(const flt32_t* p_input, uint16_t num, size32_t stri
  *
  * @return  int8_t  Absolute Maximum value in the vector
  */
-int8_t nrf_dsp_absmax_i8(const int8_t* p_input, uint16_t num);
+int8_t nrf_dsp_absmax_i8(const int8_t *p_input, uint16_t num);
 
 /**
- * @brief Finds Absolute Maximum value of a INT8 fixed-point vector ​​using values ​​in increments of 'stride'.
+ * @brief Finds Absolute Maximum value of a INT8 fixed-point vector ​​using values ​​in
+ * increments of 'stride'.
  *
  * @param[in]   p_input   Pointer to the input vector
  * @param[in]   num       Number of samples with 'stride' in input vector
@@ -61,7 +63,7 @@ int8_t nrf_dsp_absmax_i8(const int8_t* p_input, uint16_t num);
  *
  * @return  int8_t  Absolute Maximum value in the vector
  */
-int8_t nrf_dsp_absmax_i8_s(const int8_t* p_input, uint16_t num, size32_t stride);
+int8_t nrf_dsp_absmax_i8_s(const int8_t *p_input, uint16_t num, size32_t stride);
 
 /**
  * @brief Finds Absolute Maximum value of a INT16 fixed-point vector.
@@ -71,10 +73,11 @@ int8_t nrf_dsp_absmax_i8_s(const int8_t* p_input, uint16_t num, size32_t stride)
  *
  * @return  int16_t  Absolute Maximum value in the vector
  */
-int16_t nrf_dsp_absmax_i16(const int16_t* p_input, uint16_t num);
+int16_t nrf_dsp_absmax_i16(const int16_t *p_input, uint16_t num);
 
 /**
- * @brief Finds Absolute Maximum value of a INT16 fixed-point vector ​​using values ​​in increments of 'stride'.
+ * @brief Finds Absolute Maximum value of a INT16 fixed-point vector ​​using values ​​in
+ * increments of 'stride'.
  *
  * @param[in]   p_input   Pointer to the input vector
  * @param[in]   num       Number of samples with 'stride' in input vector
@@ -82,7 +85,7 @@ int16_t nrf_dsp_absmax_i16(const int16_t* p_input, uint16_t num);
  *
  * @return  int16_t  Absolute Maximum value in the vector
  */
-int16_t nrf_dsp_absmax_i16_s(const int16_t* p_input, uint16_t num, size32_t stride);
+int16_t nrf_dsp_absmax_i16_s(const int16_t *p_input, uint16_t num, size32_t stride);
 
 /**
  * @brief Finds Absolute Maximum value of a INT32 fixed-point vector.
@@ -92,10 +95,11 @@ int16_t nrf_dsp_absmax_i16_s(const int16_t* p_input, uint16_t num, size32_t stri
  *
  * @return  int32_t  Absolute Maximum value in the vector
  */
-int32_t nrf_dsp_absmax_i32(const int32_t* p_input, uint16_t num);
+int32_t nrf_dsp_absmax_i32(const int32_t *p_input, uint16_t num);
 
 /**
- * @brief Finds Absolute Maximum value of a INT32 fixed-point vector ​​using values ​​in increments of 'stride'.
+ * @brief Finds Absolute Maximum value of a INT32 fixed-point vector ​​using values ​​in
+ * increments of 'stride'.
  *
  * @param[in]   p_input   Pointer to the input vector
  * @param[in]   num       Number of samples with 'stride' in input vector
@@ -103,7 +107,7 @@ int32_t nrf_dsp_absmax_i32(const int32_t* p_input, uint16_t num);
  *
  * @return  int16_t  Absolute Maximum value in the vector
  */
-int32_t nrf_dsp_absmax_i32_s(const int32_t* p_input, uint16_t num, size32_t stride);
+int32_t nrf_dsp_absmax_i32_s(const int32_t *p_input, uint16_t num, size32_t stride);
 
 #ifdef __cplusplus
 }

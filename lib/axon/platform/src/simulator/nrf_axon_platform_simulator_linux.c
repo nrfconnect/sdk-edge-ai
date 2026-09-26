@@ -11,7 +11,6 @@
 #include <assert.h>
 #include <time.h>
 #include <semaphore.h>
-#define _GNU_SOURCE // for pthread_timedjoin_np
 #include <pthread.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -71,7 +70,7 @@ void axon_dsp_simulator_write_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_T
 		}
 	} else {
 		/* grab mutex by calling wait() */
-		simulator_state.axon_dsp.mutex_wait_result = 
+		simulator_state.axon_dsp.mutex_wait_result =
 			pthread_mutex_lock(&simulator_state.axon_dsp.registers_mutex);
 
 		/* catch failed wait() */
@@ -136,7 +135,7 @@ void *axon_dsp_int_thread(void *data)
 	bool int_fired = false;
 
 	while (1) {
-		if(int_fired || (sem_trywait(&simulator_state.axon_dsp.semaphore)==0)){
+		if (int_fired || (sem_trywait(&simulator_state.axon_dsp.semaphore) == 0)) {
 			int_fired = true;
 			/*
 			 * allow for the int firing while disabled, then the int is cleared.
@@ -144,14 +143,14 @@ void *axon_dsp_int_thread(void *data)
 			 */
 			if (axon_simulator_ints_enabled) {
 				if (axon_dsp_simualtor_int_pending()) {
-						// call the handler
+						/* call the handler */
 						host_irq_handler(NULL);
 				}
 				/* only clear	int_fired if the int bits were cleared. */
 				int_fired = axon_dsp_simualtor_int_pending();
 			}
 		}
-		if(sem_trywait(&simulator_state.axon_dsp.terminate_int_thread_semaphore)==0){
+		if (sem_trywait(&simulator_state.axon_dsp.terminate_int_thread_semaphore) == 0) {
 			break;
 		}
 	}
@@ -171,11 +170,13 @@ void *axon_dsp_hw_thread(void *data)
 
 		/* wait for driver to write something of interest... */
 		if (simulator_state.axon_dsp.action_reg_updated == 0) {
-			continue; /* ...nothing yet, skip below and go back to the beginning of while loop */
+			/* ...nothing yet */
+			continue;
 		}
 
 		/* action is necessary - grab mutex by calling wait() */
-		simulator_state.axon_dsp.mutex_wait_result = pthread_mutex_lock(&simulator_state.axon_dsp.registers_mutex);
+		simulator_state.axon_dsp.mutex_wait_result =
+			pthread_mutex_lock(&simulator_state.axon_dsp.registers_mutex);
 
 		/* catch failed wait() */
 		if (simulator_state.axon_dsp.mutex_wait_result != 0) {
@@ -190,7 +191,8 @@ void *axon_dsp_hw_thread(void *data)
 
 		/* check interrupts*/
 		int dsp_simulator_err, dsp_o_wdog_cmd, dsp_o_wdog_finish;
-		if (axon_dsp_simulator_process_action_request(&dsp_simulator_err, &dsp_o_cycles, &dsp_o_wdog_cmd, &dsp_o_wdog_finish)) {
+		if (axon_dsp_simulator_process_action_request(&dsp_simulator_err, &dsp_o_cycles,
+				&dsp_o_wdog_cmd, &dsp_o_wdog_finish)) {
 			sem_post(&simulator_state.axon_dsp.semaphore);
 		}
 	}
@@ -210,46 +212,46 @@ static int start_simulator_axon_dsp()
 		simulator_state.axon_dsp.terminate_thread = false;
 
 		int ret=0;
-		// create mutex
-		ret = pthread_mutex_init(&simulator_state.axon_dsp.registers_mutex,NULL);
-		if (ret!=0) {
+		ret = pthread_mutex_init(&simulator_state.axon_dsp.registers_mutex, NULL);
+		if (ret != 0) {
 			printf("AXON DSP CreateMutex error: %d\n", ret);
 			return -1;
 		}
-		// create semaphore
-		ret = sem_init(&simulator_state.axon_dsp.semaphore,0,0);
-		if (ret!=0) {
-			printf("AXON DSP CreateSemaphore error: %d\n",ret);
+		ret = sem_init(&simulator_state.axon_dsp.semaphore, 0, 0);
+		if (ret != 0) {
+			printf("AXON DSP CreateSemaphore error: %d\n", ret);
 			system("PAUSE");
 		}
 
-		// create interrupt thread semaphore
-		ret = sem_init(&simulator_state.axon_dsp.terminate_int_thread_semaphore,0,0);
-		if (ret!=0) {
-			printf("AXON DSP CreateSemaphore interrupt thread terminate error: %d\n", ret);
+		ret = sem_init(&simulator_state.axon_dsp.terminate_int_thread_semaphore, 0, 0);
+		if (ret != 0) {
+			printf("AXON DSP CreateSemaphore interrupt "
+				"thread terminate error: %d\n", ret);
 			system("PAUSE");
 		}
 
 		/* create threads for axon dsp hardware and the axon dsp interrupt */
-		ret = pthread_create(&simulator_state.axon_dsp.hw_thread_handle,NULL,axon_dsp_hw_thread, NULL);
-		if (ret!= 0) {
-			printf("AXON DSP HW Thread creation failed. Exiting program \n");
+		ret = pthread_create(&simulator_state.axon_dsp.hw_thread_handle, NULL,
+			axon_dsp_hw_thread, NULL);
+		if (ret != 0) {
+			printf("AXON DSP HW Thread creation failed. Exiting program\n");
 			fflush(stdout);
 			system("PAUSE");
 		}
 
 		struct timespec ts;
 		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_sec +=1; //wait for 1 seconds
+		ts.tv_sec += 1; /* wait for 1 seconds */
 		pthread_timedjoin_np(simulator_state.axon_dsp.hw_thread_handle, NULL, &ts);
-		ret = pthread_create(&simulator_state.axon_dsp.int_thread_handle,NULL,axon_dsp_int_thread, NULL);
-		if (ret!= 0) {
+		ret = pthread_create(&simulator_state.axon_dsp.int_thread_handle,
+			NULL, axon_dsp_int_thread, NULL);
+		if (ret != 0) {
 			printf("AXON DSP INT Thread creation failed. Exiting program \n");
 			fflush(stdout);
 			system("PAUSE");
 		}
 		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_sec +=1; //wait for 1 seconds
+		ts.tv_sec += 1; /* wait for 1 second */
 		pthread_timedjoin_np(simulator_state.axon_dsp.int_thread_handle, NULL, &ts);
 	}
 
@@ -260,16 +262,20 @@ void exit_simulator_axon_dsp(void)
 {
 	if (!nrf_axon_simulator_in_threadless_mode_get()) {
 		simulator_state.axon_dsp.terminate_thread = true;
-		int wait_result =	pthread_join(simulator_state.axon_dsp.hw_thread_handle, NULL);
-		if(wait_result!=0){
+		int wait_result =
+			pthread_join(simulator_state.axon_dsp.hw_thread_handle, NULL);
+		if (wait_result != 0) {
 			printf("AXON DSP HW Thread did not exit cleanly! \n");
 		}
 
-		// for the interrupt thread, release a semaphore which will then cause it to exit cleanly
+		/*
+		 * for the interrupt thread, release a semaphore which will then cause it to
+		 * exit cleanly
+		 */
 		sem_post(&simulator_state.axon_dsp.terminate_int_thread_semaphore);
 		wait_result = pthread_join(simulator_state.axon_dsp.int_thread_handle, NULL);
-		// and if that is successful close the interrupt thread handle
-		if(wait_result!=0){
+		/* and if that is successful close the interrupt thread handle */
+		if (wait_result != 0) {
 			printf("AXON DSP HW Interrupt Thread did not exit cleanly! \n");
 		}
 		pthread_mutex_destroy(&simulator_state.axon_dsp.registers_mutex);
@@ -283,33 +289,42 @@ void exit_simulator_axon_dsp(void)
 /*
  * Axon NN write to register (executes in the application thread only)
  */
-void axon_nn_simulator_write_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *addr, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE value)
+void axon_nn_simulator_write_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *addr,
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE value)
 {
 	if (nrf_axon_simulator_in_threadless_mode_get()) {
 		int nn_simulator_err, nn_o_wdog_cmd, nn_o_wdog_finish;
 		switch(axon_nn_simulator_write_reg_prim(addr, value)) {
-			case 0: break;
-			case 1:
-				if (axon_nn_simulator_process_action_request(&nn_simulator_err, &nn_o_cycles, &nn_o_wdog_cmd, &nn_o_wdog_finish)) {
-					host_irq_handler(NULL);
-				}
-				break;
-			case 2: host_irq_handler(NULL); break;
+		case 0:
+			break;
+		case 1:
+			if (axon_nn_simulator_process_action_request(&nn_simulator_err,
+					&nn_o_cycles, &nn_o_wdog_cmd, &nn_o_wdog_finish)) {
+				host_irq_handler(NULL);
+			}
+			break;
+		case 2:
+			host_irq_handler(NULL);
+			break;
 		}
 	} else {
-		// grab mutex by calling wait()
-		simulator_state.axon_nn.mutex_wait_result = pthread_mutex_lock(&simulator_state.axon_nn.registers_mutex);
+		simulator_state.axon_nn.mutex_wait_result =
+			pthread_mutex_lock(&simulator_state.axon_nn.registers_mutex);
 
-		// catch failed wait()
 		if (simulator_state.axon_nn.mutex_wait_result != 0) {
 			printf("AXON NN Mutex wait failed..");
 			system("PAUSE");
 		}
 
 		switch(axon_nn_simulator_write_reg_prim(addr, value)) {
-			case 0: break;
-			case 1: simulator_state.axon_nn.action_reg_updated = true; break;
-			case 2: sem_post(&simulator_state.axon_nn.semaphore); break;
+		case 0:
+			break;
+		case 1:
+			simulator_state.axon_nn.action_reg_updated = true;
+			break;
+		case 2:
+			sem_post(&simulator_state.axon_nn.semaphore);
+			break;
 		}
 		pthread_mutex_unlock(&simulator_state.axon_nn.registers_mutex);
 	}
@@ -318,24 +333,26 @@ void axon_nn_simulator_write_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TY
 /**
  * Axon NN read from register (executes in the application thread only)
  */
-NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE axon_nn_simulator_read_reg(volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *addr)
+NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE axon_nn_simulator_read_reg(
+	volatile NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *addr)
 {
 	if (nrf_axon_simulator_in_threadless_mode_get()) {
-		// read value from application register set
-		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE return_value = axon_nn_simulator_read_reg_prim(addr);
+		/* read value from application register set */
+		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE return_value =
+			axon_nn_simulator_read_reg_prim(addr);
 		return return_value;
 	} else {
-		// grab mutex by calling wait()
-		simulator_state.axon_nn.mutex_wait_result = pthread_mutex_lock(&simulator_state.axon_nn.registers_mutex);
+		simulator_state.axon_nn.mutex_wait_result =
+			pthread_mutex_lock(&simulator_state.axon_nn.registers_mutex);
 
-		// catch failed wait()
 		if (simulator_state.axon_nn.mutex_wait_result != 0) {
 			printf("AXON NN Mutex wait failed..");
 			system("PAUSE");
 		}
 
-		// read value from application register set
-		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE return_value = axon_nn_simulator_read_reg_prim(addr);
+		/* read value from application register set */
+		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE return_value =
+			axon_nn_simulator_read_reg_prim(addr);
 		pthread_mutex_unlock(&simulator_state.axon_nn.registers_mutex);
 		return return_value;
 	}
@@ -355,19 +372,22 @@ void* axon_nn_int_thread(void *data)
 {
 	bool int_fired = false;
 	while (1) {
-		if(int_fired || (sem_trywait(&simulator_state.axon_nn.semaphore)==0)){
+		if (int_fired || (sem_trywait(&simulator_state.axon_nn.semaphore) == 0)) {
 			int_fired = true;
-			// allow for the int firing while disabled, then the int is cleared. Need to suppress the ISR in that case.
+			/*
+			 * allow for the int firing while disabled, then the int is cleared.
+			 * Need to suppress the ISR in that case.
+			 */
 			if (axon_simulator_ints_enabled) {
 				if (axon_nn_simualtor_int_pending()) {
-						// call the handler
-						host_irq_handler(NULL);
+					/* call the handler */
+					host_irq_handler(NULL);
 				}
-				// only clear	int_fired if the int bits were cleared.
+				/* only clear int_fired if the int bits were cleared. */
 				int_fired = axon_nn_simualtor_int_pending();
 			}
 		}
-		if(sem_trywait(&simulator_state.axon_nn.terminate_int_thread_semaphore)==0){
+		if (sem_trywait(&simulator_state.axon_nn.terminate_int_thread_semaphore) == 0) {
 			break;
 		}
 	}
@@ -375,37 +395,38 @@ void* axon_nn_int_thread(void *data)
 }
 
 
-// Axon NN hardware thread
+/* Axon NN hardware thread */
 void *axon_nn_hw_thread(void *data)
 {
-	// // register polling loop
+	/* register polling loop */
 	while (1) {
 
 		if (simulator_state.axon_nn.terminate_thread) {
 			break;
 		}
 
-		// wait for driver to write something of interest...
+		/* wait for driver to write something of interest... */
 		if (simulator_state.axon_nn.action_reg_updated == 0) {
-			continue; // ...nothing yet, skip below and go back to the beginning of while loop
+			continue; /* ...nothing yet */
 		}
 
-		// action is necessary - grab mutex by calling wait()
-		simulator_state.axon_nn.mutex_wait_result = pthread_mutex_lock(&simulator_state.axon_nn.registers_mutex);
+		/* action is necessary - grab mutex */
+		simulator_state.axon_nn.mutex_wait_result =
+			pthread_mutex_lock(&simulator_state.axon_nn.registers_mutex);
 
-		// catch failed wait()
 		if (simulator_state.axon_nn.mutex_wait_result != 0) {
 			printf("AXON NN Mutex wait failed..");
 			system("PAUSE");
 		}
 
-		// clear out action indicator
+		/* clear out action indicator */
 		simulator_state.axon_nn.action_reg_updated = 0;
 
 		pthread_mutex_unlock(&simulator_state.axon_nn.registers_mutex);
 		/* check interrupts*/
 		int nn_simulator_err, nn_o_wdog_cmd, nn_o_wdog_finish;
-		if (axon_nn_simulator_process_action_request(&nn_simulator_err, &nn_o_cycles, &nn_o_wdog_cmd, &nn_o_wdog_finish)) {
+		if (axon_nn_simulator_process_action_request(&nn_simulator_err,
+				&nn_o_cycles, &nn_o_wdog_cmd, &nn_o_wdog_finish)) {
 			sem_post(&simulator_state.axon_nn.semaphore);
 		}
 
@@ -415,40 +436,39 @@ void *axon_nn_hw_thread(void *data)
 
 static void *start_simulator_axon_nn(void)
 {
-	// initialize register values, returns the base address
+	/* initialize register values, returns the base address */
 	void * axon_base_addr = axon_nn_initialize_registers();
 
 	if (!nrf_axon_simulator_in_threadless_mode_get()) {
 		simulator_state.axon_nn.terminate_thread = false;
 
-		// create mutex
-		int ret = pthread_mutex_init(&simulator_state.axon_nn.registers_mutex,NULL);
-		if (ret!=0) {
+		int ret = pthread_mutex_init(&simulator_state.axon_nn.registers_mutex, NULL);
+
+		if (ret != 0) {
 			printf("AXON NN CreateMutex error: %d\n", ret);
 			return 0;
 		}
 
-		// create semaphore
-		ret = sem_init(&simulator_state.axon_nn.semaphore,0,0);
-		if (ret!=0) {
-			printf("AXON NN CreateSemaphore error: %d\n",ret);
+		ret = sem_init(&simulator_state.axon_nn.semaphore, 0, 0);
+		if (ret != 0) {
+			printf("AXON NN CreateSemaphore error: %d\n", ret);
 			system("PAUSE");
 		}
 
-		// create interrupt thread semaphore
 		ret = sem_init(&simulator_state.axon_nn.terminate_int_thread_semaphore, 0, 0);
-		if (ret!=0) {
+		if (ret != 0) {
 			printf("AXON NN CreateSemaphore interrupt thread terminate error: %d\n", ret);
 			system("PAUSE");
 		}
 
-		// create threads for axon nn hardware and the axon nn interrupt
+		/* create threads for axon nn hardware and the axon nn interrupt */
 		/**
 		 * @FIXME! Check axon cmodel stack size requirements ~64kB
 		 * EC	- find where stack size is being set/overwritten in exe
 		 */
-		ret = pthread_create(&simulator_state.axon_nn.hw_thread_handle, 0, axon_nn_hw_thread, NULL);
-		if (ret!= 0) {
+		ret = pthread_create(&simulator_state.axon_nn.hw_thread_handle, 0,
+			axon_nn_hw_thread, NULL);
+		if (ret != 0) {
 			printf("AXON NN HW Thread creation failed. Exiting program \n");
 			fflush(stdout);
 			system("PAUSE");
@@ -456,16 +476,17 @@ static void *start_simulator_axon_nn(void)
 
 		struct timespec ts;
 		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_sec +=1; //wait for 1 second
+		ts.tv_sec += 1; /* wait for 1 second */
 		pthread_timedjoin_np(simulator_state.axon_nn.hw_thread_handle, NULL, &ts);
-		ret = pthread_create(&simulator_state.axon_nn.int_thread_handle, 0, axon_nn_int_thread, NULL);
-		if (ret!= 0) {
+		ret = pthread_create(&simulator_state.axon_nn.int_thread_handle, 0,
+			axon_nn_int_thread, NULL);
+		if (ret != 0) {
 			printf("AXON NN INT Thread creation failed. Exiting program \n");
 			fflush(stdout);
 			system("PAUSE");
 		}
 		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_sec +=1; //wait for 1 second
+		ts.tv_sec += 1; /* wait for 1 second */
 		pthread_timedjoin_np(simulator_state.axon_nn.int_thread_handle, NULL, &ts);
 	}
 
@@ -476,16 +497,20 @@ void exit_simulator_axon_nn(void)
 {
 	if (!nrf_axon_simulator_in_threadless_mode_get()) {
 		simulator_state.axon_nn.terminate_thread = true;
-		int wait_result =	pthread_join(simulator_state.axon_nn.hw_thread_handle, NULL);
-		if(wait_result!=0){
+		int wait_result =
+			pthread_join(simulator_state.axon_nn.hw_thread_handle, NULL);
+		if (wait_result != 0) {
 			printf("AXON NN HW Thread did not exit cleanly! \n");
 		}
 
-		// for the interrupt thread, release a semaphore which will then cause it to exit cleanly
+		/*
+		 * for the interrupt thread, release a semaphore which will then cause
+		 * it to exit cleanly
+		 */
 		sem_post(&simulator_state.axon_nn.terminate_int_thread_semaphore);
 		wait_result = pthread_join(simulator_state.axon_nn.int_thread_handle, NULL);
-		// and if that is successful close the interrupt thread handle
-		if(wait_result!=0){
+		/* and if that is successful close the interrupt thread handle */
+		if (wait_result != 0) {
 			printf("AXON NN HW Interrupt Thread did not exit cleanly! \n");
 		}
 		pthread_mutex_destroy(&simulator_state.axon_nn.registers_mutex);
@@ -501,10 +526,11 @@ void exit_simulator_axon_nn(void)
 */
 void *start_simulator()
 {
-	 static_assert(sizeof(void *) == sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE), "platform architecture setting mismatch!");
-	 printf(" platform architecture %d-bit\n", (int)sizeof(void *)*8);
-	 start_simulator_axon_dsp();
-	 return start_simulator_axon_nn();
+	static_assert(sizeof(void *) == sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE),
+		"platform architecture setting mismatch!");
+	printf(" platform architecture %d-bit\n", (int)sizeof(void *)*8);
+	start_simulator_axon_dsp();
+	return start_simulator_axon_nn();
 }
 
 void exit_simulator(void)
@@ -517,6 +543,7 @@ uint32_t nrf_axon_platform_get_ticks(void)
 {
 	struct timespec ts;
 	uint32_t ticks=0;
+
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	ticks = ts.tv_nsec / 1000000;
 	ticks += ts.tv_sec * 1000;
@@ -525,64 +552,68 @@ uint32_t nrf_axon_platform_get_ticks(void)
 
 int fopen_s(FILE **f, const char* name, const char* mode)
 {
-	int ret = 0;
 	assert(f);
 	*f = fopen(name, mode);
-	if (*f==NULL)
-			ret = -1;
-	return ret;
+	return (*f == NULL) ? -1 : 0;
 }
 
-int fprintf_s(FILE *stream,const char *format, ...)
+int fprintf_s(FILE *stream, const char *format, ...)
 {
 	va_list args;
 	va_start(args, format);
 	char tempstring[512];
-	vsnprintf(tempstring, sizeof(tempstring),format, args);
+
+	vsnprintf(tempstring, sizeof(tempstring), format, args);
 	va_end(args);
-	return fprintf(stream,"%s", tempstring);
+	return fprintf(stream, "%s", tempstring);
 }
 
-int fscanf_s(FILE *stream,const char *format, ...)
+int fscanf_s(FILE *stream, const char *format, ...)
 {
 	va_list args;
 	va_start(args, format);
 	char tempstring[512];
-	int result = vfscanf(stream,format,args);
+	int result = vfscanf(stream, format, args);
 	va_end(args);
+
 	return result;
 }
 
-size_t fread_s(void * buffer_ptr, size_t buffer_size, size_t size, size_t n, FILE * stream) {
+size_t fread_s(void *buffer_ptr, size_t buffer_size, size_t size, size_t n, FILE *stream)
+{
 	return fread(buffer_ptr, size, n, stream);
 }
 
-char *strcpy_s(char* dest, size_t size, char const* src) {
+char *strcpy_s(char *dest, size_t size, char const *src)
+{
 	size_t source_size = strlen(src) + 1;
 
-	if (source_size<=size) {
-		strcpy(dest,src);
+	if (source_size <= size) {
+		strcpy(dest, src);
 	} else {
-		memcpy(dest,src,size-1);
-		dest[size-1] = 0; // terminate it.
+		memcpy(dest, src, size-1);
+		dest[size-1] = 0; /* terminate it. */
 	}
 	return dest;
 }
 
 int nrf_axon_simulator_run_test_files(
-	char* input_file_path,
-	char* output_file_path,
-	char* input_file_ext,
-	char* output_file_head_str,
+	char *input_file_path,
+	char *output_file_path,
+	char *input_file_ext,
+	char *output_file_head_str,
 	uint32_t buffer_size,
-	int (*callback_function)(char* input_file_name, char* output_file_name, int8_t* buffer, uint32_t buffer_size)) {
-
+	int (*callback_function)(char *input_file_name, char *output_file_name,
+		int8_t *buffer, uint32_t buffer_size))
+{
 	#define STR_BUF_SIZE 512
-	char fullPath_input[STR_BUF_SIZE]; // Ensure this is large enough to hold the full path
-	char fullPath_output[STR_BUF_SIZE]; // Ensure this is large enough to hold the full path
-
+	/* Ensure these are large enough to hold the full path */
+	char fullPath_input[STR_BUF_SIZE];
+	char fullPath_output[STR_BUF_SIZE];
 	struct dirent *entry;
-	if((input_file_path[strnlen(input_file_path, STR_BUF_SIZE)-1] != '\\') && (input_file_path[strnlen(input_file_path, STR_BUF_SIZE)-1] != '/')) {
+
+	if ((input_file_path[strnlen(input_file_path, STR_BUF_SIZE)-1] != '\\') &&
+			(input_file_path[strnlen(input_file_path, STR_BUF_SIZE)-1] != '/')) {
 		snprintf(fullPath_input, sizeof(fullPath_input), "%s/", input_file_path);
 	} else {
 		snprintf(fullPath_input, sizeof(fullPath_input), "%s", input_file_path);
@@ -595,38 +626,51 @@ int nrf_axon_simulator_run_test_files(
 		return -1;
 	}
 
-	// make sure this is 32bit aligned in case it gets down-cast from int8*
-	int32_t* buffer = malloc(buffer_size);
-	if (NULL==buffer) {
+	/* make sure this is 32bit aligned in case it gets down-cast from int8* */
+	int32_t *buffer = malloc(buffer_size);
+
+	if (buffer == NULL) {
 		return -2;
 	}
 
 	uint32_t input_files_processed = 0;
+
 	while ((entry = readdir(dp))) {
-	if (strstr(entry->d_name, input_file_ext)) {
+		if (!strstr(entry->d_name, input_file_ext)) {
+			continue;
+		}
 		nrf_axon_platform_printf("Processing: %s\n", entry->d_name);
-		if((input_file_path[strnlen(input_file_path, STR_BUF_SIZE)-1] != '\\') && (input_file_path[strnlen(input_file_path, STR_BUF_SIZE)-1] != '/')) {
-		snprintf(fullPath_input, sizeof(fullPath_input), "%s/%s", input_file_path, entry->d_name);
+		if ((input_file_path[strnlen(input_file_path, STR_BUF_SIZE)-1] != '\\')
+				&& (input_file_path[strnlen(input_file_path, STR_BUF_SIZE)-1]
+				!= '/')) {
+			snprintf(fullPath_input, sizeof(fullPath_input), "%s/%s",
+			input_file_path, entry->d_name);
 		} else {
-		snprintf(fullPath_input, sizeof(fullPath_input), "%s%s", input_file_path, entry->d_name);
+			snprintf(fullPath_input, sizeof(fullPath_input), "%s%s",
+				input_file_path, entry->d_name);
 		}
 
 		DIR *outp = opendir(output_file_path);
-		if(NULL == outp) {
-		nrf_axon_platform_printf("%s doesn't exist, create it!\n", output_file_path);
-		mkdir(output_file_path, 0775);
-		} else {
-		closedir(outp);
-		}
-		if((output_file_path[strnlen(output_file_path, STR_BUF_SIZE)-1] != '\\') && (output_file_path[strnlen(output_file_path, STR_BUF_SIZE)-1] != '/')) {
-		snprintf(fullPath_output, sizeof(fullPath_output), "%s/%s%s", output_file_path, output_file_head_str, entry->d_name);
-		} else {
-		snprintf(fullPath_output, sizeof(fullPath_output), "%s%s%s", output_file_path, output_file_head_str, entry->d_name);
-		}
 
-		callback_function(fullPath_input, fullPath_output, (int8_t*)buffer, buffer_size);
+		if (outp == NULL) {
+			nrf_axon_platform_printf("%s doesn't exist, create it!\n",
+				output_file_path);
+			mkdir(output_file_path, 0775);
+		} else {
+			closedir(outp);
+		}
+		if ((output_file_path[strnlen(output_file_path, STR_BUF_SIZE)-1] != '\\')
+				&& (output_file_path[strnlen(output_file_path, STR_BUF_SIZE)-1]
+				!= '/')) {
+			snprintf(fullPath_output, sizeof(fullPath_output), "%s/%s%s",
+				output_file_path, output_file_head_str, entry->d_name);
+		} else {
+			snprintf(fullPath_output, sizeof(fullPath_output), "%s%s%s",
+				output_file_path, output_file_head_str, entry->d_name);
+		}
+		callback_function(fullPath_input, fullPath_output,
+			(int8_t *)buffer, buffer_size);
 		input_files_processed++;
-	}
 	}
 	nrf_axon_platform_printf("%d files processed\n", input_files_processed);
 

@@ -21,136 +21,175 @@ extern "C" {
 struct nrf_edgeai_s;
 typedef struct nrf_edgeai_s nrf_edgeai_t;
 
-/***********************************************************************************************************************
-nRF Edge AI processing interfaces types
-***********************************************************************************************************************/
+/***************************************************************************************************
+ * nRF Edge AI processing interfaces types
+ **************************************************************************************************/
 
 /**
- * @brief Setup internal data structures for processing input features(data), 
+ * @brief Setup internal data structures for processing input features(data),
  *          collecting data windows, etc
  *
- * @param[in, out] p_input_ctx     Pointer to the input processing context @ref nrf_edgeai_input_t 
- * 
+ * @param[in, out] p_input_ctx     Pointer to the input processing context @ref nrf_edgeai_input_t
+ *
  * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
-typedef nrf_edgeai_err_t (*nrf_edgeai_iface_input_init_t)(nrf_edgeai_input_t* p_input_ctx);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_input_init_t)(nrf_edgeai_input_t *p_input_ctx);
 
 /**
  * @brief Feed and collect input features to internal data structures for further processing
- * 
+ *
  * @param[in, out] p_input_ctx     Pointer to the input processing context @ref nrf_edgeai_input_t
  * @param[in] p_input_values       Input features data array
  * @param[in] num_values           Number of input features in the array
- * 
+ *
  * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
-typedef nrf_edgeai_err_t (*nrf_edgeai_iface_feed_inputs_t)(nrf_edgeai_input_t* p_input_ctx,
-                                                           void*               p_input_values,
-                                                           uint16_t            num_values);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_feed_inputs_t)(nrf_edgeai_input_t *p_input_ctx,
+							   void		      *p_input_values,
+							   uint16_t	       num_values);
 
 /**
  * @brief Init model inference engine
- * 
+ *
  * @param[in, out] p_edgeai     Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- * 
+ *
  * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
- * 
+ *
  */
-typedef nrf_edgeai_err_t (*nrf_edgeai_iface_init_inference_t)(nrf_edgeai_t* p_edgeai);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_init_inference_t)(nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Run model inference
- * 
+ *
  * @param[in, out] p_edgeai     Pointer to Edge AI Lab user context @ref nrf_edgeai_t
- * 
+ *
  * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
- * 
+ *
  */
-typedef nrf_edgeai_err_t (*nrf_edgeai_iface_run_inference_t)(nrf_edgeai_t* p_edgeai);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_run_inference_t)(nrf_edgeai_t *p_edgeai);
 
 /**
  * @brief Propagate raw model output neurons to the output values structure
- * 
+ *
  * @param[in, out] p_model    Pointer to model context @ref nrf_edgeai_model_t
- * 
+ *
  */
-typedef void (*nrf_edgeai_iface_propagate_outputs_t)(nrf_edgeai_model_t* p_model);
+typedef void (*nrf_edgeai_iface_propagate_outputs_t)(nrf_edgeai_model_t *p_model);
 
 /**
  * @brief Decode raw model outputs to human-readable format depending on the model task
- * 
+ *
  * @param[in] p_model_output      Pointer to model output structure @ref nrf_edgeai_model_t
- * @param[out] p_decoded_output   Pointer to decoded output structure @ref nrf_edgeai_decoded_output_t
- * 
+ * @param[out] p_decoded_output   Pointer to decoded output structure @ref
+ * nrf_edgeai_decoded_output_t
+ *
  */
-typedef void (*nrf_edgeai_iface_decode_outputs_t)(nrf_edgeai_model_output_t*   p_model_output,
-                                                  nrf_edgeai_decoded_output_t* p_decoded_output);
+typedef void (*nrf_edgeai_iface_decode_outputs_t)(nrf_edgeai_model_output_t   *p_model_output,
+						  nrf_edgeai_decoded_output_t *p_decoded_output);
 
 /**
- * @brief Process input features for model inference, e.g. scaling, filtering, DSP, etc
- * 
+ * @brief Process input features for model inference, DSP processing, filtering, etc
+ *
  * @param[in, out] p_input        Pointer to the input processing context @ref nrf_edgeai_input_t
  * @param[in, out] p_dsp          Pointer to the DSP pipeline context @ref nrf_edgeai_dsp_pipeline_t
- * 
+ *
  * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
  */
-typedef nrf_edgeai_err_t (*nrf_edgeai_iface_process_features_t)(nrf_edgeai_input_t*        p_input,
-                                                                nrf_edgeai_dsp_pipeline_t* p_dsp);
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_process_features_t)(nrf_edgeai_input_t	  *p_input,
+								nrf_edgeai_dsp_pipeline_t *p_dsp);
+
+/**
+ * @brief Scale input features for model inference
+ *
+ * @param[in, out] p_input        Pointer to the input processing context @ref nrf_edgeai_input_t
+ * @param[in, out] p_dsp          Pointer to the DSP pipeline context @ref nrf_edgeai_dsp_pipeline_t
+ *
+ * @return nRF Edge AI operation status code @ref nrf_edgeai_err_t
+ */
+typedef nrf_edgeai_err_t (*nrf_edgeai_iface_scale_features_t)(nrf_edgeai_input_t	*p_input,
+							      nrf_edgeai_dsp_pipeline_t *p_dsp);
 
 /**
  * @brief Edge AI runtime interfaces structure definition
  */
-typedef struct nrf_edgeai_interfaces_s
-{
-    nrf_edgeai_iface_input_init_t        input_init;
-    nrf_edgeai_iface_feed_inputs_t       feed_inputs;
-    nrf_edgeai_iface_process_features_t  process_features;
-    nrf_edgeai_iface_init_inference_t    init_inference;
-    nrf_edgeai_iface_run_inference_t     run_inference;
-    nrf_edgeai_iface_propagate_outputs_t propagate_outputs;
-    nrf_edgeai_iface_decode_outputs_t    decode_outputs;
+typedef struct nrf_edgeai_interfaces_s {
+	nrf_edgeai_iface_input_init_t	     input_init;
+	nrf_edgeai_iface_feed_inputs_t	     feed_inputs;
+	nrf_edgeai_iface_process_features_t  process_features;
+	nrf_edgeai_iface_scale_features_t    scale_features;
+	nrf_edgeai_iface_init_inference_t    init_inference;
+	nrf_edgeai_iface_run_inference_t     run_inference;
+	nrf_edgeai_iface_propagate_outputs_t propagate_outputs;
+	nrf_edgeai_iface_decode_outputs_t    decode_outputs;
 } nrf_edgeai_interfaces_t;
 
 /**
  * @brief EdgeAI runtime version structure
  */
-typedef union nrf_edgeai_rt_version_u
-{
-    struct
-    {
-        const uint8_t  major; /**< Major version */
-        const uint8_t  minor; /**< Minor version */
-        const uint16_t patch; /**< Patch version */
-    } field;
-    const uint32_t combined; /**< Combined version as a single 32-bit value */
+typedef union nrf_edgeai_rt_version_u {
+	struct {
+		const uint8_t  major; /**< Major version */
+		const uint8_t  minor; /**< Minor version */
+		const uint16_t patch; /**< Patch version */
+	} field;
+	const uint32_t combined; /**< Combined version as a single 32-bit value */
 } nrf_edgeai_rt_version_t;
 
 /**
  * @brief EdgeAI Solution metadata structure
  */
-typedef struct nrf_edgeai_metadata_s
-{
-    const char*             p_solution_id; /**< Solution ID string */
-    nrf_edgeai_rt_version_t version;       /**< Solution runtime version */
+typedef struct nrf_edgeai_metadata_s {
+	/**< Solution ID string */
+	const char *p_solution_id;
+	/**< Solution runtime version */
+	nrf_edgeai_rt_version_t version;
 } nrf_edgeai_metadata_t;
 
-/***********************************************************************************************************************
-nRF Edge AI runtime context definition
-***********************************************************************************************************************/
-struct nrf_edgeai_s
-{
-    /**< Model metadata information */
-    nrf_edgeai_metadata_t metadata;
-    /** Input features processing context */
-    nrf_edgeai_input_t input;
-    /** DSP pipeline context */
-    nrf_edgeai_dsp_pipeline_t* p_dsp;
-    /** Model context */
-    nrf_edgeai_model_t model;
-    /** Decoded output results */
-    nrf_edgeai_decoded_output_t decoded_output;
-    /** Processing interfaces */
-    nrf_edgeai_interfaces_t interfaces;
+/** Edge AI runtime state bits definitions */
+#define NRF_EDGEAI_STATE_RT_INITIALIZED		(1 << 0)
+#define NRF_EDGEAI_STATE_RT_INPUTS_COLLECTED	(1 << 1)
+#define NRF_EDGEAI_STATE_RT_FEATURES_PROCESSED	(1 << 2)
+#define NRF_EDGEAI_STATE_RT_INFERENCE_COMPLETED (1 << 3)
+
+/**< Edge AI context ready for feature processing */
+#define NRF_EDGEAI_STATE_RT_READY_FOR_FEATURE_PROCESSING \
+	(NRF_EDGEAI_STATE_RT_INITIALIZED | NRF_EDGEAI_STATE_RT_INPUTS_COLLECTED)
+/**< Edge AI context ready for inference */
+#define NRF_EDGEAI_STATE_RT_READY_FOR_INFERENCE                                   \
+	(NRF_EDGEAI_STATE_RT_INITIALIZED | NRF_EDGEAI_STATE_RT_INPUTS_COLLECTED | \
+	 NRF_EDGEAI_STATE_RT_FEATURES_PROCESSED)
+
+/** @brief EdgeAI runtime internal state structure */
+typedef union nrf_edgeai_state_u {
+	struct {
+		uint32_t initialized	    : 1;  /**< Edge AI context initialized */
+		uint32_t inputs_collected   : 1;  /**< Input features collected */
+		uint32_t features_processed : 1;  /**< Features processed, ready for inference */
+		uint32_t inference_completed: 1;  /**< Inference is completed */
+		uint32_t reserved	    : 20; /**< Reserved bits for future use */
+		uint32_t user_reserved	    : 8;  /**< Reserved bits for user-defined state */
+	} rt;
+	uint32_t all; /**< All state bits */
+} nrf_edgeai_state_t;
+
+/***************************************************************************************************
+ * nRF Edge AI runtime context definition
+ **************************************************************************************************/
+struct nrf_edgeai_s {
+	/**< Model metadata information */
+	nrf_edgeai_metadata_t metadata;
+	/** Input features processing context */
+	nrf_edgeai_input_t input;
+	/** DSP pipeline context */
+	nrf_edgeai_dsp_pipeline_t *p_dsp;
+	/** Model context */
+	nrf_edgeai_model_t model;
+	/** Decoded output results */
+	nrf_edgeai_decoded_output_t decoded_output;
+	/** Processing interfaces */
+	nrf_edgeai_interfaces_t interfaces;
+	/** Edge AI runtime state */
+	nrf_edgeai_state_t state;
 };
 
 #ifdef __cplusplus

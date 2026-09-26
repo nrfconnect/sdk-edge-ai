@@ -45,8 +45,9 @@
  * - Return: Number of features extracted and written to p_features.
  *
  * @note
- * - Use NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I8, NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I16, or NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_F32
- *   to declare feature functions for int8, int16, or float32 input types, respectively.
+ * - Use NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I8, NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I16, or
+ * NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_F32 to declare feature functions for int8, int16, or float32
+ * input types, respectively.
  *
  * @example
  * // Declaration for mean feature extraction on int8 input:
@@ -54,32 +55,32 @@
  *
  * // Expands to:
  * size32_t nrf_edgeai_feature_mean_i8(
- *     int8_t*                    p_input,
- *     size32_t                     num,
- *     int16_t*                   p_features,
+ *     int8_t*                          p_input,
+ *     size32_t                         num,
+ *     int16_t*                         p_features,
  *     nrf_edgeai_features_mask_t       feature_mask,
- *     void*                           p_pipeline_ctx,
+ *     void*                            p_pipeline_ctx,
  *     nrf_edgeai_feature_get_arg_cb_t  get_argument,
- *     void*                           p_argument_ctx
+ *     void*                            p_argument_ctx
  * );
  */
 
-#define NRF_EDGEAI_DECLARE_FEATURE_FUNCTION(feature_name, input_type, feature_type)            \
-    size32_t nrf_edgeai_feature_##feature_name(input_type*                     p_input,        \
-                                               size32_t                        num,            \
-                                               feature_type*                   p_features,     \
-                                               nrf_edgeai_features_mask_t      feature_mask,   \
-                                               void*                           p_pipeline_ctx, \
-                                               nrf_edgeai_feature_get_arg_cb_t get_argument,   \
-                                               void*                           p_argument_ctx)
+#define NRF_EDGEAI_DECLARE_FEATURE_FUNCTION(feature_name, input_type, feature_type)                \
+	size32_t nrf_edgeai_feature_##feature_name(input_type			  *p_input,        \
+						   size32_t			   num,            \
+						   feature_type			  *p_features,     \
+						   nrf_edgeai_features_mask_t	   feature_mask,   \
+						   void				  *p_pipeline_ctx, \
+						   nrf_edgeai_feature_get_arg_cb_t get_argument,   \
+						   void				  *p_argument_ctx)
 
 #define NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I8(feature_name) \
-    NRF_EDGEAI_DECLARE_FEATURE_FUNCTION(feature_name, int8_t, int16_t)
+	NRF_EDGEAI_DECLARE_FEATURE_FUNCTION(feature_name, int8_t, int16_t)
 
 #define NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I16(feature_name) \
-    NRF_EDGEAI_DECLARE_FEATURE_FUNCTION(feature_name, int16_t, int32_t)
+	NRF_EDGEAI_DECLARE_FEATURE_FUNCTION(feature_name, int16_t, int32_t)
 
 #define NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_F32(feature_name) \
-    NRF_EDGEAI_DECLARE_FEATURE_FUNCTION(feature_name, flt32_t, flt32_t)
+	NRF_EDGEAI_DECLARE_FEATURE_FUNCTION(feature_name, flt32_t, flt32_t)
 
 #endif /* _NRF_EDGEAI_PRIVATE_INTERFACES_FEATURES_COMMON_H_ */

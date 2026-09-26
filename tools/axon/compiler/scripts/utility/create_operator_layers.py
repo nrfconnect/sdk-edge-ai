@@ -1,11 +1,7 @@
 """ 
-/*
- * Copyright (c) 2025, Nordic Semiconductor ASA. All Rights Reserved.
- *
- * The information contained herein is confidential property of Nordic Semiconductor ASA.
- * The use, copying, transfer or disclosure of such information is prohibited except by
- * express written agreement with Nordic Semiconductor ASA.
- */
+Copyright (c) 2025 Nordic Semiconductor
+
+SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 """
 import numpy as np
 import tensorflow as tf

@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-// float32 features declarations
+/* float32 features declarations */
 NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_F32(utility_rfft_128_f32);
 NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_F32(utility_rfft_256_f32);
 NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_F32(utility_rfft_512_f32);
@@ -26,7 +26,7 @@ NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_F32(spectral_centroid_f32);
 NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_F32(spectral_spread_f32);
 NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_F32(spectrum_bins_f32);
 
-// int16 features declarations
+/* int16 features declarations */
 NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I16(utility_rfft_128_i16);
 NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I16(utility_rfft_256_i16);
 NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I16(utility_rfft_512_i16);

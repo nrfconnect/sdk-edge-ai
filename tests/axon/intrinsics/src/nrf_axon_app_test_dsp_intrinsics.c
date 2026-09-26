@@ -1,8 +1,8 @@
 /*
-* Copyright (c) 2025-26 Nordic Semiconductor ASA
-*
-* SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
-*/
+ * Copyright (c) 2025-26 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
 
 #include <stddef.h>
 #include <stdio.h>
@@ -13,7 +13,7 @@
 #include "axon/nrf_axon_logging.h"
 #include "./nrf_axon_app_test_dsp_intrinsics_vectors.h"
 
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 # include "axon/nrf_axon_platform_simulator.h"
 #endif
 
@@ -154,7 +154,8 @@ int xty_16_16_32_tests(int *test_ndx)
 	nrf_axon_platform_printf("xty_16_16_32_tests: %d cases\n", xty_16_16_32_test_cnt);
 	/* case 0: no rounding */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_xty_16_16_32(main_vector_16 + 0, main_vector_16 + 500, test_results.as_i32,
+	result = nrf_axon_xty_16_16_32(main_vector_16 + 0, main_vector_16 + 500,
+		test_results.as_i32,
 			278, 0, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
 		nrf_axon_platform_printf("FUNCTION FAILED! code=%d\n", result);
@@ -173,7 +174,8 @@ int xty_16_16_32_tests(int *test_ndx)
 
 	/* case 1: 2bits of rounding */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_xty_16_16_32(main_vector_16 + 0, main_vector_16 + 500, test_results.as_i32,
+	result = nrf_axon_xty_16_16_32(main_vector_16 + 0, main_vector_16 + 500,
+		test_results.as_i32,
 		64, 2, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
 		nrf_axon_platform_printf("FUNCTION FAILED! code=%d\n", result);
@@ -193,13 +195,15 @@ int xty_16_16_32_tests(int *test_ndx)
 	/* case 2: round 0 */
 	memset(test_results.as_i32, -1, sizeof(test_results.as_i32));
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_xty_16_16_32(main_vector_16 + 0, main_vector_16 + 500, test_results.as_i32,
+	result = nrf_axon_xty_16_16_32(main_vector_16 + 0, main_vector_16 + 500,
+		test_results.as_i32,
 		15, 0, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
 		nrf_axon_platform_printf("FUNCTION FAILED! code=%d\n", result);
 		nrf_axon_platform_printf(
 			"\nTEST:\t%s\tCASE NO\t%d\tRESULT:\tFAIL\n", TEST_NAME, *test_ndx);
-	} else if (nrf_axon_verify_vectors_output_stride("", test_results.as_i32, xty_16_16_32_round_0_expected_output, 15, 0, 0) != 0) {
+	} else if (nrf_axon_verify_vectors_output_stride("", test_results.as_i32,
+			xty_16_16_32_round_0_expected_output, 15, 0, 0) != 0) {
 		nrf_axon_platform_printf(
 			"\nTEST:\t%s\tCASE NO\t%d\tRESULT:\tFAIL\n", TEST_NAME, *test_ndx);
 	} else {
@@ -211,7 +215,8 @@ int xty_16_16_32_tests(int *test_ndx)
 
 	/* case 3: invalid round */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_xty_16_16_32(main_vector_16 + 0, main_vector_16 + 500, test_results.as_i32,
+	result = nrf_axon_xty_16_16_32(main_vector_16 + 0, main_vector_16 + 500,
+		test_results.as_i32,
 		80, 35, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result >= 0) {
 		nrf_axon_platform_printf(
@@ -434,7 +439,7 @@ int xspys_24_24_24_input_stride2_tests(int *test_ndx)
 	/* case 0: single command, 1 row */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
 	result = nrf_axon_xspys_24_24_24_input_stride2(fft_24_expected_output,
-		fft_24_expected_output + 1,test_results.as_i32, 512, 11,
+		fft_24_expected_output + 1, test_results.as_i32, 512, 11,
 			NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
 		nrf_axon_platform_printf("FUNCTION FAILED! code=%d\n", result);
@@ -499,7 +504,7 @@ int xspys_24_24_24_tests(int *test_ndx)
 	nrf_axon_platform_printf("xspys_24_24_24_tests: %d cases\n", xspys_24_24_24_test_cnt);
 	/* case 0: single command, 1 row */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_xspys_24_24_24(main_vector_32, main_vector_32 + 500,test_results.as_i32,
+	result = nrf_axon_xspys_24_24_24(main_vector_32, main_vector_32 + 500, test_results.as_i32,
 		500, 0, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
 		nrf_axon_platform_printf("FUNCTION FAILED! code=%d\n", result);
@@ -532,7 +537,7 @@ int abs_24_24_24_tests(int *test_ndx)
 	nrf_axon_platform_printf("abs_24_24_24_tests: %d cases\n", abs_24_24_24_test_cnt);
 	/* case 0: single command, 1 row */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_abs_24_24_24(main_vector_32, main_vector_32 + 500,test_results.as_i32,
+	result = nrf_axon_abs_24_24_24(main_vector_32, main_vector_32 + 500, test_results.as_i32,
 		500, 12, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
 		nrf_axon_platform_printf("FUNCTION FAILED! code=%d\n", result);
@@ -560,13 +565,13 @@ int abs_24_24_24_tests(int *test_ndx)
 int mar_16_24_32_tests(int *test_ndx)
 {
 	int pass_cnt = 0;
-	static int32_t mar_16_24_32_expected_output[] = {-1186516,};
+	static int32_t mar_16_24_32_expected_output[] = {-1186516, };
 	nrf_axon_result_e result;
 
 	nrf_axon_platform_printf("mar_16_24_32_tests: %d cases\n", mar_16_24_32_test_cnt);
 	/* case 0: mar */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_mar_16_24_32(main_vector_16, main_vector_32 + 500,test_results.as_i32,
+	result = nrf_axon_mar_16_24_32(main_vector_16, main_vector_32 + 500, test_results.as_i32,
 		52, 4, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
 		nrf_axon_platform_printf("FUNCTION FAILED! code=%d\n", result);
@@ -596,9 +601,9 @@ int mar_16_24_32_tests(int *test_ndx)
 int mar_16_24_24_tests(int *test_ndx)
 {
 	int pass_cnt = 0;
-	static int32_t mar_16_24_24_expected_output[] = {-1186516,};
-	static int32_t marx_16_24_32_expected_output[] = {825197,};
-	static int32_t mar_16_24_24_saturated_expected_output[] = {(1 << 23) - 1,};
+	static int32_t mar_16_24_24_expected_output[] = {-1186516, };
+	static int32_t marx_16_24_32_expected_output[] = {825197, };
+	static int32_t mar_16_24_24_saturated_expected_output[] = {(1 << 23) - 1, };
 	nrf_axon_result_e result;
 
 	nrf_axon_platform_printf("mar_16_24_24_tests: %d cases\n", mar_16_24_24_test_cnt);
@@ -607,7 +612,7 @@ int mar_16_24_24_tests(int *test_ndx)
 	 * enabled to axon so that subsequent marx does not fail.
 	 */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_mar_16_24_24(main_vector_16, main_vector_32 + 500,test_results.as_i32,
+	result = nrf_axon_mar_16_24_24(main_vector_16, main_vector_32 + 500, test_results.as_i32,
 		52, 4, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
 	if (result < 0) {
 		nrf_axon_platform_printf("FUNCTION FAILED! code=%d\n", result);
@@ -627,7 +632,7 @@ int mar_16_24_24_tests(int *test_ndx)
 	/* case 1: marx */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
 	nrf_axon_platform_printf("\nmarx_16_24\n");
-	result = nrf_axon_marx_16_24(main_vector_16 + 52,test_results.as_i32, 52, 8,
+	result = nrf_axon_marx_16_24(main_vector_16 + 52, test_results.as_i32, 52, 8,
 		NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
 		nrf_axon_platform_printf("FUNCTION FAILED! code=%d\n", result);
@@ -645,7 +650,8 @@ int mar_16_24_24_tests(int *test_ndx)
 	(*test_ndx)++;
 	/* case 2: mar should saturate */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_mar_16_24_24(main_vector_16 + 52, main_vector_32 + 500, test_results.as_i32,
+	result = nrf_axon_mar_16_24_24(main_vector_16 + 52, main_vector_32 + 500,
+		test_results.as_i32,
 		52, 4, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
 		nrf_axon_platform_printf("FUNCTION FAILED! code=%d\n", result);
@@ -847,7 +853,49 @@ int exp_11p12_tests(int *test_ndx)
 {
 	int pass_cnt = 0;
 	static const int32_t exp_expected_output[512] = {
-		1,79,161,195,240,285,318,314,240,182,142,70,23,118,190,293,329,426,491,513,512,481,414,345,190,14,160,342,448,631,717,740,719,611,453,366,180,64,48,124,196,180,176,193,172,169,187,190,254,353,344,415,438,414,390,234,111,41,195,340,483,588,670,706,645,445,326,192,44,129,330,361,171,7,190,455,900,1496,1378,1334,1491,1026,322,763,1901,3120,3494,4202,4615,4333,3578,3010,1510,184,1428,2675,3603,4115,4369,4396,3863,2595,1934,1437,489,430,1032,1055,862,814,759,441,23,158,141,454,654,1245,1813,2828,3152,3035,2678,1917,1008,345,1581,2614,3657,4191,4358,4024,2751,1515,140,1548,3136,3821,4184,4195,3529,2941,1578,71,1272,2079,2936,3095,2746,1828,1019,127,752,1383,1427,1357,1155,458,375,1296,1899,2657,2884,2647,1818,978,84,1339,2334,2740,3312,3333,2824,2548,1528,345,753,1340,1935,2099,1916,1346,747,82,519,962,1315,1170,777,23,648,1553,1976,2717,2913,2558,1723,1245,468,280,915,1330,1009,711,331,96,725,971,719,260,1378,2307,3159,4595,5501,5517,4913,4123,2901,1412,1037,2765,4158,5152,6070,6431,5821,4630,3563,2851,1162,716,1991,2929,2659,2931,2904,2703,1296,680,197,195,652,658,11,751,1296,1749,2065,2257,1576,708,770,1952,2932,4183,4669,4611,3996,3113,1355,633,2691,3978,4819,5217,5062,4260,2727,1411,327,1531,2595,3661,3992,3558,2711,2297,1460,326,628,1052,1374,1465,1250,590,190,704,1012,1312,1430,1004,318,631,1444,1881,2733,2632,3124,2352,1310,472,643,1492,2491,2751,2635,2073,1409,657,114,679,1139,1320,1024,591,385,1830,3442,4590,4639,3312,945,1711,4170,5974,7491,8588,9218,9164,8014,5532,2277,1363,4312,6354,7680,8396,8528,8065,6940,5098,2638,583,1330,2647,2920,3052,2928,1307,186,864,1544,1875,1435,31,1467,2934,4768,6563,7726,7713,6658,4952,2997,687,4206,7378,9531,10627,10704,9620,7412,4491,1430,2597,5893,8767,9909,9074,7023,4658,2694,108,2252,4135,5576,6561,6516,5166,2739,665,1120,2045,3060,2955,2896,2614,1018,735,2604,4799,6048,6124,5085,3344,1157,1457,4179,5998,7082,7517,7487,6717,4885,2563,395,2915,3968,4741,4737,4205,3045,2533,1352,18,989,1346,678,71,454,915,1346,1995,2641,2737,2100,1458,479,163,518,1033,1118,114,1941,4604,7085,8334,8264,7803,7713,7643,6708,4756,2697,159,2699,5353,6750,6755,6360,6539,6913,6520,5393,4314,3385,1742,722,2830,2703,2832,2928,3056,3442,2749,2581,2232,2486,2301,2340,3061,3326,3455,2710,2038,1038,431,2954,4910,6724,7711,8094,8066,7430,5840,3350,368,2961,4888,6382,6861,6363,5223,4004,2898,1018,648,2590,3612,4432,4785,
+		1, 79, 161, 195, 240, 285, 318, 314, 240, 182, 142, 70,
+		23, 118, 190, 293, 329, 426, 491, 513, 512, 481, 414, 345,
+		190, 14, 160, 342, 448, 631, 717, 740, 719, 611, 453, 366,
+		180, 64, 48, 124, 196, 180, 176, 193, 172, 169, 187, 190,
+		254, 353, 344, 415, 438, 414, 390, 234, 111, 41, 195, 340,
+		483, 588, 670, 706, 645, 445, 326, 192, 44, 129, 330, 361,
+		171, 7, 190, 455, 900, 1496, 1378, 1334, 1491, 1026, 322, 763,
+		1901, 3120, 3494, 4202, 4615, 4333, 3578, 3010, 1510, 184, 1428, 2675,
+		3603, 4115, 4369, 4396, 3863, 2595, 1934, 1437, 489, 430, 1032, 1055,
+		862, 814, 759, 441, 23, 158, 141, 454, 654, 1245, 1813, 2828,
+		3152, 3035, 2678, 1917, 1008, 345, 1581, 2614, 3657, 4191, 4358, 4024,
+		2751, 1515, 140, 1548, 3136, 3821, 4184, 4195, 3529, 2941, 1578, 71,
+		1272, 2079, 2936, 3095, 2746, 1828, 1019, 127, 752, 1383, 1427, 1357,
+		1155, 458, 375, 1296, 1899, 2657, 2884, 2647, 1818, 978, 84, 1339,
+		2334, 2740, 3312, 3333, 2824, 2548, 1528, 345, 753, 1340, 1935, 2099,
+		1916, 1346, 747, 82, 519, 962, 1315, 1170, 777, 23, 648, 1553,
+		1976, 2717, 2913, 2558, 1723, 1245, 468, 280, 915, 1330, 1009, 711,
+		331, 96, 725, 971, 719, 260, 1378, 2307, 3159, 4595, 5501, 5517,
+		4913, 4123, 2901, 1412, 1037, 2765, 4158, 5152, 6070, 6431, 5821, 4630,
+		3563, 2851, 1162, 716, 1991, 2929, 2659, 2931, 2904, 2703, 1296, 680,
+		197, 195, 652, 658, 11, 751, 1296, 1749, 2065, 2257, 1576, 708,
+		770, 1952, 2932, 4183, 4669, 4611, 3996, 3113, 1355, 633, 2691, 3978,
+		4819, 5217, 5062, 4260, 2727, 1411, 327, 1531, 2595, 3661, 3992, 3558,
+		2711, 2297, 1460, 326, 628, 1052, 1374, 1465, 1250, 590, 190, 704,
+		1012, 1312, 1430, 1004, 318, 631, 1444, 1881, 2733, 2632, 3124, 2352,
+		1310, 472, 643, 1492, 2491, 2751, 2635, 2073, 1409, 657, 114, 679,
+		1139, 1320, 1024, 591, 385, 1830, 3442, 4590, 4639, 3312, 945, 1711,
+		4170, 5974, 7491, 8588, 9218, 9164, 8014, 5532, 2277, 1363, 4312, 6354,
+		7680, 8396, 8528, 8065, 6940, 5098, 2638, 583, 1330, 2647, 2920, 3052,
+		2928, 1307, 186, 864, 1544, 1875, 1435, 31, 1467, 2934, 4768, 6563,
+		7726, 7713, 6658, 4952, 2997, 687, 4206, 7378, 9531, 10627, 10704, 9620,
+		7412, 4491, 1430, 2597, 5893, 8767, 9909, 9074, 7023, 4658, 2694, 108,
+		2252, 4135, 5576, 6561, 6516, 5166, 2739, 665, 1120, 2045, 3060, 2955,
+		2896, 2614, 1018, 735, 2604, 4799, 6048, 6124, 5085, 3344, 1157, 1457,
+		4179, 5998, 7082, 7517, 7487, 6717, 4885, 2563, 395, 2915, 3968, 4741,
+		4737, 4205, 3045, 2533, 1352, 18, 989, 1346, 678, 71, 454, 915,
+		1346, 1995, 2641, 2737, 2100, 1458, 479, 163, 518, 1033, 1118, 114,
+		1941, 4604, 7085, 8334, 8264, 7803, 7713, 7643, 6708, 4756, 2697, 159,
+		2699, 5353, 6750, 6755, 6360, 6539, 6913, 6520, 5393, 4314, 3385, 1742,
+		722, 2830, 2703, 2832, 2928, 3056, 3442, 2749, 2581, 2232, 2486, 2301,
+		2340, 3061, 3326, 3455, 2710, 2038, 1038, 431, 2954, 4910, 6724, 7711,
+		8094, 8066, 7430, 5840, 3350, 368, 2961, 4888, 6382, 6861, 6363, 5223,
+		4004, 2898, 1018, 648, 2590, 3612, 4432, 4785,
 	};
 	nrf_axon_result_e result;
 
@@ -1046,7 +1094,7 @@ int xsmys_24_24_24_tests(int *test_ndx)
 	nrf_axon_platform_printf("xsmys_24_24_24_tests: %d cases\n", xsmys_24_24_24_test_cnt);
 	/* case 0: single command, 1 row */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_xsmys_24_24_24(main_vector_32, main_vector_32 + 500,test_results.as_i32,
+	result = nrf_axon_xsmys_24_24_24(main_vector_32, main_vector_32 + 500, test_results.as_i32,
 		ARRAY_LENGTH(xsmys_24_24_24_expected_output) & ~1, 3,
 		NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
@@ -1082,7 +1130,7 @@ int xty_24_24_24_tests(int *test_ndx)
 	nrf_axon_platform_printf("xty_24_24_24_tests: %d cases\n", xty_24_24_24_test_cnt);
 	/* case 0: single command, 1 row */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_xty_24_24_24(main_vector_32, main_vector_32 + 500,test_results.as_i32,
+	result = nrf_axon_xty_24_24_24(main_vector_32, main_vector_32 + 500, test_results.as_i32,
 		ARRAY_LENGTH(xty_24_24_24_expected_output) & ~1, 5,
 		NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
@@ -1118,7 +1166,7 @@ int xpy_24_24_24_tests(int *test_ndx)
 	nrf_axon_platform_printf("xpy_24_24_24_tests: %d cases\n", xpy_24_24_24_test_cnt);
 	/* case 0: single command, 1 row */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_xpy_24_24_24(main_vector_32, main_vector_32 + 500,test_results.as_i32,
+	result = nrf_axon_xpy_24_24_24(main_vector_32, main_vector_32 + 500, test_results.as_i32,
 		ARRAY_LENGTH(xpy_24_24_24_expected_output) & ~1, 1,
 		NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
@@ -1154,7 +1202,7 @@ int xmy_24_24_24_tests(int *test_ndx)
 	nrf_axon_platform_printf("xmy_24_24_24_tests: %d cases\n", xmy_24_24_24_test_cnt);
 	/* case 0: single command, 1 row */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_xmy_24_24_24(main_vector_32, main_vector_32 + 500,test_results.as_i32,
+	result = nrf_axon_xmy_24_24_24(main_vector_32, main_vector_32 + 500, test_results.as_i32,
 		ARRAY_LENGTH(xmy_24_24_24_expected_output) & ~1, 1,
 		NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
@@ -1185,13 +1233,13 @@ int xmy_24_24_24_tests(int *test_ndx)
 int acc_16_24_tests(int *test_ndx)
 {
 	int pass_cnt = 0;
-	static int32_t acc_16_24_expected_output[] = {4280,};
+	static int32_t acc_16_24_expected_output[] = {4280, };
 	nrf_axon_result_e result;
 
 	nrf_axon_platform_printf("acc_16_24_tests: %d cases\n", acc_16_24_test_cnt);
 	/* case 0: mar */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_acc_16_24(main_vector_16 + 500,test_results.as_i32, 200, 3,
+	result = nrf_axon_acc_16_24(main_vector_16 + 500, test_results.as_i32, 200, 3,
 		NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
 		nrf_axon_platform_printf(
@@ -1225,7 +1273,7 @@ int fir_24_24_24_tests(int *test_ndx)
 	nrf_axon_platform_printf("fir_24_24_24_tests: %d cases\n", fir_24_24_24_test_cnt);
 	/* case 0: single command, 1 row */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_fir_24_24_24(main_vector_32, fir_24_24_24_filter,test_results.as_i32,
+	result = nrf_axon_fir_24_24_24(main_vector_32, fir_24_24_24_filter, test_results.as_i32,
 		ARRAY_LENGTH(fir_24_24_24_filter) * 3, ARRAY_LENGTH(fir_24_24_24_filter),
 		0, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
@@ -1269,7 +1317,7 @@ int fir_24_16_24_tests(int *test_ndx)
 	nrf_axon_platform_printf("fir_24_16_24_tests: %d cases\n", fir_24_16_24_test_cnt);
 	/* case 0: single command, 1 row */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-	result = nrf_axon_fir_24_16_24(main_vector_32, fir_24_16_24_filter,test_results.as_i32,
+	result = nrf_axon_fir_24_16_24(main_vector_32, fir_24_16_24_filter, test_results.as_i32,
 		ARRAY_LENGTH(fir_24_16_24_filter)*3, ARRAY_LENGTH(fir_24_16_24_filter), 0,
 		NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	if (result < 0) {
@@ -1313,7 +1361,7 @@ int fir_2d_16_16_32_decimate_tests(int *test_ndx)
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
 	/* input: 512x2, filter: 6x2, decimation_width 2, output: 507x1 */
 
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	nrf_axon_simulator_perfmodel_enable();
 	nrf_axon_simulator_perfmodel_init();
 #endif
@@ -1321,12 +1369,13 @@ int fir_2d_16_16_32_decimate_tests(int *test_ndx)
 	uint32_t op_ticks;
 	op_ticks = nrf_axon_platform_get_ticks();
 
-	result = nrf_axon_fir_2d_16_16_32_decimate(main_vector_16, (const int16_t *)fir_2d_16_16_32_decimate_filter,
-		test_results.as_i32, 512, 6, 2, 0, NRF_AXON_SYNC_MODE_BLOCKING_POLLING,
+	result = nrf_axon_fir_2d_16_16_32_decimate(main_vector_16,
+		(const int16_t *)fir_2d_16_16_32_decimate_filter, test_results.as_i32, 512, 6, 2, 0,
+		NRF_AXON_SYNC_MODE_BLOCKING_POLLING,
 		false);
 	profiling_ticks = nrf_axon_platform_get_ticks();
 	op_ticks = profiling_ticks - op_ticks;
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	op_ticks = (uint32_t)nrf_axon_simulator_perfmodel_get_cycles();
 	nrf_axon_simulator_perfmodel_disable();
 #endif
@@ -1351,7 +1400,7 @@ int fir_2d_16_16_32_decimate_tests(int *test_ndx)
 
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
 
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	nrf_axon_simulator_perfmodel_enable();
 	nrf_axon_simulator_perfmodel_init();
 #endif
@@ -1360,7 +1409,7 @@ int fir_2d_16_16_32_decimate_tests(int *test_ndx)
 		fir_2d_16_16_24_saturate_filter, test_results.as_i32, 0,
 		NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	profiling_ticks = nrf_axon_platform_get_ticks() - profiling_ticks;
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	profiling_ticks = (uint32_t)nrf_axon_simulator_perfmodel_get_cycles();
 	nrf_axon_simulator_perfmodel_disable();
 #endif
@@ -1394,7 +1443,7 @@ int fir_2d_16_16_32_decimate_tests(int *test_ndx)
 		(const int16_t *)fir_2d_16_16_32_decimate_filter, test_results.as_i32, 0,
 		NRF_AXON_SYNC_MODE_BLOCKING_POLLING, false);
 	profiling_ticks = nrf_axon_platform_get_ticks() - profiling_ticks;
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	profiling_ticks = (uint32_t)nrf_axon_simulator_perfmodel_get_cycles();
 	nrf_axon_simulator_perfmodel_disable();
 #endif
@@ -1423,7 +1472,7 @@ int fir_2d_16_16_32_decimate_tests(int *test_ndx)
 	axon_nn_enable_passlist_candidate_mode();
 
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	nrf_axon_simulator_perfmodel_enable();
 	nrf_axon_simulator_perfmodel_init();
 #endif
@@ -1433,11 +1482,12 @@ int fir_2d_16_16_32_decimate_tests(int *test_ndx)
 		false);
 	profiling_ticks = nrf_axon_platform_get_ticks();
 	op_ticks = profiling_ticks - op_ticks;
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	op_ticks = (uint32_t)nrf_axon_simulator_perfmodel_get_cycles();
 	nrf_axon_simulator_perfmodel_disable();
 #endif
-	nrf_axon_platform_printf("2d fir 16_16_24: 768 input, 256 filter, decimation 16,profiling ticks %u\n,",
+	nrf_axon_platform_printf(
+		"2d fir 16_16_24: 768 input, 256 filter, decimation 16, profiling ticks %u\n",
 		op_ticks);
 	if (result < 0) {
 		nrf_axon_platform_printf(
@@ -1469,7 +1519,7 @@ int fir_cplx_2d_16_16_24_decimate_tests(int *test_ndx)
 	nrf_axon_result_e result;
 
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	nrf_axon_simulator_perfmodel_enable();
 	nrf_axon_simulator_perfmodel_init();
 #endif
@@ -1479,11 +1529,13 @@ int fir_cplx_2d_16_16_24_decimate_tests(int *test_ndx)
 		false);
 	profiling_ticks = nrf_axon_platform_get_ticks();
 	op_ticks = profiling_ticks - op_ticks;
-#if AXON_SIMULATION
+#if NRF_AXON_SIMULATION
 	op_ticks = (uint32_t)nrf_axon_simulator_perfmodel_get_cycles();
 	nrf_axon_simulator_perfmodel_disable();
 #endif
-	nrf_axon_platform_printf("2d complex fir 16_16_24: 768 input, 256 filter, decimation 16,profiling ticks %u\n,",
+	nrf_axon_platform_printf(
+		"2d complex fir 16_16_24: 768 input, 256 filter, decimation 16, "
+		"profiling ticks %u\n",
 		op_ticks);
 	if (result < 0) {
 		nrf_axon_platform_printf(
@@ -1566,7 +1618,7 @@ int dma_2d_tests(int *test_ndx)
 	 * Copy the 2nd half 1st..
 	 */
 	nrf_axon_platform_printf("\nTEST:\t%s\tSTART CASE NO\t%d\n", TEST_NAME, *test_ndx);
- 	memset(test_results.as_i16, 0, 48 * 16 * 2);
+	memset(test_results.as_i16, 0, 48 * 16 * 2);
 	result = nrf_axon_dma_2d((int8_t *)(main_vector_16 + (4 * 48)),
 		(int8_t *)(test_results.as_i16 + 4 * 48),
 		sizeof(int16_t)*(16 - 4), 48, NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
@@ -1676,7 +1728,7 @@ struct {
 	int (*test_func)(int *text_ndx);
 } test_cases[] = {
 	{ .case_count = xty_16_16_32_output_stride_test_cnt,
-		.test_func = xty_16_16_32_output_stride_tests,},
+		.test_func = xty_16_16_32_output_stride_tests, },
 	{ .case_count = memset_32_output_stride_test_cnt,
 		.test_func = memset_32_output_stride_tests, },
 	{ .case_count = saturate_32_24_test_cnt, .test_func = saturate_32_24_tests, },
@@ -1684,8 +1736,8 @@ struct {
 	{ .case_count = fft_24_test_cnt, .test_func = fft_24_tests, },
 	{ .case_count = xspys_24_24_24_input_stride2_test_cnt,
 		.test_func = xspys_24_24_24_input_stride2_tests, },
-	{ .case_count = xspys_24_24_24_test_cnt, .test_func = xspys_24_24_24_tests,	},
-	{ .case_count = xsmys_24_24_24_test_cnt, .test_func = xsmys_24_24_24_tests,	},
+	{ .case_count = xspys_24_24_24_test_cnt, .test_func = xspys_24_24_24_tests, },
+	{ .case_count = xsmys_24_24_24_test_cnt, .test_func = xsmys_24_24_24_tests, },
 	{ .case_count = mar_16_24_32_test_cnt, .test_func = mar_16_24_32_tests, },
 	{ .case_count = mar_16_24_24_test_cnt, .test_func = mar_16_24_24_tests, },
 	{ .case_count = sqrt_24_test_cnt, .test_func = sqrt_24_tests, },
@@ -1702,17 +1754,17 @@ struct {
 	{ .case_count = axpb_24_24_test_cnt, .test_func = axpb_24_24_tests, },
 	{ .case_count = fft_power_24_test_cnt, .test_func = fft_power_24_tests, },
 	{ .case_count = fir_2d_16_16_32_decimate_test_cnt,
-		.test_func = fir_2d_16_16_32_decimate_tests,},
+		.test_func = fir_2d_16_16_32_decimate_tests, },
 	{ .case_count = fir_cplx_2d_16_16_24_decimate_test_cnt,
-		.test_func  = fir_cplx_2d_16_16_24_decimate_tests,},
+		.test_func  = fir_cplx_2d_16_16_24_decimate_tests, },
 	{ .case_count = dma_2d_test_cnt,
-		.test_func = dma_2d_tests,},
+		.test_func = dma_2d_tests, },
 	{ .case_count = abs_24_24_24_test_cnt,
-		.test_func = abs_24_24_24_tests,	},
+		.test_func = abs_24_24_24_tests, },
 	{ .case_count = axpb_2d_8_16_test_cnt,
-		.test_func = axpb_2d_8_16_tests,},
+		.test_func = axpb_2d_8_16_tests, },
 	{ .case_count = axpb_2d_16_16_test_cnt,
-		.test_func = axpb_2d_16_16_tests,},
+		.test_func = axpb_2d_16_16_tests, },
 };
 int main_intrinsics_test()
 {
