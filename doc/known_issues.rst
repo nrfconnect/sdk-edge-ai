@@ -23,6 +23,14 @@ A known issue can list one or both of the following entries:
 
 .. known-issues-filter::
 
+.. rst-class:: wontfix v2-3-0 v2-2-0 v2-1-0 v2-0-0
+
+Axon NPU asynchronous inference affects ongoing inference
+   The asynchronous inference performs premature copy of input vector into :term:`Axon interlayer buffer` before enqueuing the inference.
+   The affected Axon driver versions are from 0.7.0 to 1.5.0.
+
+   **Workaround:** Switch to using synchronous inferences or assert that no other inferences will be executed during :c:func:`nrf_axon_nn_model_infer_async` call.
+
 .. rst-class:: v2-3-0
 
 NCSDK-40932: DFU fails on Thingy:53 in the Gesture Recognition application
