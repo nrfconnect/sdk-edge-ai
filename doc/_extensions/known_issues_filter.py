@@ -32,19 +32,14 @@ class KnownIssuesFilter(SphinxDirective):
     def run(self) -> list[nodes.Node]:
         versions_file = Path(self.env.srcdir) / "versions.json"
         versions = json.loads(versions_file.read_text(encoding="utf-8"))
-        versions = [
-            version for version in versions if _VERSION_PATTERN.fullmatch(version)
-        ]
+        versions = [version for version in versions if _VERSION_PATTERN.fullmatch(version)]
 
         if not versions:
-            raise self.error(
-                f'No release versions found in "{versions_file}".')
+            raise self.error(f'No release versions found in "{versions_file}".')
 
         default = self.options.get("default", versions[0])
         if default not in versions:
-            raise self.error(
-                f'Default release "{default}" is not in "{versions_file}".'
-            )
+            raise self.error(f'Default release "{default}" is not in "{versions_file}".')
 
         options = ['<option value="all">All releases</option>']
         for version in versions:
@@ -83,6 +78,14 @@ class KnownIssuesFilter(SphinxDirective):
   margin-left: 0.5rem;
   padding: 0 0.25rem;
 }}
+.known-issue-wontfix {{
+  border: 1px solid red;
+  color: red;
+  display: inline-block;
+  font-size: 0.8em;
+  margin-left: 0.5rem;
+  padding: 0 0.25rem;
+}}
 </style>
 <script>
 document.addEventListener("DOMContentLoaded", function () {{
@@ -97,6 +100,13 @@ document.addEventListener("DOMContentLoaded", function () {{
   issues.forEach(function (issue) {{
     const title = issue.querySelector("dt");
     if (!title) return;
+
+    if (issue.classList.contains("wontfix")) {{
+      const tag = document.createElement("span");
+      tag.className = "known-issue-wontfix";
+      tag.textContent = "Won't fix";
+      title.appendChild(tag);
+    }}
 
     Array.from(issue.classList)
       .filter(function (name) {{ return versionPattern.test(name); }})
