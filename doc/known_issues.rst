@@ -26,34 +26,34 @@ A known issue can list one or both of the following entries:
 .. rst-class:: v2-3-0
 
 NCSDK-40932: DFU fails on Thingy:53 in the Gesture Recognition application
-  When using the Device Firmware Update (DFU) feature in the :ref:`Gesture Recognition application <app_gesture_recognition>` on Thingy:53, the DFU process fails.
+   When using the Device Firmware Update (DFU) feature in the :ref:`Gesture Recognition application <app_gesture_recognition>` on Thingy:53, the DFU process fails.
 
-  **Affected platforms:** Thingy:53
+   **Affected platforms:** Thingy:53
 
 .. rst-class:: v2-2-0
 
 NCSDK-40250: Bootloader Serial Recovery mode is disabled in release configurations on Thingy:53
-  In the :ref:`Gesture Recognition application <app_gesture_recognition>`, bootloader Serial Recovery mode is disabled in release configurations.
+   In the :ref:`Gesture Recognition application <app_gesture_recognition>`, bootloader Serial Recovery mode is disabled in release configurations.
 
-  **Workaround:** Enable the following Kconfig options in the MCUboot configuration file :file:`configuration/thingy53_nrf5340_cpuapp/images/mcuboot/prj_release.conf`:
+   **Workaround:** Enable the following Kconfig options in the MCUboot configuration file :file:`configuration/thingy53_nrf5340_cpuapp/images/mcuboot/prj_release.conf`:
 
-  .. code-block:: ini
+   .. code-block:: ini
 
-     CONFIG_MCUBOOT_SERIAL=y
-     CONFIG_GPIO=y
+      CONFIG_MCUBOOT_SERIAL=y
+      CONFIG_GPIO=y
 
-  This restores Serial Recovery mode at the cost of increased current consumption.
+   This restores Serial Recovery mode at the cost of increased current consumption.
 
-  **Affected platforms:** Thingy:53
+   **Affected platforms:** Thingy:53
 
 .. rst-class:: v2-0-0
 
 DRGN-27788: Bluetooth LE disables RRAM low-latency mode when using AXON NPU and Bluetooth LE simultaneously on the nRF54LM20B SoC
-  When running AXON and Bluetooth LE together on nRF54LM20B, Bluetooth LE might disable RRAM low-latency mode during radio activity, which may slow or corrupt an ongoing inference.
-  MPSL sets STANDBY mode in ``NRF_RRAMC->POWER.LOWPOWERCONFIG`` at the start of each radio slot and restores the application init value at the end.
-  In a power-optimized application, if the radio slot ends while an inference is running on Axon, the low-power (``NRF_RRAMC_LP_POWER_OFF``) value will be forced by MPSL, slowing down the rest of the inference.
+   When running AXON and Bluetooth LE together on an nRF54LM20B device, Bluetooth LE might disable the RRAM low-latency mode during radio activity, which may slow down or corrupt an ongoing inference.
+   MPSL sets STANDBY mode in ``NRF_RRAMC->POWER.LOWPOWERCONFIG`` at the start of each radio slot and restores the application init value at the end.
+   In a power-optimized application, if the radio slot ends while an inference is running on Axon, the low-power (``NRF_RRAMC_LP_POWER_OFF``) value will be forced by MPSL, slowing down the rest of the inference.
 
-  **Workaround:** Use ``CONFIG_MPSL_FORCE_RRAM_ON_ALL_THE_TIME`` to keep RRAM permanently in STANDBY mode.
-  This setting increases power consumption but ensures reliable performance.
+   **Workaround:** Use the ``CONFIG_MPSL_FORCE_RRAM_ON_ALL_THE_TIME`` Kconfig option to keep RRAM permanently in STANDBY mode.
+   This setting increases power consumption but ensures reliable performance.
 
-  **Affected platforms:** nRF54LM20B SoC
+   **Affected platforms:** nRF54LM20B SoC
