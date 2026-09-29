@@ -1,0 +1,12 @@
+exclude = [
+    "tools/axon/compiler",
+
+    # exclusion below should be removed and issues resolved
+    "tools/data_forwarder_host",
+]
+
+[lint.per-file-ignores]
+# ignores below should be resolved or accepted
+"doc/_extensions/edge_ai_project_info.py" = ["E402", "I001", "UP032"]
+"doc/conf.py" = ["E402", "I001"]
+"scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py" = ["E501", "UP017"]

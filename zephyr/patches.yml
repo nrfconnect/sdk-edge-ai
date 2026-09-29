@@ -5,8 +5,17 @@ patches:
     author: Szymon Antkowiak
     email: szymon.antkowiak@nordicsemi.no
     date: 2026-07-09
-    upstreamable: true
+    upstreamable: false
     comments: |
       Skip doc/release_notes_and_migration in the undefined Kconfig symbol check.
       Edge AI add-on release notes document renamed or removed Kconfig options,
       matching the exclusion used for doc/nrf/releases_and_maturity in NCS.
+
+  - path: zephyr/pylint-skip-axon-compiler.patch
+    sha256sum: fbf6ca55110d9e0ed34926d5c36d0c3c54a847e77f7258407b903ee15f5e2144
+    module: zephyr
+    author: Szymon Antkowiak
+    email: szymon.antkowiak@nordicsemi.no
+    date: 2026-09-29
+    upstreamable: false
+    comments: Ignore Axon compiler during pylint analysis.
