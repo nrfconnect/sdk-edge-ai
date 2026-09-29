@@ -3,6 +3,8 @@
  * Copyright (c) 2026 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * NOTICE: This file has been modified by Nordic Semiconductor ASA.
  */
 
 #ifndef __ARDUCAM_MEGA_H__
