@@ -75,11 +75,11 @@ int transport_init(struct proto_transport *out_transport)
 	return 0;
 }
 
-bool transport_is_connected(void)
+bool transport_is_ready(void)
 {
 	return true;
 }
 
-void transport_wait_connected(void)
+void transport_wait_ready(void)
 {
 }
