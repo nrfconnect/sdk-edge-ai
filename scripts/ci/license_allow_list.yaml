@@ -1,0 +1,41 @@
+# List of licenses allowed by the "check_license.py" script.
+# Key is a license identifier, value is a regular expression (see Python's
+# re.search) that matches the files that are allowed to have the license.
+# The value can be multiline string. Each line is a regexp that can optionally
+# start with a '!' character to indicate that it is a negative match.
+# File paths are relative to west workspace directory.
+# Special key "none" match no license. Special key "any" match any license
+# including no license.
+# You can add a '-' character to the beginning of the license identifier to
+# allow specific license, but using it will generate a warning.
+
+# Nordic 5-Clause is the default license for sdk-edge-ai.
+LicenseRef-Nordic-5-Clause: ".*"
+
+# Missing license information is allowed in all files except the ones listed below using
+# negative matches.
+none: |
+  .*
+  !\.c$
+  !\.h$
+  !\.cpp$
+  !\.py$
+  !\.hpp$
+  !\.cxx$
+  !\.hxx$
+  !\.rs$
+  !CMakeLists\.txt$
+  !\.a$
+  !\.lib$
+  !\.so$
+  !\.dylib$
+  !\.dll$
+
+# Apache-2.0 is allowed for selected imported files and files in the
+# Axon test directory.
+Apache-2.0: |
+  ^(sdk-)?edge-ai/\.clang-format$
+  ^(sdk-)?edge-ai/tests/axon/
+  ^(sdk-)?edge-ai/applications/person_detection/src/drivers/arducam_mega\.c$
+  ^(sdk-)?edge-ai/applications/person_detection/src/drivers/arducam_mega\.h$
+  ^(sdk-)?edge-ai/applications/person_detection/dts/bindings/nordic,arducam-mega\.yaml$
