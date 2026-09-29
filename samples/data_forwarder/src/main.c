@@ -37,7 +37,7 @@ static void session_start_retry(const struct proto_session_config *session)
 {
 	int err;
 
-	while (transport_is_connected()) {
+	while (transport_is_ready()) {
 		err = data_fwd_sensor_start();
 		if (err) {
 			LOG_WRN("Sensor start failed (err %d), retrying in %d ms", err,
@@ -67,7 +67,7 @@ static void stream_samples(void)
 {
 	int err;
 
-	while (transport_is_connected()) {
+	while (transport_is_ready()) {
 		proto_value_t values[CONFIG_DATA_FWD_PROTO_MAX_CHANNELS];
 		size_t count;
 
@@ -132,7 +132,7 @@ int main(void)
 	LOG_INF("Data forwarder started");
 
 	while (1) {
-		transport_wait_connected();
+		transport_wait_ready();
 		session_start_retry(&session);
 		stream_samples();
 		session_stop();

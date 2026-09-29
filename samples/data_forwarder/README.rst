@@ -46,9 +46,9 @@ Select the transport using the ``DATA_FWD_TRANSPORT`` Kconfig option.
 
 Bluetooth LE NUS
    Sample uses :ref:`nrf:nus_service_readme` for sending the protocol frames.
-   The sensors are sampled only while a central is connected.
+   The sensors are sampled only while a central is connected and subscribed to the NUS TX characteristic notifications.
    Before that, advertising is enabled and the sensors remain stopped.
-   When the link drops, the sample stops the protocol session and the sensors, then waits for the next connection.
+   When the central unsubscribes or the link drops, the sample stops the protocol session and the sensors, then waits for the next connection.
    This keeps the sensors off while no host is collecting data.
 
 UART transport
