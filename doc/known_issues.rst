@@ -46,27 +46,6 @@ NCSDK-40250: Bootloader Serial Recovery mode is disabled in release configuratio
 
   **Affected platforms:** Thingy:53
 
-.. rst-class:: v2-1-0
-
-NCSDK-39297: CMake duplicates the board configuration directory in ``CONF_FILE`` paths when used with the nRF Connect for VS Code GUI
-  The application's CMake setup sets ``APPLICATION_CONFIG_DIR`` to ``configuration/<board>_<qualifiers>/``, which causes Zephyr to resolve ``CONF_FILE`` relative to that directory instead of the application root.
-  As a result, ``CONF_FILE`` must be set to a file name only (for example, :file:`prj_release.conf`), and must not include the ``configuration/<board>_<qualifiers>/`` prefix.
-
-  However, the Kconfig fragment picker in the nRF Connect for VS Code extension inserts the path relative to the application root, for example::
-
-    configuration/nrf54l15tag_nrf54l15_cpuapp/prj_release.conf
-
-  CMake then prepends ``APPLICATION_CONFIG_DIR`` again, the board configuration sub-path is duplicated, and the build fails with an error similar to::
-
-    CMake Error at .../zephyr/cmake/modules/kconfig.cmake:318 (message):
-      File not found:
-      .../applications/gesture_recognition/configuration/nrf54l15tag_nrf54l15_cpuapp/configuration/nrf54l15tag_nrf54l15_cpuapp/prj.conf
-
-  **Workaround:** Set ``CONF_FILE`` to the file name only, relative to ``APPLICATION_CONFIG_DIR``, and omit the ``configuration/<board>_<qualifiers>/`` prefix.
-  On the command line, pass the file name directly, for example::
-
-      west build -b nrf54l15tag/nrf54l15/cpuapp -- -DCONF_FILE=prj_release.conf
-
 .. rst-class:: v2-0-0
 
 DRGN-27788: Bluetooth LE disables RRAM low-latency mode when using AXON NPU and Bluetooth LE simultaneously on the nRF54LM20B SoC
