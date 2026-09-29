@@ -63,7 +63,7 @@ choice DATA_FWD_TRANSPORT
 	default DATA_FWD_TRANSPORT_BLE_NUS
 
 config DATA_FWD_TRANSPORT_BLE_NUS
-	bool "BLE NUS"
+	bool "Bluetooth LE NUS"
 	depends on BT
 	depends on BT_PERIPHERAL
 	depends on BT_NUS
