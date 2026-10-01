@@ -75,7 +75,7 @@ LOG_MODULE_REGISTER(anomaly, LOG_LEVEL_INF);
 #define INVALID_ANOMALY_SCORE  10000.0f	 /* Invalid score for test validation */
 
 /**
- *  Healthy Gear Vibration Baseline Data
+ * Healthy Gear Vibration Baseline Data
  *
  * This dataset contains vibration measurements from a well-maintained mechanical gear
  * operating under normal conditions. Used to validate that the model correctly identifies
@@ -229,7 +229,7 @@ static const flt32_t ANOMALOUS_GEAR_MECH_VIBRATION_DATA_2AXIS[USER_WINDOW_SIZE *
  *   Anomaly score (float): 0.0 = definitely healthy
  *   Interpretation:
  *     score < USER_ANOMALY_THRESHOLD -> Healthy gear (pass maintenance check)
- *     score >= USER_ANOMALY_THRESHOLD > Anomalous gear (schedule maintenance alert)
+ *     score >= USER_ANOMALY_THRESHOLD -> Anomalous gear (schedule maintenance alert)
  */
 static flt32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_data,
 			     size_t data_len)
@@ -311,7 +311,7 @@ static flt32_t model_predict(nrf_edgeai_t *p_user_model, const flt32_t *p_input_
  */
 int main(void)
 {
-	/*  Get user generated model pointer */
+	/* Get user generated model pointer */
 	nrf_edgeai_t *p_user_model = nrf_edgeai_user_model();
 
 	__ASSERT_NO_MSG(p_user_model != NULL);
