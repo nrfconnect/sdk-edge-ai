@@ -11,7 +11,7 @@ jobs:
     name: Run compliance checks on patch series (PR)
     steps:
       - name: Checkout
-        uses: nrfconnect/action-checkout-west-update@main
+        uses: nrfconnect/action-checkout-west-update@5c48dbb5d8a90f2d9abbb90494a0e279d35611a5 # 6 Aug 2026
         with:
           path: ncs/edge-ai
           git-fetch-depth: 0
