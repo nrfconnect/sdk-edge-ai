@@ -26,9 +26,11 @@ The runtime major version was raised from 2 to 3, which makes it incompatible wi
     The ``nrf_edgeai_interfaces_t`` runtime interface structure now has a new mandatory ``scale_features`` member of type ``nrf_edgeai_iface_scale_features_t``, which every solution context must provide.
     Solutions exported with Nordic Edge AI Lab 3.0.0 populate this member automatically.
   * The combined ``nrf_edgeai_process_features_<mode>_<input>_<output>`` interface family was removed and replaced by the following:
+
     * ``process_features``, which now provides DSP extraction only, through ``nrf_edgeai_process_features_dsp_i8()``, ``nrf_edgeai_process_features_dsp_i16()``, ``nrf_edgeai_process_features_dsp_f32()``, and ``nrf_edgeai_process_features_empty()``.
     * The new ``nrf_edgeai_scale_features_*`` family declared in :file:`nrf_edgeai_scale_features.h`, which handles scaling.
     * Renamed scaling mode prefixes, where ``scale_vector_*`` is now ``input_vector_*``, and ``scale_window_*`` is now ``input_window_*``.
+
   * The ``nrf_edgeai_t`` runtime context now has a ``state`` member, which changes the structure layout.
     Applications and exported solutions must be recompiled against the 3.0.0 headers.
 
@@ -98,7 +100,7 @@ This release is tagged as ``NRF-EDGEAI-RELEASE-2.2.1`` (internal release commit 
 
 * Fixed:
 
-  * Argument handling in positive and negative sigma crossing rate feature extraction functions (:c:func:`nrf_edgeai_feature_pscr`, :c:func:`nrf_edgeai_feature_nscr`) across all supported integer and float types.
+  * Argument handling in positive and negative sigma crossing rate feature extraction functions (``nrf_edgeai_feature_pscr`` and ``nrf_edgeai_feature_nscr``) across all supported integer and float types.
   * Type casting for ``sigma_factor`` and ``lag`` parameters in time-domain DSP feature extraction functions to correctly use the declared ``nrf_dsp_sigma_factor_t`` and ``uint8_t`` types.
   * Refactored DSP clipping functions for Q63-to-Q31 and Q63-to-Q15 fixed-point conversions to ensure correct saturation behavior.
 

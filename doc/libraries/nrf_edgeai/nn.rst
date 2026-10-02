@@ -37,10 +37,10 @@ Key types and metadata
 The Neuton implementation provides compact model descriptors that store model topology and pointers to weight arrays.
 The most important structures are:
 
-* :c:func:`nrf_nn_neuton_meta_t` — Read-only metadata describing neuron link tables, indices of output neurons, counts of neurons and weights, and activation mask
-* :c:func:`nrf_nn_neuton_model_q8_t` — Descriptor for 8-bit quantized models
-* :c:func:`nrf_nn_neuton_model_q16_t` — Descriptor for 16-bit models
-* :c:func:`nrf_nn_neuton_model_f32_t` — Descriptor for floating-point models
+* :c:type:`nrf_nn_neuton_model_meta_t` — Read-only metadata describing neuron link tables, indices of output neurons, counts of neurons and weights, and activation mask
+* :c:type:`nrf_nn_neuton_model_q8_t` — Descriptor for 8-bit quantized models
+* :c:type:`nrf_nn_neuton_model_q16_t` — Descriptor for 16-bit models
+* :c:type:`nrf_nn_neuton_model_f32_t` — Descriptor for floating-point models
 
 Inference API
 =============
