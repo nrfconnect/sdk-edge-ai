@@ -106,6 +106,16 @@ jobs:
             exit 1;
           fi
 
+      - name: Run binary files check
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        working-directory: ncs/edge-ai
+        if: contains(github.event.pull_request.user.login, 'dependabot[bot]') != true
+        run: |
+          scripts/ci/check_binary_files.py \
+            -c origin/${BASE_REF}.. \
+            --github
+
       - name: Check added or updated links
         working-directory: ncs/edge-ai
         run: |

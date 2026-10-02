@@ -1,0 +1,42 @@
+# Configuration for scripts/ci/check_binary_files.py
+
+# Path prefixes where new binary files with allowed extensions are permitted.
+allowed_paths:
+  # zephyr-keep-sorted-start
+  - applications/
+  - doc/
+  - samples/
+  # zephyr-keep-sorted-stop
+
+# Extensions allowed for new binary files under allowed_paths.
+allowed_extensions:
+  - .jpg
+  - .jpeg
+  - .png
+  - .svg
+  - .webp
+  - .gif
+
+# Pre-approved binary files that do not match allowed_paths/allowed_extensions.
+preapproved_binaries:
+  # zephyr-keep-sorted-start
+  - lib/axon/bin/Darwin/libnrf-axon-driver-internal.a
+  - lib/axon/bin/Darwin/libnrf-axon-nn-compiler-internal.a
+  - lib/axon/bin/Linux/libnrf-axon-driver-internal.a
+  - lib/axon/bin/Linux/libnrf-axon-nn-compiler-internal.a
+  - lib/axon/bin/Windows/nrf-axon-driver-internal.lib
+  - lib/axon/bin/Windows/nrf-axon-nn-compiler-internal.lib
+  - lib/axon/bin/arm/libnrf-axon-driver-internal-fpu.a
+  - lib/axon/bin/arm/libnrf-axon-driver-internal.a
+  - lib/axon/platform/bin/simulator/Darwin/libnrf-axon-simulator-internal.a
+  - lib/axon/platform/bin/simulator/Linux/libnrf-axon-simulator-internal.a
+  - lib/axon/platform/bin/simulator/Windows/nrf-axon-simulator-internal.lib
+  - lib/nrf_edgeai/cortex-m33/libnrf_edgeai_cortex-m33.a
+  - lib/nrf_edgeai/cortex-m4/libnrf_edgeai_cortex-m4.a
+  - samples/edge_impulse/hello_ei/ei_model_nrf_accel_sim_axon_v54.zip
+  - samples/edge_impulse/hello_ei/ei_model_nrf_accel_sim_cpu_v55.zip
+  - tools/axon/compiler/bin/Darwin/libnrf-axon-nn-compiler-lib-arm64.dylib
+  - tools/axon/compiler/bin/Linux/libnrf-axon-nn-compiler-lib-amd64.so
+  - tools/axon/compiler/bin/Linux/libnrf-axon-nn-compiler-lib-arm64.so
+  - tools/axon/compiler/bin/Windows/nrf-axon-nn-compiler-lib-amd64.dll
+  # zephyr-keep-sorted-stop
