@@ -98,7 +98,7 @@ This release is tagged as ``NRF-EDGEAI-RELEASE-2.2.1`` (internal release commit 
 
 * Fixed:
 
-  * Argument handling in positive and negative sigma crossing rate feature extraction functions (:c:func:`nrf_edgeai_feature_pscr`, :c:func:`nrf_edgeai_feature_nscr`) across all supported integer and float types.
+  * Argument handling in positive and negative sigma crossing rate feature extraction functions (``nrf_edgeai_feature_pscr`` and ``nrf_edgeai_feature_nscr``) across all supported integer and float types.
   * Type casting for ``sigma_factor`` and ``lag`` parameters in time-domain DSP feature extraction functions to correctly use the declared ``nrf_dsp_sigma_factor_t`` and ``uint8_t`` types.
   * Refactored DSP clipping functions for Q63-to-Q31 and Q63-to-Q15 fixed-point conversions to ensure correct saturation behavior.
 
