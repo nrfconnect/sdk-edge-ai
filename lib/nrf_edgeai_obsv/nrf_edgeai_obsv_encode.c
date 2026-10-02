@@ -19,15 +19,10 @@
 /* CBOR major type 4 (array), bits [7:5] = 0b100. */
 #define CBOR_MAJOR_TYPE_ARRAY 0x80U
 
-/* v2: added "num_features" to the model map, and the "num_features" counter
- * (FEATURES-stream) to the payload. Additive fields within the 2.x line keep
- * format_version at 2; the encoder and the CDDL-generated decoder are
- * regenerated together so in-tree consumers stay in sync.
- */
-#define OBSV_FORMAT_VERSION	 2
+#define OBSV_FORMAT_VERSION	 3
 #define OBSV_TOP_MAP_ELEMENTS	 5
 #define OBSV_MODEL_MAP_ELEMENTS	 4
-#define OBSV_METRIC_MAP_ELEMENTS 3
+#define OBSV_METRIC_MAP_ELEMENTS 3 /* id, v, d; "c" adds one when the metric has config */
 
 /* Five nesting levels: top map → metrics list → metric map → data list → row list. */
 #define OBSV_ENCODE_BACKUPS 5
@@ -37,29 +32,47 @@ struct encode_ctx {
 	bool ok;
 };
 
+/* Encode a row-major uint32 matrix as a list of row lists. */
+static bool encode_matrix(zcbor_state_t *zs, const uint32_t *p, uint16_t rows, uint16_t cols)
+{
+	bool ok = zcbor_list_start_encode(zs, rows);
+
+	for (uint16_t r = 0; ok && r < rows; r++) {
+		ok = zcbor_list_start_encode(zs, cols);
+		for (uint16_t c = 0; ok && c < cols; c++) {
+			ok = zcbor_uint32_put(zs, p[(size_t)r * cols + c]);
+		}
+		ok = ok && zcbor_list_end_encode(zs, cols);
+	}
+
+	return ok && zcbor_list_end_encode(zs, rows);
+}
+
 static bool encode_metric(const nrf_edgeai_obsv_metric_snapshot_t *snap, void *user)
 {
 	struct encode_ctx *ec = user;
 	zcbor_state_t *zs = ec->zs;
 	bool ok = ec->ok;
 
-	ok = ok && zcbor_map_start_encode(zs, OBSV_METRIC_MAP_ELEMENTS);
+	const bool has_cfg =
+		(snap->config != NULL) && (snap->config_rows > 0U) && (snap->config_cols > 0U);
+	const size_t map_len = OBSV_METRIC_MAP_ELEMENTS + (has_cfg ? 1U : 0U);
+
+	ok = ok && zcbor_map_start_encode(zs, map_len);
 	ok = ok && zcbor_tstr_put_lit(zs, "id");
 	ok = ok && zcbor_uint32_put(zs, snap->metric_id);
 	ok = ok && zcbor_tstr_put_lit(zs, "v");
 	ok = ok && zcbor_uint32_put(zs, snap->version);
 	ok = ok && zcbor_tstr_put_lit(zs, "d");
 
-	ok = ok && zcbor_list_start_encode(zs, snap->num_rows);
-	for (uint16_t r = 0; ok && r < snap->num_rows; r++) {
-		ok = zcbor_list_start_encode(zs, snap->num_cols);
-		for (uint16_t c = 0; ok && c < snap->num_cols; c++) {
-			ok = zcbor_uint32_put(zs, snap->counts[r * snap->num_cols + c]);
-		}
-		ok = ok && zcbor_list_end_encode(zs, snap->num_cols);
+	ok = ok && encode_matrix(zs, snap->counts, snap->num_rows, snap->num_cols);
+
+	if (has_cfg) {
+		ok = ok && zcbor_tstr_put_lit(zs, "c");
+		ok = ok && encode_matrix(zs, snap->config, snap->config_rows, snap->config_cols);
 	}
-	ok = ok && zcbor_list_end_encode(zs, snap->num_rows);
-	ok = ok && zcbor_map_end_encode(zs, OBSV_METRIC_MAP_ELEMENTS);
+
+	ok = ok && zcbor_map_end_encode(zs, map_len);
 
 	ec->ok = ok;
 	return ok;
@@ -131,8 +144,8 @@ size_t nrf_edgeai_obsv_encode(nrf_edgeai_obsv_ctx_t *ctx, uint8_t *buf, size_t m
 	return len;
 }
 
-size_t nrf_edgeai_obsv_encode_list(nrf_edgeai_obsv_ctx_t *const *ctxs, uint8_t n,
-				   uint8_t *buf, size_t max_len)
+size_t nrf_edgeai_obsv_encode_list(nrf_edgeai_obsv_ctx_t *const *ctxs, uint8_t n, uint8_t *buf,
+				   size_t max_len)
 {
 	if ((ctxs == NULL) || (buf == NULL) || (max_len == 0U) || (n == 0U)) {
 		return 0U;

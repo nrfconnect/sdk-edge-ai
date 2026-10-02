@@ -17,6 +17,19 @@
 #include <nrf_edgeai_obsv/nrf_edgeai_obsv_memfault.h>
 #include "nrf_edgeai_obsv_memfault_priv.h"
 
+/* nrf_edgeai_obsv_memfault_collect() places a NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ-byte
+ * buffer on the caller's stack. With auto-collect that caller is the system
+ * workqueue, so its stack must hold the buffer plus this encoder's own call frames.
+ * Assert the floor here so an under-sized stack fails the build instead of
+ * overflowing at runtime; integrators own the value (and any margin for the
+ * workqueue's other users) via CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE.
+ */
+#if defined(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT)
+BUILD_ASSERT(CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE >= NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ + 1024,
+	     "CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE is too small for the observability collect "
+	     "buffer that auto-collect builds on the system workqueue stack");
+#endif
+
 LOG_MODULE_REGISTER(nrf_edgeai_obsv_mflt, CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_LOG_LEVEL);
 
 /* External linkage for internal variables when CONFIG_ZTEST. */
@@ -62,7 +75,7 @@ STATIC_EXCEPT_TEST const sMemfaultCdrSourceImpl obsv_cdr_source = {
 };
 
 /* Memfault passes this as const char ** (array of pointers to const strings). */
-static const char * const mimetypes[] = {MEMFAULT_CDR_BINARY};
+static const char *const mimetypes[] = {MEMFAULT_CDR_BINARY};
 
 static bool has_cdr(sMemfaultCdrMetadata *metadata)
 {
@@ -127,8 +140,7 @@ STATIC_EXCEPT_TEST void auto_collect_work_handler(struct k_work *work)
 
 	(void)nrf_edgeai_obsv_memfault_collect();
 
-	k_timeout_t delay =
-		K_SECONDS(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC);
+	k_timeout_t delay = K_SECONDS(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC);
 
 	(void)k_work_reschedule(&auto_collect_work, delay);
 }
@@ -204,8 +216,8 @@ int nrf_edgeai_obsv_memfault_collect(void)
 	 */
 	uint8_t tmp[NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ];
 
-	size_t total_len = nrf_edgeai_obsv_encode_list(
-		(nrf_edgeai_obsv_ctx_t *const *)ctxs, num_ctxs, tmp, sizeof(tmp));
+	size_t total_len = nrf_edgeai_obsv_encode_list((nrf_edgeai_obsv_ctx_t *const *)ctxs,
+						       num_ctxs, tmp, sizeof(tmp));
 
 	if (total_len == 0U) {
 		LOG_ERR("collect: CBOR encode failed");
@@ -238,6 +250,11 @@ int nrf_edgeai_obsv_memfault_collect(void)
 	LOG_INF("CDR staged: %u bytes (%u context(s))", (unsigned int)total_len, num_ctxs);
 	LOG_HEXDUMP_DBG(nrf_edgeai_obsv_mflt_staging.buf, nrf_edgeai_obsv_mflt_staging.len,
 			"payload");
+
+	/* Reset the observability contexts after staging the CDR */
+	for (uint8_t i = 0; i < nrf_edgeai_obsv_mflt_staging.num_ctxs; i++) {
+		nrf_edgeai_obsv_reset(nrf_edgeai_obsv_mflt_staging.ctxs[i]);
+	}
 
 	return 0;
 }

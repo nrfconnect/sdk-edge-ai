@@ -76,7 +76,7 @@ static nrf_edgeai_obsv_metric_t custom_metric = {
 };
 
 /* Built-in metric instance for this test suite. */
-static uint32_t custom_suite_pd_buf[NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(TEST_NUM_CLASSES) /
+static uint32_t custom_suite_pd_buf[NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES(TEST_NUM_CLASSES) /
 				    sizeof(uint32_t)];
 static nrf_edgeai_obsv_metric_t custom_suite_pd;
 
@@ -85,7 +85,7 @@ static void custom_before(void *fixture)
 	ARG_UNUSED(fixture);
 	memset(&ctx, 0, sizeof(ctx));
 	nrf_edgeai_obsv_core_init(&ctx, &test_model);
-	nrf_edgeai_obsv_metric_pd_create(&custom_suite_pd, custom_suite_pd_buf, TEST_NUM_CLASSES);
+	nrf_edgeai_obsv_metric_cpd_create(&custom_suite_pd, custom_suite_pd_buf, TEST_NUM_CLASSES);
 }
 
 ZTEST_SUITE(obsv_custom_metric, NULL, NULL, custom_before, NULL, NULL);
@@ -103,6 +103,9 @@ static bool verify_custom_snap_cb(const nrf_edgeai_obsv_metric_snapshot_t *snap,
 	zassert_equal(snap->num_rows, 1U);
 	zassert_equal(snap->num_cols, 1U);
 	zassert_equal(snap->counts[0], 2U);
+	/* A metric that sets no config must read as "none": the core zeroes the snapshot. */
+	zassert_is_null(snap->config);
+	zassert_equal(snap->config_rows, 0U);
 	v->ok = true;
 	return true;
 }
@@ -134,7 +137,7 @@ static bool dual_capture_cb(const nrf_edgeai_obsv_metric_snapshot_t *snap, void 
 {
 	struct dual_verify *v = user;
 
-	if (snap->metric_id == NRF_EDGEAI_OBSV_METRIC_ID_PROBS_DISTRIBUTION) {
+	if (snap->metric_id == NRF_EDGEAI_OBSV_METRIC_ID_CLASS_PRED_DIST) {
 		v->saw_probs = true;
 	} else if (snap->metric_id == CUSTOM_METRIC_ID) {
 		zassert_equal(snap->counts[0], 1U);

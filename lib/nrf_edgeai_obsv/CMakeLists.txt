@@ -15,28 +15,16 @@ zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_DIST_BINNING
   metrics/nrf_obsv_dist_binning.c
 )
 
-zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION
-  metrics/nrf_obsv_metric_probs_distribution.c
-)
-
 zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX
   metrics/nrf_obsv_metric_transition_matrix.c
 )
 
-zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_PREDICTION_SWITCHING_RATE
-  metrics/nrf_obsv_metric_pred_switch_rate.c
+zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC
+  metrics/nrf_obsv_metric_model_certainty_desc.c
 )
 
-zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST
-  metrics/nrf_obsv_metric_probs_entropy_dist.c
-)
-
-zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST
-  metrics/nrf_obsv_metric_probs_top2_margin_dist.c
-)
-
-zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST
-  metrics/nrf_obsv_metric_class_streak_dist.c
+zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_PRED_DIST
+  metrics/nrf_obsv_metric_class_pred_dist.c
 )
 
 zephyr_library_sources_ifdef(CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC
