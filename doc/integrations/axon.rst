@@ -42,9 +42,9 @@ The Axon compiler incorporates the user-supplied ``model_name`` into all model-s
 Compiled model
 ==============
 
-The compiled model is placed in a header file of the name :file:`nrf_axon_model_<model_name>_h`.
-This file declares the models parameters and compiled code, then encapsulates the model in a ``nrf_axon_nn_compiled_model_s`` instance of name ``nrf_axon_model_<model_name>``.
-Structure ``nrf_axon_nn_compiled_model_s`` is declared in :file:`include/drivers/nrf_axon_nn_infer.h`.
+The compiled model is placed in a header file of the name :file:`nrf_axon_model_<model_name>_.h`.
+This file declares the models parameters and compiled code, then encapsulates the model in a :c:type:`nrf_axon_nn_compiled_model_s` instance of name ``nrf_axon_model_<model_name>``.
+Structure :c:type:`nrf_axon_nn_compiled_model_s` is declared in :file:`include/drivers/nrf_axon_nn_infer.h`.
 
 This structure provides all the model's meta data:
 
@@ -105,10 +105,10 @@ Follow these steps to initialize the Axon driver:
 
       nrf_axon_platform_init()
 
-   This function is platform-specific, but you must provide the Axon base address (``nrf_axon_driver_init(base_address``).
-   You can obtain ``base_address`` from the device tree on Zephyr.
+   This function is platform-specific.
+   Internally it calls :c:func:`nrf_axon_driver_init` function and provides Axon base address obtained from the device tree on Zephyr.
 
-   During initialization, the driver powers on Axon by calling the ``nrf_axon_platform_vote_for_power()`` function.
+   During initialization, the driver powers on Axon.
    The driver then verifies that Axon NPU exists at the specified base address.
 
    .. note::
@@ -120,9 +120,9 @@ Follow these steps to initialize the Axon driver:
 
    .. code-block:: console
 
-      nrf_axon_nn_model_init_vars(&my_model_wrapper);
+      nrf_axon_nn_model_init_vars(&nrf_axon_model_<model_name>);
 
-   This sets all persistent variables to their quantized zero-point values.
+   The :c:func:`nrf_axon_nn_model_init_vars` function sets all persistent variables to their quantized zero-point values.
 
 #. Refer to further instructions on :ref:`integrating the driver into your application <ug_axon_integration>`.
 
@@ -141,10 +141,10 @@ Synchronous model inference
 Synchronous inference means that the inference call waits for completion before returning.
 The synchronous call will wait for the Axon hardware to be available and then claim its exclusive use.
 
-Asynchnronous requests can be made while the Axon is in synchronous mode.
+Asynchronous requests can be made while the Axon is in synchronous mode.
 These requests will be serviced upon exiting of synchronous mode, regardless of any pending synchronous requests.
 
-To initialize the model, invoke the function ``nrf_axon_nn_model_validate(&nrf_model_<model_name>)`` one time at start-up to do basic model validation.
+To initialize the model, invoke the :c:func:`nrf_axon_nn_model_validate` function one time at start-up to do basic model validation.
 This will confirm that the global buffers are large enough to handle the model.
 
 Asynchronous model inference
@@ -152,12 +152,12 @@ Asynchronous model inference
 
 Compiled models need to be initialized prior to asynchronous inference.
 The initialization binds the static, compiled model stored in non-volatile memory (NVM) to a RAM wrapper struct that the driver then manages.
-First, you must declare a static (not on the stack) instance of ``nrf_axon_nn_model_async_inference_wrapper_s`` (included in :file:`include/drivers/nrf_axon_infer.h`), and then invoke the model by initializing the ``nrf_axon_nn_model_async_init()`` function:
+First, you must declare a static (not on the stack) instance of :c:type:`nrf_axon_nn_model_async_inference_wrapper_s`, and then initialize the model by invoking the :c:func:`nrf_axon_nn_model_async_init` function:
 
 .. code-block:: c
 
    static nrf_axon_nn_model_async_inference_wrapper_s my_model_wrapper;
-   nrf_axon_nn_model_async_init(&my_model_wrapper, nrf_axon_model_<model_name>);
+   nrf_axon_nn_model_async_init(&my_model_wrapper, &nrf_axon_model_<model_name>);
 
 This function also verifies if the interlayer buffer is large enough to accommodate the model's needs.
 
@@ -183,10 +183,12 @@ Follow these steps to execute inference with a compiled Axon model:
    You must map each data source to the correct input.
    As of Axon 2.0.0, a model can have only one input and future releases will support multiple inputs per model.
 
-   For each input index ``input_ndx``, the input element size is defined by ``inputs[input_ndx].byte_width``:
+   For each input index ``input_ndx``, the input element size is defined by ``inputs[input_ndx].dimensions.byte_width``:
 
    * ``1`` for ``int8``
    * ``2`` for ``int16``
+
+   Check :c:struct:`nrf_axon_nn_model_layer_dimensions_s` struct for more information.
 
    .. note::
 
@@ -227,7 +229,7 @@ Follow these steps to execute inference with a compiled Axon model:
             The call blocks until inference completes.
             The Axon hardware is reserved exclusively for the duration of the call.
 
-         #. Observe that when ``nrf_axon_nn_model_infer_sync()`` returns, the ``output_buffer`` is populated with the inference results.
+         #. Observe that when :c:func:`nrf_axon_nn_model_infer_sync` returns, the ``output_buffer`` is populated with the inference results.
 
       .. tab:: Asynchronous inference
 
@@ -286,7 +288,7 @@ These requests are queued and serviced once the synchronous execution completes.
 Integrating the model into an application
 =========================================
 
-It is recommended to first test your compiled model by using the :ref:`inference test application<test_nn_inference>` (:file:`/tests/axon/inference`).
+It is recommended to first test your compiled model by using the :ref:`inference test application<test_nn_inference>` (:file:`tests/axon/inference`).
 Once you have verified that the model works correctly on the test application, you can integrate it into your application.
 It is your responsibility to feed data into the model, schedule inference, and respond to the model output.
 
@@ -311,7 +313,7 @@ Ensure you have completed the following:
      This value is printed near the top of the compiled model header file.
 
 #. Initialized driver one time at start-up.
-#. Initialized the model one-time at start-up for the desired mode of execution, synchronous (``nrf_axon_nn_model_validate``) or asynchronous (``nrf_axon_nn_model_async_init``).
+#. Initialized the model one-time at start-up for the desired mode of execution, synchronous (:c:func:`nrf_axon_nn_model_validate`) or asynchronous (:c:func:`nrf_axon_nn_model_async_init`).
 
 Next steps
 **********
