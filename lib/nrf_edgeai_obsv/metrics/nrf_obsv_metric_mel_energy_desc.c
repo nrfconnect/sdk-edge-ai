@@ -111,7 +111,9 @@ static void med_update(const float *p_feats, uint16_t n, void *priv)
 		n = CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_MAX_FEATURES;
 	}
 
-	const float range = hdr->scale_max - hdr->scale_min;
+	const float scale_min = (float)(int32_t)hdr->cfg[NRF_EDGEAI_OBSV_MED_CFG_SCALE_P01_MILLI] / 1000.0f;
+	const float scale_max = (float)(int32_t)hdr->cfg[NRF_EDGEAI_OBSV_MED_CFG_SCALE_P99_MILLI] / 1000.0f;
+	const float range = scale_max - scale_min;
 	float scratch[CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_MAX_FEATURES];
 
 	float sum_n = 0.0f;
@@ -125,7 +127,7 @@ static void med_update(const float *p_feats, uint16_t n, void *priv)
 			floor_cnt++;
 		}
 
-		float vn = (v - hdr->scale_min) / range;
+		float vn = (v - scale_min) / range;
 
 		vn = _clip01(vn);
 
@@ -157,6 +159,9 @@ static void med_snapshot(nrf_edgeai_obsv_metric_snapshot_t *out, void *priv)
 	out->num_rows = NRF_EDGEAI_OBSV_MED_NUM_ROWS;
 	out->num_cols = hdr->bin_num;
 	out->counts = med_counts(hdr);
+	out->config_rows = 1;
+	out->config_cols = NRF_EDGEAI_OBSV_MED_CFG_COUNT;
+	out->config = hdr->cfg;
 }
 
 void nrf_edgeai_obsv_metric_med_create(nrf_edgeai_obsv_metric_t *metric, void *buf,
@@ -169,8 +174,10 @@ void nrf_edgeai_obsv_metric_med_create(nrf_edgeai_obsv_metric_t *metric, void *b
 
 	hdr->num_features = n_features;
 	hdr->bin_num = (uint8_t)CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_BIN_NUM;
-	hdr->scale_min = (float)CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P01_MILLI / 1000.0f;
-	hdr->scale_max = (float)CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P99_MILLI / 1000.0f;
+	hdr->cfg[NRF_EDGEAI_OBSV_MED_CFG_SCALE_P01_MILLI] =
+		(uint32_t)(int32_t)CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P01_MILLI;
+	hdr->cfg[NRF_EDGEAI_OBSV_MED_CFG_SCALE_P99_MILLI] =
+		(uint32_t)(int32_t)CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P99_MILLI;
 
 	*metric = (nrf_edgeai_obsv_metric_t){
 		.init     = med_init,

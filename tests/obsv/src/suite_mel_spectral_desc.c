@@ -110,7 +110,7 @@ static uint32_t row_total(const struct msd_capture *cap, uint16_t row)
 
 ZTEST_SUITE(obsv_msd, NULL, NULL, msd_setup, NULL, NULL);
 
-/* 8 x bin_num descriptor, id 8, version 1. */
+/* 8 x bin_num descriptor, id 5, version 1. */
 ZTEST(obsv_msd, test_snapshot_shape)
 {
 	struct msd_capture cap = capture();

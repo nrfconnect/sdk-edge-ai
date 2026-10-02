@@ -94,10 +94,11 @@
  * Per-metric fixed overhead, traced from encode_metric():
  *
  * @code
- *   map(3) {           -- _CBOR_SMALL_HDR (count=3 <= 23)
+ *   map(3 or 4) {      -- _CBOR_SMALL_HDR (count=3..4 <= 23)
  *     "id" : uint32,   -- _CBOR_TSTR + _U32
  *     "v"  : uint32,   -- _CBOR_TSTR + _U32
  *     "d"  : [...]     -- _CBOR_TSTR + _CBOR_LARGE_HDR (rows = runtime value)
+ *     "c"  : [...]     -- optional matrix, see NRF_EDGEAI_OBSV_ENCODE_METRIC_CONFIG_SIZE()
  *   }
  * @endcode
  */
@@ -108,6 +109,24 @@
 	 + _CBOR_TSTR("d")  + _CBOR_LARGE_HDR)
 
 /**
+ * @brief CBOR encoded size of the optional @c "c" config entry of one metric.
+ *
+ * @c 0 when @p n_rows or @p n_cols is 0 (the key is omitted), otherwise the key
+ * plus a matrix encoded like the counters. Add it to
+ * NRF_EDGEAI_OBSV_ENCODE_METRIC_SIZE() for a custom metric that reports
+ * configuration.
+ *
+ * @param n_rows Rows of the config matrix the metric reports (@c config_rows).
+ * @param n_cols Columns of the config matrix (@c config_cols).
+ */
+#define NRF_EDGEAI_OBSV_ENCODE_METRIC_CONFIG_SIZE(n_rows, n_cols)               \
+	((((n_rows) == 0U) || ((n_cols) == 0U))                                 \
+		 ? 0U                                                           \
+		 : (_CBOR_TSTR("c") + _CBOR_LARGE_HDR +                         \
+		    (n_rows) * (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +       \
+				(n_cols) * _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST)))
+
+/**
  * Per-row overhead: the inner CBOR list header for one row of counters.
  * The column count is a runtime value so the worst-case header is used.
  */
@@ -115,19 +134,26 @@
 
 /* --- optional metrics (0 when the corresponding Kconfig option is off) --- */
 
-#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION)
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_PRED_DIST)
 
-#define _NRF_EDGEAI_OBSV_ENCODE_PD_PER_CLASS                                         \
+/* Class predictions distribution emits 2*num_classes rows (probability
+ * distribution then streak distribution) x bin_num.
+ */
+#define _NRF_EDGEAI_OBSV_ENCODE_CPD_PER_ROW                                          \
 	(_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                                   \
-	 (CONFIG_NRF_EDGEAI_OBSV_PROBS_DISTRIBUTION_BIN_NUM *                        \
+	 (CONFIG_NRF_EDGEAI_OBSV_CLASS_PRED_DIST_BIN_NUM *                           \
 	  _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST))
 
-#define _NRF_EDGEAI_OBSV_ENCODE_PD                                                    \
+/* Config reported by the metric: one row of streak top and tolerance
+ * (NRF_EDGEAI_OBSV_CPD_CFG_COUNT columns in nrf_edgeai_obsv_metrics.h).
+ */
+#define _NRF_EDGEAI_OBSV_ENCODE_CPD                                                   \
 	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                                 \
-	 (CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES * _NRF_EDGEAI_OBSV_ENCODE_PD_PER_CLASS))
+	 NRF_EDGEAI_OBSV_ENCODE_METRIC_CONFIG_SIZE(1U, 2U) +                              \
+	 (2U * CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES * _NRF_EDGEAI_OBSV_ENCODE_CPD_PER_ROW))
 
 #else
-#define _NRF_EDGEAI_OBSV_ENCODE_PD 0
+#define _NRF_EDGEAI_OBSV_ENCODE_CPD 0
 #endif
 
 #if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX)
@@ -144,49 +170,29 @@
 #define _NRF_EDGEAI_OBSV_ENCODE_TM 0
 #endif
 
-#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PREDICTION_SWITCHING_RATE)
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC)
 
-/* Prediction switching rate emits a fixed 1 x 2 row: [switches, comparisons]. */
-#define _NRF_EDGEAI_OBSV_ENCODE_PSR                                  \
-	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                \
-	 (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                  \
-	  (2U * _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST)))
-
-#else
-#define _NRF_EDGEAI_OBSV_ENCODE_PSR 0
-#endif
-
-#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST)
-
-/* Entropy distribution emits a single 1 x bin_num histogram row. */
-#define _NRF_EDGEAI_OBSV_ENCODE_PED                                            \
+/* Model certainty descriptor emits 3 rows (entropy hist, top-2 margin hist,
+ * stability counters) x bin_num.
+ */
+#define _NRF_EDGEAI_OBSV_ENCODE_MCD                                            \
 	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                          \
-	 (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                            \
-	  (CONFIG_NRF_EDGEAI_OBSV_PROBS_ENTROPY_DIST_BIN_NUM *                 \
-	   _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST)))
+	 (3U * (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                      \
+		(CONFIG_NRF_EDGEAI_OBSV_MODEL_CERTAINTY_DESC_BIN_NUM *         \
+		 _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST))))
 
 #else
-#define _NRF_EDGEAI_OBSV_ENCODE_PED 0
-#endif
-
-#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST)
-
-/* Top-2 margin distribution emits a single 1 x bin_num histogram row. */
-#define _NRF_EDGEAI_OBSV_ENCODE_PMD                                            \
-	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                          \
-	 (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                            \
-	  (CONFIG_NRF_EDGEAI_OBSV_PROBS_TOP2_MARGIN_DIST_BIN_NUM *             \
-	   _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST)))
-
-#else
-#define _NRF_EDGEAI_OBSV_ENCODE_PMD 0
+#define _NRF_EDGEAI_OBSV_ENCODE_MCD 0
 #endif
 
 #if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC)
 
-/* Mel energy descriptor emits 4 rows (mean, max, dynamic range, floor) x bin_num. */
+/* Mel energy descriptor emits 4 rows (mean, max, dynamic range, floor) x bin_num,
+ * plus a 1 x 2 config row (p01, p99; NRF_EDGEAI_OBSV_MED_CFG_COUNT columns).
+ */
 #define _NRF_EDGEAI_OBSV_ENCODE_MED                                            \
 	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                          \
+	 NRF_EDGEAI_OBSV_ENCODE_METRIC_CONFIG_SIZE(1U, 2U) +                   \
 	 (4U * (_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                      \
 		(CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_BIN_NUM *              \
 		 _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST))))
@@ -206,22 +212,6 @@
 
 #else
 #define _NRF_EDGEAI_OBSV_ENCODE_MSD 0
-#endif
-
-#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST)
-
-/* Class streak distribution emits num_classes rows x bin_num histogram. */
-#define _NRF_EDGEAI_OBSV_ENCODE_CSD_PER_CLASS                                          \
-	(_NRF_EDGEAI_OBSV_ENCODE_TABLE_ROW_FIXED +                                     \
-	 (CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_BIN_NUM *                            \
-	  _NRF_EDGEAI_OBSV_ENCODE_UINT32_WORST))
-
-#define _NRF_EDGEAI_OBSV_ENCODE_CSD                                                     \
-	(_NRF_EDGEAI_OBSV_ENCODE_METRIC_BLOCK_FIXED +                                   \
-	 (CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES * _NRF_EDGEAI_OBSV_ENCODE_CSD_PER_CLASS))
-
-#else
-#define _NRF_EDGEAI_OBSV_ENCODE_CSD 0
 #endif
 
 /**
@@ -257,11 +247,9 @@
  * metrics. @ref nrf_edgeai_obsv_encode returns 0 when the buffer is too small.
  */
 #define NRF_EDGEAI_OBSV_ENCODE_MAX_SIZE                                          \
-	(_NRF_EDGEAI_OBSV_ENCODE_OUTER_FIXED + _NRF_EDGEAI_OBSV_ENCODE_PD +      \
-	 _NRF_EDGEAI_OBSV_ENCODE_TM + _NRF_EDGEAI_OBSV_ENCODE_PSR +              \
-	 _NRF_EDGEAI_OBSV_ENCODE_PED + _NRF_EDGEAI_OBSV_ENCODE_PMD +             \
+	(_NRF_EDGEAI_OBSV_ENCODE_OUTER_FIXED + _NRF_EDGEAI_OBSV_ENCODE_CPD +     \
+	 _NRF_EDGEAI_OBSV_ENCODE_TM + _NRF_EDGEAI_OBSV_ENCODE_MCD +              \
 	 _NRF_EDGEAI_OBSV_ENCODE_MED + _NRF_EDGEAI_OBSV_ENCODE_MSD +             \
-	 _NRF_EDGEAI_OBSV_ENCODE_CSD +                                          \
 	 CONFIG_NRF_EDGEAI_OBSV_EXTRA_ENCODE_BYTES)
 
 /**
