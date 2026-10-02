@@ -346,7 +346,7 @@ Every statistic is scale-invariant (it divides by the total energy or the mean),
 Custom metrics
 ==============
 
-You can implement additional metrics by filling in an :c:struct:`nrf_edgeai_obsv_metric_t` operation table and registering it with the :c:func:`nrf_edgeai_obsv_register` function.
+You can implement additional metrics by filling in an :c:type:`nrf_edgeai_obsv_metric_t` operation table and registering it with the :c:func:`nrf_edgeai_obsv_register` function.
 A metric consists of five callbacks, a ``source`` field, and a ``priv`` pointer to its own storage:
 
 .. list-table:: Observability metric callbacks
