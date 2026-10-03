@@ -1,0 +1,40 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+&global_peripherals {
+	axon: axon@56000 {
+		compatible = "nordic,axon";
+		reg = <0x56000 0x1000>;
+		interrupts = <86 NRF_DEFAULT_IRQ_PRIORITY>;
+		status = "okay";
+	};
+};
+
+/*
+ * The Arducam Mega requires 3.3 V logic levels. The only port P4 has a configurable
+ * 1.8-3.3 V rail (VDD_IO_P4_3V3). No SPIM instance can mux to P4 - its pins
+ * expose GPIO and analog functions only - so the bus is bit-banged over plain
+ * GPIOs on P4 instead.
+ */
+/ {
+	spibb0: spibb0 {
+		compatible = "zephyr,spi-bitbang";
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		clk-gpios = <&gpio4 2 GPIO_ACTIVE_HIGH>;
+		mosi-gpios = <&gpio4 3 GPIO_ACTIVE_HIGH>;
+		miso-gpios = <&gpio4 4 GPIO_ACTIVE_HIGH>;
+		cs-gpios = <&gpio4 5 GPIO_ACTIVE_LOW>;
+
+		arducam_mega: arducam-mega@0 {
+			compatible = "nordic,arducam-mega";
+			reg = <0>;
+			spi-max-frequency = <DT_FREQ_M(8)>;
+			status = "okay";
+		};
+	};
+};

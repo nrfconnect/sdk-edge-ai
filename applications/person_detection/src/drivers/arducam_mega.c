@@ -626,7 +626,7 @@ static int arducam_mega_get_caps(const struct device *dev, struct video_caps *ca
 	return 0;
 }
 
-static const struct video_driver_api arducam_mega_driver_api = {
+static DEVICE_API(video, arducam_mega_driver_api) = {
 	.set_format = arducam_mega_set_fmt,
 	.get_format = arducam_mega_get_fmt,
 	.set_stream = arducam_mega_set_stream,

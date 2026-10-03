@@ -18,7 +18,10 @@ LOG_MODULE_REGISTER(dmic);
 
 #define BLOCK_SIZE (DMIC_SAMPLE_BYTES * DMIC_SAMPLES_IN_BLOCK)
 
-K_MEM_SLAB_DEFINE_STATIC(dmic_mem_slab, BLOCK_SIZE, 4, 4);
+/* 16 blocks of headroom to absorb DMIC startup/transition bursts, matched to
+ * the pdm20 queue-size in the board overlay.
+ */
+K_MEM_SLAB_DEFINE_STATIC(dmic_mem_slab, BLOCK_SIZE, 16, 4);
 
 int dmic_init(void)
 {
