@@ -1,0 +1,51 @@
+name: License Check
+
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  license_job:
+    runs-on: ubuntu-24.04
+    name: Run license checks on patch series (PR)
+    if: contains(github.event.pull_request.user.login, 'dependabot[bot]') != true
+    steps:
+    - name: Checkout sources
+      uses: nrfconnect/action-checkout-west-update@5c48dbb5d8a90f2d9abbb90494a0e279d35611a5 # 6 Aug 2026
+      with:
+        git-fetch-depth: 0
+        git-ref: ${{ github.event.pull_request.head.sha }}
+        path: ncs/edge-ai
+        rebase: true
+        west-update-args: '-n'
+
+    - name: Set up Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      with:
+        python-version: 3.12
+        cache: pip
+        cache-dependency-path: ncs/nrf/scripts/ci/requirements.txt
+        pip-install: |
+          -r ncs/nrf/scripts/ci/requirements.txt
+
+    - name: Run license checks
+      id: license_checks
+      env:
+        BASE_REF: ${{ github.base_ref }}
+      working-directory: ncs/edge-ai
+      run: |
+        ../nrf/scripts/ci/check_license.py \
+            --github \
+            -l ./scripts/ci/license_allow_list.yaml \
+            -c origin/${BASE_REF}..
+
+    - name: Upload results
+      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+      continue-on-error: true
+      if: always()
+      with:
+        name: licenses.xml
+        path: ncs/edge-ai/licenses.xml
+        overwrite: true
