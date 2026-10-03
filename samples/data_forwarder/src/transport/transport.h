@@ -31,18 +31,20 @@ int transport_init(struct proto_transport *out_transport);
 /**
  * @brief Return whether the transport link is ready to carry data.
  *
- * For BLE NUS, this is true while a central is connected.
+ * For BLE NUS, this is true while a central is connected and NUS TX
+ * notifications are enabled.
  * For UART, this is always true.
  */
-bool transport_is_connected(void);
+bool transport_is_ready(void);
 
 /**
  * @brief Block until the transport link becomes ready.
  *
- * For BLE NUS, this waits for a central to connect.
+ * For BLE NUS, this waits for a central to connect and enable NUS TX
+ * notifications.
  * For UART, this returns immediately.
  */
-void transport_wait_connected(void);
+void transport_wait_ready(void);
 
 #ifdef __cplusplus
 }
