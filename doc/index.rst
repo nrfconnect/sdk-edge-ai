@@ -53,5 +53,4 @@ See the following documentation:
    libraries.rst
    tools.rst
    glossary.rst
-   release_notes.rst
-   known_issues.rst
+   releases_and_maturity.rst

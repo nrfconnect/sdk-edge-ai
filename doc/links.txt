@@ -96,3 +96,4 @@
 .. _`Bosch BMI270`: https://www.bosch-sensortec.com/en/products/motion-sensors/imus/bmi270/
 .. _`Adafruit PDM MEMS Microphone`: https://www.adafruit.com/product/3492
 .. _`Arducam Mega 5MP`: https://www.arducam.com/presale-mega-5mp-color-rolling-shutter-camera-module-with-autofocus-lens-for-any-microcontroller.html
+.. _`Semantic versioning`: https://semver.org/
