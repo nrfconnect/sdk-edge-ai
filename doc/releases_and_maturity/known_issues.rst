@@ -1,3 +1,4 @@
+.. _known_issues:
 .. _edge_ai_known_issues:
 
 Known issues
