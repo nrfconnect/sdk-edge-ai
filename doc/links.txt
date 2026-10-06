@@ -19,6 +19,8 @@
 
 .. ### Source: docs.nordicsemi.com
 
+.. _`known issues page on the main branch`: https://nrfconnectdocs.nordicsemi.com/addons/addon-edge-ai/latest/known_issues.html
+
 .. _`Serial Terminal app`: https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/serial-terminal-app
 .. _`Power Profiler Kit II (PPK2)`: https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html
 .. _`nRF Connect for Visual Studio Code`: https://docs.nordicsemi.com/r/bundle/nrf-connect-vscode
