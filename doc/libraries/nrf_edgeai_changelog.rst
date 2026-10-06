@@ -10,7 +10,7 @@ nRF Edge AI Library changelog
 See the list of changes for a specific release of the |EAILib|.
 
 Release v3.0.0 (22 September 2026)
-*******************************
+**********************************
 
 This release is tagged as ``NRF-EDGEAI-RELEASE-3.0.0`` (internal release commit ``1000c2a2793a409d9d90b4bfe635c459a0e4c90b``).
 This is a major release.
