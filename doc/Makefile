@@ -7,6 +7,7 @@ SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = _src
 BUILDDIR      = _build
+SPHINXTAGS    ?= --tag pr
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -23,4 +24,4 @@ mkdir:
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: mkdir Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" --conf-dir . $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" --conf-dir . $(SPHINXOPTS) $(SPHINXTAGS) $(O)

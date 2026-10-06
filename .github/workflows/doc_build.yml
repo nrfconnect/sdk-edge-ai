@@ -70,23 +70,27 @@ jobs:
           west init -l .
           west update -o=--depth=1 -n
 
-      - name: Build
-        working-directory: ncs/edge-ai/doc
-        run: |
-          make html
-
-      - name: Check version
+      - name: Set build context
         run: |
           VERSION_REGEX="^v([0-9a-zA-Z\.\-]+)$"
           if [[ ${GITHUB_REF#refs/tags/} =~ $VERSION_REGEX ]]; then
             VERSION=${BASH_REMATCH[1]}
+            SPHINXTAGS="--tag release"
           elif [[ ${GITHUB_REF#refs/heads/} == "main" ]]; then
             VERSION="latest"
+            SPHINXTAGS="--tag latest"
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
             VERSION="pr-${{ github.event.number }}"
+            SPHINXTAGS="--tag pr"
           fi
           echo "VERSION=${VERSION}"
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "SPHINXTAGS=${SPHINXTAGS}"
+          echo "SPHINXTAGS=${SPHINXTAGS}" >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: ncs/edge-ai/doc
+        run: make html
 
       - name: Prepare Azure upload
         working-directory: ncs/edge-ai
