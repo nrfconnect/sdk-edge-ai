@@ -7,7 +7,7 @@ TinyML Image Classification (IC)
    :local:
    :depth: 2
 
-This page describes a TinyML-based image classification use case using a ResNet8 model trained on the CIFAR-10 dataset.
+This page describes a `TinyML-based image classification <Image classification model_>`_ use case using a ResNet8 model trained on the CIFAR-10 dataset.
 
 Overview
 ********
@@ -28,22 +28,25 @@ When working with this model, keep the following points in mind:
 Running the model
 *****************
 
-To start working with this model, download the trained image classification model from the `MLPerf Tiny repository <Image classification model_>`_.
-You must place the download TFLite model and Keras model files in the root directory of the model (:file:`image_classification/<tflite_model.tflite>` or :file:`image_classification/<keras_model.h5>`).
+Download a pre-trained model and compile it with Axon.
+You do not need to download the dataset, pre-process data, or train the model for that workflow.
+Complete the following steps to run the model:
 
-Obtaining raw dataset
-=====================
+#. Download the TFLite or Keras model from the `MLPerf Tiny repository <Image classification model_>`_.
+#. Place the file in the root of the model directory (:file:`image_classification/<tflite_model.tflite>` or :file:`image_classification/<keras_model.h5>`).
 
+Obtaining raw dataset (optional)
+================================
+
+You only need to obtain the raw dataset if you plan to train or retrain the model yourself.
 The model is trained on the CIFAR-10 dataset.
-To simplify the process, you can use the :file:`download_cifar10_train_resnet.sh` script in the `image classification folder structure <Image classification model_>`_ to download the CIFAR-10 dataset and start training the model.
-Alternatively, you can obtain it from the `CIFAR dataset`_ page.
+Use the :file:`download_cifar10_train_resnet.sh` script in the `image classification folder structure <Image classification model_>`_, or obtain the dataset from the `CIFAR dataset`_ page.
 
-Data pre-processing and model behavior
-======================================
+Data pre-processing and model behavior (optional)
+=================================================
 
-The training and data pre-processing steps are implemented in the reference training script :file:`train.py` in the `MLPerf Tiny image classification training repository <Image classification model_>`_.
-
-Reviewing this script helps clarify how the CIFAR-10 images are processed and how the ResNet8 model is trained.
+You only need to pre-process the data for training, retraining, or test accuracy evaluation during compilation.
+Training and pre-processing are implemented in the :file:`train.py` script in the `MLPerf Tiny image classification training repository <Image classification model_>`_.
 
 The repository also includes:
 
