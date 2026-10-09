@@ -17,10 +17,8 @@ target_sources(app PRIVATE
   src/suite_iteration.c
   src/suite_payload.c
   src/suite_user_storage.c
-  src/suite_pred_switch_rate.c
-  src/suite_probs_entropy_dist.c
-  src/suite_probs_top2_margin_dist.c
-  src/suite_class_streak_dist.c
+  src/suite_model_certainty_desc.c
+  src/suite_class_pred_dist.c
   src/suite_mel_energy_desc.c
   src/suite_mel_spectral_desc.c
 )
@@ -39,6 +37,9 @@ if(CONFIG_NRF_EDGEAI_OBSV_ENCODE)
   set(CDDL_GEN_H ${CDDL_GEN_DIR}/cddl_decode.h)
   set(CDDL_GEN_TYPES_H ${CDDL_GEN_DIR}/cddl_decode_types.h)
 
+  # Capacity of every unbounded CDDL list in the generated decoder.
+  set(OBSV_CDDL_MAX_QTY 16)
+
   find_program(ZCBOR_EXECUTABLE zcbor REQUIRED)
 
   add_custom_command(
@@ -51,7 +52,7 @@ if(CONFIG_NRF_EDGEAI_OBSV_ENCODE)
             --output-c ${CDDL_GEN_C}
             --output-h ${CDDL_GEN_H}
             --output-h-types ${CDDL_GEN_TYPES_H}
-            --default-max-qty 8
+            --default-max-qty ${OBSV_CDDL_MAX_QTY}
     DEPENDS ${OBSV_CDDL}
     COMMENT "Generating CBOR decoder from ${OBSV_CDDL}"
     VERBATIM
@@ -61,6 +62,7 @@ if(CONFIG_NRF_EDGEAI_OBSV_ENCODE)
   add_dependencies(app cddl_gen)
 
   target_include_directories(app PRIVATE ${CDDL_GEN_DIR})
+  target_compile_definitions(app PRIVATE OBSV_CDDL_MAX_QTY=${OBSV_CDDL_MAX_QTY})
 
   target_sources(app PRIVATE
     src/suite_encoder.c

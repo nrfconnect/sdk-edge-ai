@@ -71,7 +71,8 @@ It is a CBOR array with one entry per observed model:
         "num_features": ...,     # FEATURES-stream updates since last reset (counter)
         "model": { "id": ..., "num_classes": ..., "num_features": ..., "version": ... },
         "metrics": [
-          { "id": metric_id, "v": metric_version, "d": [[...], [...], ...] },
+          { "id": metric_id, "v": metric_version, "d": [[...], [...], ...],
+            "c": [[config, ...], ...]  (optional matrix) },
           ...
         ]
       },
@@ -109,9 +110,8 @@ Usage (paths relative to the sdk-edge-ai tree):
     ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --from-cloud --fleet --limit 20
     ./scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py --from-cloud --fleet --reason "" --limit 5
 
-Requires Python 3.9+, with dependencies ``cbor2`` and ``requests`` installed.
-Install with: ``pip install -r scripts/decode_edgeai_obsv_cdr/requirements.txt``
-(from the sdk-edge-ai root), or ``pip install cbor2 requests``.
+Requires Python 3.10+, install dependencies with:
+``pip install -r scripts/decode_edgeai_obsv_cdr/requirements.txt``
 """
 
 from __future__ import annotations
@@ -142,17 +142,27 @@ def _redact_url_for_log(url: str) -> str:
     return urlunparse((p.scheme, p.netloc, p.path, p.params, "<redacted>", ""))
 
 
+# Mirrors OBSV_FORMAT_VERSION in nrf_edgeai_obsv_encode.c. The metric id table below
+# is only valid for this version (ids were renumbered between v2 and v3), so payloads
+# of any other version are rejected rather than decoded with wrong names/validation.
+SUPPORTED_FORMAT_VERSION = 3
+
 # Mirrors nrf_edgeai_obsv_metric_id enum in nrf_edgeai_obsv_metrics.h.
 # Update here whenever a new metric ID is added on the firmware side.
 METRIC_NAMES = {
-    2: "transition_matrix",
-    3: "probs_distribution",
-    4: "prediction_switching_rate",
-    5: "probs_entropy_dist",
-    6: "probs_top2_margin_dist",
-    7: "mel_energy_desc",
-    8: "mel_spectral_desc",
-    9: "class_streak_dist",
+    1: "model_certainty_desc",
+    2: "class_pred_dist",
+    3: "transition_matrix",
+    4: "mel_energy_desc",
+    5: "mel_spectral_desc",
+}
+
+# Meaning and order of the columns of the optional per-metric "c" (config) matrix,
+# keyed by metric id. Mirrors the "c" notes in lib/nrf_edgeai_obsv/obsv.cddl; a metric id
+# absent here still has its raw config list passed through.
+METRIC_CONFIG_FIELDS = {
+    2: ("streak_top", "streak_tol"),  # class_pred_dist
+    4: ("scale_p01_milli", "scale_p99_milli"),  # mel_energy_desc
 }
 
 EVENT_TYPES = {
@@ -178,6 +188,13 @@ CDR_LIST_PER_PAGE_CAP = 250
 
 def _decode_one_obsv_payload(decoded: dict, validate: bool = False) -> dict[str, Any]:
     """Annotate a single already-decoded CBOR obsv-payload map."""
+    fv = decoded.get("format_version")
+    if fv != SUPPORTED_FORMAT_VERSION:
+        raise ValueError(
+            f"unsupported obsv format_version {fv!r}: decoder expects "
+            f"version {SUPPORTED_FORMAT_VERSION} (metric ids differ between versions). "
+        )
+
     result: dict[str, Any] = {
         "format_version": decoded.get("format_version"),
         "num_inferences": decoded.get("num_inferences"),
@@ -202,29 +219,44 @@ def _decode_one_obsv_payload(decoded: dict, validate: bool = False) -> dict[str,
             "data": data,
         }
 
+        cfg = metric.get("c")
+        if isinstance(cfg, list):
+            entry["config"] = cfg
+            fields = METRIC_CONFIG_FIELDS.get(mid)
+            # Named view only for a single config row of the documented width.
+            if fields and len(cfg) == 1 and len(cfg[0]) == len(fields):
+                entry["config_named"] = dict(zip(fields, cfg[0], strict=True))
+
         if validate:
             row_sums = [sum(row) for row in data if isinstance(row, list)]
             entry["row_sums"] = row_sums
             if mid == 3 and isinstance(n, int):
-                # probs_distribution: every class histogram must total num_inferences.
-                entry["row_sums_match_n"] = all(s == n for s in row_sums)
-            if mid == 2 and isinstance(n, int):
                 total = sum(row_sums)
                 entry["total_transitions"] = total
                 # First inference has no predecessor => (n - 1) transitions total.
                 entry["matches_n_minus_one"] = total == max(n - 1, 0)
-            if mid in (7, 8) and isinstance(nf, int):
+            if mid in (4, 5) and isinstance(nf, int):
                 # FEATURES-stream descriptors histogram one entry per feature
                 # update, so every row must total num_features.
                 entry["row_sums_match_num_features"] = all(s == nf for s in row_sums)
-            if mid == 9 and isinstance(n, int):
-                # class_streak_dist records one count per COMPLETED streak, not
-                # per inference, so the matrix totals the number of finished
-                # streaks. Unlike pd/ped/pmd, rows do NOT sum to num_inferences;
-                # the streak count is bounded by (and in practice far below) n.
-                total = sum(row_sums)
-                entry["total_streaks"] = total
-                entry["streaks_le_n"] = total <= n
+            if mid == 2 and isinstance(n, int):
+                # class_pred_dist is 2*num_classes rows: the first half is the
+                # probability distribution (each row totals num_inferences), the
+                # second half is the streak distribution (one count per COMPLETED
+                # streak, so those rows do NOT sum to n and total far below it).
+                half = len(row_sums) // 2
+                prob_sums, streak_sums = row_sums[:half], row_sums[half:]
+                entry["prob_rows_match_n"] = bool(prob_sums) and all(s == n for s in prob_sums)
+                total_streaks = sum(streak_sums)
+                entry["total_streaks"] = total_streaks
+                entry["streaks_le_n"] = total_streaks <= n
+            if mid == 1 and isinstance(n, int):
+                # model_certainty_desc: row 0 (entropy histogram) and row 1
+                # (top-2 margin histogram) each total num_inferences; row 2 holds
+                # stability counters ([switches, comparisons, majority_frames,
+                # confident_switches] zero-padded) that do NOT sum to n.
+                entry["entropy_row_matches_n"] = len(row_sums) > 0 and row_sums[0] == n
+                entry["margin_row_matches_n"] = len(row_sums) > 1 and row_sums[1] == n
 
         result["metrics"].append(entry)
 
@@ -249,16 +281,14 @@ def _decode_obsv_cdr(payload: bytes, validate: bool = False) -> list[dict[str, A
         entries = [decoded]
     else:
         raise ValueError(
-            f"CDR payload is neither a CBOR array nor a map "
-            f"(got {type(decoded).__name__})"
+            f"CDR payload is neither a CBOR array nor a map (got {type(decoded).__name__})"
         )
 
     result: list[dict[str, Any]] = []
     for i, entry in enumerate(entries):
         if not isinstance(entry, dict):
             raise ValueError(
-                f"CDR array element {i} is not a CBOR map "
-                f"(got {type(entry).__name__})"
+                f"CDR array element {i} is not a CBOR map (got {type(entry).__name__})"
             )
         result.append(_decode_one_obsv_payload(entry, validate=validate))
 
@@ -429,9 +459,7 @@ def decode_chunks(hex_list: list[str], validate: bool = False) -> dict[str, Any]
     try:
         event = cbor2.loads(cbor_body)
     except cbor2.CBORDecodeError as exc:
-        raise ValueError(
-            f"outer CBOR decode failed after reassembly: {exc}"
-        ) from None
+        raise ValueError(f"outer CBOR decode failed after reassembly: {exc}") from None
 
     return {
         "source": "local_chunks_reassembled",
@@ -461,8 +489,7 @@ def _read_hex_input(args: argparse.Namespace) -> str:
         if text.strip():
             return text
     raise SystemExit(
-        "error: provide a hex chunk as an argument, via --file, on stdin, "
-        "or use --from-cloud"
+        "error: provide a hex chunk as an argument, via --file, on stdin, or use --from-cloud"
     )
 
 
@@ -474,9 +501,7 @@ def _decode_local_input(args: argparse.Namespace) -> dict[str, Any]:
         elif args.hex == "-" or not sys.stdin.isatty():
             raw = sys.stdin.buffer.read()
         else:
-            raise SystemExit(
-                "error: --binary requires --file PATH or binary data on stdin"
-            )
+            raise SystemExit("error: --binary requires --file PATH or binary data on stdin")
         if not raw:
             raise ValueError("empty binary input")
         return decode_plain_cbor(raw, validate=args.validate)
@@ -518,9 +543,9 @@ def _cloud_config(args: argparse.Namespace) -> CloudConfig:
     user_api_key = args.user_api_key or os.environ.get("MEMFAULT_USER_API_KEY")
     org = args.org or os.environ.get("MEMFAULT_ORG")
     project = args.project or os.environ.get("MEMFAULT_PROJECT")
-    api_base = (
-        args.api_base or os.environ.get("MEMFAULT_API_BASE") or DEFAULT_API_BASE
-    ).rstrip("/")
+    api_base = (args.api_base or os.environ.get("MEMFAULT_API_BASE") or DEFAULT_API_BASE).rstrip(
+        "/"
+    )
 
     has_org_token = bool(org_token)
     has_user_auth = bool(user_email and user_api_key)
@@ -532,9 +557,7 @@ def _cloud_config(args: argparse.Namespace) -> CloudConfig:
             "(or --user-email + --user-api-key)"
         )
     if has_org_token and has_user_auth:
-        raise SystemExit(
-            "error: pass either an org token or user-email+user-api-key, not both"
-        )
+        raise SystemExit("error: pass either an org token or user-email+user-api-key, not both")
 
     missing = [
         name
@@ -581,9 +604,7 @@ def _cloud_get(session, url: str, params: dict | None = None, raw: bool = False)
         response = session.get(alt, params=params, timeout=60)
     if response.status_code != 200:
         body = response.text[:500]
-        raise SystemExit(
-            f"error: Memfault API {response.status_code} for {response.url}\n{body}"
-        )
+        raise SystemExit(f"error: Memfault API {response.status_code} for {response.url}\n{body}")
     if raw:
         log.debug("  -> %d bytes binary", len(response.content))
         return response
@@ -620,9 +641,7 @@ def _unwrap_paginated(payload: Any) -> list[Any]:
         return payload
     if isinstance(payload, dict) and isinstance(payload.get("data"), list):
         return payload["data"]
-    raise SystemExit(
-        f"error: unexpected list payload shape: {json.dumps(payload)[:400]}"
-    )
+    raise SystemExit(f"error: unexpected list payload shape: {json.dumps(payload)[:400]}")
 
 
 def _cdr_list_paging_meta(payload: Any) -> dict[str, Any]:
@@ -670,14 +689,22 @@ def _cloud_list_all_cdrs(
 ) -> tuple[list[Any], int]:
     """Fetch every page of a paginated CDR list; return deduplicated rows and page count."""
     items_first, paging = _cloud_list_cdrs_page(
-        session, list_url, page=1, per_page=per_page, reason=reason,
+        session,
+        list_url,
+        page=1,
+        per_page=per_page,
+        reason=reason,
     )
     total_pages = max(int(paging.get("total_pages") or 1), 1)
     all_items: list[Any] = list(items_first)
 
     for page in range(2, total_pages + 1):
         page_items, _ = _cloud_list_cdrs_page(
-            session, list_url, page=page, per_page=per_page, reason=reason,
+            session,
+            list_url,
+            page=page,
+            per_page=per_page,
+            reason=reason,
         )
         all_items.extend(page_items)
         log.debug("CDR list page %s/%s: %s row(s)", page, total_pages, len(page_items))
@@ -742,17 +769,11 @@ def _cdr_newest_first_sort_key(item: Any) -> tuple[float, int]:
 
 
 def _unwrap_single(payload: Any) -> dict[str, Any]:
-    if (
-        isinstance(payload, dict)
-        and "data" in payload
-        and isinstance(payload["data"], dict)
-    ):
+    if isinstance(payload, dict) and "data" in payload and isinstance(payload["data"], dict):
         return payload["data"]
     if isinstance(payload, dict):
         return payload
-    raise SystemExit(
-        f"error: unexpected single-item payload: {json.dumps(payload)[:400]}"
-    )
+    raise SystemExit(f"error: unexpected single-item payload: {json.dumps(payload)[:400]}")
 
 
 DOWNLOAD_URL_KEYS = (
@@ -830,9 +851,7 @@ def _try_download_via_url(session, url: str) -> bytes | None:
     return None
 
 
-def _download_cdr_bytes(
-    session, cfg: CloudConfig, cdr_id: int | str, device: str | None
-) -> bytes:
+def _download_cdr_bytes(session, cfg: CloudConfig, cdr_id: int | str, device: str | None) -> bytes:
     """Fetch a CDR's raw bytes. Uses the verified primary URL first and falls
     back to a small set of alternates if that ever 404s.
     """
@@ -844,9 +863,7 @@ def _download_cdr_bytes(
         for suffix in _FALLBACK_SUFFIXES:
             candidates.append(f"{base}/{resource}/{cdr_id}{suffix}")
             if device:
-                candidates.append(
-                    f"{base}/devices/{device}/{resource}/{cdr_id}{suffix}"
-                )
+                candidates.append(f"{base}/devices/{device}/{resource}/{cdr_id}{suffix}")
 
     attempted: list[str] = []
     for url in candidates:
@@ -911,11 +928,16 @@ def _fetch_cloud_list(
     per_page = min(max(limit, CDR_LIST_PER_PAGE_DEFAULT), CDR_LIST_PER_PAGE_CAP)
 
     items, total_pages = _cloud_list_all_cdrs(
-        session, list_url, per_page=per_page, reason=reason,
+        session,
+        list_url,
+        per_page=per_page,
+        reason=reason,
     )
     log.debug(
         "CDR list: per_page=%s pages=%s unique row(s)=%s",
-        per_page, total_pages, len(items),
+        per_page,
+        total_pages,
+        len(items),
     )
 
     dict_rows = [row for row in items if isinstance(row, dict)]
@@ -938,18 +960,14 @@ def _fetch_cloud_list(
     for i, summary in enumerate(items, start=1):
         cdr_id = summary.get("id")
         if cdr_id is None:
-            raise SystemExit(
-                f"error: list item missing 'id': {json.dumps(summary)[:400]}"
-            )
+            raise SystemExit(f"error: list item missing 'id': {json.dumps(summary)[:400]}")
         print(
             f"decode_edgeai_obsv_cdr: fetching CDR id={cdr_id} ({i}/{n_dl})...",
             file=sys.stderr,
             flush=True,
         )
         raw = _download_cdr_bytes(session, cfg, cdr_id, device=device_hint)
-        results.append(
-            _decode_cloud_item(summary, raw, device_hint=device_hint, validate=validate)
-        )
+        results.append(_decode_cloud_item(summary, raw, device_hint=device_hint, validate=validate))
     return results
 
 
@@ -961,11 +979,7 @@ def _fetch_cloud(args: argparse.Namespace) -> list[dict[str, Any]]:
         # No list metadata; fabricate a stub so _decode_cloud_item still works.
         raw = _download_cdr_bytes(session, cfg, args.cdr_id, device=args.device)
         stub = {"id": args.cdr_id}
-        return [
-            _decode_cloud_item(
-                stub, raw, device_hint=args.device, validate=args.validate
-            )
-        ]
+        return [_decode_cloud_item(stub, raw, device_hint=args.device, validate=args.validate)]
 
     if args.fleet:
         return _fetch_cloud_list(
@@ -979,9 +993,7 @@ def _fetch_cloud(args: argparse.Namespace) -> list[dict[str, Any]]:
         )
 
     if not args.device:
-        raise SystemExit(
-            "error: --from-cloud requires --device, --fleet, or --cdr-id"
-        )
+        raise SystemExit("error: --from-cloud requires --device, --fleet, or --cdr-id")
 
     return _fetch_cloud_list(
         session,
@@ -1227,11 +1239,7 @@ def main() -> int:
         print("error: --device and --fleet are mutually exclusive", file=sys.stderr)
         return 2
 
-    if (
-        _limit_flag_in_argv(sys.argv)
-        and not args.from_cloud
-        and not args.count
-    ):
+    if _limit_flag_in_argv(sys.argv) and not args.from_cloud and not args.count:
         log.warning(
             "--limit applies only to --from-cloud when listing by --device or --fleet; "
             "local decoding ignores it."

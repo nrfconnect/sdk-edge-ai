@@ -18,14 +18,16 @@
 #define TEST_MODEL_ID	   7
 #define TEST_MODEL_VERSION 1
 #define TEST_NUM_CLASSES   CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES
-#define TEST_NUM_BINS	   CONFIG_NRF_EDGEAI_OBSV_PROBS_DISTRIBUTION_BIN_NUM
+#define TEST_NUM_BINS	   CONFIG_NRF_EDGEAI_OBSV_CLASS_PRED_DIST_BIN_NUM
 
-/* counts[] in test_metric_capture is sized for the largest possible metric:
- * TM = MAX_CLASSES x MAX_CLASSES, PD = MAX_CLASSES x BIN_NUM.
- * If BIN_NUM ever exceeds MAX_CLASSES the array would be too small.
+/* counts[] in test_metric_capture is sized for the largest possible captured
+ * view: TM = MAX_CLASSES x MAX_CLASSES, and each half of the class predictions
+ * distribution = MAX_CLASSES x BIN_NUM (the capture callback splits the merged
+ * 2*MAX_CLASSES x BIN_NUM matrix into its two per-class views). If BIN_NUM ever
+ * exceeds MAX_CLASSES the array would be too small.
  */
 BUILD_ASSERT(TEST_NUM_BINS <= TEST_NUM_CLASSES,
-	     "PROBS_DISTRIBUTION_BIN_NUM > MAX_CLASSES: enlarge counts[] in test_metric_capture");
+	     "CLASS_PRED_DIST_BIN_NUM > MAX_CLASSES: enlarge counts[] in test_metric_capture");
 
 /**
  * @brief Per-metric snapshot slot captured by tests.
@@ -40,16 +42,24 @@ struct test_metric_capture {
 	uint32_t version;
 	uint16_t num_rows;
 	uint16_t num_cols;
+	uint16_t config_rows;
+	uint16_t config_cols;
+	int32_t config[8];
 	uint32_t counts[TEST_NUM_CLASSES * TEST_NUM_CLASSES];
 };
 
 /**
- * @brief Captured snapshots for the two known metrics plus a count of
- *        visited entries.
+ * @brief Captured snapshots plus a count of visited entries.
+ *
+ * The class predictions distribution (id 2) is a 2*num_classes x bin_num matrix;
+ * test_capture_cb() splits it into its two per-class views, @c probs_distribution
+ * (the first num_classes rows) and @c class_streak (the last num_classes rows),
+ * so each keeps the num_classes x bin_num shape the tests expect.
  */
 struct test_snapshots {
 	uint32_t visited;
 	struct test_metric_capture probs_distribution;
+	struct test_metric_capture class_streak;
 	struct test_metric_capture transition_matrix;
 };
 

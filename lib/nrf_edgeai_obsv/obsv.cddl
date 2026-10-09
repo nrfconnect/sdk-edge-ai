@@ -32,29 +32,45 @@ obsv-metric = {
     "id" : uint,                ; nrf_edgeai_obsv_metric_id (on-wire id)
     "v"  : uint,                ; metric payload version (per metric_id)
     "d"  : [* [* uint]],        ; row-major num_rows x num_cols matrix
+    ? "c" : [* [* int]],        ; configuration the counters were gathered with, a
+                                ; row-major matrix; omitted when
+                                ; the metric reports none. Meaning and order are
+                                ; fixed per (id, v), see below.
 }
 
 ; Well-known metric id values. The schema does not constrain "id" to this set;
 ; unknown ids are allowed for forward compatibility. See
 ; enum nrf_edgeai_obsv_metric_id in nrf_edgeai_obsv_metrics.h.
-;   2 = transition matrix (num_classes x num_classes)
-;   3 = probability distribution (num_classes x num_bins)
-;   4 = prediction switching rate (1 x 2: [switches, comparisons];
-;       SwitchRate = switches / comparisons)
-;   5 = probability entropy distribution (1 x num_bins; histogram of
-;       normalized Shannon entropy H(p)/ln(N) over [0, 1])
-;   6 = probability top-2 margin distribution (1 x num_bins; histogram of
-;       margin = p_top1 - p_top2 over [0, 1]; low margin = ambiguous)
-;   7 = mel energy descriptor (4 x num_bins; per-frame stats over input mel
+;   1 = model certainty descriptor (3 x num_bins; per-inference certainty and
+;       temporal stability over the output probability vector; rows:
+;       0 normalized Shannon entropy H(p)/ln(N) histogram over [0, 1]
+;         (uncertainty),
+;       1 top-2 margin p_top1 - p_top2 histogram over [0, 1] (decisiveness),
+;       2 stability counters [switches, comparisons, majority_frames,
+;         confident_switches] zero-padded to num_bins, where
+;         SwitchRate = switches / comparisons, majority_frames counts inferences
+;         with p_top1 > 0.5, and confident_switches counts switches into a
+;         p_top1 > 0.5 winner)
+;   2 = class predictions distribution (2*num_classes x num_bins; per-class output
+;       picture over the probability vector; rows [0, num_classes) = probability
+;       distribution (each class's predicted probability binned uniformly over
+;       [0, 1]; every inference adds one sample to every row, so each sums to
+;       num_inferences); rows [num_classes, 2*num_classes) = streak distribution
+;       (per-class histogram of consecutive-argmax run lengths, binned uniformly
+;       over [1, TOP] with lengths >= TOP in the top bin, recorded when a streak
+;       ends with up to a configured flicker tolerance bridged; these rows do NOT
+;       sum to num_inferences)
+;       "c" = [[streak_top, streak_tol]] (1 x 2): the streak length saturating the top
+;       streak bin, and the flicker tolerance in bridged frames)
+;   3 = transition matrix (num_classes x num_classes)
+;   4 = mel energy descriptor (4 x num_bins; per-frame stats over input mel
 ;       features, rows: 0 mean energy, 1 max energy, 2 dynamic range (q95-q05),
 ;       3 floor-bin ratio; features normalized to [0, 1] by a configured
 ;       percentile range [p01, p99], all rows histogrammed over [0, 1])
-;   8 = mel spectral descriptor (8 x num_bins; per-frame scale-invariant shape
+;       "c" = [[scale_p01_milli, scale_p99_milli]] (1 x 2, v >= 2; v1 has no "c"): the p01 / p99
+;       normalization bounds in thousandths of a feature unit, signed (feature
+;       values, and so the percentiles, can be negative))
+;   5 = mel spectral descriptor (8 x num_bins; per-frame scale-invariant shape
 ;       stats over input mel features, rows: 0 low ratio, 1 mid ratio, 2 high
 ;       ratio, 3 centroid, 4 spread, 5 entropy, 6 flatness, 7 contrast; all
 ;       normalized to [0, 1])
-;   9 = class streak distribution (num_classes x num_bins; per-class histogram of
-;       prediction streak lengths — consecutive inferences with the same argmax
-;       class — binned uniformly over [1, TOP] with lengths >= TOP in the top bin;
-;       up to a configured number of consecutive mismatching frames are bridged
-;       (flicker tolerance) without ending a streak)

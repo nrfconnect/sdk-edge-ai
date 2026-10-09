@@ -8,7 +8,7 @@ nRF Edge AI Observability Library
    :depth: 2
 
 The Edge AI Observability module tracks how a classification model performs at runtime.
-It collects stats from the model's output probabilities and packages them as metric snapshots that can be sent to a monitoring backend.
+It collects stats from the model's output probabilities and, optionally, from the input features fed to the model, and packages them as metric snapshots that can be sent to a monitoring backend.
 It works with any inference engine that produces a probability vector, including the :ref:`nrf_edgeai_lib`, :ref:`Axon NPU <lib_axon>`, and `Edge Impulse`_ deployments.
 
 Overview
@@ -19,17 +19,14 @@ For a conceptual introduction to model observability, what it enables, and how i
 Metrics are driven by two input streams.
 Output metrics consume the model's class-probability vector passed to :c:func:`nrf_edgeai_obsv_update_probs`, while input-feature metrics consume the extracted feature vector fed to the model and passed to :c:func:`nrf_edgeai_obsv_update_features`.
 Each metric declares which stream it consumes through its ``source`` field, and the library routes every update only to the metrics that match.
-
-.. note::
-   |EAILib| does not currently expose the extracted feature vector through its API, so input-feature metrics are not yet available for models integrated through it.
-   Support for capturing this data from |EAILib| is planned for a future release.
+The two streams are counted independently: every call to :c:func:`nrf_edgeai_obsv_update_probs` advances the ``num_inferences`` counter and every call to :c:func:`nrf_edgeai_obsv_update_features` advances the separate ``num_features`` counter.
 
 The module is organized as three cooperating layers:
 
 * Core (:file:`lib/nrf_edgeai_obsv/nrf_edgeai_obsv_core.c`) - A portable, mutex-free state machine that accumulates metric counters as inference results arrive.
   It has no Zephyr RTOS dependency and you can use it in bare-metal environments, other RTOSes, or host-side test builds.
 * Zephyr wrapper (:file:`lib/nrf_edgeai_obsv/nrf_edgeai_obsv.c`) - Wraps the core in a mutex-protected context so that multiple threads can feed inferences and trigger encoding without data races, and integrates the library into the Zephyr build system (CMake, Kconfig, logging).
-* Memfault CDR transport (:file:`lib/nrf_edgeai_obsv_memfault/`) - Encodes the accumulated metric snapshots as a CBOR blob and stages them as a `Memfault Custom Data Recording`_ (CDR) that the Memfault SDK packetizer uploads on the next transport drain cycle.
+* Memfault CDR transport (:file:`lib/nrf_edgeai_obsv_memfault/nrf_edgeai_obsv_memfault.c`) - Encodes the accumulated metric snapshots as a CBOR blob and stages them as a `Memfault Custom Data Recording`_ (CDR) that the Memfault SDK packetizer uploads on the next transport drain cycle.
   For Memfault Kconfig, keys, and transports in |NCS|, see :ref:`nrf:mod_memfault`.
 
 .. uml::
@@ -58,7 +55,7 @@ The module is organized as three cooperating layers:
    together {
      component "Application" as App #D9E1E2;line:768692;text:333F48
      component "nrf_edgeai_obsv\n(Zephyr wrapper + core)" as Obsv
-     component "Metrics\n(e.g. probability distribution)" as Metrics
+     component "Metrics\n(e.g. class predictions distribution)" as Metrics
    }
 
    component "nrf_edgeai_obsv_memfault\n(Memfault CDR transport)" as MfltTransport #0033A0;line:0033A0;text:FFFFFF
@@ -66,7 +63,7 @@ The module is organized as three cooperating layers:
    cloud "nRF Cloud\n(Memfault)" as Cloud #0033A0;line:0033A0;text:FFFFFF
    component "Monitoring tool\n(dashboard / ML pipeline)" as Dashboard #0033A0;line:0033A0;text:FFFFFF
 
-   App -right-> Obsv : inference results\n(class probabilities) [1]
+   App -right-> Obsv : input features and\nclass probabilities [1]
    Obsv -down-> Metrics : accumulate counters [2]
    App -down-> MfltTransport : trigger collect [3]
    MfltTransport -up-> Obsv : encode metrics as CBOR [4]
@@ -80,10 +77,76 @@ The module is organized as three cooperating layers:
      3-7 run periodically, or on demand, to drain and upload the accumulated metrics.
    endlegend
 
-The following diagram shows the detailed call sequence between the observability layers, the application, and the Memfault SDK.
+The following diagram shows how the application initializes observability and updates metrics during inference.
 
 .. uml::
-   :caption: Call sequence for initialization, inference updates, Memfault collect, and CDR drain.
+   :caption: Observability initialization and inference updates.
+
+   skinparam shadowing false
+   skinparam roundcorner 0
+   skinparam backgroundColor #FFFFFF
+   skinparam ArrowColor #0077C8
+   skinparam sequenceArrowThickness 1
+
+   skinparam sequence {
+     DividerBackgroundColor #8DBEFF
+     DividerBorderColor #8DBEFF
+     LifeLineBackgroundColor #13B6FF
+     LifeLineBorderColor #13B6FF
+     ParticipantBackgroundColor #13B6FF
+     ParticipantBorderColor #13B6FF
+     BoxBackgroundColor #C1E8FF
+     BoxBorderColor #C1E8FF
+     GroupBackgroundColor #8DBEFF
+     GroupBorderColor #8DBEFF
+   }
+
+   skinparam participant {
+     Shadowing false
+   }
+
+   participant "Application" as App
+   participant "nRF Edge AI Library" as Rt
+   participant "nrf_edgeai_obsv" as Obsv
+   participant Metric
+
+   == Initialization ==
+
+   App -> Rt : nrf_edgeai_init(model)
+   App -> Obsv : nrf_edgeai_obsv_init(ctx, model_info)
+   loop each enabled metric
+     App -> Metric : nrf_edgeai_obsv_metric_*_create(metric, buf, n)
+     App -> Obsv : nrf_edgeai_obsv_register(ctx, metric, cfg)
+   end
+
+   == Inference loop ==
+
+   loop until the input window is full
+     App -> Rt : nrf_edgeai_feed_inputs(model, samples, n)
+   end
+
+   opt application reports input features
+     App -> Rt : nrf_edgeai_process_features(model)
+     Rt --> App : extracted feature vector
+     App -> Obsv : nrf_edgeai_obsv_update_features(ctx, feats, n)
+     Obsv -> Obsv : lock ctx->lock
+     Obsv -> Metric : update registered FEATURES-source metrics
+     Obsv -> Obsv : unlock ctx->lock
+   end
+
+   App -> Rt : nrf_edgeai_run_inference(model)
+   Rt -> Rt : process features if needed
+   Rt --> App : class probability vector
+
+   App -> Obsv : nrf_edgeai_obsv_update_probs(ctx, probs)
+   Obsv -> Obsv : lock ctx->lock
+   Obsv -> Metric : update registered PROBS-source metrics
+   Obsv -> Obsv : unlock ctx->lock
+
+The following diagram shows how the Memfault integration encodes accumulated metric snapshots and stages them for transport.
+
+.. uml::
+   :caption: Observability collection, staging, retry, and transport drain.
 
    skinparam shadowing false
    skinparam roundcorner 0
@@ -114,46 +177,32 @@ The following diagram shows the detailed call sequence between the observability
      Shadowing false
    }
 
-   participant "Application" as App
-   participant "nrf_edgeai_obsv\n(Zephyr wrapper)" as Obsv
-   participant "nrf_edgeai_obsv_core" as Core
-   participant Metric
+   participant "Application /\nauto-collect work" as Trigger
    participant "nrf_edgeai_obsv_memfault" as Mflt
+   participant "nrf_edgeai_obsv" as Obsv
    participant "Memfault SDK" as SDK
+   participant "nRF Cloud" as Cloud
 
    == Initialization ==
 
-   App -> Obsv : nrf_edgeai_obsv_init(ctx, model)
-   App -> Metric : nrf_edgeai_obsv_metric_tm_create(metric, buf, n)
-   App -> Metric : nrf_edgeai_obsv_metric_pd_create(metric, buf, n)
-   App -> Obsv : nrf_edgeai_obsv_register(ctx, metric, cfg)
-   App -> Mflt : nrf_edgeai_obsv_memfault_init(ctx)
+   Trigger -> Mflt : nrf_edgeai_obsv_memfault_init(ctx)
    Mflt -> SDK : memfault_cdr_register_source()
-
-   == Inference loop ==
-
-   loop every inference
-     App -> Obsv : nrf_edgeai_obsv_update_probs(ctx, probs)
-     Obsv -> Obsv : lock ctx->lock
-     Obsv -> Core : nrf_edgeai_obsv_core_update_probs()
-     Core -> Metric : metric->update(probs, n)
-     Obsv -> Obsv : unlock ctx->lock
-   end
 
    == Collect (periodic or on demand) ==
 
-   App -> Mflt : nrf_edgeai_obsv_memfault_collect()
-   note right of Mflt : snapshot ctx list under obsv_mflt_lock,\nthen release before encoding
-   Mflt -> Obsv : nrf_edgeai_obsv_encode_list(ctxs, n, buf)
-   loop per context
-     Obsv -> Obsv : lock ctx->lock
-     Obsv -> Core : nrf_edgeai_obsv_core_for_each_metric()
-     Core -> Metric : metric->finalize()
-     Core -> Metric : metric->snapshot()
-     Core -> Obsv : zcbor encode → CBOR blob
-     Obsv -> Obsv : unlock ctx->lock
+   Trigger -> Mflt : nrf_edgeai_obsv_memfault_collect()
+   alt previous CDR not drained yet
+     Mflt --> Trigger : -EBUSY\n(nothing encoded or reset)
+   else staging slot free
+     Mflt -> Obsv : nrf_edgeai_obsv_encode_list_and_reset(ctxs, n, buf)
+     note right of Obsv
+       Hold all context locks while encoding.
+       Reset only after the complete list encodes.
+     end note
+     Obsv --> Mflt : encoded length
+     Mflt -> Mflt : copy blob to staging buffer
+     Mflt --> Trigger : success
    end
-   Mflt -> Mflt : copy blob to staging buffer\nunder obsv_mflt_lock
 
    == Transport drain ==
 
@@ -162,7 +211,11 @@ The following diagram shows the detailed call sequence between the observability
    SDK -> Mflt : read_data_cb(offset, len)
    Mflt --> SDK : CBOR payload bytes
    SDK -> Mflt : mark_cdr_read_cb()
-   SDK -> SDK : upload via BLE MDS or HTTP
+   Mflt -> Mflt : release the staging slot
+   opt auto-collect enabled and collection pending
+     Mflt -> Mflt : reschedule auto-collect immediately
+   end
+   SDK -> Cloud : upload via BLE MDS or HTTP
 
 Metrics
 *******
@@ -185,7 +238,9 @@ See the :ref:`nrf_edgeai_obsv_buffer_config` section for the available options.
 Transition matrix
 -----------------
 
-The transition matrix counts how many times the dominant class (argmax of the probability vector) changed from class *i* to class *j* across consecutive calls to :c:func:`nrf_edgeai_obsv_update_probs`.
+The transition matrix counts how many times the dominant class (argmax of the probability vector) went from class *i* to class *j* across consecutive calls to :c:func:`nrf_edgeai_obsv_update_probs`.
+Every pair of consecutive inferences is counted, so the diagonal (*i* = *j*) holds the inferences that kept the same dominant class, and the off-diagonal cells hold the class changes.
+The first inference after initialization or reset has no predecessor and is not counted.
 The result is a square ``num_classes × num_classes`` matrix of ``uint32_t`` counters stored in row-major order, where row *i* is the previous class and column *j* is the current class.
 
 The following table shows rows for the previous dominant class and columns for the current dominant class:
@@ -201,36 +256,39 @@ The following table shows rows for the previous dominant class and columns for t
      - run
      - jump
    * - idle
-     - 0
+     - 120
      - 38
      - 3
      - 1
    * - walk
      - 36
-     - 0
+     - 210
      - 12
      - 2
    * - run
      - 3
      - 10
-     - 0
+     - 45
      - 5
    * - jump
      - 2
      - 3
      - 3
-     - 0
+     - 8
 
-The illustrative counts suggest *walk* as the dominant class, frequent transitions between *idle* and *walk*, and little *jump* activity.
+The illustrative counts suggest *walk* as the dominant class (largest diagonal count), frequent transitions between *idle* and *walk*, and little *jump* activity.
 
-.. _nrf_edgeai_obsv_metrics_built_in_probability:
+.. _nrf_edgeai_obsv_metrics_built_in_class_pred:
 
-Probability distribution
-------------------------
+Class predictions distribution
+------------------------------
 
-The probability distribution metric builds a per-class histogram over the ``[0, 1]`` probability range.
-Each call to :c:func:`nrf_edgeai_obsv_update_probs` function increments one bin per class based on that class's output probability.
-The result is a ``num_classes × bin_num`` matrix of ``uint32_t`` bin counts, where row *i* is the class and each column is a histogram bin.
+The class predictions distribution gives a per-class picture of the model's output in one ``2 × num_classes × bin_num`` matrix of ``uint32_t`` counters, sharing a single bin count between its two row groups.
+
+**Probability distribution rows** (``[0, num_classes)``).
+
+A per-class histogram over the ``[0, 1]`` probability range: each call to the :c:func:`nrf_edgeai_obsv_update_probs` function increments one bin per class based on that class's output probability.
+Every inference contributes one sample to every class row, so each of these rows sums to the inference count.
 
 The following table uses four uniform bins with inner edges at 0.25, 0.50, and 0.75.
 Each row is a class; each column is a probability bin.
@@ -268,56 +326,44 @@ Each row is a class; each column is a probability bin.
 
 The illustrative counts suggest *walk* is often predicted with high confidence (67 counts in the top bin), a bimodal spread for *idle*, and mostly low confidence for *run* and *jump*, which may indicate confusion between those classes.
 
-.. _nrf_edgeai_obsv_metrics_built_in_switching:
+**Streak distribution rows** (``[num_classes, 2 × num_classes)``).
 
-Prediction switching rate
--------------------------
-
-The prediction switching rate tracks temporal instability: how often the dominant class (argmax of the probability vector) changes between consecutive inferences.
-It exports two ``uint32_t`` counters as a ``1 × 2`` row, ``[switches, comparisons]``, from which the rate is derived off-device as ``switches / comparisons``.
-A high rate indicates an unstable or noisy input.
-
-.. _nrf_edgeai_obsv_metrics_built_in_entropy:
-
-Probability entropy distribution
---------------------------------
-
-The probability entropy distribution builds a histogram of prediction uncertainty.
-For each inference it computes the normalized Shannon entropy ``H(p) / ln(N)`` of the probability vector and bins it over ``[0, 1]``, producing a ``1 × bin_num`` row.
-High entropy flags uncertain predictions or out-of-distribution inputs; low entropy flags confident predictions.
-
-.. _nrf_edgeai_obsv_metrics_built_in_margin:
-
-Probability top-2 margin distribution
--------------------------------------
-
-The probability top-2 margin distribution builds a histogram of prediction decisiveness.
-For each inference it computes the margin between the two largest class probabilities, ``margin = p_top1 - p_top2``, and bins it over ``[0, 1]`` as a ``1 × bin_num`` row.
-A low margin flags ambiguous predictions even when the dominant probability is high.
-
-.. _nrf_edgeai_obsv_metrics_built_in_streak:
-
-Class streak distribution
--------------------------
-
-The class streak distribution builds a per-class histogram of *streak lengths*.
-A streak length is the number of consecutive inferences for which the dominant class - the argmax of the probability vector - stays the same.
-The result is a ``num_classes × bin_num`` matrix of ``uint32_t`` counters, where row *i* corresponds to class *i* and each column is a streak-length bin.
+A per-class histogram of *streak lengths* - the number of consecutive inferences for which the dominant class (the argmax of the probability vector) stays the same.
 
 A streak is recorded only when it ends.
-Up to ``CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOLERANCE`` consecutive mismatching inferences are bridged without ending the streak (flicker tolerance).
-These bridged inferences are not counted toward the streak's length.
-A longer run of mismatches ends the streak.
-Streak lengths are binned uniformly over ``[1, TOP]``, with lengths of ``CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOP`` or longer saturating the top bin.
+
+Up to ``CONFIG_NRF_EDGEAI_OBSV_CLASS_PRED_DIST_STREAK_TOL`` consecutive mismatching inferences are bridged without ending the streak (flicker tolerance) and are not counted toward its length; a longer run of mismatches ends it.
+When it does, the trailing bridged frames of the class that took over are counted toward that class's new streak, so a real class change loses no frames.
+Streak lengths are binned uniformly over ``[1, TOP]``, with lengths of ``CONFIG_NRF_EDGEAI_OBSV_CLASS_PRED_DIST_STREAK_TOP_BIN`` or longer saturating the top bin.
 Setting the tolerance to ``0`` reduces the metric to strict "N in a row" runs.
 
-Because each streak contributes a single count only when it completes, the rows do not sum to the inference count.
-Instead, each row totals the number of finished streaks per class.
-This metric separates stable, sustained detections (streaks reaching the mid or top bins) from single-frame flicker (streaks pinned in the lowest bin).
-The per-inference probability metrics cannot make this distinction.
+Because each streak contributes a single count only when it completes, these rows do not sum to the inference count; each totals the number of finished streaks per class.
+This separates stable, sustained detections (streaks reaching the mid or top bins) from single-frame flicker (streaks pinned in the lowest bin), a distinction the per-inference probability rows cannot make.
+The metric reports the configuration the streak rows were gathered with as the single-row matrix ``"c": [[streak_top, streak_tol]]``, so a decoded dump carries the top-bin streak length and the flicker tolerance without relying on the build configuration.
+
+.. _nrf_edgeai_obsv_metrics_built_in_certainty:
+
+Model certainty descriptor
+--------------------------
+
+The model certainty descriptor summarizes, per inference, how certain and how temporally stable the model's predictions are, in a single ``3 × bin_num`` matrix.
+It merges the former prediction switching rate, probability entropy distribution, and probability top-2 margin distribution metrics, so one metric answers the whole "is the model sure of itself" question.
+For each inference it derives, in one pass over the probability vector:
+
+* **Row 0 — normalized entropy histogram.**
+  The normalized Shannon entropy ``H(p) / ln(N)`` binned over ``[0, 1]`` (uncertainty).
+  High entropy flags uncertain predictions or out-of-distribution inputs; low entropy flags confident predictions.
+* **Row 1 — top-2 margin histogram.**
+  The margin ``p_top1 - p_top2`` between the two largest class probabilities, binned over ``[0, 1]`` (decisiveness).
+  A low margin flags ambiguous predictions even when the dominant probability is high.
+* **Row 2 — stability counters.**
+  The ``uint32_t`` counters ``[switches, comparisons, majority_frames, confident_switches]``, with the rest of the row zero-padded.
+  ``switches / comparisons`` is the off-device switching rate (temporal instability); ``majority_frames`` counts inferences whose winner exceeded ``0.5``; and ``confident_switches`` counts switches into a ``> 0.5`` winner, separating confident class-confusion from low-probability churn.
+
+One bin count, ``CONFIG_NRF_EDGEAI_OBSV_MODEL_CERTAINTY_DESC_BIN_NUM``, is shared by the two histogram rows and sizes the stability row.
 
 Input-feature metrics
-----------------------
+---------------------
 
 The following metrics consume the input-feature stream fed through :c:func:`nrf_edgeai_obsv_update_features`, rather than the output probabilities.
 They target audio mel-spectrogram features (for example, wake-word and keyword-spotting models), but apply to any non-negative feature vector.
@@ -330,6 +376,8 @@ Mel energy descriptor
 The mel energy descriptor summarizes per-frame energy statistics of the input mel feature vector.
 It produces a ``4 × bin_num`` matrix with one ``[0, 1]`` histogram row per statistic: mean energy, max energy, dynamic range (q95 − q05), and the floor-bin ratio.
 Feature values are normalized into ``[0, 1]`` against a configured percentile range ``[p01, p99]`` (``CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P01_MILLI`` and ``_SCALE_P99_MILLI``, in thousandths of a feature unit), so the bins are comparable across devices.
+The metric reports these bounds as the single-row matrix ``"c": [[scale_p01_milli, scale_p99_milli]]``, each value a signed integer, so a decoded dump carries the calibration without relying on the build configuration.
+The metric reports ``"v": 2``; version 1 had no ``"c"`` key.
 Measure the percentiles offline on a representative dataset; the defaults are placeholders.
 
 .. _nrf_edgeai_obsv_metrics_built_in_mel_spectral:
@@ -373,6 +421,10 @@ A metric consists of five callbacks, a ``source`` field, and a ``priv`` pointer 
      - Populate a read-only :c:struct:`nrf_edgeai_obsv_metric_snapshot_t` view. The ``counts`` pointer must remain valid for the lifetime of the metric instance.
 
 The snapshot exposes counters as a flat row-major ``uint32_t`` matrix of ``num_rows × num_cols`` elements.
+A metric can also report the configuration its counters were gathered with, as a second flat row-major ``int32_t`` matrix of ``config_rows × config_cols`` elements at ``config``.
+Like ``counts``, the pointer must remain valid for the lifetime of the metric instance, and the matrix is encoded under the optional ``"c"`` key of the metric.
+The meaning and order of the values is fixed per metric ID and version.
+The core zero-initializes the snapshot before calling ``snapshot()``, so a metric that leaves ``config`` as ``NULL`` emits no ``"c"`` key.
 Metrics with a single scalar value use ``num_rows = 1, num_cols = 1``.
 
 Set the ``source`` field to select the input stream the metric consumes: ``NRF_EDGEAI_OBSV_SOURCE_PROBS`` (the default, ``0``) for the class-probability vector, or ``NRF_EDGEAI_OBSV_SOURCE_FEATURES`` for the input-feature vector.
@@ -394,6 +446,7 @@ You reserve this space through the ``CONFIG_NRF_EDGEAI_OBSV_EXTRA_ENCODE_BYTES``
 
 The required value is the sum of ``NRF_EDGEAI_OBSV_ENCODE_METRIC_SIZE(n_rows, n_cols)`` across all custom metrics.
 Because ``NRF_EDGEAI_OBSV_ENCODE_METRIC_SIZE`` is a C preprocessor macro, evaluate it at compile time and write the resulting integer directly in :file:`prj.conf`.
+If your metric reports configuration through ``config``, add ``NRF_EDGEAI_OBSV_ENCODE_METRIC_CONFIG_SIZE(config_rows, config_cols)`` to its size.
 To catch mismatches at build time, add a ``BUILD_ASSERT`` in your application code:
 
 .. code-block:: c
@@ -485,17 +538,21 @@ Configuration
 *************
 
 To use the observability library, enable the ``CONFIG_NRF_EDGEAI_OBSV`` Kconfig option in your :file:`prj.conf` file.
+Then complete the following setup:
+
+* Set ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` to the largest class count among the observed models (the default is ``4``).
+  Metric storage and the CBOR encode buffer scale with this value, and the transition matrix grows as the square of it.
+* To encode the snapshots as CBOR, enable ``CONFIG_ZCBOR`` and ``CONFIG_NRF_EDGEAI_OBSV_ENCODE``.
+  The Memfault CDR transport and :c:func:`nrf_edgeai_obsv_encode_list` require them.
+
 Enable at least one metric to start collecting data:
 
 * Built-in metrics:
 
   * For the :ref:`transition matrix <nrf_edgeai_obsv_metrics_built_in_transition>`, enable
     ``CONFIG_NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX``.
-  * For the :ref:`probability distribution <nrf_edgeai_obsv_metrics_built_in_probability>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION``, and set the number of histogram bins through ``CONFIG_NRF_EDGEAI_OBSV_PROBS_DISTRIBUTION_BIN_NUM``.
-  * For the :ref:`prediction switching rate <nrf_edgeai_obsv_metrics_built_in_switching>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PREDICTION_SWITCHING_RATE``.
-  * For the :ref:`probability entropy distribution <nrf_edgeai_obsv_metrics_built_in_entropy>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST``, and set the bin count through ``CONFIG_NRF_EDGEAI_OBSV_PROBS_ENTROPY_DIST_BIN_NUM``.
-  * For the :ref:`probability top-2 margin distribution <nrf_edgeai_obsv_metrics_built_in_margin>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST``, and set the bin count through ``CONFIG_NRF_EDGEAI_OBSV_PROBS_TOP2_MARGIN_DIST_BIN_NUM``.
-  * For the :ref:`class streak distribution <nrf_edgeai_obsv_metrics_built_in_streak>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST``, and set the bin count, the top-bin streak length, and the flicker tolerance through the matching ``CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_*`` options.
+  * For the :ref:`class predictions distribution <nrf_edgeai_obsv_metrics_built_in_class_pred>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_PRED_DIST``, and set the shared bin count, the top-bin streak length, and the flicker tolerance through the matching ``CONFIG_NRF_EDGEAI_OBSV_CLASS_PRED_DIST_*`` options.
+  * For the :ref:`model certainty descriptor <nrf_edgeai_obsv_metrics_built_in_certainty>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC``, and set the bin count shared by its entropy and top-2 margin rows through ``CONFIG_NRF_EDGEAI_OBSV_MODEL_CERTAINTY_DESC_BIN_NUM``.
   * For the :ref:`mel energy descriptor <nrf_edgeai_obsv_metrics_built_in_mel_energy>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC``, and set the bin count, the maximum feature length, and the ``[p01, p99]`` scaling percentiles through the matching ``CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_*`` options.
   * For the :ref:`mel spectral descriptor <nrf_edgeai_obsv_metrics_built_in_mel_spectral>`, enable ``CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_SPECTRAL_DESC``, and set the bin count through ``CONFIG_NRF_EDGEAI_OBSV_MEL_SPECTRAL_DESC_BIN_NUM``.
 
@@ -517,6 +574,16 @@ Memfault CDR transport
 
 The Memfault module registers a CDR source with the Memfault SDK; see `Memfault Custom Data Recording`_ for callback semantics, payload metadata, and upload limits, `Memfault`_ for the vendor platform, and :ref:`nrf:ug_memfault` in |NCS|.
 
+To use it, enable the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT`` Kconfig option.
+It depends on ``CONFIG_NRF_EDGEAI_OBSV_ENCODE`` and on the Memfault CDR support (``CONFIG_MEMFAULT_CDR_ENABLE``).
+Set ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS`` to the number of observability contexts you register with the transport (one per observed model).
+Each additional context enlarges the staging buffer by one maximum-size payload.
+
+The :c:func:`nrf_edgeai_obsv_memfault_collect` function builds its encode buffer on the stack of the calling thread.
+When you enable ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT``, the caller is the system workqueue, so increase ``CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE`` accordingly.
+The build fails if the stack is smaller than the encode buffer plus 1024 bytes.
+The default auto-collect interval is one day, which matches the default Memfault limit of one CDR per device per day.
+
 .. options-from-kconfig:: /lib/nrf_edgeai_obsv_memfault/Kconfig
    :show-type:
 
@@ -529,14 +596,25 @@ For a complete example using the nRF Edge AI API, see :ref:`quick_start_nrf_edge
 To integrate the library into your application, complete the following steps:
 
 1. Initialize an observability context with model metadata using the :c:func:`nrf_edgeai_obsv_init` function.
-#. Allocate metric storage and initialize each metric descriptor using the :c:func:`nrf_edgeai_obsv_metric_tm_create` and :c:func:`nrf_edgeai_obsv_metric_pd_create` functions.
+   Set ``num_features`` in the model metadata to the input-feature vector length if you register input-feature metrics; otherwise leave it at ``0``.
+#. Allocate metric storage and initialize each metric descriptor using the matching ``nrf_edgeai_obsv_metric_*_create`` function:
+
+   * :c:func:`nrf_edgeai_obsv_metric_tm_create` for the transition matrix.
+   * :c:func:`nrf_edgeai_obsv_metric_cpd_create` for the class predictions distribution.
+   * :c:func:`nrf_edgeai_obsv_metric_mcd_create` for the model certainty descriptor.
+   * :c:func:`nrf_edgeai_obsv_metric_med_create` for the mel energy descriptor.
+   * :c:func:`nrf_edgeai_obsv_metric_msd_create` for the mel spectral descriptor.
+
+   Size each buffer with the matching ``NRF_EDGEAI_OBSV_*_STORAGE_BYTES`` macro.
 #. Register the metrics with the context using the :c:func:`nrf_edgeai_obsv_register` function.
 #. Bind the Memfault transport once at application startup using the :c:func:`nrf_edgeai_obsv_memfault_init` function.
+#. If you registered input-feature metrics, obtain the feature vector from your inference engine and pass it to the :c:func:`nrf_edgeai_obsv_update_features` function before running inference.
+   With the nRF Edge AI Lib, call the :c:func:`nrf_edgeai_process_features` function once the input window is full, and read the resulting vector through the :c:func:`nrf_edgeai_dsp_features_ctx` function.
+   The :c:func:`nrf_edgeai_obsv_update_features` call routes only to feature-source metrics and advances the feature counter.
 #. Call the :c:func:`nrf_edgeai_obsv_update_probs` function with the output probability vector after every inference.
-#. If you registered input-feature metrics, call the :c:func:`nrf_edgeai_obsv_update_features` function with the extracted feature vector. This routes only to feature-source metrics and does not advance the inference counter.
 #. Call the :c:func:`nrf_edgeai_obsv_memfault_collect` function periodically, or enable the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT`` Kconfig option.
 
-The following example shows minimal initialization with both built-in metrics and Memfault upload over Bluetooth using MDS:
+The following example shows minimal initialization with the transition matrix and class predictions distribution metrics and Memfault upload over Bluetooth using MDS:
 
 .. code-block:: c
 
@@ -550,9 +628,9 @@ The following example shows minimal initialization with both built-in metrics an
 
    /* uint32_t arrays give natural alignment required by the storage macros. */
    static uint32_t tm_buf[NRF_EDGEAI_OBSV_TM_STORAGE_BYTES(NUM_CLASSES) / sizeof(uint32_t)];
-   static uint32_t pd_buf[NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(NUM_CLASSES) / sizeof(uint32_t)];
+   static uint32_t cpd_buf[NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES(NUM_CLASSES) / sizeof(uint32_t)];
    static nrf_edgeai_obsv_metric_t tm_metric;
-   static nrf_edgeai_obsv_metric_t pd_metric;
+   static nrf_edgeai_obsv_metric_t cpd_metric;
 
    void observability_init(void)
    {
@@ -567,8 +645,8 @@ The following example shows minimal initialization with both built-in metrics an
        nrf_edgeai_obsv_metric_tm_create(&tm_metric, tm_buf, NUM_CLASSES);
        nrf_edgeai_obsv_register(&obsv_ctx, &tm_metric, NULL);
 
-       nrf_edgeai_obsv_metric_pd_create(&pd_metric, pd_buf, NUM_CLASSES);
-       nrf_edgeai_obsv_register(&obsv_ctx, &pd_metric, NULL);
+       nrf_edgeai_obsv_metric_cpd_create(&cpd_metric, cpd_buf, NUM_CLASSES);
+       nrf_edgeai_obsv_register(&obsv_ctx, &cpd_metric, NULL);
 
        /* Bind the Memfault transport. */
        nrf_edgeai_obsv_memfault_init(&obsv_ctx);
@@ -580,7 +658,48 @@ The following example shows minimal initialization with both built-in metrics an
        nrf_edgeai_obsv_update_probs(&obsv_ctx, probs);
    }
 
-When ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT`` is disabled, call :c:func:`nrf_edgeai_obsv_memfault_collect` manually at the interval that matches your transport's drain cadence (for example, once per hour for HTTP, or before each Bluetooth LE connection).
+If you also registered input-feature metrics, extract the features explicitly before the inference and feed them to the library, as in the following example for the nRF Edge AI Lib:
+
+.. code-block:: c
+
+   int run_model(nrf_edgeai_t *model, void *samples, uint16_t num_values)
+   {
+       nrf_edgeai_err_t err = nrf_edgeai_feed_inputs(model, samples, num_values);
+
+       if (err != NRF_EDGEAI_ERR_SUCCESS) {
+           return err; /* NRF_EDGEAI_ERR_INPROGRESS: window not full yet. */
+       }
+
+       err = nrf_edgeai_process_features(model);
+       if (err != NRF_EDGEAI_ERR_SUCCESS) {
+           return err;
+       }
+
+       const nrf_edgeai_dsp_feature_extraction_t *feats = nrf_edgeai_dsp_features_ctx(model);
+
+       if (feats != NULL) {
+           nrf_edgeai_obsv_update_features(&obsv_ctx, feats->buffer.p_f32, feats->overall_num);
+       }
+
+       err = nrf_edgeai_run_inference(model);
+       if (err != NRF_EDGEAI_ERR_SUCCESS) {
+           return err;
+       }
+
+       nrf_edgeai_obsv_update_probs(&obsv_ctx, model->decoded_output.classif.probabilities.p_f32);
+
+       return 0;
+   }
+
+When ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT`` is disabled, call :c:func:`nrf_edgeai_obsv_memfault_collect` manually at the interval that matches your transport's drain cadence (for example, aligned with the periodic HTTP upload interval, or before each Bluetooth LE connection).
+
+The :c:func:`nrf_edgeai_obsv_memfault_collect` function resets every registered context while it encodes them, holding the context locks for both steps so that no inference is lost in between.
+Each staged payload therefore covers exactly the period since the previous successful collect, and the ``num_inferences`` and ``num_features`` counters restart from zero.
+
+A staged payload is never overwritten, because its data no longer exists anywhere else.
+While the Memfault SDK has not drained the previous payload, the :c:func:`nrf_edgeai_obsv_memfault_collect` function returns ``-EBUSY`` and does not encode or reset anything, so the contexts keep accumulating and the next payload covers the longer period.
+With ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT`` enabled, a refused collect runs again as soon as the payload is drained.
+With manual collection, treat ``-EBUSY`` as "try again later", for example at the next interval.
 
 When using a custom transport instead of Memfault, use :c:func:`nrf_edgeai_obsv_encode_list` to encode one or more contexts into a caller-supplied buffer in a single CBOR list:
 
@@ -594,6 +713,9 @@ When using a custom transport instead of Memfault, use :c:func:`nrf_edgeai_obsv_
        my_transport_send(cbor_buf, len);
    }
 
+For per-interval reporting, use :c:func:`nrf_edgeai_obsv_encode_list_and_reset` instead.
+It resets the contexts under the same locks as the encode, and only when the whole list encodes successfully.
+
 Thread safety
 =============
 
@@ -604,12 +726,15 @@ The following functions acquire ``ctx->lock`` internally and are safe to call fr
 * :c:func:`nrf_edgeai_obsv_encode`
 * :c:func:`nrf_edgeai_obsv_for_each_metric`
 
+The :c:func:`nrf_edgeai_obsv_encode_list_and_reset` function acquires the locks of all passed contexts, in array order, and holds them until every context is encoded and reset.
+
 The :c:func:`nrf_edgeai_obsv_memfault_collect` function uses two mutexes:
 
 * ``obsv_mflt_lock`` protects the staging buffer and the registered context list.
-* Each ``ctx->lock`` is acquired by :c:func:`nrf_edgeai_obsv_encode_list` during encoding.
+* Each ``ctx->lock`` is acquired by :c:func:`nrf_edgeai_obsv_encode_list_and_reset` during encoding and reset, thus could lead to stall of inference pipeline when called from low priority threads.
 
-To avoid lock inversion, ``obsv_mflt_lock`` is released before encoding begins, so inference is never blocked by an ongoing collect.
+To avoid lock inversion, ``obsv_mflt_lock`` is released before encoding begins.
+Inference on a context waits only while the contexts are being encoded and reset, never on the Memfault transport.
 
 .. _nrf_edgeai_obsv_script:
 
