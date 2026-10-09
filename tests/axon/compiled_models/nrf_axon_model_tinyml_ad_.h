@@ -16,8 +16,7 @@ static_assert(NRF_AXON_VERSION >= 0x00010501, "MODEL REQUIRES FEATURES NOT SUPPO
 // size of axon_model_const_tinyml_ad: 270880
 const static struct {
 	int8_t l00_weights[81920];
-	int32_t l00_biasp[128];
-	int8_t l01_weights[16384];
+	int32_t l00_biasp[128];	int8_t l01_weights[16384];
 	int32_t l01_biasp[128];
 	int8_t l02_weights[16384];
 	int32_t l02_biasp[128];

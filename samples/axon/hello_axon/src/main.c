@@ -192,8 +192,7 @@ int main(void)
 	LOG_INF("Hello Axon sample");
 	LOG_INF("Initializing Axon NPU");
 
-	__ASSERT(model_hello_axon.inputs[0]
-				 .dimensions.byte_width == 1,
+	__ASSERT(model_hello_axon.inputs[0]. dimensions.byte_width == 1,
 		 "Model input data type different than expected");
 	__ASSERT(model_hello_axon.outputs[0].dimensions.byte_width == 1,
 		 "Model output data type different than expected");
