@@ -34,6 +34,13 @@ extern "C" {
  * Counters are a row-major 2-D @c uint32_t matrix of @p num_rows x @p num_cols
  * elements. Metrics with 1-D data set @p num_cols to 1.
  *
+ * A metric may also report the configuration its counters were gathered with
+ * (e.g. histogram ceilings) as a second row-major @c int32_t matrix of
+ * @p config_rows x @p config_cols elements at @p config. The meaning and order
+ * of the values is fixed per (@p metric_id, @p version). The core
+ * zero-initializes the snapshot before calling snapshot(), so a metric with no
+ * configuration leaves @p config NULL and nothing is emitted for it.
+ *
  * Thread safety: snapshot() is not synchronized against concurrent
  * nrf_edgeai_obsv_core_update_probs() calls. Callers must ensure @c update() does not
  * overlap @c snapshot() (e.g. hold the context lock for the duration of
@@ -55,6 +62,17 @@ typedef struct {
 	 * metric; the transport must not free it.
 	 */
 	const uint32_t *counts;
+	/** @brief Number of rows in the config matrix (0 = no configuration reported). */
+	uint16_t config_rows;
+	/** @brief Number of columns in the config matrix. */
+	uint16_t config_cols;
+	/**
+	 * @brief Row-major config matrix, @p config_rows x @p config_cols int32s.
+	 *
+	 * NULL when the metric reports no configuration. Like @p counts it points
+	 * into the metric's @c priv storage; ownership remains with the metric.
+	 */
+	const int32_t *config;
 } nrf_edgeai_obsv_metric_snapshot_t;
 
 /**
@@ -81,7 +99,7 @@ enum nrf_edgeai_obsv_source {
  * callbacks, a @p priv pointer to its own storage, and a list link pointer.
  * Metrics are registered into the observability context as a singly linked list.
  *
- * Use @ref nrf_edgeai_obsv_metric_tm_create / @ref nrf_edgeai_obsv_metric_pd_create
+ * Use @ref nrf_edgeai_obsv_metric_tm_create / @ref nrf_edgeai_obsv_metric_cpd_create
  * to initialize a metric descriptor with caller-provided storage.
  */
 typedef struct nrf_edgeai_obsv_metric_s {
@@ -167,79 +185,12 @@ typedef struct nrf_edgeai_obsv_metric_s {
  * @brief Metric identifier values emitted by each metric's snapshot.
  */
 enum nrf_edgeai_obsv_metric_id {
-	NRF_EDGEAI_OBSV_METRIC_ID_TRANSITION_MATRIX = 2,
-	NRF_EDGEAI_OBSV_METRIC_ID_PROBS_DISTRIBUTION = 3,
-	NRF_EDGEAI_OBSV_METRIC_ID_PREDICTION_SWITCHING_RATE = 4,
-	NRF_EDGEAI_OBSV_METRIC_ID_PROBS_ENTROPY_DIST = 5,
-	NRF_EDGEAI_OBSV_METRIC_ID_PROBS_TOP2_MARGIN_DIST = 6,
-	NRF_EDGEAI_OBSV_METRIC_ID_MEL_ENERGY_DESC = 7,
-	NRF_EDGEAI_OBSV_METRIC_ID_MEL_SPECTRAL_DESC = 8,
-	NRF_EDGEAI_OBSV_METRIC_ID_CLASS_STREAK_DIST = 9,
+	NRF_EDGEAI_OBSV_METRIC_ID_MODEL_CERTAINTY_DESC = 1,
+	NRF_EDGEAI_OBSV_METRIC_ID_CLASS_PRED_DIST = 2,
+	NRF_EDGEAI_OBSV_METRIC_ID_TRANSITION_MATRIX = 3,
+	NRF_EDGEAI_OBSV_METRIC_ID_MEL_ENERGY_DESC = 4,
+	NRF_EDGEAI_OBSV_METRIC_ID_MEL_SPECTRAL_DESC = 5,
 };
-
-#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION)
-
-/**
- * @brief Runtime configuration for probability distribution metric.
- *
- * Pass to nrf_edgeai_obsv_core_register() as the p_cfg argument.
- * NULL p_cfg gives uniform bins over [0, 1].
- */
-typedef struct {
-	/**
-	 * Array of (CONFIG_NRF_EDGEAI_OBSV_PROBS_DISTRIBUTION_BIN_NUM - 1) inner edge
-	 * values in ascending order, e.g. {0.25, 0.5, 0.75} for 4 uniform bins over [0, 1].
-	 * The boundary values 0.0 and 1.0 are implicit: all probability values below the
-	 * first edge fall in bin 0; all values at or above the last edge fall in the last bin.
-	 */
-	float bin_edges[CONFIG_NRF_EDGEAI_OBSV_PROBS_DISTRIBUTION_BIN_NUM - 1];
-} nrf_obsv_probs_dist_cfg_t;
-
-/**
- * @brief Header (dimension fields) for the probability distribution metric storage.
- *
- * Shared between the storage macro and the metric implementation so the layout
- * is defined in exactly one place. sizeof(_nrf_obsv_pd_hdr_t) == 4, which keeps
- * the float array that immediately follows naturally aligned.
- *
- * Not intended for direct use outside of the metric implementation.
- */
-typedef struct {
-	uint16_t num_classes;
-	uint8_t bin_num;
-	uint8_t _pad[1];
-} _nrf_obsv_pd_hdr_t;
-
-_Static_assert(sizeof(_nrf_obsv_pd_hdr_t) == 4,
-	       "Layout changed; update NRF_EDGEAI_OBSV_PD_STORAGE_BYTES and storage accessors");
-
-/**
- * @brief Minimum byte size of a probability distribution storage buffer for @p n_classes classes.
- *
- * Use with @ref nrf_edgeai_obsv_metric_pd_create to size a caller-supplied buffer.
- * The buffer must be aligned to at least @c sizeof(uint32_t) bytes.
- */
-#define NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(n_classes)                                          \
-	(sizeof(_nrf_obsv_pd_hdr_t)                                                          \
-	 + ((size_t)CONFIG_NRF_EDGEAI_OBSV_PROBS_DISTRIBUTION_BIN_NUM - 1U) * sizeof(float)  \
-	 + (size_t)(n_classes) * CONFIG_NRF_EDGEAI_OBSV_PROBS_DISTRIBUTION_BIN_NUM           \
-	   * sizeof(uint32_t))
-
-/**
- * @brief Initialize a probability distribution metric using caller-provided storage.
- *
- * The caller allocates a buffer of at least @ref NRF_EDGEAI_OBSV_PD_STORAGE_BYTES
- * bytes, passes it here, then registers the metric with nrf_edgeai_obsv_core_register().
- *
- * @param metric    Metric descriptor to fill. Must not be NULL.
- * @param buf       Buffer of at least NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(n_classes)
- *                  bytes, aligned to at least @c sizeof(uint32_t). Must not be NULL.
- * @param n_classes Number of model output classes (> 0).
- */
-void nrf_edgeai_obsv_metric_pd_create(nrf_edgeai_obsv_metric_t *metric, void *buf,
-				      uint16_t n_classes);
-
-#endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION */
 
 #if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX)
 
@@ -266,7 +217,7 @@ _Static_assert(sizeof(_nrf_obsv_tm_hdr_t) == 4,
  * Use with @ref nrf_edgeai_obsv_metric_tm_create to size a caller-supplied buffer.
  * The buffer must be aligned to at least @c sizeof(uint32_t) bytes.
  */
-#define NRF_EDGEAI_OBSV_TM_STORAGE_BYTES(n_classes) \
+#define NRF_EDGEAI_OBSV_TM_STORAGE_BYTES(n_classes)                                                \
 	(sizeof(_nrf_obsv_tm_hdr_t) + (size_t)(n_classes) * (size_t)(n_classes) * sizeof(uint32_t))
 
 /**
@@ -285,186 +236,109 @@ void nrf_edgeai_obsv_metric_tm_create(nrf_edgeai_obsv_metric_t *metric, void *bu
 
 #endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX */
 
-#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PREDICTION_SWITCHING_RATE)
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC)
 
 /**
- * @brief Header (dimension/state fields) for the prediction switching rate storage.
+ * @brief Header (dimension/state fields) for the model certainty descriptor storage.
  *
- * Shared between the storage macro and the metric implementation.
- * sizeof(_nrf_obsv_psr_hdr_t) == 4, which keeps the uint32_t counters that
- * immediately follow naturally aligned.
+ * Shared between the storage macro and the metric implementation so the layout
+ * is defined in exactly one place. sizeof(_nrf_obsv_mcd_hdr_t) == 8, which keeps
+ * the uint32_t counter array that immediately follows naturally aligned.
+ * @c prev carries the previous inference's dominant class across updates (the
+ * switching-rate state), sentinel 0xFFFF when no inference has been seen.
  *
  * Not intended for direct use outside of the metric implementation.
  */
 typedef struct {
 	uint16_t num_classes;
 	uint16_t prev;
-} _nrf_obsv_psr_hdr_t;
+	uint8_t bin_num;
+	uint8_t _pad[3];
+} _nrf_obsv_mcd_hdr_t;
 
-_Static_assert(sizeof(_nrf_obsv_psr_hdr_t) == 4,
-	       "Layout changed; update NRF_EDGEAI_OBSV_PSR_STORAGE_BYTES and storage accessors");
+_Static_assert(sizeof(_nrf_obsv_mcd_hdr_t) == 8,
+	       "Layout changed; update NRF_EDGEAI_OBSV_MCD_STORAGE_BYTES and storage accessors");
+
+/** @brief Rows of the model certainty descriptor matrix. */
+#define NRF_EDGEAI_OBSV_MCD_NUM_ROWS 3
 
 /**
- * @brief Minimum byte size of a prediction switching rate storage buffer.
+ * @brief Minimum byte size of a model certainty descriptor storage buffer.
  *
- * The metric exposes a fixed 1 x 2 row of @c uint32_t counters
- * (switches, comparisons), so the storage size does not depend on @p n_classes;
- * the parameter is accepted only for symmetry with the other metric storage
- * macros. Use with @ref nrf_edgeai_obsv_metric_psr_create to size a
- * caller-supplied buffer. The buffer must be aligned to at least
+ * The descriptor is a fixed @ref NRF_EDGEAI_OBSV_MCD_NUM_ROWS x bin_num matrix
+ * (entropy histogram, top-2 margin histogram, stability counters), so storage
+ * does not depend on @p n_classes; the parameter is accepted only for symmetry
+ * with the other metric storage macros. Use with
+ * @ref nrf_edgeai_obsv_metric_mcd_create. The buffer must be aligned to at least
  * @c sizeof(uint32_t) bytes.
  */
-#define NRF_EDGEAI_OBSV_PSR_STORAGE_BYTES(n_classes) \
-	(sizeof(_nrf_obsv_psr_hdr_t) + 2U * sizeof(uint32_t))
+#define NRF_EDGEAI_OBSV_MCD_STORAGE_BYTES(n_classes)                                               \
+	(sizeof(_nrf_obsv_mcd_hdr_t) +                                                             \
+	 (size_t)NRF_EDGEAI_OBSV_MCD_NUM_ROWS *                                                    \
+		 CONFIG_NRF_EDGEAI_OBSV_MODEL_CERTAINTY_DESC_BIN_NUM * sizeof(uint32_t))
 
 /**
- * @brief Initialize a prediction switching rate metric using caller-provided storage.
+ * @brief Initialize a model certainty descriptor metric using caller-provided storage.
  *
- * Tracks temporal instability: the metric counts how often the dominant class
- * (argmax of the probability vector) changes between consecutive inferences.
- * It exports two raw counters as a 1 x 2 row, @c [switches, comparisons], from
- * which the rate is derived off-device:
- * @c SwitchRate = switches / comparisons = (1 / (N - 1)) * sum I(y_t != y_{t-1}).
+ * Consumes the class-probability stream (@c NRF_EDGEAI_OBSV_SOURCE_PROBS). Per
+ * inference it derives, in one pass, prediction uncertainty, decisiveness and
+ * temporal stability, accumulating them into a @c 3 x bin_num matrix:
+ *   - row 0: histogram of the normalized Shannon entropy @c H(p)/ln(N) over
+ *     [0, 1] (uncertainty; high = uncertain / out-of-distribution);
+ *   - row 1: histogram of the top-2 margin @c p_top1-p_top2 over [0, 1]
+ *     (decisiveness; low = ambiguous near-tie);
+ *   - row 2: stability counters
+ *     @c [switches, comparisons, majority_frames, confident_switches], the rest
+ *     of the row zero-padded. @c switches / @c comparisons is the off-device
+ *     switching rate; @c majority_frames counts inferences with @c p_top1 > 0.5;
+ *     @c confident_switches counts switches into a @c p_top1 > 0.5 winner.
  *
- * The caller allocates a buffer of at least @ref NRF_EDGEAI_OBSV_PSR_STORAGE_BYTES
+ * One bin count (@c CONFIG_NRF_EDGEAI_OBSV_MODEL_CERTAINTY_DESC_BIN_NUM) is shared
+ * by the entropy and margin histograms and sizes the stability-counter row.
+ *
+ * The caller allocates a buffer of at least @ref NRF_EDGEAI_OBSV_MCD_STORAGE_BYTES
  * bytes, passes it here, then registers the metric with nrf_edgeai_obsv_core_register().
  *
  * @param metric    Metric descriptor to fill. Must not be NULL.
- * @param buf       Buffer of at least NRF_EDGEAI_OBSV_PSR_STORAGE_BYTES(n_classes)
+ * @param buf       Buffer of at least NRF_EDGEAI_OBSV_MCD_STORAGE_BYTES(n_classes)
  *                  bytes, aligned to at least @c sizeof(uint32_t). Must not be NULL.
  * @param n_classes Number of model output classes (> 0).
  */
-void nrf_edgeai_obsv_metric_psr_create(nrf_edgeai_obsv_metric_t *metric, void *buf,
+void nrf_edgeai_obsv_metric_mcd_create(nrf_edgeai_obsv_metric_t *metric, void *buf,
 				       uint16_t n_classes);
 
-#endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_PREDICTION_SWITCHING_RATE */
-
-#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST)
-
-/**
- * @brief Header (dimension fields) for the probability entropy distribution storage.
- *
- * Shared between the storage macro and the metric implementation so the layout
- * is defined in exactly one place. sizeof(_nrf_obsv_ped_hdr_t) == 4, which keeps
- * the uint32_t counter array that immediately follows naturally aligned.
- *
- * Not intended for direct use outside of the metric implementation.
- */
-typedef struct {
-	uint16_t num_classes;
-	uint8_t bin_num;
-	uint8_t _pad[1];
-} _nrf_obsv_ped_hdr_t;
-
-_Static_assert(sizeof(_nrf_obsv_ped_hdr_t) == 4,
-	       "Layout changed; update NRF_EDGEAI_OBSV_PED_STORAGE_BYTES and storage accessors");
-
-/**
- * @brief Minimum byte size of a probability entropy distribution storage buffer.
- *
- * Entropy is a single scalar per inference, so the histogram is one row of
- * @c CONFIG_NRF_EDGEAI_OBSV_PROBS_ENTROPY_DIST_BIN_NUM bins regardless of class
- * count; @p n_classes is accepted only for symmetry with the other metric
- * storage macros. Use with @ref nrf_edgeai_obsv_metric_ped_create. The buffer
- * must be aligned to at least @c sizeof(uint32_t) bytes.
- */
-#define NRF_EDGEAI_OBSV_PED_STORAGE_BYTES(n_classes)                                          \
-	(sizeof(_nrf_obsv_ped_hdr_t)                                                          \
-	 + (size_t)CONFIG_NRF_EDGEAI_OBSV_PROBS_ENTROPY_DIST_BIN_NUM * sizeof(uint32_t))
-
-/**
- * @brief Initialize a probability entropy distribution metric using caller-provided storage.
- *
- * Measures prediction uncertainty: per inference it computes the Shannon entropy
- * @c H(p)=-sum p_i*ln(p_i) of the probability vector, normalizes it to [0, 1] by
- * the maximum entropy @c ln(num_classes), and bins it into a 1 x bin_num
- * histogram. High entropy indicates uncertain or out-of-distribution inputs.
- *
- * The caller allocates a buffer of at least @ref NRF_EDGEAI_OBSV_PED_STORAGE_BYTES
- * bytes, passes it here, then registers the metric with nrf_edgeai_obsv_core_register().
- *
- * @param metric    Metric descriptor to fill. Must not be NULL.
- * @param buf       Buffer of at least NRF_EDGEAI_OBSV_PED_STORAGE_BYTES(n_classes)
- *                  bytes, aligned to at least @c sizeof(uint32_t). Must not be NULL.
- * @param n_classes Number of model output classes (> 0).
- */
-void nrf_edgeai_obsv_metric_ped_create(nrf_edgeai_obsv_metric_t *metric, void *buf,
-				       uint16_t n_classes);
-
-#endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST */
-
-#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST)
-
-/**
- * @brief Header (dimension fields) for the probability top-2 margin distribution storage.
- *
- * Shared between the storage macro and the metric implementation so the layout
- * is defined in exactly one place. sizeof(_nrf_obsv_pmd_hdr_t) == 4, which keeps
- * the uint32_t counter array that immediately follows naturally aligned.
- *
- * Not intended for direct use outside of the metric implementation.
- */
-typedef struct {
-	uint16_t num_classes;
-	uint8_t bin_num;
-	uint8_t _pad[1];
-} _nrf_obsv_pmd_hdr_t;
-
-_Static_assert(sizeof(_nrf_obsv_pmd_hdr_t) == 4,
-	       "Layout changed; update NRF_EDGEAI_OBSV_PMD_STORAGE_BYTES and storage accessors");
-
-/**
- * @brief Minimum byte size of a probability top-2 margin distribution storage buffer.
- *
- * The margin is a single scalar per inference, so the histogram is one row of
- * @c CONFIG_NRF_EDGEAI_OBSV_PROBS_TOP2_MARGIN_DIST_BIN_NUM bins regardless of
- * class count; @p n_classes is accepted only for symmetry with the other metric
- * storage macros. Use with @ref nrf_edgeai_obsv_metric_pmd_create. The buffer
- * must be aligned to at least @c sizeof(uint32_t) bytes.
- */
-#define NRF_EDGEAI_OBSV_PMD_STORAGE_BYTES(n_classes)                                            \
-	(sizeof(_nrf_obsv_pmd_hdr_t)                                                            \
-	 + (size_t)CONFIG_NRF_EDGEAI_OBSV_PROBS_TOP2_MARGIN_DIST_BIN_NUM * sizeof(uint32_t))
-
-/**
- * @brief Initialize a probability top-2 margin distribution metric using caller-provided storage.
- *
- * Measures how decisive each prediction is: per inference it computes the margin
- * @c margin=p_top1-p_top2 between the two largest class probabilities and bins it
- * into a 1 x bin_num histogram over [0, 1]. A low margin flags ambiguous
- * predictions even when the dominant probability is high.
- *
- * The caller allocates a buffer of at least @ref NRF_EDGEAI_OBSV_PMD_STORAGE_BYTES
- * bytes, passes it here, then registers the metric with nrf_edgeai_obsv_core_register().
- *
- * @param metric    Metric descriptor to fill. Must not be NULL.
- * @param buf       Buffer of at least NRF_EDGEAI_OBSV_PMD_STORAGE_BYTES(n_classes)
- *                  bytes, aligned to at least @c sizeof(uint32_t). Must not be NULL.
- * @param n_classes Number of model output classes (> 0).
- */
-void nrf_edgeai_obsv_metric_pmd_create(nrf_edgeai_obsv_metric_t *metric, void *buf,
-				       uint16_t n_classes);
-
-#endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST */
+#endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC */
 
 #if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC)
+
+/** @brief Layout of the config row reported by the mel energy descriptor. */
+enum nrf_edgeai_obsv_med_config {
+	/** @brief Lower scaling percentile p01, thousandths of a feature unit. */
+	NRF_EDGEAI_OBSV_MED_CFG_SCALE_P01_MILLI = 0,
+	/** @brief Upper scaling percentile p99, thousandths of a feature unit. */
+	NRF_EDGEAI_OBSV_MED_CFG_SCALE_P99_MILLI = 1,
+	/** @brief Number of config values (columns of the single config row). */
+	NRF_EDGEAI_OBSV_MED_CFG_COUNT,
+};
 
 /**
  * @brief Header (dimension/scale fields) for the mel energy descriptor storage.
  *
  * Shared between the storage macro and the metric implementation.
  * sizeof(_nrf_obsv_med_hdr_t) == 12, which keeps the uint32_t counter array that
- * follows naturally aligned. @c scale_min / @c scale_max are the configured
- * percentile bounds (p01 / p99) used to normalize feature values into [0, 1].
+ * follows naturally aligned. @c cfg holds the configured percentile bounds
+ * (p01 / p99, indexed by @ref nrf_edgeai_obsv_med_config) used to normalize
+ * feature values into [0, 1]. They are thousandths of a feature unit, signed
+ * (feature values, and so the percentiles, can be negative), so the snapshot
+ * can point at them directly.
  *
  * Not intended for direct use outside of the metric implementation.
  */
 typedef struct {
+	int32_t cfg[NRF_EDGEAI_OBSV_MED_CFG_COUNT];
 	uint16_t num_features;
 	uint8_t bin_num;
 	uint8_t _pad[1];
-	float scale_min;
-	float scale_max;
 } _nrf_obsv_med_hdr_t;
 
 _Static_assert(sizeof(_nrf_obsv_med_hdr_t) == 12,
@@ -482,10 +356,10 @@ _Static_assert(sizeof(_nrf_obsv_med_hdr_t) == 12,
  * macros). Use with @ref nrf_edgeai_obsv_metric_med_create. The buffer must be
  * aligned to at least @c sizeof(uint32_t) bytes.
  */
-#define NRF_EDGEAI_OBSV_MED_STORAGE_BYTES(n_features)                                           \
-	(sizeof(_nrf_obsv_med_hdr_t)                                                            \
-	 + (size_t)NRF_EDGEAI_OBSV_MED_NUM_ROWS                                                 \
-	   * CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_BIN_NUM * sizeof(uint32_t))
+#define NRF_EDGEAI_OBSV_MED_STORAGE_BYTES(n_features)                                              \
+	(sizeof(_nrf_obsv_med_hdr_t) + (size_t)NRF_EDGEAI_OBSV_MED_NUM_ROWS *                      \
+					       CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_BIN_NUM *    \
+					       sizeof(uint32_t))
 
 /**
  * @brief Initialize a mel energy descriptor metric using caller-provided storage.
@@ -544,10 +418,10 @@ _Static_assert(sizeof(_nrf_obsv_msd_hdr_t) == 4,
  * storage macros). Use with @ref nrf_edgeai_obsv_metric_msd_create. The buffer
  * must be aligned to at least @c sizeof(uint32_t) bytes.
  */
-#define NRF_EDGEAI_OBSV_MSD_STORAGE_BYTES(n_features)                                           \
-	(sizeof(_nrf_obsv_msd_hdr_t)                                                            \
-	 + (size_t)NRF_EDGEAI_OBSV_MSD_NUM_ROWS                                                 \
-	   * CONFIG_NRF_EDGEAI_OBSV_MEL_SPECTRAL_DESC_BIN_NUM * sizeof(uint32_t))
+#define NRF_EDGEAI_OBSV_MSD_STORAGE_BYTES(n_features)                                              \
+	(sizeof(_nrf_obsv_msd_hdr_t) + (size_t)NRF_EDGEAI_OBSV_MSD_NUM_ROWS *                      \
+					       CONFIG_NRF_EDGEAI_OBSV_MEL_SPECTRAL_DESC_BIN_NUM *  \
+					       sizeof(uint32_t))
 
 /**
  * @brief Initialize a mel spectral descriptor metric using caller-provided storage.
@@ -571,70 +445,100 @@ void nrf_edgeai_obsv_metric_msd_create(nrf_edgeai_obsv_metric_t *metric, void *b
 
 #endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_SPECTRAL_DESC */
 
-#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST)
+#if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_PRED_DIST)
+
+/** @brief Layout of the config row reported by the class predictions distribution. */
+enum nrf_edgeai_obsv_cpd_config {
+	/** @brief Streak length saturating the top streak bin (STREAK_TOP_BIN). */
+	NRF_EDGEAI_OBSV_CPD_CFG_STREAK_TOP = 0,
+	/** @brief Flicker tolerance, in bridged frames (STREAK_TOL). */
+	NRF_EDGEAI_OBSV_CPD_CFG_STREAK_TOL = 1,
+	/** @brief Number of config values (columns of the single config row). */
+	NRF_EDGEAI_OBSV_CPD_CFG_COUNT,
+};
 
 /**
- * @brief Header (dimension/config/state fields) for the class streak distribution storage.
+ * @brief Header (dimension/config/state fields) for the class predictions distribution storage.
  *
  * Shared between the storage macro and the metric implementation so the layout
- * is defined in exactly one place. sizeof(_nrf_obsv_csd_hdr_t) == 12, which keeps
+ * is defined in exactly one place. sizeof(_nrf_obsv_cpd_hdr_t) == 20, which keeps
  * the uint32_t counter array that immediately follows naturally aligned.
- * @c top and @c tolerance are the configured binning ceiling and flicker
- * tolerance; the @c cur_* fields carry the in-progress streak state across
- * updates (a streak is recorded only when it ends).
+ * @c cfg holds the streak binning ceiling and flicker tolerance (indexed by
+ * @ref nrf_edgeai_obsv_cpd_config) as @c int32_t so the snapshot can point at it
+ * directly; the @c cur_* fields carry the in-progress streak state across updates
+ * (a streak is recorded only when it ends). The @c alt_* fields track the trailing
+ * run of one mismatching class inside the tolerance window, so that if tolerance is
+ * exhausted those frames count toward the new streak instead of being lost.
  *
  * Not intended for direct use outside of the metric implementation.
  */
 typedef struct {
+	int32_t cfg[NRF_EDGEAI_OBSV_CPD_CFG_COUNT];
 	uint16_t num_classes;
 	uint16_t cur_class;
+	uint16_t alt_class;
 	uint8_t bin_num;
-	uint8_t top;
-	uint8_t tolerance;
 	uint8_t cur_len;
 	uint8_t cur_miss;
-	uint8_t _pad[3];
-} _nrf_obsv_csd_hdr_t;
+	uint8_t alt_len;
+	uint8_t _pad[2];
+} _nrf_obsv_cpd_hdr_t;
 
-_Static_assert(sizeof(_nrf_obsv_csd_hdr_t) == 12,
-	       "Layout changed; update NRF_EDGEAI_OBSV_CSD_STORAGE_BYTES and storage accessors");
+_Static_assert(sizeof(_nrf_obsv_cpd_hdr_t) == 20,
+	       "Layout changed; update NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES and storage accessors");
+
+/** @brief Row-group count: the matrix is 2 x num_classes rows (probs, then streak). */
+#define NRF_EDGEAI_OBSV_CPD_ROW_GROUPS 2
 
 /**
- * @brief Minimum byte size of a class streak distribution storage buffer for @p n_classes classes.
+ * @brief Minimum byte size of a class predictions distribution storage buffer for @p n_classes
+ * classes.
  *
- * Use with @ref nrf_edgeai_obsv_metric_csd_create to size a caller-supplied buffer.
- * The buffer must be aligned to at least @c sizeof(uint32_t) bytes.
+ * The matrix is @c 2*n_classes x bin_num (rows [0, n_classes) probability
+ * distribution, rows [n_classes, 2*n_classes) streak distribution). Use with
+ * @ref nrf_edgeai_obsv_metric_cpd_create to size a caller-supplied buffer. The
+ * buffer must be aligned to at least @c sizeof(uint32_t) bytes.
  */
-#define NRF_EDGEAI_OBSV_CSD_STORAGE_BYTES(n_classes)                                          \
-	(sizeof(_nrf_obsv_csd_hdr_t)                                                          \
-	 + (size_t)(n_classes) * CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_BIN_NUM             \
-	   * sizeof(uint32_t))
+#define NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES(n_classes)                                               \
+	(sizeof(_nrf_obsv_cpd_hdr_t) + (size_t)NRF_EDGEAI_OBSV_CPD_ROW_GROUPS * (n_classes) *      \
+					       CONFIG_NRF_EDGEAI_OBSV_CLASS_PRED_DIST_BIN_NUM *    \
+					       sizeof(uint32_t))
 
 /**
- * @brief Initialize a class streak distribution metric using caller-provided storage.
+ * @brief Initialize a class predictions distribution metric using caller-provided storage.
  *
- * Per class, accumulates a histogram of streak lengths: the number of consecutive
- * inferences whose dominant class (argmax) is that class. A streak is recorded
- * into its class's histogram row when it ends. Up to
- * @c CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOLERANCE consecutive mismatching
- * frames are bridged without ending the streak (and are not counted into its
- * length); more consecutive mismatches than that end it. Streak lengths are binned
- * uniformly over [1, TOP], with lengths >= TOP saturating the top bin
- * (@c CONFIG_NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOP). Consumes the class-probability
- * stream (@c NRF_EDGEAI_OBSV_SOURCE_PROBS).
+ * Consumes the class-probability stream (@c NRF_EDGEAI_OBSV_SOURCE_PROBS) and, per
+ * inference, feeds two per-class views into one @c 2*num_classes x bin_num matrix:
+ *   - rows @c [0, num_classes): the probability distribution — each class's
+ *     predicted probability binned uniformly over [0, 1]; every inference adds one
+ *     sample to every class row, so each of these rows sums to the inference count;
+ *   - rows @c [num_classes, 2*num_classes): the streak distribution — a per-class
+ *     histogram of how many consecutive inferences the dominant class (argmax)
+ *     stays that class. A streak is recorded when it ends; up to
+ *     @c CONFIG_NRF_EDGEAI_OBSV_CLASS_PRED_DIST_STREAK_TOL consecutive mismatching
+ *     frames are bridged (not counted into the length, unless they turn out to
+ *     start a new streak of another class, in which case they count toward that
+ *     new streak). Streak lengths are
+ *     binned uniformly over [1, TOP], lengths >= TOP saturating the top bin
+ *     (@c CONFIG_NRF_EDGEAI_OBSV_CLASS_PRED_DIST_STREAK_TOP_BIN). These rows do not sum to the
+ *     inference count.
  *
- * The caller allocates a buffer of at least @ref NRF_EDGEAI_OBSV_CSD_STORAGE_BYTES
+ * One bin count (@c CONFIG_NRF_EDGEAI_OBSV_CLASS_PRED_DIST_BIN_NUM) is shared by
+ * both row groups. Merges the former probability distribution and class streak
+ * distribution metrics.
+ *
+ * The caller allocates a buffer of at least @ref NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES
  * bytes, passes it here, then registers the metric with nrf_edgeai_obsv_core_register().
  *
  * @param metric    Metric descriptor to fill. Must not be NULL.
- * @param buf       Buffer of at least NRF_EDGEAI_OBSV_CSD_STORAGE_BYTES(n_classes)
+ * @param buf       Buffer of at least NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES(n_classes)
  *                  bytes, aligned to at least @c sizeof(uint32_t). Must not be NULL.
  * @param n_classes Number of model output classes (> 0).
  */
-void nrf_edgeai_obsv_metric_csd_create(nrf_edgeai_obsv_metric_t *metric, void *buf,
+void nrf_edgeai_obsv_metric_cpd_create(nrf_edgeai_obsv_metric_t *metric, void *buf,
 				       uint16_t n_classes);
 
-#endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST */
+#endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_PRED_DIST */
 
 #ifdef __cplusplus
 }

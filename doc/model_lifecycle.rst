@@ -165,7 +165,7 @@ Deployment
 ==========
 
 Build and flash your application to your target devices, then ship it as part of your product.
-See :ref:`app_ww_kws` for a reference application that integrates model observability through the ``CONFIG_MODELS_OBSERVABILITY`` Kconfig option.
+See :ref:`app_ww_kws` for a reference application that enables observability independently for its wakeword and keyword spotting models through the ``CONFIG_MODELS_OBSERVABILITY_WW`` and ``CONFIG_MODELS_OBSERVABILITY_KWS`` Kconfig options.
 
 Later deployments — whether they carry a retrained model, an application defect fix, or a hardware-related configuration change — reach devices already in the field through your product's device firmware update (DFU) mechanism.
 See :ref:`nrf:app_bootloaders` for the DFU mechanisms available in |NCS|.
@@ -264,7 +264,7 @@ Model drift
 ===========
 
 Gradual shifts in class distributions, confidence scores, or streak lengths over weeks or months can suggest that the model no longer matches real-world conditions.
-Examples to look for include a rising :ref:`prediction switching rate <nrf_edgeai_obsv_metrics_built_in_switching>`, a :ref:`probability distribution <nrf_edgeai_obsv_metrics_built_in_probability>` that drifts away from the training-time baseline, or a :ref:`class streak distribution <nrf_edgeai_obsv_metrics_built_in_streak>` dominated by short, flickering streaks instead of stable detections.
+Examples to look for include a rising :ref:`prediction switching rate <nrf_edgeai_obsv_metrics_built_in_certainty>`, a :ref:`probability distribution <nrf_edgeai_obsv_metrics_built_in_class_pred>` that drifts away from the training-time baseline, or a :ref:`class streak distribution <nrf_edgeai_obsv_metrics_built_in_class_pred>` dominated by short, flickering streaks instead of stable detections.
 
 Hardware and deployment environment
 ===================================

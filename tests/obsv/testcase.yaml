@@ -1,7 +1,17 @@
+common:
+  tags: edgeai obsv
+  platform_allow:
+    - native_sim/native/64
+  integration_platforms:
+    - native_sim/native/64
+
 tests:
-  edgeai.obsv:
-    tags: edgeai obsv
-    platform_allow:
-      - native_sim/native/64
-    integration_platforms:
-      - native_sim/native/64
+  edgeai.obsv: {}
+
+  edgeai.obsv.cpd_strict:
+    extra_configs:
+      - CONFIG_NRF_EDGEAI_OBSV_CLASS_PRED_DIST_STREAK_TOL=0
+
+  edgeai.obsv.mcd_wide:
+    extra_configs:
+      - CONFIG_NRF_EDGEAI_OBSV_MODEL_CERTAINTY_DESC_BIN_NUM=16

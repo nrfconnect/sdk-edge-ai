@@ -85,6 +85,7 @@ int nrf_edgeai_obsv_deregister(nrf_edgeai_obsv_ctx_t *ctx, nrf_edgeai_obsv_metri
  * Calls each metric's @c clear callback to zero counters while preserving
  * any configuration set at registration time (e.g. custom bin edges).
  * Registered metrics remain attached; model metadata is preserved.
+ * This function will reset transient state of registered metrics.
  *
  * @param ctx Initialized context.
  * @return 0 on success, -EINVAL if @p ctx is NULL.
@@ -156,8 +157,30 @@ size_t nrf_edgeai_obsv_encode(nrf_edgeai_obsv_ctx_t *ctx, uint8_t *buf, size_t m
  * @param max_len Size of @p buf in bytes.
  * @return Encoded byte count on success, 0 on error or buffer overflow.
  */
-size_t nrf_edgeai_obsv_encode_list(nrf_edgeai_obsv_ctx_t *const *ctxs, uint8_t n,
-				   uint8_t *buf, size_t max_len);
+size_t nrf_edgeai_obsv_encode_list(nrf_edgeai_obsv_ctx_t *const *ctxs, uint8_t n, uint8_t *buf,
+				   size_t max_len);
+
+/**
+ * @brief Encode multiple contexts as a CBOR list and reset them atomically.
+ *
+ * Same wire format as @ref nrf_edgeai_obsv_encode_list. All @p n context locks
+ * are held across encode and reset, so no update is lost between the snapshot
+ * and the reset, and all contexts are snapshotted at the same point. Use it for
+ * incremental (per-interval) reporting.
+ *
+ * Contexts are reset only when the whole list encodes successfully; on error
+ * they keep their data.
+ *
+ * Requires @c CONFIG_NRF_EDGEAI_OBSV_ENCODE.
+ *
+ * @param ctxs    Array of @p n distinct initialized context pointers.
+ * @param n       Number of contexts. Must be 1–23 (CBOR tiny integer limit).
+ * @param buf     Output buffer.
+ * @param max_len Size of @p buf in bytes.
+ * @return Encoded byte count on success, 0 on error or buffer overflow.
+ */
+size_t nrf_edgeai_obsv_encode_list_and_reset(nrf_edgeai_obsv_ctx_t *const *ctxs, uint8_t n,
+					     uint8_t *buf, size_t max_len);
 
 #ifdef __cplusplus
 }

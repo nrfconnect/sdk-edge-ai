@@ -178,7 +178,7 @@ int nrf_edgeai_obsv_core_for_each_metric(nrf_edgeai_obsv_core_t *p_ctx,
 			p_metric->finalize(p_metric->priv);
 		}
 
-		nrf_edgeai_obsv_metric_snapshot_t snap;
+		nrf_edgeai_obsv_metric_snapshot_t snap = {0};
 
 		p_metric->snapshot(&snap, p_metric->priv);
 

@@ -24,7 +24,10 @@ struct med_capture {
 	uint32_t version;
 	uint16_t num_rows;
 	uint16_t num_cols;
-	uint32_t counts[MED_ROWS * 16];
+	uint16_t config_rows;
+	uint16_t config_cols;
+	int32_t config[NRF_EDGEAI_OBSV_MED_CFG_COUNT];
+	uint32_t counts[MED_ROWS * MED_BINS];
 };
 
 static bool med_capture_cb(const nrf_edgeai_obsv_metric_snapshot_t *snap, void *user)
@@ -40,12 +43,20 @@ static bool med_capture_cb(const nrf_edgeai_obsv_metric_snapshot_t *snap, void *
 	cap->version = snap->version;
 	cap->num_rows = snap->num_rows;
 	cap->num_cols = snap->num_cols;
+	cap->config_rows = (snap->config != NULL) ? snap->config_rows : 0;
+	cap->config_cols = (snap->config != NULL) ? snap->config_cols : 0;
+	if (snap->config != NULL) {
+		const size_t cfg_elems = (size_t)snap->config_rows * snap->config_cols;
 
-	uint32_t n = (uint32_t)snap->num_rows * snap->num_cols;
-
-	for (uint32_t i = 0; i < n && i < ARRAY_SIZE(cap->counts); i++) {
-		cap->counts[i] = snap->counts[i];
+		zassert_true(cfg_elems <= ARRAY_SIZE(cap->config),
+			     "config too large for capture buffer: %zu", cfg_elems);
+		memcpy(cap->config, snap->config, cfg_elems * sizeof(cap->config[0]));
 	}
+
+	const size_t n = (size_t)snap->num_rows * snap->num_cols;
+
+	zassert_true(n <= ARRAY_SIZE(cap->counts), "snapshot too large for capture buffer: %zu", n);
+	memcpy(cap->counts, snap->counts, n * sizeof(cap->counts[0]));
 
 	return true;
 }
@@ -111,15 +122,28 @@ ZTEST_SUITE(obsv_med, NULL, NULL, med_setup, NULL, NULL);
  * [0, .25) [.25, .5) [.5, .75) [.75, 1].
  */
 
-/* 4 x bin_num descriptor, id 7, version 1. */
+/* 4 x bin_num descriptor, id 4, version 2 (v2 added the "c" config matrix). */
 ZTEST(obsv_med, test_snapshot_shape)
 {
 	struct med_capture cap = capture();
 
 	zassert_equal(cap.metric_id, NRF_EDGEAI_OBSV_METRIC_ID_MEL_ENERGY_DESC);
-	zassert_equal(cap.version, 1);
+	zassert_equal(cap.version, 2);
 	zassert_equal(cap.num_rows, MED_ROWS);
 	zassert_equal(cap.num_cols, MED_BINS);
+}
+
+/* The snapshot reports the p01 / p99 normalization bounds (thousandths, signed). */
+ZTEST(obsv_med, test_snapshot_reports_config)
+{
+	struct med_capture cap = capture();
+
+	zassert_equal(cap.config_rows, 1);
+	zassert_equal(cap.config_cols, NRF_EDGEAI_OBSV_MED_CFG_COUNT);
+	zassert_equal(cap.config[NRF_EDGEAI_OBSV_MED_CFG_SCALE_P01_MILLI],
+		      CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P01_MILLI);
+	zassert_equal(cap.config[NRF_EDGEAI_OBSV_MED_CFG_SCALE_P99_MILLI],
+		      CONFIG_NRF_EDGEAI_OBSV_MEL_ENERGY_DESC_SCALE_P99_MILLI);
 }
 
 /*

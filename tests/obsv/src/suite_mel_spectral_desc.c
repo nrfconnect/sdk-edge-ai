@@ -29,7 +29,7 @@ struct msd_capture {
 	uint32_t version;
 	uint16_t num_rows;
 	uint16_t num_cols;
-	uint32_t counts[MSD_ROWS * 16];
+	uint32_t counts[MSD_ROWS * MSD_BINS];
 };
 
 static bool msd_capture_cb(const nrf_edgeai_obsv_metric_snapshot_t *snap, void *user)
@@ -46,11 +46,10 @@ static bool msd_capture_cb(const nrf_edgeai_obsv_metric_snapshot_t *snap, void *
 	cap->num_rows = snap->num_rows;
 	cap->num_cols = snap->num_cols;
 
-	uint32_t n = (uint32_t)snap->num_rows * snap->num_cols;
+	const size_t n = (size_t)snap->num_rows * snap->num_cols;
 
-	for (uint32_t i = 0; i < n && i < ARRAY_SIZE(cap->counts); i++) {
-		cap->counts[i] = snap->counts[i];
-	}
+	zassert_true(n <= ARRAY_SIZE(cap->counts), "snapshot too large for capture buffer: %zu", n);
+	memcpy(cap->counts, snap->counts, n * sizeof(cap->counts[0]));
 
 	return true;
 }
@@ -110,7 +109,7 @@ static uint32_t row_total(const struct msd_capture *cap, uint16_t row)
 
 ZTEST_SUITE(obsv_msd, NULL, NULL, msd_setup, NULL, NULL);
 
-/* 8 x bin_num descriptor, id 8, version 1. */
+/* 8 x bin_num descriptor, id 5, version 1. */
 ZTEST(obsv_msd, test_snapshot_shape)
 {
 	struct msd_capture cap = capture();

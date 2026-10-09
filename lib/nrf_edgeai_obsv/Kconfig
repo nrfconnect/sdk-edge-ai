@@ -47,116 +47,83 @@ config NRF_EDGEAI_OBSV_MAX_CLASSES
 	  Both metric counter storage and the CBOR encode buffer scale with the
 	  class count; the transition matrix grows as N^2.
 
-config NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION
-	bool "Probability distribution metric"
-	select NRF_EDGEAI_OBSV_DIST_BINNING
-	help
-	  Per-class histogram of inference probability values.
-
-if NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION
-
-config NRF_EDGEAI_OBSV_PROBS_DISTRIBUTION_BIN_NUM
-	int "Number of histogram bins"
-	default 4
-	range 2 16
-	help
-	  Number of bins in the probability histogram per class.
-
-endif # NRF_EDGEAI_OBSV_METRIC_PROBS_DISTRIBUTION
-
 config NRF_EDGEAI_OBSV_METRIC_TRANSITION_MATRIX
 	bool "Transition matrix metric"
 	help
 	  Tracks class-to-class transitions across consecutive inferences.
 
-config NRF_EDGEAI_OBSV_METRIC_PREDICTION_SWITCHING_RATE
-	bool "Prediction switching rate metric"
-	help
-	  Tracks temporal instability: how often the dominant class (argmax)
-	  changes between consecutive inferences. Exposes two raw counters,
-	  [switches, comparisons]; the rate is derived off-device as
-	  SwitchRate = switches / comparisons.
-
-config NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST
-	bool "Probability entropy distribution metric"
+config NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC
+	bool "Model certainty descriptor metric"
 	select NRF_EDGEAI_OBSV_DIST_BINNING
 	help
-	  Histogram of prediction uncertainty. Per inference, computes the
-	  Shannon entropy H(p) = -sum p_i*ln(p_i) of the output probability
-	  vector, normalizes it to [0, 1] by ln(num_classes), and bins it.
-	  High entropy indicates uncertain predictions or out-of-distribution
-	  inputs.
+	  Per-inference descriptor of prediction certainty and temporal stability,
+	  derived from the output probability vector. Emits a 3 x bin_num matrix:
+	  row 0 is the normalized Shannon-entropy histogram H(p)/ln(N) over [0, 1]
+	  (uncertainty), row 1 is the top-2 margin histogram p_top1 - p_top2 over
+	  [0, 1] (decisiveness), and row 2 carries stability counters
+	  [switches, comparisons, majority_frames, confident_switches] padded with
+	  zeros. The switching rate is derived off-device as switches / comparisons.
+	  One bin count is shared by the entropy and margin histograms. Merges the
+	  former prediction switching rate, probability entropy distribution and
+	  probability top-2 margin distribution metrics.
 
-if NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST
+if NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC
 
-config NRF_EDGEAI_OBSV_PROBS_ENTROPY_DIST_BIN_NUM
-	int "Number of entropy histogram bins"
+config NRF_EDGEAI_OBSV_MODEL_CERTAINTY_DESC_BIN_NUM
+	int "Number of histogram bins (shared by entropy and top-2 margin)"
 	default 4
-	range 2 16
+	range 4 16
 	help
-	  Number of bins in the normalized-entropy histogram.
+	  Number of bins in each of the entropy and top-2 margin histogram rows.
 
-endif # NRF_EDGEAI_OBSV_METRIC_PROBS_ENTROPY_DIST
+endif # NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC
 
-config NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST
-	bool "Probability top-2 margin distribution metric"
+config NRF_EDGEAI_OBSV_METRIC_CLASS_PRED_DIST
+	bool "Class predictions distribution metric"
 	select NRF_EDGEAI_OBSV_DIST_BINNING
 	help
-	  Histogram of prediction decisiveness. Per inference, computes the
-	  margin = p_top1 - p_top2 between the two largest class probabilities
-	  and bins it over [0, 1]. A low margin indicates ambiguous predictions.
-
-if NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST
-
-config NRF_EDGEAI_OBSV_PROBS_TOP2_MARGIN_DIST_BIN_NUM
-	int "Number of margin histogram bins"
-	default 4
-	range 2 16
-	help
-	  Number of bins in the top-2 margin histogram.
-
-endif # NRF_EDGEAI_OBSV_METRIC_PROBS_TOP2_MARGIN_DIST
-
-config NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST
-	bool "Class streak distribution metric"
-	select NRF_EDGEAI_OBSV_DIST_BINNING
-	help
-	  Per-class histogram of prediction streak lengths: how many consecutive
-	  inferences the dominant class (argmax) stays the same. A streak is
-	  recorded when it ends. Distinguishes stable, held detections from flicker
-	  and shows how long each class is typically sustained. Consumes the
+	  Per-class picture of the model's predictions, in one 2*num_classes x bin_num
+	  matrix. Rows [0, num_classes) are the probability distribution: a per-class
+	  histogram of the predicted probability over uniform [0, 1] bins (every
+	  inference contributes one sample to every class row). Rows
+	  [num_classes, 2*num_classes) are the streak distribution: a per-class
+	  histogram of how many consecutive inferences the dominant class (argmax)
+	  stays the same, recorded when a streak ends. Merges the former probability
+	  distribution and class streak distribution metrics. Consumes the
 	  class-probability stream (NRF_EDGEAI_OBSV_SOURCE_PROBS).
 
-if NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST
+if NRF_EDGEAI_OBSV_METRIC_CLASS_PRED_DIST
 
-config NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_BIN_NUM
-	int "Number of streak-length histogram bins"
+config NRF_EDGEAI_OBSV_CLASS_PRED_DIST_BIN_NUM
+	int "Number of histogram bins (shared by both row groups)"
 	default 4
 	range 2 16
 	help
-	  Number of bins per class. Streak lengths are binned uniformly over
-	  [1, TOP], with the last bin catching lengths >= TOP.
+	  Number of bins per class, shared by the probability-distribution rows
+	  (uniform over [0, 1]) and the streak-length rows (uniform over [1, TOP]).
 
-config NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOP
-	int "Streak length saturating the top bin"
+config NRF_EDGEAI_OBSV_CLASS_PRED_DIST_STREAK_TOP_BIN
+	int "Streak length saturating the top streak bin"
 	default 20
 	range 2 255
 	help
-	  Streak lengths >= this value falls into the last bin; bins span [1, TOP]
-	  uniformly, so a length of 1 lands in bin 0 and TOP (or longer) in the top
-	  bin. Set it around the longest streak worth resolving.
+	  Streak lengths >= this value falls into the last streak bin; bins span
+	  [1, TOP] uniformly, so a length of 1 lands in bin 0 and TOP (or longer) in
+	  the top bin. Set it around the longest streak worth resolving.
 
-config NRF_EDGEAI_OBSV_CLASS_STREAK_DIST_TOLERANCE
-	int "Flicker tolerance (consecutive mismatched frames bridged)"
+config NRF_EDGEAI_OBSV_CLASS_PRED_DIST_STREAK_TOL
+	int "Streak flicker tolerance (consecutive mismatched frames bridged)"
 	default 0
 	range 0 255
 	help
 	  How many consecutive inferences whose dominant class differs from the
 	  active streak's class may be skipped without ending the streak. Bridged
-	  frames are not counted into the streak length. 0 means any mismatch ends
+	  frames are not counted into the streak length, unless the mismatch turns
+	  into a real class change: then the trailing bridged frames of the new
+	  class count toward its new streak. 0 means any mismatch ends
 	  the streak (strict "N in a row"). One tolerance applies to all classes.
 
-endif # NRF_EDGEAI_OBSV_METRIC_CLASS_STREAK_DIST
+endif # NRF_EDGEAI_OBSV_METRIC_CLASS_PRED_DIST
 
 config NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC
 	bool "Mel energy descriptor metric"
