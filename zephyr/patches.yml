@@ -19,3 +19,15 @@ patches:
     date: 2026-09-29
     upstreamable: false
     comments: Ignore Axon compiler during pylint analysis.
+
+  - author: Szymon Antkowiak
+    date: '2026-10-09'
+    email: szymon.antkowiak@nordicsemi.no
+    merge-pr: https://github.com/zephyrproject-rtos/zephyr/pull/121686
+    merge-status: false
+    module: zephyr
+    path: zephyr/ClangFormatCheck.patch
+    sha256sum: aa4aa0fd6953eebb706dd33ec248aea42358f47d423aebe66e013a06d69e21b0
+    upstreamable: true
+    comments: |
+      Update check_compliance.py to workaround issues with ignored files in ClangFormatCheck.
