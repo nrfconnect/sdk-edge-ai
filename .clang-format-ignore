@@ -1,0 +1,8 @@
+# Paths excluded from clang-format (clang-format 21 .clang-format-ignore).
+
+# zephyr-keep-sorted-start
+**/generated/**
+**/nrf_edgeai_generated/**
+tests/axon/compiled_models/**
+zephyr/patches/**
+# zephyr-keep-sorted-stop
