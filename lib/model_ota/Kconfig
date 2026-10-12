@@ -81,7 +81,8 @@ config MODEL_OTA_SMP
 	depends on MCUMGR_MGMT_NOTIFICATION_HOOKS
 	depends on MCUMGR_GRP_IMG
 	depends on MCUMGR_GRP_IMG_UPLOAD_CHECK_HOOK
-	depends on MCUMGR_GRP_IMG_STATUS_HOOKS
+	select MCUMGR_GRP_IMG_NRF
+	select MCUMGR_GRP_IMG_SAME_FLASH_AREA_SLOTS
 	help
 	  Register MCUMGR image-upload hooks that pause inference while a registered
 	  MCUboot updateable model image is uploaded over SMP. After upload completes,
