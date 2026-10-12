@@ -4,9 +4,6 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-config PARTITION_MANAGER
-	default n
-
 config APP_MODEL_OTA
 	bool "Load regression model from a separate flash partition (model-only OTA)"
 	default n
