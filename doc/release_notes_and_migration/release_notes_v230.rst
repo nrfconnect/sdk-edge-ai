@@ -23,8 +23,8 @@ This release is based on the |NCS| release v3.4.0.
 
 * Added:
 
-  * The :ref:`class streak distribution <nrf_edgeai_obsv_metrics_built_in_streak>`, a new observability output metric.
+  * The class streak distribution, a new observability output metric.
   * The :ref:`test_axon_intrinsics`, which demonstrates how to run and validate Axon NPU DSP intrinsic functions on an Axon-enabled target.
   * The :ref:`ug_axon_dsp_intrinsics_integration` page, which describes how to incorporate DSP intrinsics into your application.
   * The :ref:`supported_dsp_intrinsics` page, which lists the DSP intrinsics supported by the Axon NPU.
-  * The  :ref:`model_observability` page, which describes how to use observability to monitor and troubleshoot your Edge AI models in production.
+  * The :ref:`model_observability` page, which describes how to use observability to monitor and troubleshoot your Edge AI models in production.
