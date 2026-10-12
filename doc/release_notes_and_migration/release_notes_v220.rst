@@ -35,6 +35,6 @@ This release is based on the |NCS| release v3.4.0.
   * The keyword spotting stage in the :ref:`WW KWS application <app_ww_kws>` now uses class labels provided by the generated model.
   * Bundled Axon models are recompiled with a newer version of the Axon NPU compiler.
 
-* Deprecated the :ref:`Edge Impulse data forwarder sample application <ei_data_forwarder_sample>`.
+* Deprecated the Edge Impulse data forwarder sample application.
   This sample will be removed in the next release.
   Use the :ref:`Data forwarder sample <data_forwarder_sample>` instead and enable the ``CONFIG_DATA_FWD_PROTO_ASCII_MODE`` Kconfig option for |EI| CLI compatibility.

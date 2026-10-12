@@ -20,7 +20,33 @@ extern "C" {
 /**
  * NRF_AXON_VERSION applies to the entire axon software tool chain.
  * version history
- * 1.3.0
+ * 2.0.1 09/17/2026
+ * - fixe to release candidate 2.0.0 to write output dequant parameters to model files.
+ *
+ * 2.0.0 09/14/2026
+ * - Breaks backward compatibility of compiled models!!! Compiled models will not run on older
+ *   driver versions, and older models will not run on this version! Changes to model structure
+ *   nrf_axon_nn_compiled_model_s include:
+ *     external_input_ndx field and associated APIs removed. All inputs are external.
+ *     "primary" output (output_*) fields and "extra" outputs (extra_outputs*)fields replaced
+ *     with consolidated outputs[] field.
+ * - command  buffer segments are 64bit aligned.
+ * - support subtract operator.
+ * - Supports unfused GRU operator.
+ *
+ * 1.5.0 08/14/2026
+ * - Fixes bug in multiply operation with width > 512.
+ * - Optimized tanh/sigmoid nn operators use look-up tables and interpolation
+ *   rather than exp() and division. Execute 60x faster.
+ * - Supports fused, rolled LSTM.
+ * - Supports unfused, unrolled LSTM.
+ * 1.4.0 07/16/2026
+ * - fixes bug in fully-connected operator compilation; incorrectly
+ *   calculated dimensions if channel count > 1.
+ * - Multiply operation width no longer limited to 512.
+ * - Experimental support for Unidirectional Sequential LSTM operator.
+ *
+ * 1.3.0 07/02/2026
  * - batch support added for SpaceToBatch, BatchToSpace, and convolutions.
  *   This enables dilation on convolutions.
  *
@@ -65,20 +91,39 @@ extern "C" {
  * 0.1.0  12/11/2025 :
  * - 1st versioned release
  */
-#define NRF_AXON_GENERATE_VERSION(major,minor,patch) ( ((major)<<16) | ((minor) << 8) | (patch))
-#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(1, 3, 0)
+#define NRF_AXON_GENERATE_VERSION(major, minor, patch) \
+	(((major) << 16) | ((minor) << 8) | (patch))
+#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(2, 0, 1)
 
 #ifndef NRF_AXON_MODEL_APP_STORAGE
 #define NRF_AXON_MODEL_APP_STORAGE
 #endif
 
-#if !defined(AXON_FORCE_32BIT_ADDR) && ((defined(__SIZEOF_POINTER__) && (__SIZEOF_POINTER__==8)) || defined(_WIN64))
+#if !defined(AXON_FORCE_32BIT_ADDR) && \
+	((defined(__SIZEOF_POINTER__) && (__SIZEOF_POINTER__ == 8)) || \
+	 defined(_WIN64))
 typedef uint64_t NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE;
 typedef int64_t NRF_AXON_PLATFORM_BITWIDTH_SIGNED_TYPE;
 #else
 typedef uint32_t NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE;
 typedef int32_t NRF_AXON_PLATFORM_BITWIDTH_SIGNED_TYPE;
 #endif
+
+#ifdef NRF_AXON_SIMULATION
+# define NRF_AXON_CMD_BUFFER_ALIGN
+#else
+# define NRF_AXON_CMD_BUFFER_ALIGN alignas(8)
+#endif
+
+/**
+ * @brief
+ * Preprocessor macros for calculating the stride width in bytes for
+ * axon NPU generated output. Axon NPU writes each row to a 32bit
+ * boundary, so the distance between row starts is the width of
+ * the output times its bitwidth, rounded to the next 32bit boundary.
+ */
+#define NRF_AXON_CEIL_BITS(x, y) ((((((x)+(1<<(y))-1)))>>(y))<<(y))
+#define NRF_AXON_NPU_OUTPUT_STRIDE(width, byte_width) NRF_AXON_CEIL_BITS((width)*(byte_width), 2)
 
 /**
  * @brief Axon driver return codes
@@ -87,6 +132,10 @@ typedef int32_t NRF_AXON_PLATFORM_BITWIDTH_SIGNED_TYPE;
  * or a negative error code.
  */
 typedef enum {
+	/* driver version does not support the model  */
+	NRF_AXON_RESULT_DRIVER_VERSION_TOO_OLD        = -205,
+	/* too many intrinsics using intrinsics  */
+	NRF_AXON_RESULT_TOO_MANY_NESTED_SYNC_CMDS     = -204,
 	/**< Unable to acquire the mutex to access the axonpro */
 	NRF_AXON_RESULT_MUTEX_FAILED                  = -203,
 	/**< problem with the model structure. */
@@ -136,8 +185,8 @@ typedef struct {
 /**
  * @brief Specifies the blocking mechanism for synchronous Axon command buffer execution
  *
- * nrf_axon_run_cmd_buf_sync() provides a synchronous interface to executing an Axon command buffer.
- * The optimal blocking scheme is dependent on the work load being presented.
+ * nrf_axon_run_cmd_buf_sync() provides a synchronous interface to executing an Axon command
+ * buffer. The optimal blocking scheme is dependent on the work load being presented.
  *
  * Smaller work loads like intrinsics are faster and more energy efficient when a hardware status
  * polling loop is used, because the overhead of interrupt handling is high relative to the Axon
@@ -148,9 +197,9 @@ typedef struct {
  * the Axon execution time.
  *
  * A potential future option is to defer blocking and return immediately and allow the caller to
- * proceed with other work, then perform the wait with a call to a TBD function. Callers must ensure
- * that no variables passed to nrf_axon_run_cmd_buf_sync fall out of scope, and that there are no
- * interdependencies between the work Axon is doing and the work the CPU is doing.
+ * proceed with other work, then perform the wait with a call to a TBD function. Callers must
+ * ensure that no variables passed to nrf_axon_run_cmd_buf_sync fall out of scope, and that there
+ * are no interdependencies between the work Axon is doing and the work the CPU is doing.
  */
 typedef enum {
 	/**< DO NOT USE! Reserved for driver use. */
@@ -183,14 +232,8 @@ typedef struct nrf_axon_queued_cmd_info_wrapper_s {
 	void *callback_context;
 	/**< caller-provided function to be invoked when the operation list is completed */
 	void (*callback_function)(nrf_axon_result_e result, void *callback_context);
-	/**< If not NULL, input data will be copied from here to input_buffer immediately prior to
-	 * execution. Needed if there is any possibility axon is in use by any other user.
-	 */
-	const int8_t *input_vector;
-	/**< Location of input as compiled into the command buffer. */
-	int8_t *input_buffer;
-	/**< size in bytes of the input to be copied from input_vector to input_buffer. */
-	uint16_t input_size;
+	/**< function to call to copy input in preparationg for execution. */
+	void (*copy_input_function)(void *callback_context);
 	/**< function to call to copy results. The next queued command runs after this callback. */
 	void (*copy_result_function)(void *callback_context);
 	/**< Managed by the driver to place this entry in a linked-list queue. */

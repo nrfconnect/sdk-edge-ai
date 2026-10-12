@@ -59,6 +59,16 @@ int data_fwd_sensor_init(void)
 	return 0;
 }
 
+int data_fwd_sensor_start(void)
+{
+	return 0;
+}
+
+int data_fwd_sensor_stop(void)
+{
+	return 0;
+}
+
 int data_fwd_sensor_fetch(proto_value_t *values, const size_t values_size, size_t *count)
 {
 	int err;

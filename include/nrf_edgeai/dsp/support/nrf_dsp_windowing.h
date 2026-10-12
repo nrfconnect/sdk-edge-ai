@@ -23,11 +23,11 @@ extern "C" {
 
 /**
  * @brief Initialize Hanning window
- * 
- * @param[out]  p_window        Pointer to window for initialization 
+ *
+ * @param[out]  p_window        Pointer to window for initialization
  * @param[in]   window_size     Window size in samples
  */
-void nrf_dsp_window_hanning_f32(flt32_t* p_window, uint16_t window_size);
+void nrf_dsp_window_hanning_f32(flt32_t *p_window, uint16_t window_size);
 
 #ifdef __cplusplus
 }

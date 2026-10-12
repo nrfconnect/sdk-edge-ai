@@ -9,6 +9,8 @@
 
 #include "../protocol/protocol.h"
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,6 +27,24 @@ extern "C" {
  * @retval -errno Negative error code on failure.
  */
 int transport_init(struct proto_transport *out_transport);
+
+/**
+ * @brief Return whether the transport link is ready to carry data.
+ *
+ * For Bluetooth LE NUS, this is true while a central is connected and NUS TX
+ * notifications are enabled.
+ * For UART, this is always true.
+ */
+bool transport_is_ready(void);
+
+/**
+ * @brief Block until the transport link becomes ready.
+ *
+ * For Bluetooth LE NUS, this waits for a central to connect and enable NUS TX
+ * notifications.
+ * For UART, this returns immediately.
+ */
+void transport_wait_ready(void);
 
 #ifdef __cplusplus
 }

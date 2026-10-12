@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-// int16 features declarations
+/* int16 features declarations */
 NRF_EDGEAI_DECLARE_FEATURE_FUNCTION_I16(audio_mels_i16);
 
 #ifdef __cplusplus

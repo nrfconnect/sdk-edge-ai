@@ -49,8 +49,7 @@ Advanced setup variants
 Use these options when you need lower‑level control, custom inference pipelines, or direct access to hardware acceleration features.
 These workflows require more manual configuration but allow finer control over performance and resource usage.
 
-* :ref:`quick_start_axon_driver` - Work directly with the Axon NPU driver API for maximum control, performance and low energy consumption.
-  Compile TensorFlow Lite models and implement custom inference pipelines.
+* :ref:`quick_start_axon_driver` - Work directly with the Axon NPU driver API for compiled model inference or hardware-accelerated DSP intrinsics.
   Use this option for advanced optimization and direct NPU control.
 
 .. toctree::

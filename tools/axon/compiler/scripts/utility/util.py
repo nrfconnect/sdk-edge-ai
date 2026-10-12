@@ -109,7 +109,7 @@ def scale_error(data_, scaling_shift):
     Data_: Dataset before quantizing.
     Scaling_Shift : Number of the left shifts for quantizing float input.
     """
-    data_ += 1e-8  # to avoid divide by zero errors
+    data_ += 1e-32  # to avoid divide by zero errors
     scaling_shift = np.int32(scaling_shift)
     if bool(np.array(data_).any()):
         error = (((np.round(data_*(2**scaling_shift)) /
@@ -660,11 +660,15 @@ def excel_floor(x, s):
     return s * math.floor(float(x)/s)
 
 
-def get_array_from_tensor(input_tensor, transpose_flag=False):
-    if (len(input_tensor.shape) == 4):
-        input_tensor = input_tensor.transpose(0, 3, 1, 2)
-    elif (len(input_tensor.shape) == 3):
-        input_tensor = input_tensor.transpose(2, 0, 1)
+def get_array_from_tensor(input_tensor, transpose_flag=True, op_code=None):
+    if op_code:  # checks if the op code of the tensor is in the 'no transpose list' and disable the transpose
+        transpose_flag = transpose_flag and (
+            op_code not in NO_TRANSPOSE_TFLITE_OPERATORS)
+    if transpose_flag:
+        if (len(input_tensor.shape) == 4):
+            input_tensor = input_tensor.transpose(0, 3, 1, 2)
+        elif (len(input_tensor.shape) == 3):
+            input_tensor = input_tensor.transpose(2, 0, 1)
     input_tensor = input_tensor.squeeze()
     op = []
     if (len(input_tensor.shape) == 3):
@@ -1272,7 +1276,7 @@ def convert_range_to_list(range_string: list):
     return list(set(vectors_list))
 
 
-def save_vectors_for_mass_inference(test_vector_file_name, test_vectors_ndx, quantized_test_vectors, test_labels, output_dir, transpose_model_ip_flag=False, save_test_labels=False):
+def save_vectors_for_mass_inference(test_vector_file_name, test_vectors_ndx, quantized_test_vectors, test_labels, output_dir, transpose_model_ip_flag=False, op_type=None, save_test_labels=False):
     """create logger object"""
     logger = logging.getLogger(__name__)
     # print("\nGetting the quantized input test vector and labels for the simulator....")
@@ -1293,12 +1297,12 @@ def save_vectors_for_mass_inference(test_vector_file_name, test_vectors_ndx, qua
             q_test_vector = q_test_vector.transpose(0, 2, 1, 3)
         elif q_input_shape.shape_size == 3:
             q_test_vector = q_test_vector.transpose(0, 2, 1)
-
-    if (q_input_shape.depth > 1):
-        if q_input_shape.shape_size == 4:
-            q_test_vector = q_test_vector.transpose(0, 3, 1, 2)
-        elif q_input_shape.shape_size == 3:
-            q_test_vector = q_test_vector.transpose(0, 2, 1)
+    if op_type != 'Lstm':
+        if (q_input_shape.depth > 1):
+            if q_input_shape.shape_size == 4:
+                q_test_vector = q_test_vector.transpose(0, 3, 1, 2)
+            elif q_input_shape.shape_size == 3:
+                q_test_vector = q_test_vector.transpose(0, 2, 1)
 
     def get_csv_text_map_func(vector):
         test_vector_text_m = ""
@@ -1661,9 +1665,6 @@ def get_unit_test_model_name(test_op_info_dict):
     model_name = ""
     OP_TYPE = test_op_info_dict['OP_TYPE']
 
-    if 'TEST_VECTOR_COUNT' not in test_op_info_dict:
-        test_op_info_dict['TEST_VECTOR_COUNT'] = 4  # default count of vectors
-
     if OP_TYPE == "UserModelInput":
         # the user is providing a model, extract the model name from the tflite file name
         if 'MODEL_NAME' in test_op_info_dict:
@@ -1720,6 +1721,11 @@ def get_unit_test_model_name(test_op_info_dict):
             f"_activation_{test_op_info_dict['ACTIVATION']}"
         # model_name = model_name + f"_actv_{test_op_info_dict['ACTIVATION']}"
 
+    disable_fc_chan_q = test_op_info_dict.get("DISABLE_FC_CHAN_Q", False)
+    if disable_fc_chan_q:
+        model_name = model_name + \
+            "_fc_per_chan_q_disabled"
+
     if OP_TYPE == "Pad":
         if 'H_PAD' in test_op_info_dict:
             h_pad_string = get_string_from_array_values(
@@ -1756,7 +1762,7 @@ def get_unit_test_model_name(test_op_info_dict):
             model_name = model_name + \
                 f"_alpha_{float_to_str(test_op_info_dict['ALPHA'])}"
 
-    if OP_TYPE == "Multiply" or OP_TYPE == "Add":
+    if OP_TYPE in ["Add", "Multiply", "Subtract"]:
         if 'BROADCAST_AXIS' in test_op_info_dict:
             broadcast_axis_string = get_string_from_array_values(
                 test_op_info_dict['BROADCAST_AXIS'])
@@ -1776,6 +1782,18 @@ def get_unit_test_model_name(test_op_info_dict):
                 test_op_info_dict['BLOCK_SIZE'])
             model_name = model_name + \
                 f"_block_size_{block_size_string}"
+
+    if OP_TYPE in ["Lstm", "LstmV2", "Gru"]:
+        if 'UNITS' in test_op_info_dict:
+            units_string = get_string_from_array_values(
+                test_op_info_dict['UNITS'])
+            model_name = model_name + \
+                f"_units_{units_string}"
+        return_sequence = test_op_info_dict.get("RETURN_SEQUENCES", False)
+        if return_sequence:
+            model_name = model_name + \
+                "_return_seq"
+
     return model_name.lower()
 
 
@@ -1903,3 +1921,7 @@ def print_with_borders(text, border="=", get_text=False):
     print(f"{border_text}")
     print(text)
     print(f"{border_text}")
+
+
+NO_TRANSPOSE_TFLITE_OPERATORS = [
+    tflite.BuiltinOperator.UNIDIRECTIONAL_SEQUENCE_LSTM]

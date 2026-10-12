@@ -1,0 +1,13 @@
+diff --git a/scripts/ci/pylintrc b/scripts/ci/pylintrc
+index 833d398ae32..b584389152e 100644
+--- a/scripts/ci/pylintrc
++++ b/scripts/ci/pylintrc
+@@ -28,6 +28,8 @@ reports=no
+ # Disable score
+ score=no
+ 
++# Ignore Axon compiler
++ignore-paths=^tools/axon/compiler/.*
+ 
+ [MESSAGES CONTROL]
+ 

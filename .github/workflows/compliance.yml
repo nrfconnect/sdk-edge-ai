@@ -11,7 +11,7 @@ jobs:
     name: Run compliance checks on patch series (PR)
     steps:
       - name: Checkout
-        uses: nrfconnect/action-checkout-west-update@main
+        uses: nrfconnect/action-checkout-west-update@5c48dbb5d8a90f2d9abbb90494a0e279d35611a5 # 6 Aug 2026
         with:
           path: ncs/edge-ai
           git-fetch-depth: 0
@@ -45,6 +45,10 @@ jobs:
           [[ "$(git rev-list --merges --count origin/${BASE_REF}..)" == "0" ]] || \
             (echo "::error ::Merge commits not allowed, rebase instead";false)
 
+      - name: Apply patches
+        working-directory: ncs
+        run: west patch --src-module edge-ai apply
+
       - name: Run Compliance Tests
         continue-on-error: true
         id: compliance
@@ -65,10 +69,7 @@ jobs:
             -e KconfigBasicNoModules \
             -e SysbuildKconfigBasicNoModules \
             -e LicenseAndCopyrightCheck \
-            -e BinaryFiles \
-            -e GitLint \
-            -e PyLint \
-            -e Ruff
+            -e BinaryFiles
 
       - name: upload-results
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
@@ -105,42 +106,37 @@ jobs:
             exit 1;
           fi
 
+      - name: Run binary files check
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        working-directory: ncs/edge-ai
+        if: contains(github.event.pull_request.user.login, 'dependabot[bot]') != true
+        run: |
+          scripts/ci/check_binary_files.py \
+            -c origin/${BASE_REF}.. \
+            --github
+
       - name: Check added or updated links
         working-directory: ncs/edge-ai
         run: |
           RE='.. _`(.*)`: (.*)'
           LINKS=$(git diff --unified=0 "${{ github.event.pull_request.base.sha }}..HEAD" -- "doc/links.txt" | \
-                  grep "^+" || true | \
-                  grep -Ev "^(---|\+\+\+)" || true)
-
-          NCS_VERSION_NUMBER=$(python3 -c "
-          import sys
-          import west.manifest
-          try:
-              projects = west.manifest.Manifest.from_topdir().get_projects(['nrf'])
-              if not projects or not projects[0].revision:
-                  raise RuntimeError('nrf project missing or has no revision')
-              rev = projects[0].revision
-              print(rev[1:] if rev.startswith('v') else rev)
-          except Exception as e:
-              print(f'::error ::Could not determine NCS version from west manifest: {e}', file=sys.stderr)
-              sys.exit(1)
-          ")
-
-          echo "Resolved NCS version from manifest: ${NCS_VERSION_NUMBER}"
+            grep "^+" | grep -Ev "^\+\+\+" || true)
 
           while IFS= read -r link; do
+            link="${link#+}"
             if [[ $link =~ $RE ]]; then
               NAME=${BASH_REMATCH[1]}
               URL=${BASH_REMATCH[2]}
-              URL="${URL//|ncs_version_number|/${NCS_VERSION_NUMBER}}"
 
               echo -n "Checking URL for '$NAME' ($URL)... "
-              if [[ "$URL" == *"files.nordicsemi.com"* ]]; then
-                # files.nordicsemi.com server does not allow downloading only headers
-                status=$(curl --write-out "%{http_code}" --output /dev/null --silent "$URL" || true)
+              if [[ "$URL" == *"nordicsemi.com"* ]]; then
+                # Nordic hosts often reject HEAD from CI; /bundle/ URLs redirect to /r/
+                status=$(curl --write-out "%{http_code}" --output /dev/null --silent --location \
+                  --user-agent "NCS-compliance-link-check" "$URL" || true)
               else
-                status=$(curl --write-out "%{http_code}" --output /dev/null --silent --head "$URL" || true)
+                status=$(curl --write-out "%{http_code}" --output /dev/null --silent --location --head \
+                  "$URL" || true)
               fi
 
               if [[ "$status" -ne 200 ]]; then

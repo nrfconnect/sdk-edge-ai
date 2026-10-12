@@ -17,16 +17,16 @@ static const nrf_edgeai_obsv_model_info_t test_model = {
 /* Per-file metric instances — each test that needs a metric uses these.
  * Using distinct instances per test suite file means no cross-suite state.
  */
-static uint32_t core_pd_buf[NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(TEST_NUM_CLASSES) /
+static uint32_t core_pd_buf[NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES(TEST_NUM_CLASSES) /
 			     sizeof(uint32_t)];
 static uint32_t core_tm_buf[NRF_EDGEAI_OBSV_TM_STORAGE_BYTES(TEST_NUM_CLASSES) /
 			     sizeof(uint32_t)];
 static nrf_edgeai_obsv_metric_t core_pd;
 static nrf_edgeai_obsv_metric_t core_tm;
 
-static uint32_t iso_pd_a_buf[NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(TEST_NUM_CLASSES) /
+static uint32_t iso_pd_a_buf[NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES(TEST_NUM_CLASSES) /
 			      sizeof(uint32_t)];
-static uint32_t iso_pd_b_buf[NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(TEST_NUM_CLASSES) /
+static uint32_t iso_pd_b_buf[NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES(TEST_NUM_CLASSES) /
 			      sizeof(uint32_t)];
 static nrf_edgeai_obsv_metric_t iso_pd_a;
 static nrf_edgeai_obsv_metric_t iso_pd_b;
@@ -36,10 +36,10 @@ static void core_before(void *fixture)
 	ARG_UNUSED(fixture);
 	memset(&ctx, 0, sizeof(ctx));
 	nrf_edgeai_obsv_core_init(&ctx, &test_model);
-	nrf_edgeai_obsv_metric_pd_create(&core_pd, core_pd_buf, TEST_NUM_CLASSES);
+	nrf_edgeai_obsv_metric_cpd_create(&core_pd, core_pd_buf, TEST_NUM_CLASSES);
 	nrf_edgeai_obsv_metric_tm_create(&core_tm, core_tm_buf, TEST_NUM_CLASSES);
-	nrf_edgeai_obsv_metric_pd_create(&iso_pd_a, iso_pd_a_buf, TEST_NUM_CLASSES);
-	nrf_edgeai_obsv_metric_pd_create(&iso_pd_b, iso_pd_b_buf, TEST_NUM_CLASSES);
+	nrf_edgeai_obsv_metric_cpd_create(&iso_pd_a, iso_pd_a_buf, TEST_NUM_CLASSES);
+	nrf_edgeai_obsv_metric_cpd_create(&iso_pd_b, iso_pd_b_buf, TEST_NUM_CLASSES);
 }
 
 ZTEST_SUITE(obsv_core, NULL, NULL, core_before, NULL, NULL);

@@ -17,6 +17,19 @@
 #include <nrf_edgeai_obsv/nrf_edgeai_obsv_memfault.h>
 #include "nrf_edgeai_obsv_memfault_priv.h"
 
+/* nrf_edgeai_obsv_memfault_collect() places a NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ-byte
+ * buffer on the caller's stack. With auto-collect that caller is the system
+ * workqueue, so its stack must hold the buffer plus this encoder's own call frames.
+ * Assert the floor here so an under-sized stack fails the build instead of
+ * overflowing at runtime; integrators own the value (and any margin for the
+ * workqueue's other users) via CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE.
+ */
+#if defined(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT)
+BUILD_ASSERT(CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE >= NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ + 1024,
+	     "CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE is too small for the observability collect "
+	     "buffer that auto-collect builds on the system workqueue stack");
+#endif
+
 LOG_MODULE_REGISTER(nrf_edgeai_obsv_mflt, CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_LOG_LEVEL);
 
 /* External linkage for internal variables when CONFIG_ZTEST. */
@@ -30,21 +43,32 @@ LOG_MODULE_REGISTER(nrf_edgeai_obsv_mflt, CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_LOG_LE
 
 /*
  * CDR wire format: obsv-list = [+ obsv-payload] (see lib/nrf_edgeai_obsv/obsv.cddl).
- * nrf_edgeai_obsv_encode_list() builds the full array; contexts are encoded
- * sequentially under their individual locks. Cross-context consistency is not
- * guaranteed, which is acceptable for observability data.
+ * nrf_edgeai_obsv_encode_list_and_reset() builds the full array and resets the
+ * contexts while holding all of their locks, so each CDR covers exactly the
+ * interval since the previous successful collect.
+ *
+ * Metrics are incremental: once a CDR is staged its interval exists nowhere else.
+ * collect() therefore never overwrites a staged CDR that Memfault has not drained;
+ * it returns -EBUSY and the live contexts keep accumulating. This also keeps the
+ * staged bytes stable while the packetizer reads them in chunks.
  */
+
+/* Encoding the list must not truncate into staging.len. */
+BUILD_ASSERT(NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ <= UINT16_MAX,
+	     "observability CDR buffer exceeds the 16-bit staged length");
 
 static bool has_cdr(sMemfaultCdrMetadata *metadata);
 static bool read_data(uint32_t offset, void *data, size_t data_len);
 static void mark_read(void);
 
 /* obsv_mflt_lock: protects the staging blob and the Memfault SDK read callbacks
- * (has_cdr/read_data/mark_read). collect() uses nrf_edgeai_obsv_encode() which
- * acquires ctx->lock internally, so collect() must not be called while holding
- * obsv_mflt_lock (to avoid lock inversion). collect() holds obsv_mflt_lock only
- * briefly at the start (to snapshot the context array) and at the end (to commit
- * the new payload). Precondition: init() and collect() must not be called concurrently.
+ * (has_cdr/read_data/mark_read). collect() encodes through
+ * nrf_edgeai_obsv_encode_list_and_reset(), which acquires each ctx->lock
+ * internally, so collect() must not be called while holding obsv_mflt_lock
+ * (to avoid lock inversion). collect() holds obsv_mflt_lock only briefly at the
+ * start (to check the slot and snapshot the context array) and at the end (to
+ * commit the new payload). Precondition: init() and collect() must not be called
+ * concurrently.
  */
 K_MUTEX_DEFINE(obsv_mflt_lock);
 STATIC_EXCEPT_TEST nrf_edgeai_obsv_mflt_staging_t nrf_edgeai_obsv_mflt_staging;
@@ -62,7 +86,7 @@ STATIC_EXCEPT_TEST const sMemfaultCdrSourceImpl obsv_cdr_source = {
 };
 
 /* Memfault passes this as const char ** (array of pointers to const strings). */
-static const char * const mimetypes[] = {MEMFAULT_CDR_BINARY};
+static const char *const mimetypes[] = {MEMFAULT_CDR_BINARY};
 
 static bool has_cdr(sMemfaultCdrMetadata *metadata)
 {
@@ -109,14 +133,6 @@ static bool read_data(uint32_t offset, void *data, size_t data_len)
 	return true;
 }
 
-static void mark_read(void)
-{
-	k_mutex_lock(&obsv_mflt_lock, K_FOREVER);
-	nrf_edgeai_obsv_mflt_staging.ready = false;
-	k_mutex_unlock(&obsv_mflt_lock);
-	LOG_DBG("CDR drained");
-}
-
 #if defined(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT)
 STATIC_EXCEPT_TEST void auto_collect_work_handler(struct k_work *work);
 static K_WORK_DELAYABLE_DEFINE(auto_collect_work, auto_collect_work_handler);
@@ -127,12 +143,31 @@ STATIC_EXCEPT_TEST void auto_collect_work_handler(struct k_work *work)
 
 	(void)nrf_edgeai_obsv_memfault_collect();
 
-	k_timeout_t delay =
-		K_SECONDS(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC);
+	k_timeout_t delay = K_SECONDS(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC);
 
 	(void)k_work_reschedule(&auto_collect_work, delay);
 }
 #endif
+
+static void mark_read(void)
+{
+	k_mutex_lock(&obsv_mflt_lock, K_FOREVER);
+	nrf_edgeai_obsv_mflt_staging.ready = false;
+	bool retry = nrf_edgeai_obsv_mflt_staging.collect_pending;
+
+	nrf_edgeai_obsv_mflt_staging.collect_pending = false;
+	k_mutex_unlock(&obsv_mflt_lock);
+	LOG_DBG("CDR drained");
+
+#if defined(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT)
+	/* A collect was refused while this CDR was staged */
+	if (retry) {
+		(void)k_work_reschedule(&auto_collect_work, K_NO_WAIT);
+	}
+#else
+	ARG_UNUSED(retry);
+#endif
+}
 
 int nrf_edgeai_obsv_memfault_init(nrf_edgeai_obsv_ctx_t *ctx)
 {
@@ -193,31 +228,43 @@ int nrf_edgeai_obsv_memfault_collect(void)
 		return -EINVAL;
 	}
 
+	/* Not drained yet: leave the contexts accumulating; the drain retries. */
+	if (nrf_edgeai_obsv_mflt_staging.ready) {
+		nrf_edgeai_obsv_mflt_staging.collect_pending = true;
+		k_mutex_unlock(&obsv_mflt_lock);
+		LOG_DBG("collect: previous CDR not drained yet");
+		return -EBUSY;
+	}
+
+	if (nrf_edgeai_obsv_mflt_staging.collecting) {
+		k_mutex_unlock(&obsv_mflt_lock);
+		LOG_DBG("collect: another collect in progress");
+		return -EBUSY;
+	}
+
+	nrf_edgeai_obsv_mflt_staging.collecting = true;
 	memcpy(ctxs, nrf_edgeai_obsv_mflt_staging.ctxs, num_ctxs * sizeof(ctxs[0]));
 
 	k_mutex_unlock(&obsv_mflt_lock);
 
 	/*
-	 * Encode all contexts into a temporary buffer as obsv-list = [+ obsv-payload].
-	 * nrf_edgeai_obsv_encode_list() acquires each ctx->lock internally,
-	 * so obsv_mflt_lock must not be held here.
+	 * Encode all contexts into a temporary buffer as obsv-list = [+ obsv-payload]
+	 * and reset them. nrf_edgeai_obsv_encode_list_and_reset()
+	 * acquires each ctx->lock internally, so obsv_mflt_lock must not be held here.
 	 */
 	uint8_t tmp[NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ];
 
-	size_t total_len = nrf_edgeai_obsv_encode_list(
+	size_t total_len = nrf_edgeai_obsv_encode_list_and_reset(
 		(nrf_edgeai_obsv_ctx_t *const *)ctxs, num_ctxs, tmp, sizeof(tmp));
 
+	k_mutex_lock(&obsv_mflt_lock, K_FOREVER);
+
 	if (total_len == 0U) {
+		nrf_edgeai_obsv_mflt_staging.collecting = false;
+		k_mutex_unlock(&obsv_mflt_lock);
 		LOG_ERR("collect: CBOR encode failed");
 		return -ENODATA;
 	}
-
-	if (total_len > UINT16_MAX) {
-		LOG_ERR("collect: payload too large (%zu bytes)", total_len);
-		return -ENODATA;
-	}
-
-	k_mutex_lock(&obsv_mflt_lock, K_FOREVER);
 
 	memcpy(nrf_edgeai_obsv_mflt_staging.buf, tmp, total_len);
 	nrf_edgeai_obsv_mflt_staging.len = (uint16_t)total_len;
@@ -232,6 +279,7 @@ int nrf_edgeai_obsv_memfault_collect(void)
 	}
 	nrf_edgeai_obsv_mflt_staging.last_collect_ms = now_ms;
 	nrf_edgeai_obsv_mflt_staging.ready = true;
+	nrf_edgeai_obsv_mflt_staging.collecting = false;
 
 	k_mutex_unlock(&obsv_mflt_lock);
 

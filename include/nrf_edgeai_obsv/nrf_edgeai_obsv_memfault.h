@@ -42,11 +42,20 @@ int nrf_edgeai_obsv_memfault_init(struct nrf_edgeai_obsv_ctx *ctx);
 /**
  * @brief Encodes observability metrics as CBOR and stages them for Memfault.
  *
- * Overwrites any previously staged payload. The CBOR blob is stored internally
- * and handed out by the registered CDR source on the next transport drain cycle.
+ * The CBOR blob is stored internally and handed out by the registered CDR source
+ * on the next transport drain cycle. Every registered context is reset in the
+ * same critical section as its encode, so each payload covers exactly the
+ * interval since the previous successful collect.
  *
- * @note This function acquires each registered observability context's
- * lock (@c ctx->lock) while encoding.
+ * A staged payload is never overwritten. While the previous payload has not been
+ * drained, the function returns @c -EBUSY and leaves the contexts untouched, so
+ * their data keeps accumulating into the next payload. With
+ * @c CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT, a refused collect is retried
+ * as soon as the payload is drained; otherwise call this function again later.
+ *
+ * @note This function acquires the locks (@c ctx->lock) of all registered
+ * observability contexts while encoding and resetting, thus could lead to stall
+ * of inference pipeline when called from low priority threads.
  * @note Allocates a @c NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ-byte buffer
  * on the calling thread's stack. When invoked from the system workqueue
  * (e.g. via @c CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT), increase
@@ -54,7 +63,9 @@ int nrf_edgeai_obsv_memfault_init(struct nrf_edgeai_obsv_ctx *ctx);
  *
  * @retval 0        Success; payload staged and ready for the next drain cycle.
  * @retval -EINVAL  Not initialized (no context registered).
- * @retval -ENODATA CBOR encoding failed.
+ * @retval -EBUSY   The previous payload has not been drained yet, or another
+ *                  collect is in progress. Nothing was encoded or reset.
+ * @retval -ENODATA CBOR encoding failed. Contexts were not reset.
  */
 int nrf_edgeai_obsv_memfault_collect(void);
 

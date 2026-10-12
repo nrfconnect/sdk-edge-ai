@@ -34,7 +34,8 @@ struct proto_transport {
 	void *ctx;
 	/**
 	 * When false, payloads are COBS-encoded before @c send is called.
-	 * Set true when the transport already delimits messages (for example BLE GATT).
+	 * Set true when the transport already delimits messages (for example
+	 * Bluetooth LE GATT).
 	 */
 	bool has_message_boundaries;
 };

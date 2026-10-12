@@ -1,13 +1,21 @@
 patches:
-- author: Mateusz Michalek
-  date: '2026-08-20'
-  email: mateusz.michalek@nordicsemi.no
-  merge-pr: https://github.com/nrfconnect/sdk-mcuboot/pull/730
-  merge-status: false
-  module: bootloader/mcuboot
-  path: nrf-noup-boot-bootutil-image-scrub-mode.patch
-  sha256sum: 2b9716d10875c315c24a9c348fb73dfb5333ba49f9ef382d4e716a06143cc5f4
-  upstreamable: true
-  comments: |
-    Rebased from PR #730 onto current NCS mcuboot (c1d2d128).
-    Original GitHub patch targeted main@91821239 and did not apply cleanly.
+  - path: zephyr/compliance-skip-release-notes-kconfig.patch
+    sha256sum: a64472881036e71f321149642db3c296115e944277aa2725be5245bf087e8c22
+    module: zephyr
+    author: Szymon Antkowiak
+    email: szymon.antkowiak@nordicsemi.no
+    date: 2026-07-09
+    upstreamable: false
+    comments: |
+      Skip doc/release_notes_and_migration in the undefined Kconfig symbol check.
+      Edge AI add-on release notes document renamed or removed Kconfig options,
+      matching the exclusion used for doc/nrf/releases_and_maturity in NCS.
+
+  - path: zephyr/pylint-skip-axon-compiler.patch
+    sha256sum: fbf6ca55110d9e0ed34926d5c36d0c3c54a847e77f7258407b903ee15f5e2144
+    module: zephyr
+    author: Szymon Antkowiak
+    email: szymon.antkowiak@nordicsemi.no
+    date: 2026-09-29
+    upstreamable: false
+    comments: Ignore Axon compiler during pylint analysis.

@@ -18,7 +18,7 @@ class CpuExtension(ABC):
         self.cpu_extension_axon_enum_string = enum_string
 
     @abstractmethod
-    def HandleOperatorOptions(cls, operator_object):
+    def HandleOperatorOptions(cls, operator_object, op_graph):
         """
         Default handle for operations for which there is no handler written
         will just pass through, after printing a warning to console
@@ -29,7 +29,7 @@ class CpuExtension(ABC):
 
     @classmethod
     @abstractmethod
-    def HandlePreviousOperatorAttributes(cls, operator_object):
+    def HandlePreviousOperatorScalingAttributes(cls, operator_object):
         """
         Default handle for operations for which there is no handler written
         will just pass through, after printing a warning to console
@@ -54,7 +54,7 @@ class CpuOpDummy(CpuExtension):
     cpu_extension_axon_enum_string = ""
 
     @classmethod
-    def HandleOperatorOptions(self, operator_object):
+    def HandleOperatorOptions(self, operator_object, op_graph):
         """
         perform all the operation needed for a specific custom operation needed, 
         populate all the fields as needed inside the operator object
@@ -128,7 +128,7 @@ class CpuOpDummy(CpuExtension):
         return -1
 
     @classmethod
-    def HandlePreviousOperatorAttributes(cls, previous_operator_object):
+    def HandlePreviousOperatorScalingAttributes(cls, previous_operator_object):
         return -1
 
     @classmethod
@@ -139,7 +139,7 @@ class CpuOpDummy(CpuExtension):
 class CpuSoftmax(CpuExtension):
     cpu_extension_axon_enum_string = "Softmax"
 
-    def HandleOperatorOptions(self, operator_object):
+    def HandleOperatorOptions(self, operator_object, op_graph):
         """
         perform all the operation needed for a specific custom operation needed, 
         populate all the fields as needed inside the operator object
@@ -194,7 +194,7 @@ class CpuSoftmax(CpuExtension):
     """
 
     @classmethod
-    def HandlePreviousOperatorAttributes(cls, previous_operator_object):
+    def HandlePreviousOperatorScalingAttributes(cls, previous_operator_object):
         if previous_operator_object.GetSkipSoftmaxOpFlag():
             return 1
         # set the activation function to be custom function
@@ -215,19 +215,23 @@ class CpuSoftmax(CpuExtension):
             (len(bin(int(max(abs(op_max), abs(op_min))))) - 2)
         previous_operator_object.SetScaleshiftMaxRange(scaleshift_max_range)
         previous_operator_object.SetOpBitwidth(np.int32)
+        previous_operator_object.SetLayerOutputRadix(12) #setting the output layer radix
         return 0
 
 
 class CpuActivation(CpuExtension):
     cpu_extension_axon_enum_string = "CpuActivationOpExtensionEnumString"
+    set_op_bitwidth = False
 
-    def HandleOperatorOptions(self, operator_object):
+    def HandleOperatorOptions(self, operator_object, op_graph):
         # options = None
         op_name = operator_object.GetOperationName()
         operator_object.SetOperatorMetaAttributesString(
             f"no attributes for {op_name}")
 
-        # set the input bitwidth to be 32 as softmax expects a q11.12 input
+        # set the input bitwidth to be 16 or 8 bit as tanh/logistics works with 16 as well as 8 bits
+        # based on what condition though?
+        # look at the output bitwidth of the previous op? and then update ????
         operator_object.SetIpBitwidth(np.int16)
         # getting quantization parameters
         ip_q, w_q, bias_q = operator_object.GetIpQuantizationParameters()
@@ -259,7 +263,7 @@ class CpuActivation(CpuExtension):
         return 0
 
     @classmethod
-    def HandlePreviousOperatorAttributes(cls, previous_operator_object):
+    def HandlePreviousOperatorScalingAttributes(cls, previous_operator_object):
         # set the activation function to be custom function
         if (not previous_operator_object.SetCustomActivationFunctionType("None")):
             return -2
@@ -281,6 +285,12 @@ class CpuSigmoid(CpuActivation):
 
 class CpuReshape(CpuExtension):
     cpu_extension_axon_enum_string = "Reshape"
+    swap_operator_op_codes = None
+
+    def __init__(self, enum_string):
+        super().__init__(enum_string)
+        self.swap_operator_op_codes = [tflite.BuiltinOperator.UNPACK,
+                                       tflite.BuiltinOperator.FULLY_CONNECTED]
 
     def determine_reshape_is_passthrough(ip_shape, op_shape, shape, operator_list, op_index):
         """
@@ -289,8 +299,14 @@ class CpuReshape(CpuExtension):
         1. The first reshape and the last reshape in model.
         2. If the next operation is a FC and the reshape is changing the channel.
         3. If the reshape is performing a transpose on the hxw and preserves the channel information with one dimension being 1 of either h or w.
+        4. Other conditions as below
+        5. Reshapes before and after an LSTM are to be dropped irrespective as the compiler dechannelizes and rechannelizes the tensors.
         """
         if op_index == 0 or op_index == (len(operator_list)-1) or (0 in operator_list[op_index]['inputs']):  # first or last op is reshape, treated as passthorugh
+            return True
+
+        if operator_list[op_index-1]['op_name'] == "UNIDIRECTIONAL_SEQUENCE_LSTM" or operator_list[op_index+1]['op_name'] == "UNIDIRECTIONAL_SEQUENCE_LSTM":
+            # Any reshape before or after the Unidirectional LSTM needs to be dropped
             return True
 
         # shape dimensions remain the same
@@ -314,6 +330,10 @@ class CpuReshape(CpuExtension):
             if ip_shape.depth == op_shape.width and ip_shape.shape_size == 4 and op_shape.shape_size < 4:
                 return True
 
+            if ip_shape.shape_size == 4 and op_shape.shape_size == 3:
+                if ip_shape.depth == 1 and (ip_shape.width == op_shape.depth):
+                    return True
+
             if operator_list[op_index+1]['op_name'] == "FULLY_CONNECTED":
                 if ip_shape.shape_size > 2:
                     if ip_shape.depth > 1:
@@ -330,12 +350,17 @@ class CpuReshape(CpuExtension):
                 if (op_shape.height == 1 and op_shape.width == 1 and op_shape.depth == ip_shape.get_length()):
                     return True
 
+            if op_shape.shape_size == 3 and ip_shape.shape_size == 2:
+                # part of the unfused LSTM block, with an input shape size of 2 so no need of the reshape here!
+                if operator_list[op_index+1]['op_name'] == "UNPACK":
+                    return True
+
         if (ip_shape.depth == op_shape.depth) and (ip_shape.depth == 1) and (ip_shape.width % 4 == 0) and (op_shape.width % 4 == 0):
             return True
 
         return False
 
-    def HandleOperatorOptions(self, operator_object):
+    def HandleOperatorOptions(self, operator_object, op_graph):
         """
         perform all the operation needed for a specific custom operation needed, 
         populate all the fields as needed inside the operator object
@@ -352,6 +377,18 @@ class CpuReshape(CpuExtension):
                 operator_object.error_text = "RESHAPE is a PASSTHROUGH Operator"
                 operator_object.error_action = "CONTINUE"
                 return 1
+            # if this is not a PASSTHROUGH OP, we need to understand what is happening here with the shape and adjust the ip op shapes to fit with axon
+            if operator_object.operation_detail['operator_support'] == ops_options.OperatorSupportEnum.SUPPORTED:
+                next_op_index = ops_options.SupportedOperators.get_tf_graph_index_from_tf_op_index(
+                    op_graph, operator_object.operation_detail['outputs'][0])
+                next_op_info = op_graph[next_op_index]
+                ip_shape = operator_object.ip_shape
+                op_shape = operator_object.op_shape
+                # we have to swap the channels with the width in the reshape op shape
+                if next_op_info['op_code'] in self.swap_operator_op_codes and ip_shape.shape_size == 4 and op_shape.shape_size == 3:
+                    # we have to swap the op width with depth as this is essentially a transpose
+                    op_shape.depth, op_shape.width = op_shape.width, op_shape.depth
+
         # getting quantization parameters
         ip_q, w_q, bias_q = operator_object.GetIpQuantizationParameters()
         op_q = operator_object.GetOpQuantizationParameters()
@@ -378,7 +415,7 @@ class CpuReshape(CpuExtension):
         return 0
 
     @classmethod
-    def HandlePreviousOperatorAttributes(cls, previous_operator_object):
+    def HandlePreviousOperatorScalingAttributes(cls, previous_operator_object):
         """
         nothing to be done with the previous operators with the RESHAPE Operator
         """
@@ -386,10 +423,19 @@ class CpuReshape(CpuExtension):
 
     @classmethod
     def DetermineCpuExtensionSupport(cls, operator_object, op_list, op_index):
+        if 0 not in op_list[op_index]['inputs']:  # ensuring this is not the first op
+            ip_to_reshape_op = op_list[op_index-1]
+            if ip_to_reshape_op['op_name'] == "UNIDIRECTIONAL_SEQUENCE_LSTM":
+                inner_most_dim_is_width = True
+
         ip_to_reshape = ops_options.TensorShape(operator_object.tflite_interpreter.get_tensor(
             operator_object.operators_detail_graph[op_index]['inputs'][0]).shape)
+
+        # if -1 not in op_list[op_index]['inputs'] and [op_index+1] < len(op_list):#ensuring this is not the last output
+        #     op_to_reshape_op = op_list[op_index+1]
+
         op_of_reshape = ops_options.TensorShape(operator_object.tflite_interpreter.get_tensor(
-            operator_object.operators_detail_graph[op_index]['outputs'][0]).shape)
+            operator_object.operators_detail_graph[op_index]['outputs'][0]).shape, ip_to_reshape.shape_size)
         # as some reshape have the shape in as an attribute
         if len(operator_object.operators_detail_graph[op_index]['inputs']) > 1:
             shape = operator_object.tflite_interpreter.get_tensor(
@@ -404,7 +450,7 @@ class CpuReshape(CpuExtension):
 class CpuResizeNearestNeighbor(CpuExtension):
     cpu_extension_axon_enum_string = "ResizeNearestNeigbor"
 
-    def HandleOperatorOptions(self, operator_object):
+    def HandleOperatorOptions(self, operator_object, op_graph):
         """
         perform all the operation needed for a specific custom operation needed, 
         populate all the fields as needed inside the operator object
@@ -446,7 +492,7 @@ class CpuResizeNearestNeighbor(CpuExtension):
         return 0
 
     @classmethod
-    def HandlePreviousOperatorAttributes(cls, previous_operator_object):
+    def HandlePreviousOperatorScalingAttributes(cls, previous_operator_object):
         """
         nothing to be done with the previous operators with the RESHAPE Operator
         """
@@ -487,11 +533,11 @@ before the CPU Op extension to setup the correct quantization values, output bit
 """
 
 
-def HandleOperatorAttributesBeforeCpuOp(current_operator_object, code):
+def HandleOperatorScalingAttributesBeforeCpuOp(current_operator_object, code):
     if (code in cpu_operators_list):
-        return cpu_operators_list[code].HandlePreviousOperatorAttributes(
+        return cpu_operators_list[code].HandlePreviousOperatorScalingAttributes(
             current_operator_object)
-    return CpuExtension.HandlePreviousOperatorAttributes(current_operator_object)
+    return CpuExtension.HandlePreviousOperatorScalingAttributes(current_operator_object)
 
 
 def DetermineOperatorSupportforCpuExtension(current_operator_object, code, op_list, op_index):

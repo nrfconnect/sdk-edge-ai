@@ -42,8 +42,12 @@ static inline int obsv_model_info_from_model(nrf_edgeai_t *model, uint16_t num_c
 		return -EINVAL;
 	}
 
+	const nrf_edgeai_dsp_feature_extraction_t *features_ctx =
+		nrf_edgeai_dsp_features_ctx(model);
+
 	info->model_id = (uint16_t)model_id;
 	info->num_classes = num_classes;
+	info->num_features = features_ctx != NULL ? features_ctx->overall_num : 0;
 	info->version = model->metadata.version.combined;
 
 	return 0;

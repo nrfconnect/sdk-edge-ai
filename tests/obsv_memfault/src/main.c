@@ -29,9 +29,21 @@ static void reset_obsv_mflt_staging(nrf_edgeai_obsv_mflt_staging_t *s)
 	s->num_ctxs = 0U;
 	s->len = 0U;
 	s->ready = false;
+	s->collecting = false;
+	s->collect_pending = false;
 	s->staged_duration_ms = 0U;
 	s->last_collect_ms = 0U;
 	k_mutex_unlock(&obsv_mflt_lock);
+}
+
+static uint32_t get_last_collect_ms(void)
+{
+	k_mutex_lock(&obsv_mflt_lock, K_FOREVER);
+	uint32_t last_collect_ms = nrf_edgeai_obsv_mflt_staging.last_collect_ms;
+
+	k_mutex_unlock(&obsv_mflt_lock);
+
+	return last_collect_ms;
 }
 
 static nrf_edgeai_obsv_ctx_t obsv;
@@ -184,20 +196,19 @@ ZTEST(obsv_memfault, test_two_contexts_produce_combined_payload)
 	zassert_true(obsv_cdr_source.read_data_cb(0, read_buf, md.data_size_bytes));
 }
 
-/* ---------- Overwrite behavior ---------- */
+/* ---------- No-overwrite behavior ---------- */
 
 /*
- * collect() must overwrite the staging buffer even when the previous CDR has
- * not yet been drained. The packetizer's read_data() bounds-checks against
- * staging.len (updated atomically under obsv_mflt_lock), so stale reads are
- * caught gracefully. Fresh data is always preferred over stale.
+ * Metrics are incremental: every collect resets the contexts, so a staged CDR
+ * cannot be rebuilt once overwritten. collect() must refuse with -EBUSY until
+ * the CDR is drained, without encoding or resetting, and the staged bytes must
+ * stay stable for the packetizer's chunked reads.
  */
-ZTEST(obsv_memfault, test_collect_overwrites_when_not_drained)
+ZTEST(obsv_memfault, test_collect_busy_until_drained)
 {
 	setup_ctx();
 	zassert_equal(nrf_edgeai_obsv_memfault_init(&obsv), 0);
 
-	/* First collect: must succeed and stage a payload. */
 	zassert_equal(nrf_edgeai_obsv_memfault_collect(), 0, "first collect failed");
 
 	sMemfaultCdrMetadata md = {0};
@@ -210,27 +221,76 @@ ZTEST(obsv_memfault, test_collect_overwrites_when_not_drained)
 	zassert_true(md.data_size_bytes <= sizeof(buf_first));
 	zassert_true(obsv_cdr_source.read_data_cb(0, buf_first, md.data_size_bytes));
 
-	/* Second collect before drain: must overwrite with new mock payload. */
-	zassert_equal(nrf_edgeai_obsv_memfault_collect(), 0,
-		      "second collect before drain must succeed");
+	const float probs[TEST_NUM_CLASSES] = {0.7f, 0.1f, 0.1f, 0.1f};
+
+	zassert_equal(nrf_edgeai_obsv_update_probs(&obsv, probs), 0);
+	zassert_equal(nrf_edgeai_obsv_update_probs(&obsv, probs), 0);
+
+	/* Second collect before drain: refused, nothing encoded (no reset either). */
+	zassert_equal(nrf_edgeai_obsv_memfault_collect(), -EBUSY,
+		      "collect before drain must be refused");
+	zassert_equal(obsv_mock_call_count(), 1U, "refused collect must not encode/reset");
+	zassert_equal(obsv.state.num_inferences, 2U, "refused collect touched the live context");
+
+	sMemfaultCdrMetadata md_busy = {0};
+	uint8_t buf_busy[16];
+
+	zassert_true(obsv_cdr_source.has_cdr_cb(&md_busy));
+	zassert_equal(md_busy.data_size_bytes, md.data_size_bytes);
+	zassert_true(obsv_cdr_source.read_data_cb(0, buf_busy, md_busy.data_size_bytes));
+	zassert_mem_equal(buf_first, buf_busy, md.data_size_bytes,
+			  "refused collect changed the staged CDR");
+
+	/* After drain, collect succeeds and stages a new payload. */
+	obsv_cdr_source.mark_cdr_read_cb();
+	zassert_equal(nrf_edgeai_obsv_memfault_collect(), 0, "collect after drain failed");
 
 	sMemfaultCdrMetadata md2 = {0};
-
-	zassert_true(obsv_cdr_source.has_cdr_cb(&md2));
-	zassert_true(md2.data_size_bytes > 0, "no payload after second collect");
-
 	uint8_t buf_second[16];
 
+	zassert_true(obsv_cdr_source.has_cdr_cb(&md2));
 	zassert_true(md2.data_size_bytes <= sizeof(buf_second));
 	zassert_true(obsv_cdr_source.read_data_cb(0, buf_second, md2.data_size_bytes));
+	zassert_true(memcmp(buf_first, buf_second, MIN(md.data_size_bytes, md2.data_size_bytes)) !=
+			     0,
+		     "collect after drain did not stage a new payload");
+}
 
-	/* Mock fills with an incrementing call count — bytes must differ. */
-	zassert_true(memcmp(buf_first, buf_second,
-			    MIN(md.data_size_bytes, md2.data_size_bytes)) != 0,
-		     "second collect did not overwrite the staging buffer");
+/* A failed encode stages nothing and must not leave collect() stuck at -EBUSY. */
+ZTEST(obsv_memfault, test_failed_encode_allows_next_collect)
+{
+	setup_ctx();
+	zassert_equal(nrf_edgeai_obsv_memfault_init(&obsv), 0);
 
-	obsv_cdr_source.mark_cdr_read_cb();
-	zassert_false(obsv_cdr_source.has_cdr_cb(&md2));
+	obsv_mock_fail_next();
+	zassert_equal(nrf_edgeai_obsv_memfault_collect(), -ENODATA);
+
+	sMemfaultCdrMetadata md = {0};
+
+	zassert_false(obsv_cdr_source.has_cdr_cb(&md), "failed encode staged a CDR");
+
+	zassert_equal(nrf_edgeai_obsv_memfault_collect(), 0, "collect after failed encode");
+	zassert_true(obsv_cdr_source.has_cdr_cb(&md));
+}
+
+/* A refused collect must preserve the start of the current collection interval. */
+ZTEST(obsv_memfault, test_refused_collect_preserves_interval_start)
+{
+	setup_ctx();
+	zassert_equal(nrf_edgeai_obsv_memfault_init(&obsv), 0);
+
+	k_sleep(K_MSEC(10));
+	zassert_equal(nrf_edgeai_obsv_memfault_collect(), 0);
+
+	uint32_t interval_start_ms = get_last_collect_ms();
+
+	zassert_not_equal(interval_start_ms, 0U);
+
+	k_sleep(K_MSEC(10));
+	zassert_equal(nrf_edgeai_obsv_memfault_collect(), -EBUSY);
+
+	zassert_equal(get_last_collect_ms(), interval_start_ms,
+		      "refused collect changed the interval start");
 }
 
 #if defined(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT)
@@ -248,5 +308,42 @@ ZTEST(obsv_memfault, test_auto_collect_work_handler_stages_payload)
 
 	zassert_true(obsv_cdr_source.has_cdr_cb(&md), "work handler did not stage a payload");
 	zassert_true(md.data_size_bytes > 0);
+}
+
+/* A drain after a refused collect stages the backlog without waiting an interval. */
+ZTEST(obsv_memfault, test_drain_after_refused_collect_schedules_collect)
+{
+	setup_ctx();
+	zassert_equal(nrf_edgeai_obsv_memfault_init(&obsv), 0);
+
+	zassert_equal(nrf_edgeai_obsv_memfault_collect(), 0);
+	zassert_equal(nrf_edgeai_obsv_memfault_collect(), -EBUSY);
+
+	obsv_cdr_source.mark_cdr_read_cb();
+
+	/* Let the system workqueue run the deferred collect. */
+	k_sleep(K_MSEC(50));
+
+	sMemfaultCdrMetadata md = {0};
+
+	zassert_true(obsv_cdr_source.has_cdr_cb(&md), "drain did not trigger the deferred collect");
+	zassert_equal(obsv_mock_call_count(), 2U);
+}
+
+/* A normal drain (no refused collect) must not trigger a short-window collect. */
+ZTEST(obsv_memfault, test_drain_without_refusal_does_not_collect)
+{
+	setup_ctx();
+	zassert_equal(nrf_edgeai_obsv_memfault_init(&obsv), 0);
+
+	zassert_equal(nrf_edgeai_obsv_memfault_collect(), 0);
+	obsv_cdr_source.mark_cdr_read_cb();
+
+	k_sleep(K_MSEC(50));
+
+	sMemfaultCdrMetadata md = {0};
+
+	zassert_false(obsv_cdr_source.has_cdr_cb(&md), "drain staged an unrequested CDR");
+	zassert_equal(obsv_mock_call_count(), 1U);
 }
 #endif

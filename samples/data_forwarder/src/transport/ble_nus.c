@@ -8,6 +8,7 @@
 
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/gatt.h>
 #include <zephyr/logging/log.h>
 
 #include <bluetooth/services/nus.h>
@@ -16,8 +17,12 @@ LOG_MODULE_REGISTER(transport, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
+#define BLE_NUS_DEFAULT_MTU 20U
 
 static struct bt_conn *current_conn;
+static atomic_t notif_enabled;
+static size_t nus_mtu = BLE_NUS_DEFAULT_MTU;
+static K_SEM_DEFINE(connected_sem, 0, 1);
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -28,7 +33,12 @@ static const struct bt_data sd[] = {
 	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_NUS_VAL),
 };
 
-static size_t nus_mtu;
+static const struct bt_le_adv_param *const adv_param = BT_LE_ADV_CONN_FAST_2;
+
+static int ble_adv_start(void)
+{
+	return bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+}
 
 static void nus_recv_cb(struct bt_conn *conn, const uint8_t *const data, uint16_t len)
 {
@@ -37,37 +47,48 @@ static void nus_recv_cb(struct bt_conn *conn, const uint8_t *const data, uint16_
 	ARG_UNUSED(len);
 }
 
+static void nus_send_enabled_cb(enum bt_nus_send_status status)
+{
+	atomic_set(&notif_enabled, status == BT_NUS_SEND_STATUS_ENABLED);
+
+	if (status == BT_NUS_SEND_STATUS_ENABLED) {
+		k_sem_give(&connected_sem);
+	}
+}
+
 static struct bt_nus_cb nus_cb = {
 	.received = nus_recv_cb,
+	.send_enabled = nus_send_enabled_cb,
 };
 
-static void bt_nus_exchange_cb(struct bt_conn *conn, uint8_t err,
-			       struct bt_gatt_exchange_params *params)
+static void att_mtu_updated(struct bt_conn *conn, uint16_t tx, uint16_t rx)
 {
-	if (err) {
-		LOG_WRN("MTU exchange failed (err %u)", err);
-	} else {
+	ARG_UNUSED(tx);
+	ARG_UNUSED(rx);
+
+	if (conn == current_conn) {
 		nus_mtu = bt_nus_get_mtu(conn);
 		LOG_INF("New NUS MTU: %d bytes", nus_mtu);
 	}
 }
 
+static struct bt_gatt_cb gatt_callbacks = {
+	.att_mtu_updated = att_mtu_updated,
+};
+
 static void connected(struct bt_conn *conn, uint8_t err)
 {
 	if (err) {
-		LOG_WRN("BLE connect failed (err %u)", err);
+		LOG_WRN("Bluetooth LE connection failed (err %u)", err);
 		return;
 	}
 
 	if (current_conn == NULL) {
 		current_conn = bt_conn_ref(conn);
+		nus_mtu = BLE_NUS_DEFAULT_MTU;
 	}
 
-	static struct bt_gatt_exchange_params params = {.func = bt_nus_exchange_cb};
-
-	bt_gatt_exchange_mtu(conn, &params);
-
-	LOG_INF("BLE connected");
+	LOG_INF("Bluetooth LE connected");
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -79,16 +100,18 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 		current_conn = NULL;
 	}
 
-	nus_mtu = 0;
+	nus_mtu = BLE_NUS_DEFAULT_MTU;
+	atomic_set(&notif_enabled, 0);
+	k_sem_reset(&connected_sem);
 
-	LOG_INF("BLE disconnected");
+	LOG_INF("Bluetooth LE disconnected");
 }
 
 static void recycled(void)
 {
 	int err;
 
-	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	err = ble_adv_start();
 	if (err) {
 		LOG_ERR("Advertising start failed (err %d)", err);
 	}
@@ -105,11 +128,15 @@ static int ble_send_cb(const uint8_t *buf, size_t len, void *ctx)
 	size_t off = 0U;
 	int err;
 
-	if ((buf == NULL) || (len == 0U) || (nus_mtu == 0U)) {
+	if ((buf == NULL) || (len == 0U)) {
 		return -EINVAL;
 	}
 
 	if (current_conn == NULL) {
+		return -ENOTCONN;
+	}
+
+	if (nus_mtu == 0U) {
 		return -ENOTCONN;
 	}
 
@@ -140,13 +167,15 @@ int transport_init(struct proto_transport *out_transport)
 		return err;
 	}
 
+	bt_gatt_cb_register(&gatt_callbacks);
+
 	err = bt_nus_init(&nus_cb);
 	if (err) {
 		LOG_ERR("bt_nus_init failed (err %d)", err);
 		return err;
 	}
 
-	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	err = ble_adv_start();
 	if (err) {
 		LOG_ERR("Advertising start failed (err %d)", err);
 		return err;
@@ -156,6 +185,16 @@ int transport_init(struct proto_transport *out_transport)
 	out_transport->ctx = NULL;
 	out_transport->has_message_boundaries = false;
 
-	LOG_INF("BLE NUS transport ready");
+	LOG_INF("Bluetooth LE NUS transport ready");
 	return 0;
+}
+
+bool transport_is_ready(void)
+{
+	return (current_conn != NULL) && (atomic_get(&notif_enabled) != 0);
+}
+
+void transport_wait_ready(void)
+{
+	(void)k_sem_take(&connected_sem, K_FOREVER);
 }

@@ -35,7 +35,7 @@ This release is based on the |NCS| release v3.3.0.
   * Axon NPU to v1.2.1 (see :ref:`Axon NPU changelog <axon_npu_changelog>` for details).
   * nRF Edge AI Lib to 2.2.1 (see :ref:`nRF Edge AI Lib changelog <nrf_edgeai_changelog>` for details).
   * Quantization function in the :ref:`Hello Axon sample application <sample_hello_axon>`.
-  * The :ref:`Gesture Recognition application <app_gesture_recognition>` to use the `HID Service`_ from the |NCS| instead of a custom HID Service implementation.
+  * The :ref:`Gesture Recognition application <app_gesture_recognition>` to use the :ref:`HID Service <nrf:hids_readme>` from the |NCS| instead of a custom HID Service implementation.
   * Improved Bluetooth LE security of the :ref:`Gesture Recognition application <app_gesture_recognition>` with Bluetooth LE authentication.
 
 * Removed the deprecated Partition Manager configuration from all applications, samples, and tests, except for the ``thingy53/nrf5340/cpuapp`` board target in the :ref:`Gesture Recognition application <app_gesture_recognition>`.

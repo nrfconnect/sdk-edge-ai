@@ -9,6 +9,9 @@ License
 Source files in this repository include SPDX license identifiers. See file
 headers for the exact license text.
 
+Edge Impulse SDK files are redistributed under a separate license.
+Refer to the license file in the Edge Impulse SDK archive.
+
 Documentation
 -------------
 

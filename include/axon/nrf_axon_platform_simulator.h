@@ -147,6 +147,24 @@ int nrf_axon_simulator_run_test_files(
 	int (*callback_function)(char *input_file_name, char *output_file_name,
 		int8_t *input_vector, uint32_t buffer_size));
 
+/**
+ * @brief places the axon simulator in or out of "threadless" mode.
+ *
+ * Axon simulator executes in separate threads to simulate the asynchronous
+ * hardware/software interface. While this closely resembles on-target development,
+ * it comes at a performance penalty. The tflite compiler will place the simulator
+ * in threadless mode to improve inference time on test data.
+ *
+ * Axon simulator is not in threadless mode by default.
+ */
+void nrf_axon_simulator_in_threadless_mode_set(bool in_threadless_mode);
+
+/**
+ * @brief Returns if the simulator is in threadless mode.
+ *
+ */
+bool nrf_axon_simulator_in_threadless_mode_get(void);
+
 #ifdef __cplusplus
 }
 #endif

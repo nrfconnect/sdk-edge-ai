@@ -36,7 +36,12 @@ typedef struct nrf_edgeai_obsv_mflt_staging {
 	 */
 	uint8_t buf[NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ];
 	uint16_t len;
+	/** @brief A CDR is staged and not yet drained; collect() refuses to overwrite it. */
 	bool ready;
+	/** @brief A collect() is encoding; a concurrent collect() refuses to start. */
+	bool collecting;
+	/** @brief A collect() was refused while @c ready; the drain schedules a retry. */
+	bool collect_pending;
 	uint32_t staged_duration_ms;
 	uint32_t last_collect_ms;
 } nrf_edgeai_obsv_mflt_staging_t;

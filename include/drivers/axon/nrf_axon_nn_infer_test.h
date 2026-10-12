@@ -6,7 +6,7 @@
 
 /**
  * These APIs support test inference on axon neural network models.
- * They are used in the test_nn_inference application, as well as by private Nordic Semiconducotr
+ * They are used in the test_nn_inference application, as well as by private Nordic Semiconductor
  * test code.
  */
 #pragma once
@@ -32,37 +32,14 @@ typedef struct {
 	 *  Index into the model of this layer. Used to dereference the
 	 * layer_expected_output_vectors by the test framework.
 	 */
-	uint8_t layer_ndx;
-	/**
-	 * Index into the model of the layer that is input0 to this model. Used to dereference
-	 * the layer_expected_output_vectors by the test framework.
-	 */
-	int8_t input0_layer_ndx;
-	/**
-	 * Index into the model of the layer that is input0 to this model. Used to dereference
-	 * the layer_expected_output_vectors by the test framework.
-	 */
-	int8_t input1_layer_ndx;
-	/**
-	 * Number of batches in the input. All inputs must have the same batch count.
-	 * Introduced with v1.2.9
-	 */
-	uint16_t input_batch_cnt;
-	/**
-	 * Number of batches in the output.
-	 * Introduced with v1.2.9
-	 * Use accessor NRF_AXON_LAYER_MODEL_OUTPUT_BATCH_CNT to maintain backward
-	 * compatitbility.
-	 */
-	uint16_t output_batch_cnt;
-
+	uint16_t layer_ndx;
 } nrf_axon_nn_compiled_model_layer_s;
 
 #define NRF_AXON_LAYER_MODEL_INPUT_BATCH_CNT(compiled_model_ptr) \
 	(compiled_model_ptr->is_layer_model && (compiled_model_ptr->compiler_version >= 0x10209)  ?\
 	 ((nrf_axon_nn_compiled_model_layer_s *)compiled_model_ptr)->input_batch_cnt : 1)
 
-	 #define NRF_AXON_LAYER_MODEL_OUTPUT_BATCH_CNT(compiled_model_ptr) \
+	#define NRF_AXON_LAYER_MODEL_OUTPUT_BATCH_CNT(compiled_model_ptr) \
 	(compiled_model_ptr->is_layer_model && (compiled_model_ptr->compiler_version >= 0x10209)  ?\
 	 ((nrf_axon_nn_compiled_model_layer_s *)compiled_model_ptr)->output_batch_cnt : 1)
 
@@ -89,8 +66,13 @@ typedef struct {
 /**
  * @brief Populates a nrf_axon_nn_model_test_info_s instance with the provided data.
  *
- * @param[in] the_struct Instance of nrf_axon_nn_model_test_info_s to populate.
- * See nrf_axon_nn_model_test_info_s for a description of the remaining data elements.
+ * @param[in,out] the_struct Instance of nrf_axon_nn_model_test_info_s to populate.
+ * @param[in] test_name Name printed with the test.
+ * @param[in] full_model_input_vectors Full-model input test vectors.
+ * @param[in] full_model_expected_output_vectors Expected output for each full-model input vector.
+ * @param[in] full_model_vector_count Number of full-model test/expected-output vector pairs.
+ * @param[in] layer_vectors Individual layer vectors used as both input and expected output.
+ * @param[in] layer_cnt Number of elements in layer_vectors.
  */
 void nrf_axon_nn_populate_model_test_info_s(nrf_axon_nn_model_test_info_s *the_struct,
 	const char *test_name,

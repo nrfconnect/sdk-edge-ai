@@ -60,7 +60,7 @@ class _ChannelChart(QChartView):
         super().__init__(chart, parent)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.setMinimumHeight(120)
+        self.setMinimumHeight(200)
 
         self._series = QLineSeries()
         self._series.setColor(QColor(color))

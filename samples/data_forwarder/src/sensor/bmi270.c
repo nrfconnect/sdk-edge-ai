@@ -69,7 +69,7 @@ static bool bmi_set_attr(enum sensor_channel chan, enum sensor_attribute attr,
 
 int data_fwd_sensor_init(void)
 {
-	struct sensor_value full_scale, sampling_freq, oversampling;
+	struct sensor_value full_scale, oversampling;
 
 	if (!device_is_ready(dev_bmi)) {
 		return -ENODEV;
@@ -84,8 +84,6 @@ int data_fwd_sensor_init(void)
 	/* Setting scale in G to match the sensor scale */
 	full_scale.val1 = 2; /* G */
 	full_scale.val2 = 0;
-	sampling_freq.val1 = FREQUENCY_HZ; /* Hz. Performance mode */
-	sampling_freq.val2 = 0;
 	oversampling.val1 = 1; /* Normal mode */
 	oversampling.val2 = 0;
 
@@ -93,33 +91,61 @@ int data_fwd_sensor_init(void)
 
 	ok &= bmi_set_attr(SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_FULL_SCALE, &full_scale);
 	ok &= bmi_set_attr(SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_OVERSAMPLING, &oversampling);
-	/* Set sampling frequency last as this also sets the appropriate power mode. If already
-	 * sampling, change to 0.0Hz before changing other attributes
-	 */
-	ok &= bmi_set_attr(SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &sampling_freq);
 
 	/* Setting scale in degrees/s to match the sensor scale */
 	full_scale.val1 = 500; /* dps */
 	full_scale.val2 = 0;
-	sampling_freq.val1 = FREQUENCY_HZ; /* Hz. Performance mode */
-	sampling_freq.val2 = 0;
-	oversampling.val1 = 1; /* Normal mode */
-	oversampling.val2 = 0;
 
 	ok &= bmi_set_attr(SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_FULL_SCALE, &full_scale);
 	ok &= bmi_set_attr(SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_OVERSAMPLING, &oversampling);
-	/* Set sampling frequency last as this also sets the appropriate power mode. If already
-	 * sampling, change sampling frequency to 0.0Hz before changing other attributes
-	 */
-	ok &= bmi_set_attr(SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &sampling_freq);
 
 	if (!ok) {
 		return -ENOTSUP;
 	}
 
+	return 0;
+}
+
+static int bmi270_set_sampling_frequency(uint16_t frequency_hz)
+{
+	struct sensor_value sampling_freq = {
+		.val1 = frequency_hz,
+		.val2 = 0,
+	};
+	bool ok = true;
+
+	ok &= bmi_set_attr(SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &sampling_freq);
+	ok &= bmi_set_attr(SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &sampling_freq);
+
+	return ok ? 0 : -ENOTSUP;
+}
+
+int data_fwd_sensor_start(void)
+{
+	int err;
 	const uint32_t period_ns = Z_HZ_ns / FREQUENCY_HZ;
 
+	err = bmi270_set_sampling_frequency(FREQUENCY_HZ);
+	if (err) {
+		return err;
+	}
+
 	k_timer_start(&fetch_timer, K_NO_WAIT, K_NSEC(period_ns));
+
+	return 0;
+}
+
+int data_fwd_sensor_stop(void)
+{
+	int err;
+
+	k_timer_stop(&fetch_timer);
+	k_sem_reset(&fetch_sem);
+
+	err = bmi270_set_sampling_frequency(0);
+	if (err) {
+		return err;
+	}
 
 	return 0;
 }

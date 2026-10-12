@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+tests:
+  edgeai.obsv_size.max_config:
+    tags: edgeai obsv
+    platform_allow:
+      - native_sim/native/64
+    integration_platforms:
+      - native_sim/native/64

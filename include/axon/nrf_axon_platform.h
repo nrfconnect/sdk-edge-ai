@@ -139,7 +139,7 @@ bool nrf_axon_platform_reserve_for_user();
 
 /**
  * @brief Frees the user's Axon reservation made with
- *        nrf_axon_platform_free_reservation_from_driver();
+ * nrf_axon_platform_free_reservation_from_driver();
  *
  * Will "kick-start" asynchronous operation if any asynchronous requests occurred while Axon was
  * reserved for synchronous use.

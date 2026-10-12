@@ -14,7 +14,7 @@ static const nrf_edgeai_obsv_model_info_t test_model = {
 	.version = TEST_MODEL_VERSION,
 };
 
-static uint32_t payload_pd_buf[NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(TEST_NUM_CLASSES) /
+static uint32_t payload_pd_buf[NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES(TEST_NUM_CLASSES) /
 			       sizeof(uint32_t)];
 static uint32_t payload_tm_buf[NRF_EDGEAI_OBSV_TM_STORAGE_BYTES(TEST_NUM_CLASSES) /
 			       sizeof(uint32_t)];
@@ -26,7 +26,7 @@ static void payload_before(void *fixture)
 	ARG_UNUSED(fixture);
 	memset(&ctx, 0, sizeof(ctx));
 	nrf_edgeai_obsv_core_init(&ctx, &test_model);
-	nrf_edgeai_obsv_metric_pd_create(&payload_pd, payload_pd_buf, TEST_NUM_CLASSES);
+	nrf_edgeai_obsv_metric_cpd_create(&payload_pd, payload_pd_buf, TEST_NUM_CLASSES);
 	nrf_edgeai_obsv_metric_tm_create(&payload_tm, payload_tm_buf, TEST_NUM_CLASSES);
 }
 
@@ -84,36 +84,6 @@ ZTEST(obsv_payload, test_probs_distribution_default_bins)
 	zassert_equal(probs_cell(pd, 2, 3), 1);
 }
 
-ZTEST(obsv_payload, test_probs_distribution_custom_edges)
-{
-	/* 4 bins with custom non-uniform edges (inner edges only; 0.0 and 1.0 are implicit) */
-	const nrf_obsv_probs_dist_cfg_t cfg = {
-		.bin_edges = {0.1f, 0.5f, 0.9f},
-	};
-
-	nrf_edgeai_obsv_core_register(&ctx, &payload_pd, &cfg);
-
-	const float probs[TEST_NUM_CLASSES] = {0.05f, 0.3f, 0.95f, 1.0f};
-
-	nrf_edgeai_obsv_core_update_probs(&ctx, probs);
-
-	struct test_snapshots snaps;
-
-	capture_snapshots(&snaps);
-	zassert_true(snaps.probs_distribution.present);
-
-	const struct test_metric_capture *pd = &snaps.probs_distribution;
-
-	/* 0.05 → bin 0 ([0.0, 0.1)) */
-	zassert_equal(probs_cell(pd, 0, 0), 1);
-	/* 0.3 → bin 1 ([0.1, 0.5)) */
-	zassert_equal(probs_cell(pd, 1, 1), 1);
-	/* 0.95 → bin 3 ([0.9, 1.0]) */
-	zassert_equal(probs_cell(pd, 2, 3), 1);
-	/* 1.0 → bin 3 (clamped to last) */
-	zassert_equal(probs_cell(pd, 3, 3), 1);
-}
-
 ZTEST(obsv_payload, test_transition_matrix_values)
 {
 	nrf_edgeai_obsv_core_register(&ctx, &payload_tm, NULL);
@@ -163,37 +133,4 @@ ZTEST(obsv_payload, test_reset_clears_metric_state)
 	}
 
 	zassert_equal(sum, 0, "all bins must be zero after reset");
-}
-
-ZTEST(obsv_payload, test_reset_preserves_custom_bin_edges)
-{
-	/* Non-uniform edges: bin 0 = [0.0, 0.5), bin 1 = [0.5, 0.9), ... (0.0 and 1.0 implicit) */
-	const nrf_obsv_probs_dist_cfg_t cfg = {
-		.bin_edges = {0.5f, 0.9f, 0.95f},
-	};
-
-	nrf_edgeai_obsv_core_register(&ctx, &payload_pd, &cfg);
-
-	const float before[TEST_NUM_CLASSES] = {0.3f, 0.0f, 0.0f, 0.0f};
-
-	nrf_edgeai_obsv_core_update_probs(&ctx, before);
-	nrf_edgeai_obsv_core_reset(&ctx);
-
-	/* 0.3 must still land in bin 0 ([0.0, 0.5)) after reset, not bin 1
-	 * ([0.25, 0.5) with default uniform edges) — proves edges were kept.
-	 */
-	const float after[TEST_NUM_CLASSES] = {0.3f, 0.0f, 0.0f, 0.0f};
-
-	nrf_edgeai_obsv_core_update_probs(&ctx, after);
-
-	struct test_snapshots snaps;
-
-	capture_snapshots(&snaps);
-	zassert_true(snaps.probs_distribution.present);
-
-	const struct test_metric_capture *pd = &snaps.probs_distribution;
-
-	zassert_equal(probs_cell(pd, 0, 0), 1,
-		      "0.3 must be in bin 0 after reset (custom edges preserved)");
-	zassert_equal(probs_cell(pd, 0, 1), 0, "bin 1 must be empty");
 }

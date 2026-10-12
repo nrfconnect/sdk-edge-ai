@@ -42,6 +42,8 @@ target_include_directories(app PRIVATE
   ${KWS_MODEL_DIR}
 )
 
+target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_WW app PRIVATE src/ww/ww_obsv.c)
+target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_KWS app PRIVATE src/kws/kws_obsv.c)
 target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_MDS app PRIVATE src/ble/ble_mds.c)
 
 if(CONFIG_APP_MODEL_OTA)

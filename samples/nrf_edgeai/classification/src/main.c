@@ -67,7 +67,7 @@ static const size_t USER_UNIQ_INPUTS_NUM = 1;  /* Single input: acceleration mag
 static const size_t USER_MODELS_CLASS_NUM = 7; /* 7 parcel state classes */
 
 /**
- *  Class 0: IDLE STATE - Parcel at Rest
+ * Class 0: IDLE STATE - Parcel at Rest
  *
  * Characteristics of the idle state:
  *   - Acceleration values cluster tightly around 1000 mG (gravitational acceleration baseline)
@@ -95,7 +95,7 @@ static const flt32_t CLASS_0_PARCEL_IDLE_ACCEL_DATA[] = {
 };
 
 /**
- *  Class 1: SHAKING STATE - Parcel Vibrating or Experiencing Continuous Motion
+ * Class 1: SHAKING STATE - Parcel Vibrating or Experiencing Continuous Motion
  *
  * Characteristics of the shaking state:
  *   - Wide variation in acceleration values (ranging 629–3505 mG across the window)
@@ -123,7 +123,7 @@ static const flt32_t CLASS_1_PARCEL_SHAKING_ACCEL_DATA[] = {
 };
 
 /**
- *  Class 2: IMPACT EVENT - Sudden Collision or Drop
+ * Class 2: IMPACT EVENT - Sudden Collision or Drop
  *
  * Characteristics of the impact state:
  *   - Baseline values ~1000–1400 mG (idle/stable state before and after impact)
@@ -154,7 +154,7 @@ static const flt32_t CLASS_2_PARCEL_IMPACT_ACCEL_DATA[] = {
 };
 
 /**
- *  Class 3: FREE FALL STATE - Parcel Unsupported in Air
+ * Class 3: FREE FALL STATE - Parcel Unsupported in Air
  *
  * Characteristics of the free fall state:
  *   - Very low acceleration values (15–82 mG, approximately 0.1–0.8x gravity)
@@ -185,7 +185,7 @@ static const flt32_t CLASS_3_PARCEL_FREE_FALL_ACCEL_DATA[] = {
 };
 
 /**
- *  Class 4: CARRYING STATE - Being Transported by Handler
+ * Class 4: CARRYING STATE - Being Transported by Handler
  *
  * Characteristics of the carrying state:
  *   - Moderate acceleration variation (793–1350 mG range)
@@ -217,7 +217,7 @@ static const flt32_t CLASS_4_PARCEL_CARRYING_ACCEL_DATA[] = {
 };
 
 /**
- *  Class 5: IN CAR STATE - Parcel Inside Vehicle During Transport
+ * Class 5: IN CAR STATE - Parcel Inside Vehicle During Transport
  *
  * Characteristics of the in-car state:
  *   - Moderate, steady acceleration (920–1200 mG throughout the window)
@@ -247,7 +247,7 @@ static const flt32_t CLASS_5_PARCEL_IN_CAR_ACCEL_DATA[] = {
 };
 
 /**
- *  Class 6: PLACED STATE - Active Placement or Lowering Motion
+ * Class 6: PLACED STATE - Active Placement or Lowering Motion
  *
  * Characteristics of the placed state:
  *   - Starts with variable mid-range acceleration (1000–1400 mG)

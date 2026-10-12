@@ -7,7 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <math.h>
+#include "./nrf_axon_nn_op_extensions_const.h"
 #include "axon/nrf_axon_platform.h"
 #include "drivers/axon/nrf_axon_nn_op_extensions.h"
 #include "drivers/axon/nrf_axon_nn_infer.h"
@@ -164,6 +166,62 @@ nrf_axon_result_e nrf_axon_nn_op_extension_softmax(uint16_t argc,
 	return NRF_AXON_RESULT_SUCCESS;
 }
 
+#define SIGMOID_TANH_OPTIMIZED 1
+
+#if SIGMOID_TANH_OPTIMIZED
+
+/* entries in the interpolation multiply table are left shifted this ammount */
+#define SIGMOID_INTERP_SHIFT 7
+
+/* input values are shifted right this much to create the lut table index */
+#define SIGMOID_LUT_SHIFT (NRF_AXON_SIG_TANH_INPUT16_RADIX - 5)
+/* any input value greater than this is saturated to 0 or 1 */
+#define SIGMOID_LUT_MAX_INPUT (8 << NRF_AXON_SIG_TANH_INPUT16_RADIX)
+/* lut table indexes greater than this do not do interpolation because the difference is < 1 */
+#define SIGMOID_INTER_MAX_NDX sizeof(sigmoid_interp_multiplier)
+/* input values are and'ed with this to create the interpolation value to multiply */
+#define SIGMOID_INTERP_MASK ((1 << SIGMOID_LUT_SHIFT) - 1)
+
+/**
+ *
+ */
+static inline int16_t sigmoid_optimized(int16_t in_data)
+{
+	int32_t in_data_abs =  in_data < 0 ? -in_data : in_data;
+	int32_t out_data;
+
+	if (in_data_abs >= SIGMOID_LUT_MAX_INPUT) {
+		out_data = sigmoid_lut[255];
+	} else {
+		uint8_t lut_ndx = in_data_abs >> SIGMOID_LUT_SHIFT;
+
+		out_data = sigmoid_lut[lut_ndx];
+		if (lut_ndx < SIGMOID_INTER_MAX_NDX) {
+			/* interpolate intermediate points */
+			out_data += ((in_data_abs & SIGMOID_INTERP_MASK) *
+				sigmoid_interp_multiplier[lut_ndx]) >> SIGMOID_INTERP_SHIFT;
+		}
+	}
+	if (in_data < 0) {
+		out_data = (1 << NRF_AXON_SIG_TANH_OUTPUT16_RADIX) - out_data;
+	}
+	return (int16_t)out_data;
+}
+#else
+static inline float sigmoid_float(int16_t in_data)
+{
+	float scratch = in_data;
+
+	/*
+	 * sigmoid(x) = 1/(1+exp(-x))
+	 */
+	/* input is q.12, convert to float */
+	scratch /= (float)(1 << NRF_AXON_SIG_TANH_INPUT16_RADIX);
+	scratch = (float)exp(-scratch); /* now have exp(x) */
+	scratch = 1/(1+scratch); /* have float sigmoid(x) */
+	return scratch;
+}
+#endif
 /*
  * @brief
  * Implements neural net operator sigmoid as a software operation that can be
@@ -198,6 +256,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 	int16_t *input_ptr = (int16_t *)base1_args->ptr_args.input;
 	union {
 		int8_t *i8;
+		int16_t *i16;
 		int32_t *i32;
 		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE value;
 	} output_ptr;
@@ -212,21 +271,35 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 			for (uint16_t col_ndx = 0;
 				col_ndx < base1_args->remaining_args.width;
 				col_ndx++, input_ptr++) {
-				float scratch = *input_ptr;
-				/*
-				 * sigmoid(x) = 1/(1+exp(-x))
-				 */
-				scratch /= (float)(1<<12); /* input is q.12, convert to float */
-				scratch = (float)exp(-scratch); /* now have exp(x) */
-				scratch = 1/(1+scratch); /* have float sigmoid(x) */
+				int16_t in_data = *input_ptr;
+#if SIGMOID_TANH_OPTIMIZED
+				int16_t out_data = sigmoid_optimized(in_data);
+#if 0
+				int16_t output_from_float = (int16_t)(sigmoid_float(in_data) * (1 << NRF_AXON_SIG_TANH_OUTPUT16_RADIX));
+				int16_t error = abs(output_from_float - out_data);
+				if (error > 2) {
+					printf("Error! output_from_float (%d) != out_data (%d)\n", output_from_float, out_data);
+				}
+#endif
+
 				switch (base1_args->remaining_args.output_bytewidth) {
 				case 1: /* quantized output. scales between 0 and 1. */
-					scratch = (float)round(scratch * 256.0f) - 128;
-					axon_saturate_i8(scratch, output_ptr.i8, 0);
+					out_data = (out_data >>
+						(NRF_AXON_SIG_TANH_OUTPUT16_RADIX - 8)) - 128;
+					if (out_data > 127) {
+						out_data = 127;
+					}
+
+					*output_ptr.i8 = (int8_t)out_data;
 					output_ptr.i8++;
 					break;
+				case 2: /* q1.14 output */
+					*output_ptr.i16 = out_data;
+					output_ptr.i16++;
+					break;
 				case 4: /* q1.30 output */
-					*output_ptr.i32 = (int32_t)(scratch * (1<<30));
+					*output_ptr.i32 = out_data <<
+						(NRF_AXON_SIG_TANH_OUTPUT16_RADIX + 6);
 					output_ptr.i32++;
 					break;
 				default:
@@ -235,6 +308,31 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_base(uint16_t argc,
 					base1_args->remaining_args.output_bytewidth);
 					return -1;
 				}
+#else
+				float out_data = sigmoid_float(in_data);
+
+				switch (base1_args->remaining_args.output_bytewidth) {
+				case 1: /* quantized output. scales between 0 and 1. */
+					out_data = (float)round(out_data * 256.0f) - 128;
+					axon_saturate_i8(out_data, output_ptr.i8, 0);
+					output_ptr.i8++;
+					break;
+				case 2: /* q1.14 output */
+					*output_ptr.i16 = (int16_t)(out_data *
+						(1 << NRF_AXON_SIG_TANH_OUTPUT16_RADIX));
+					output_ptr.i16++;
+					break;
+				case 4: /* q1.30 output */
+					*output_ptr.i32 = (int32_t)(out_data * (1<<30));
+					output_ptr.i32++;
+					break;
+				default:
+					nrf_axon_platform_printf(
+					"Axon NN: Invalid Sigmoid bytewidth %d\n",
+					base1_args->remaining_args.output_bytewidth);
+					return -1;
+				}
+#endif
 			}
 			input_ptr += input_extra_stride;
 			output_ptr.value += output_extra_stride;
@@ -259,7 +357,111 @@ nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_v2(uint16_t argc,
 {
 	return nrf_axon_nn_op_extension_sigmoid_base(argc, args, true);
 }
+/**
+ * sigmoid version used when input dequantization is needed.
+ */
+nrf_axon_result_e nrf_axon_nn_op_extension_sigmoid_dequantize_input(uint16_t argc,
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args)
+{
+	nrf_axon_nn_op_extension_sig_tanh_args_s *sig_tanh_args =
+		(nrf_axon_nn_op_extension_sig_tanh_args_s *)args;
+	/* 1st dequantize */
+	if (sig_tanh_args->remaining_args.input_byte_width == 1) {
+		/* dequantize 8bit input */
+		/*
+		 * MUST ALWAYS KEEP THE RESERVATION WHEN EXECUING AN INTRISIC
+		 * WITHIN A OP EXTENSION!
+		 */
+		nrf_axon_axpb_2d_8_16(sig_tanh_args->ptr_args.base1.input,
+			sig_tanh_args->remaining_args.input_dequant_multiplier,
+			-sig_tanh_args->remaining_args.input_dequant_zero_pt *
+				sig_tanh_args->remaining_args.input_dequant_multiplier,
+			(int16_t *)sig_tanh_args->ptr_args.scratch,
+			sig_tanh_args->remaining_args.base1.height,
+			sig_tanh_args->remaining_args.base1.width,
+			sig_tanh_args->remaining_args.base1.input_is_packed,
+			sig_tanh_args->remaining_args.input_dequant_rounding_bits,
+			NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
+	} else {
+		/* dequantize 16bit input */
+		nrf_axon_axpb_2d_16_16((int16_t *)sig_tanh_args->ptr_args.base1.input,
+			sig_tanh_args->remaining_args.input_dequant_multiplier,
+			-sig_tanh_args->remaining_args.input_dequant_zero_pt *
+				sig_tanh_args->remaining_args.input_dequant_multiplier,
+			(int16_t *)sig_tanh_args->ptr_args.scratch,
+			sig_tanh_args->remaining_args.base1.height,
+			sig_tanh_args->remaining_args.base1.width,
+			sig_tanh_args->remaining_args.base1.input_is_packed,
+			sig_tanh_args->remaining_args.input_dequant_rounding_bits,
+			NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
+	}
+	/*
+	 * copy params to a nrf_axon_nn_op_extension_base1_args_s
+	 */
+	nrf_axon_nn_op_extension_base1_args_s base1_args;
 
+	memcpy(&base1_args.ptr_args, &sig_tanh_args->ptr_args.base1,
+		sizeof(sig_tanh_args->ptr_args.base1));
+	/* scratch is the input */
+	base1_args.ptr_args.input = sig_tanh_args->ptr_args.scratch;
+	memcpy(&base1_args.remaining_args, &sig_tanh_args->remaining_args.base1,
+		sizeof(sig_tanh_args->remaining_args.base1));
+	return nrf_axon_nn_op_extension_sigmoid_base(
+		sizeof(base1_args) / sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE),
+		(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *)&base1_args, true);
+}
+
+#if SIGMOID_TANH_OPTIMIZED
+
+#define TANH_INTERP_SHIFT 6
+/* lut table indexes greater than this do not do interpolation because the difference is < 1 */
+#define TANH_INTER_MAX_NDX sizeof(tanh_interp_multiplier)
+/* any input value greater than this is saturated to +/-1 */
+#define TANH_LUT_MAX_INPUT (4 << NRF_AXON_SIG_TANH_INPUT16_RADIX)
+/* input 3.12 values are shifted right this much to create the lut table index */
+#define TANH_LUT_SHIFT (NRF_AXON_SIG_TANH_INPUT16_RADIX - 6)
+/* input 3.12 values are and'ed with this to create the interpolation value */
+#define TANH_INTERP_MASK ((1 << TANH_LUT_SHIFT) - 1)
+
+/**
+ *
+ */
+static inline int16_t tanh_optimized(int16_t in_data)
+{
+	int32_t in_data_abs =  in_data < 0 ? -in_data : in_data;
+	int32_t out_data;
+
+	if (in_data_abs >= TANH_LUT_MAX_INPUT) {
+		out_data = tanh_lut[255];
+	} else {
+		uint8_t lut_ndx = in_data_abs >> TANH_LUT_SHIFT;
+
+		out_data = tanh_lut[lut_ndx];
+		if (lut_ndx < TANH_INTER_MAX_NDX) {
+			/* interpolate intermediate points */
+			out_data += ((in_data_abs & TANH_INTERP_MASK) *
+				tanh_interp_multiplier[lut_ndx]) >> TANH_INTERP_SHIFT;
+		}
+	}
+	if (in_data < 0) {
+		out_data *= -1;
+	}
+	return (int16_t)out_data;
+}
+#else
+static inline float tanh_float(int16_t data)
+{
+	float out_data = data;
+	/**
+	 * tanh(x) = (exp(2x)-1)/(exp(2x)+1)
+	 */
+	/* input is q.12, multiply by 2 and convert to float */
+	out_data /= (float)(1<<(NRF_AXON_SIG_TANH_INPUT16_RADIX - 1));
+	out_data = expf(out_data); /* now have exp(2x) */
+	out_data = (out_data - 1)/(out_data+1); /* have float tanh(x) */
+	return out_data;
+}
+#endif
 /**
  * @brief
  * Implements neural net operator tanh as a software operation that can be
@@ -293,6 +495,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 	int16_t *input_ptr = (int16_t *)base1_args->ptr_args.input;
 	union {
 		int8_t *i8;
+		int16_t *i16;
 		int32_t *i32;
 		NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE value;
 	} output_ptr;
@@ -307,22 +510,57 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 			for (uint16_t col_ndx = 0;
 				col_ndx < base1_args->remaining_args.width;
 				col_ndx++, input_ptr++) {
-				float scratch = *input_ptr;
-				/**
-				 * tanh(x) = (exp(2x)-1)/(exp(2x)+1)
-				 */
-				/* input is q.12, multiply by 2 and convert to float */
-				scratch /= (float)(1<<11);
-				scratch = expf(scratch); /* now have exp(2x) */
-				scratch = (scratch - 1)/(scratch+1); /* have float tanh(x) */
+#if SIGMOID_TANH_OPTIMIZED
+				int16_t out_data = tanh_optimized(*input_ptr);
+#if 0
+				int16_t output_from_float = (int16_t)((tanh_float(*input_ptr)) * (1 << NRF_AXON_SIG_TANH_OUTPUT16_RADIX));
+				int16_t error = abs(output_from_float - out_data);
+				if (error > 2) {
+					printf("Error! output_from_float (*%d) != out_data (%d)\n", output_from_float, out_data);
+				}
+#endif
+
 				switch (base1_args->remaining_args.output_bytewidth) {
 				case 1: /* quantized output. scales between -1 and 1. */
-					scratch = roundf(scratch * 128.0f); /* quantized */
-					axon_saturate_i8(scratch, output_ptr.i8, 0);
+					out_data = (out_data >>
+						(NRF_AXON_SIG_TANH_OUTPUT16_RADIX - 7));
+					if (out_data > 127) {
+						out_data = 127;
+					}
+					*output_ptr.i8 = (int8_t)out_data;
 					output_ptr.i8++;
 					break;
+				case 2: /* q1.14 output */
+					*output_ptr.i16 = out_data;
+					output_ptr.i16++;
+					break;
 				case 4: /* q1.30 output */
-					*output_ptr.i32 = (int32_t)(scratch * (1<<30));
+					*output_ptr.i32 = out_data <<
+						(NRF_AXON_SIG_TANH_OUTPUT16_RADIX + 6);
+					output_ptr.i32++;
+					break;
+				default:
+					nrf_axon_platform_printf(
+					"Axon NN: Invalid Sigmoid bytewidth %d\n",
+					base1_args->remaining_args.output_bytewidth);
+					return -1;
+				}
+#else
+				float out_data = tanh_float(*input_ptr);
+
+				switch (base1_args->remaining_args.output_bytewidth) {
+				case 1: /* quantized output. scales between -1 and 1. */
+					out_data = roundf(out_data * 128.0f); /* quantized */
+					axon_saturate_i8(out_data, output_ptr.i8, 0);
+					output_ptr.i8++;
+					break;
+				case 2: /* q1.14 output */
+					*output_ptr.i16 = (int16_t)(out_data *
+						(1 << NRF_AXON_SIG_TANH_OUTPUT16_RADIX));
+					output_ptr.i16++;
+					break;
+				case 4: /* q1.30 output */
+					*output_ptr.i32 = (int32_t)(out_data * (1<<30));
 					output_ptr.i32++;
 					break;
 				default:
@@ -331,6 +569,7 @@ static nrf_axon_result_e nrf_axon_nn_op_extension_tanh_base(uint16_t argc,
 						base1_args->remaining_args.output_bytewidth);
 					return -1;
 				}
+#endif
 			}
 			input_ptr += input_extra_stride;
 			output_ptr.value += output_extra_stride;
@@ -354,6 +593,60 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh_v2(uint16_t argc,
 {
 	return nrf_axon_nn_op_extension_tanh_base(argc, args, true);
 }
+/**
+ * sigmoid version used when input dequantization is needed.
+ */
+nrf_axon_result_e nrf_axon_nn_op_extension_tanh_dequantize_input(uint16_t argc,
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args)
+{
+	nrf_axon_nn_op_extension_sig_tanh_args_s *sig_tanh_args =
+		(nrf_axon_nn_op_extension_sig_tanh_args_s *)args;
+	/* 1st dequantize */
+	if (sig_tanh_args->remaining_args.input_byte_width == 1) {
+		/* dequantize 8bit input */
+		/*
+		 * MUST ALWAYS KEEP THE RESERVATION WHEN EXECUING AN INTRISIC
+		 * WITHIN A OP EXTENSION!
+		 */
+		nrf_axon_axpb_2d_8_16(sig_tanh_args->ptr_args.base1.input,
+			sig_tanh_args->remaining_args.input_dequant_multiplier,
+			-sig_tanh_args->remaining_args.input_dequant_zero_pt *
+				sig_tanh_args->remaining_args.input_dequant_multiplier,
+			(int16_t *)sig_tanh_args->ptr_args.scratch,
+			sig_tanh_args->remaining_args.base1.height,
+			sig_tanh_args->remaining_args.base1.width,
+			sig_tanh_args->remaining_args.base1.input_is_packed,
+			sig_tanh_args->remaining_args.input_dequant_rounding_bits,
+			NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
+	} else {
+		/* dequantize 16bit input */
+		nrf_axon_axpb_2d_16_16((int16_t *)sig_tanh_args->ptr_args.base1.input,
+			sig_tanh_args->remaining_args.input_dequant_multiplier,
+			-sig_tanh_args->remaining_args.input_dequant_zero_pt *
+				sig_tanh_args->remaining_args.input_dequant_multiplier,
+			(int16_t *)sig_tanh_args->ptr_args.scratch,
+			sig_tanh_args->remaining_args.base1.height,
+			sig_tanh_args->remaining_args.base1.width,
+			sig_tanh_args->remaining_args.base1.input_is_packed,
+			sig_tanh_args->remaining_args.input_dequant_rounding_bits,
+			NRF_AXON_SYNC_MODE_BLOCKING_POLLING, true);
+	}
+	/*
+	 * copy params to a nrf_axon_nn_op_extension_base1_args_s
+	 */
+	nrf_axon_nn_op_extension_base1_args_s base1_args;
+
+	memcpy(&base1_args.ptr_args, &sig_tanh_args->ptr_args.base1,
+		sizeof(sig_tanh_args->ptr_args.base1));
+	/* scratch is the input */
+	base1_args.ptr_args.input = sig_tanh_args->ptr_args.scratch;
+	memcpy(&base1_args.remaining_args, &sig_tanh_args->remaining_args.base1,
+		sizeof(sig_tanh_args->remaining_args.base1));
+	return nrf_axon_nn_op_extension_tanh_base(
+		sizeof(base1_args) / sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE),
+		(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *)&base1_args, true);
+}
+
 
 nrf_axon_result_e nrf_axon_nn_op_extension_reshape(uint16_t argc,
 	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args)
@@ -410,6 +703,47 @@ nrf_axon_result_e nrf_axon_nn_op_extension_reshape(uint16_t argc,
 	return NRF_AXON_RESULT_SUCCESS;
 }
 
+nrf_axon_result_e nrf_axon_nn_op_extension_reshape_from_axon(uint16_t argc,
+	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args)
+{
+	if (((argc * sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)) <
+		sizeof(nrf_axon_nn_op_extension_base2_args_s)) || (args == NULL)) {
+		return NRF_AXON_RESULT_FAILURE;
+	}
+	nrf_axon_nn_op_extension_base2_args_s *base2_args =
+		(nrf_axon_nn_op_extension_base2_args_s *)args;
+	unsigned int ax_width_tf_ch = base2_args->remaining_args.input_width;
+	/* iterate through axon space, mapping to tf space */
+	unsigned int ax_stride = base2_args->remaining_args.input_stride;
+	unsigned int height = base2_args->remaining_args.input_height;
+	unsigned int ax_ch_tf_width = base2_args->remaining_args.input_channel_cnt;
+	unsigned int ax_extra_stride = ax_stride - ax_width_tf_ch;
+
+	unsigned int axon_offset = 0;
+	unsigned int tf_offset;
+
+	for (uint16_t chan_ndx = 0;
+		chan_ndx < ax_ch_tf_width;
+		chan_ndx++) { /*channel */
+		tf_offset = chan_ndx;
+		for (uint16_t row_ndx = 0;
+			row_ndx < height;
+			row_ndx++) { /* height */
+
+			for (uint16_t col_ndx = 0;
+				col_ndx < ax_width_tf_ch;
+				col_ndx++) { /*width */
+
+				((int8_t *)base2_args->ptr_args.output)[tf_offset] =
+					((int8_t *)base2_args->ptr_args.input)[axon_offset];
+				tf_offset += ax_ch_tf_width;
+				axon_offset++;
+			}
+			axon_offset += ax_extra_stride;
+		}
+	}
+	return NRF_AXON_RESULT_SUCCESS;
+}
 
 static inline int32_t get_nearest_neighbor(
 	const int input_value,

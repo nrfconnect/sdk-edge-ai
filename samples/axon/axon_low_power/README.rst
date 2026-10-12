@@ -76,7 +76,7 @@ The sample supports the following build types:
        This drives two GPIO pins, which are defined in the board's DeviceTree overlay file (see the :file:`boards/` directory).
        You can capture inference and sweep timing on a logic analyzer or oscilloscope (for example, the `Power Profiler Kit II (PPK2)`_).
 
-See `Custom build types`_ and `Providing CMake options`_ for more information.
+See :ref:`nrf:app_build_additions_build_types` and :ref:`nrf:cmake_options` for more information.
 
 Building and running
 ********************
@@ -144,5 +144,5 @@ This sample uses the following |EAI| libraries:
 
 It uses the following Zephyr libraries:
 
-* `Logging`_
-* `Power Management`_
+* :ref:`zephyr:logging_api`
+* :ref:`zephyr:pm-guide`

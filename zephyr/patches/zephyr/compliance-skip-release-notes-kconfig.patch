@@ -1,0 +1,12 @@
+diff --git a/scripts/ci/check_compliance.py b/scripts/ci/check_compliance.py
+index dfec13c96f7..bcae798c2b2 100755
+--- a/scripts/ci/check_compliance.py
++++ b/scripts/ci/check_compliance.py
+@@ -1562,6 +1562,7 @@ Missing SoC names or CONFIG_SOC vs soc.yml out of sync:
+             ":!/doc/nrf/libraries/bin/lwm2m_carrier/CHANGELOG.rst",
+             ":!/doc/nrf/app_dev/device_guides/nrf70/wifi_advanced_security_modes.rst",
+             ":!/doc/nrf-bm/release_notes",
++            ":!/doc/release_notes_and_migration",
+             cwd=GIT_TOP,
+         )
+ 

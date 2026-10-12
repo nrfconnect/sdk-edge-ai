@@ -7,7 +7,7 @@ TinyML Keyword Spotting (KWS)
    :local:
    :depth: 2
 
-This page describes a TinyML-based keyword spotting (KWS) use case for recognizing predefined keywords from audio input using a DS-CNN model.
+This page describes a `TinyML-based keyword spotting (KWS) <Keyword spotting_>`_ use case for recognizing predefined keywords from audio input using a DS-CNN model.
 
 Overview
 ********
@@ -30,21 +30,26 @@ When working with this model, keep the following points in mind:
 Running the model
 *****************
 
-You can either train the model using the reference implementation or start from a pre-trained model.
-Place the downloaded TFLite model in the directory expected by the compiler input configuration file.
+Download a pre-trained model and compile it with Axon.
+You do not need to download the dataset, pre-process data, or train the model for that workflow.
+Complete the following steps to run the model:
 
-Obtaining raw dataset
-=====================
+#. Download the TFLite model from the `MLPerf Tiny repository <Keyword spotting trained model_>`_.
+#. Place the file in the directory expected by the compiler input configuration (:file:`kws/<model.tflite>`).
 
+Obtaining raw dataset (optional)
+================================
+
+You only need to obtain the raw dataset if you plan to train or retrain the model yourself.
 This model uses the Google Speech Commands V2 dataset.
 The MLPerf Tiny repository includes scripts to download the dataset, train the model, and prepare test data.
-Detailed instructions are provided in the `reference repository <Keyword spotting_>`_.
+For details, see the `reference repository <Keyword spotting_>`_.
 
-Data pre-processing and model behavior
-======================================
+Data pre-processing and model behavior (optional)
+=================================================
 
-You can find all the other relevant scripts for loading and preparing the dataset in the `Keyword spotting scripts folder <Keyword spotting_>`_.
-These scripts will guide you through generating the feature data required to evaluate the model and compute test accuracy.
+You only need to pre-process the data for training, retraining, or test accuracy evaluation during compilation.
+The scripts for loading and preparing the dataset are in the `Keyword spotting scripts folder <Keyword spotting_>`_.
 
 Running the Compiler
 ********************

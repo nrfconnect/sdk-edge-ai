@@ -17,6 +17,69 @@ Changelog
 
 See the list of changes for a specific release of the Axon NPU software.
 
+Release 2.0.1  21 Sep 2026
+==========================
+
+* Fixed:
+
+  * Added writing of output dequantization parameters to the model file.
+
+Release 2.0.0  14 Sept 2026
+===========================
+
+This release has the following breaking changes:
+
+* You must recompile existing models.
+  Models and drivers are only compatible within the same major version.
+* The ``nrf_axon_nn_compiled_model_s`` model structure is modified to support a variable number of inputs and outputs:
+
+  * The ``external_input_ndx`` field and its associated APIs are removed.
+    All entries in the ``inputs[]`` field are now external.
+  * The primary output fields (starting with ``output_``) and the extra output fields (starting with ``extra_outputs``) are replaced with a single consolidated ``outputs[]`` field.
+
+* Added:
+
+  * Compiler release v2.0.0.
+  * Support for unfused Gated Recurrent Unit (GRU).
+    Only the unrolled form is supported.
+  * Support for the SUB (subtract) operator.
+
+* Updated:
+
+  * Support for unfused, unrolled LSTM is no longer experimental.
+    Input features (input width) and units (output width) can now both exceed 512.
+
+Release 1.5.0  13 Aug 2026
+==========================
+
+* Added:
+
+  * Compiler release v1.5.0.
+  * Cell state clipping for unidirectional sequential (fused) Long Short-Term Memory (LSTM) model.
+  * ``passlist_candidate_mode`` support in the compiler executor.
+    You can set this option when invoking the compiler, or enable it in the YAML configuration with the ``passlist_candidate_mode`` entry.
+  * Experimental support for unfused LSTM.
+    Only the unrolled mode is supported.
+  * :ref:`Test: DSP intrinsics application <test_axon_intrinsics>` for validating Axon DSP intrinsic functions on hardware and in the simulator.
+
+* Updated:
+
+  * The unidirectional sequential (fused) LSTM command buffer is now rolled up, which significantly reduces model size.
+  * Sigmoid (logistic) and tanh operators are optimized for better performance.
+  * API documentation in :c:group:`nrf_axon_dsp_intrinsics` is expanded with more complete comments.
+
+Release 1.4.0  17 Jul 2026
+==========================
+
+* Added:
+
+  * Compiler release 1.4.0
+  * Partial and experimental support for unidirectional sequential LSTM.
+
+* Updated:
+
+  * Multiply no longer limited to widths less than or equal to 512.
+
 Release 1.3.0  02 Jul 2026
 ==========================
 

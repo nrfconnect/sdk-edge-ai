@@ -23,46 +23,45 @@ extern "C" {
 #endif
 
 /** @brief Structure descibing mel-spectrogram preprocessing block */
-typedef struct
-{
-    /** Buffer to store mel-spectrogram 
-     * (elements count is freq_bands * time_bands)
-     */
-    flt32_t* p_melspectrum;
+typedef struct {
+	/** Buffer to store mel-spectrogram
+	 * (elements count is freq_bands * time_bands)
+	 */
+	flt32_t *p_melspectrum;
 
-    /** FHT instance */
-    nrf_dsp_rfht_instance_t fht;
+	/** FHT instance */
+	nrf_dsp_rfht_instance_t fht;
 
-    /** Sample rate of audio signal */
-    uint16_t sample_rate;
+	/** Sample rate of audio signal */
+	uint16_t sample_rate;
 
-    /** Current spectrogram fill */
-    uint16_t current_fill;
+	/** Current spectrogram fill */
+	uint16_t current_fill;
 
-    /** Count of frequency bins */
-    uint16_t freq_bands;
+	/** Count of frequency bins */
+	uint16_t freq_bands;
 
-    /** Spectrogram Time Bands dim */
-    uint16_t time_bands;
+	/** Spectrogram Time Bands dim */
+	uint16_t time_bands;
 } nrf_dsp_melspectr_ctx_f32_t;
 
 /**
  * @brief Make mel-spectrogram from timeseries audio data
- * 
+ *
  * @param[in] p_ctx            Pointer to mel-spectrogram instance
  * @param[in] p_audio_input    Audio input to process
- * 
+ *
  * @return int8_t      Return 0 if spectrogram is ready, otherwise 1
  */
-int8_t nrf_dsp_melspectr_make_f32(nrf_dsp_melspectr_ctx_f32_t* p_ctx, flt32_t* p_audio_input);
+int8_t nrf_dsp_melspectr_make_f32(nrf_dsp_melspectr_ctx_f32_t *p_ctx, flt32_t *p_audio_input);
 
 /**
  * @brief Shift mel-spectrogram to the right on N columns
- * 
+ *
  * @param[in] p_ctx        Pointer to mel-spectrogram instance
  * @param[in] shift        Number of spectrograms to shift
  */
-void nrf_dsp_melspectr_shift_f32(nrf_dsp_melspectr_ctx_f32_t* p_ctx, uint16_t shift);
+void nrf_dsp_melspectr_shift_f32(nrf_dsp_melspectr_ctx_f32_t *p_ctx, uint16_t shift);
 
 #ifdef __cplusplus
 }

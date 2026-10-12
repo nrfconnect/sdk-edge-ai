@@ -14,7 +14,7 @@ static const nrf_edgeai_obsv_model_info_t test_model = {
 	.version = TEST_MODEL_VERSION,
 };
 
-static uint32_t iter_pd_buf[NRF_EDGEAI_OBSV_PD_STORAGE_BYTES(TEST_NUM_CLASSES) /
+static uint32_t iter_pd_buf[NRF_EDGEAI_OBSV_CPD_STORAGE_BYTES(TEST_NUM_CLASSES) /
 			     sizeof(uint32_t)];
 static uint32_t iter_tm_buf[NRF_EDGEAI_OBSV_TM_STORAGE_BYTES(TEST_NUM_CLASSES) /
 			     sizeof(uint32_t)];
@@ -26,7 +26,7 @@ static void iter_before(void *fixture)
 	ARG_UNUSED(fixture);
 	memset(&ctx, 0, sizeof(ctx));
 	nrf_edgeai_obsv_core_init(&ctx, &test_model);
-	nrf_edgeai_obsv_metric_pd_create(&iter_pd, iter_pd_buf, TEST_NUM_CLASSES);
+	nrf_edgeai_obsv_metric_cpd_create(&iter_pd, iter_pd_buf, TEST_NUM_CLASSES);
 	nrf_edgeai_obsv_metric_tm_create(&iter_tm, iter_tm_buf, TEST_NUM_CLASSES);
 }
 
@@ -58,7 +58,7 @@ ZTEST(obsv_iteration, test_iterate_two_metrics_visits_both)
 	zassert_true(snaps.transition_matrix.present);
 
 	zassert_equal(snaps.probs_distribution.metric_id,
-		      NRF_EDGEAI_OBSV_METRIC_ID_PROBS_DISTRIBUTION);
+		      NRF_EDGEAI_OBSV_METRIC_ID_CLASS_PRED_DIST);
 	zassert_equal(snaps.probs_distribution.num_rows, TEST_NUM_CLASSES);
 	zassert_equal(snaps.probs_distribution.num_cols, TEST_NUM_BINS);
 
@@ -66,6 +66,11 @@ ZTEST(obsv_iteration, test_iterate_two_metrics_visits_both)
 		      NRF_EDGEAI_OBSV_METRIC_ID_TRANSITION_MATRIX);
 	zassert_equal(snaps.transition_matrix.num_rows, TEST_NUM_CLASSES);
 	zassert_equal(snaps.transition_matrix.num_cols, TEST_NUM_CLASSES);
+
+	/* Only the class predictions distribution reports config. */
+	zassert_equal(snaps.probs_distribution.config_rows, 1);
+	zassert_equal(snaps.probs_distribution.config_cols, NRF_EDGEAI_OBSV_CPD_CFG_COUNT);
+	zassert_equal(snaps.transition_matrix.config_rows, 0);
 }
 
 ZTEST(obsv_iteration, test_null_params)

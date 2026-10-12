@@ -63,19 +63,32 @@ ZEPHYR_VERSION           = f"v{ZEPHYR_VERSION_NUMBER}"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.intersphinx',
     'sphinx_tabs.tabs',
     'sphinx_copybutton',
     'options_from_kconfig',
     'table_from_rows',
+    'doxyrunner_winfix',
     'zephyr.doxyrunner',
     'zephyr.doxybridge',
     'zephyr.external_content',
     'sphinxcontrib.plantuml',
+    'sphinxcontrib.mermaid',
+    'sphinx.ext.graphviz',
+    'known_issues_filter',
     'edge_ai_project_info',
 ]
 
 plantuml = 'plantuml'
 plantuml_output_format = 'svg_img'
+
+mermaid_output_format = 'svg'
+# Sandboxed CI runners (and some containers) need Chromium's sandbox disabled
+# for mmdc/Puppeteer to launch.
+mermaid_params = ['--puppeteerConfigFile', str(EDGE_AI_BASE / 'doc' / 'puppeteer-config.json')]
+
+# Render Graphviz diagrams (e.g. the model observability cycle) as SVG.
+graphviz_output_format = 'svg'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -193,6 +206,19 @@ SUBSTITUTIONS = [
 
 # Consumed by the edge_ai_project_info extension (source-read handler).
 edge_ai_substitutions = SUBSTITUTIONS
+
+# -- Options for intersphinx --------------------------------------------------
+#
+# Hosted NCS inventories are published at nrfconnectdocs.nordicsemi.com.
+# See https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
+
+_NCS_DOCS_BASE = f"https://nrfconnectdocs.nordicsemi.com/ncs/{NCS_VERSION_NUMBER}"
+_NCS_DOCS_STORAGE = f"https://ncsdoc.z6.web.core.windows.net/ncs/{NCS_VERSION_NUMBER}"
+
+intersphinx_mapping = {
+    "nrf": (f"{_NCS_DOCS_BASE}/nrf/", f"{_NCS_DOCS_STORAGE}/nrf/objects.inv"),
+    "zephyr": (f"{_NCS_DOCS_BASE}/zephyr/", f"{_NCS_DOCS_STORAGE}/zephyr/objects.inv"),
+}
 
 # -- rst_epilog: pre-expanded links.txt + shortcuts.txt ----------------------
 

@@ -19,11 +19,11 @@ const int32_t tinyml_ic_expected_output_vector_2[1][1][10] = {
 };
 #endif
 
-const int32_t* tinyml_ic_input_test_vectors[] = {
-  (int32_t*)tinyml_ic_test_input_vector_0,
+const int8_t* tinyml_ic_input_test_vectors[] = {
+  (int8_t*)tinyml_ic_test_input_vector_0,
 #if !AXON_MINIMUM_TEST_VECTORS
-  (int32_t*)tinyml_ic_test_input_vector_1,
-  (int32_t*)tinyml_ic_test_input_vector_2,
+  (int8_t*)tinyml_ic_test_input_vector_1,
+  (int8_t*)tinyml_ic_test_input_vector_2,
 #endif
 };
 const int32_t* tinyml_ic_expected_output_vectors[] = {

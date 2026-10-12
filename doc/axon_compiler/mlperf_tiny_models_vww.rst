@@ -8,7 +8,7 @@ TinyML Visual Wake Word (VWW)
    :depth: 2
 
 
-This page describes a TinyML-based visual wake word (VWW) use case for detecting the presence of a person in an image using a MobileNet-based model.
+This page describes a `TinyML-based visual wake word (VWW) <Visual wake word_>`_ use case for detecting the presence of a person in an image using a MobileNet-based model.
 
 Overview
 ********
@@ -32,21 +32,25 @@ When working with this model, keep the following points in mind:
 Running the model
 *****************
 
-You can either train the model using the reference implementation or start from a pre-trained model.
-Place the downloaded TFLite or Keras model in the directory expected by the compiler input configuration file.
+Download a pre-trained model and compile it with Axon.
+You do not need to download the dataset, pre-process data, or train the model for that workflow.
+Complete the following steps to run the model:
 
-Obtaining raw dataset
-=====================
+#. Download the TFLite or Keras model from the `MLPerf Tiny repository <Visual wake word trained model_>`_.
+#. Place the file in the directory expected by the compiler input configuration (:file:`vww/<model.tflite>` or :file:`vww/<model.h5>`).
 
+Obtaining raw dataset (optional)
+================================
+
+You only need to obtain the raw dataset if you plan to train or retrain the model yourself.
 The visual wake word model is trained on data derived from the COCO dataset.
-To download the dataset and set up the training environment, use the :file:`download_and_train_vww.sh` script provided in the `MLPerf Tiny repository <Visual wake word_>`_.
+Use the :file:`download_and_train_vww.sh` script in the `MLPerf Tiny repository <Visual wake word_>`_ to download the dataset and set up the training environment.
 
-Data pre-processing and model behavior
-======================================
+Data pre-processing and model behavior (optional)
+=================================================
 
-After downloading the dataset, additional data preparation is required before testing the model.
-In particular, test label files must be generated for evaluation.
-You can generate the test labels by running the :file:`generate_y_labels.py` script.
+You only need to pre-process the data for training, retraining, or test accuracy evaluation during compilation.
+After downloading the dataset, run the :file:`generate_y_labels.py` script to generate the test label files for evaluation.
 
 Running the compiler
 ********************

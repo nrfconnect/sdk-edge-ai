@@ -17,6 +17,24 @@ The Axon NPU TFLite compiler converts a TensorFlow Lite (``.tflite`` or ``.lite`
 Optionally, the compiler can run inference on a provided test dataset to validate that the compiled model produces results that match TensorFlow Lite accuracy.
 When test data is provided, the compiler can also generate test vectors for on‑target verification.
 
+.. _axon_compile_model_options:
+
+Compilation options
+===================
+
+You can compile TensorFlow Lite models for Axon in two ways:
+
+Nordic Edge AI Lab
+   Use the `Nordic Edge AI Lab Compile your own model`_ feature to upload an int8-quantized ``.tflite`` or ``.lite`` file and download Axon-optimized header files from the cloud.
+   This option does not require a local Python environment or access to the compiler binaries in this repository.
+
+   See :ref:`axon_compile_model` for how this method fits into the Axon driver workflow.
+
+Local Axon NPU TFLite compiler
+   Use the executor and compiler library described in the rest of this guide when you need local compilation, custom YAML configuration, accuracy validation with test data, test vector generation, or variant exploration.
+
+Both options use the same Axon NPU compiler technology and produce header files compatible with the Axon driver API.
+
 Workflow
 ========
 

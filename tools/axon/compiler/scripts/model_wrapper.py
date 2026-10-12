@@ -230,8 +230,8 @@ class CompilerResultsReturnClass():
 
 class ModelDescriptionBin:
     MAJOR_VER = 1
-    MINOR_VER = 2
-    PATCH_VER = 9
+    MINOR_VER = 3
+    PATCH_VER = 1
     binary_title_string = "AXON_INTERMEDIATE_REPRESENTATION_FILE"
     MODEL_BIN_VER = (MAJOR_VER << 16) + (MINOR_VER << 8) + PATCH_VER
     model_ver_bin = bytearray(np.array([MODEL_BIN_VER], dtype=np.uint32))
@@ -655,6 +655,10 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
             logger.debug(
                 # 4
                 f" id {model_layer_description_struct[layers].input_ids[input_ids]} : input byte_width : {model_layer_description_struct[layers].input_dimensions[input_ids].byte_width} , {input_byte_width_name} : bitwidth : {input_bitwidth}")
+            input_offset = model_layer_description_struct[layers].input_split_offsets[input_ids].offset
+            offset_axis = model_layer_description_struct[layers].input_split_offsets[input_ids].axis
+            logger.debug(
+                f" id {model_layer_description_struct[layers].input_ids[input_ids]} : offset : {input_offset}, axis : {offset_axis}")
         axon_op_name = ffi_object.string(ffi_object.cast(
             "nrf_axon_nn_op_e", model_layer_description_struct[layers].nn_operation))
         logger.debug(
@@ -710,6 +714,21 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
         logger.debug(
             # 2
             f"stride y : {model_layer_description_struct[layers].stride_y}")
+        logger.debug(
+            # 1
+            f"dilation x : {model_layer_description_struct[layers].dilation_x}")
+        logger.debug(
+            # 2
+            f"dilation y : {model_layer_description_struct[layers].dilation_y}")
+        logger.debug(
+            # -128
+            f"input zp : {model_layer_description_struct[layers].input_zero_point}")
+        logger.debug(
+            # -128
+            f"output dequant multiplier : {model_layer_description_struct[layers].output_dequant_multiplier}")
+        logger.debug(
+            # -128
+            f"output dequant shift : {model_layer_description_struct[layers].output_dequant_shift}")
         logger.debug(
             # -128
             f"output zp : {model_layer_description_struct[layers].output_zero_point}")
@@ -769,6 +788,7 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
             scaleshift_vector = np.frombuffer(
                 model_const, offset=model_layer_description_struct[layers].scale_shifts.offset, dtype=np.int8, count=model_layer_description_struct[layers].scale_shift_cnt)
             logger.debug(f"scale_shifts vector : {scaleshift_vector}")
+
         if (np.array(model_layer_description_struct[layers].cpu_op_additional_attributes.offset).astype(np.int32) != -1):
             cpu_op_additional_attribs = np.frombuffer(
                 model_const, offset=model_layer_description_struct[layers].cpu_op_additional_attributes.offset, dtype=np.int32, count=model_layer_description_struct[layers].cpu_op_additional_attributes_count)

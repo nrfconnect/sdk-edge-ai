@@ -7,7 +7,7 @@ TinyML Anomaly Detection
    :local:
    :depth: 2
 
-This model demonstrates a TinyML-based anomaly detection use case for identifying abnormal machine sounds.
+This model demonstrates a `TinyML-based anomaly detection <MLPerf Tiny anomaly detection_>`_ use case for identifying abnormal machine sounds.
 
 Overview
 ********
@@ -33,28 +33,29 @@ When working with this model, keep the following points in mind:
 Running the model
 *****************
 
-For detailed instructions, see the `MLPerf Tiny anomaly detection`_ page.
-You can also refer to a `Pre-trained anomaly detection model`_.
+Download a pre-trained model and compile it with Axon.
+You do not need to download the dataset, pre-process data, or train the model for that workflow.
+Complete the following steps:
 
-Place the downloaded TFLite or Keras model in the directory expected by the compiler input configuration file, for example:
+#. Download a TFLite or Keras model from the `Pre-trained anomaly detection model`_.
+#. Place the file in the directory expected by the compiler input configuration:
 
-.. code-block:: text
+   .. code-block:: text
 
-   anomaly_detection/<model.tflite>
-   anomaly_detection/<model.h5>
+      anomaly_detection/<model.tflite>
+      anomaly_detection/<model.h5>
 
-Obtainig raw dataset
-====================
+Obtaining raw dataset (optional)
+================================
 
-This section describes how to obtain the raw dataset used for training and evaluation.
-Download it by running the :file:`get_dataset.sh` script provided in the `reference repository <Anomaly detection script_>`_.
+You only need to obtain the raw dataset if you plan to train or retrain the model yourself.
+To download the raw dataset, run the :file:`get_dataset.sh` script in the `reference repository <Anomaly detection script_>`_.
 
-Data pre-processing and model behavior
-======================================
+Data pre-processing and model behavior (optional)
+=================================================
 
-This section summarizes the required data pre-processing steps and explains the model output behavior.
-
-You can find data pre-processing steps required for training and testing in the `reference repository <Anomaly detection training_>`_.
+You only need to pre-process the data for training, retraining, or test accuracy evaluation during compilation.
+For the required pre-processing steps, see the `reference repository <Anomaly detection training_>`_.
 These steps convert the raw audio data into the format expected by the anomaly detection model.
 
 The model output is an anomaly score derived from the reconstruction error.

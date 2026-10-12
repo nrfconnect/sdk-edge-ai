@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 """Data Forwarder Host — receives, visualises and exports sensor data from an nRF device."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 def main() -> int:

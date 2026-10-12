@@ -57,8 +57,8 @@ The runtime API consists of a small number of essential functions for model infe
 
 * Model information
 
-  * :c:func:`nrf_edgeai_model_neurons_num` - Gets the number of neurons in the model.
-  * :c:func:`nrf_edgeai_model_weights_num` - Gets the number of weights in the model.
+  * :c:func:`nrf_edgeai_model_neuton_neurons_num` - Gets the number of neurons in the model.
+  * :c:func:`nrf_edgeai_model_neuton_weights_num` - Gets the number of weights in the model.
   * :c:func:`nrf_edgeai_model_outputs_num` - Gets the number of model outputs.
   * :c:func:`nrf_edgeai_model_task` - Gets the model task type (classification, regression, anomaly detection).
 

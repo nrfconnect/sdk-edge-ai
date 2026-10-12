@@ -14,7 +14,7 @@ Integration prerequisites
 
 Before you start using the nRF Edge AI integration, make sure you have completed the following prerequisites:
 
-* `Installation of the nRF Connect SDK <nRF Connect SDK installation guide_>`_
+* :ref:`Installation of the nRF Connect SDK <nrf:install_ncs>`
 * Setup of a :ref:`supported development kit <setup_nrf_edgeai_lib>`
 
 .. _ug_nrf_edgeai_integration_enabling_kconfig:

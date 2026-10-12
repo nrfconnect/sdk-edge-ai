@@ -3,72 +3,73 @@
 Known issues
 ############
 
-.. contents::
-   :local:
-   :depth: 2
+.. only:: release or pr
 
-Known issues listed on this page are valid for the current state of development.
-For the list of potential issues found regarding Axon NPU, see the :ref:`axon_npu_changelog` page.
-A known issue can list one or both of the following entries:
+   See `known issues page on the main branch`_ for the complete list of issues for all releases.
 
-* **Affected platforms:**
+.. only:: latest or pr
 
-  If a known issue does not have any specific platforms listed, it is valid for all hardware platforms.
-
-* **Workaround:**
-
-  Some known issues have a workaround.
-  Sometimes, they are discovered later and added over time.
+   .. contents::
+      :local:
+      :depth: 2
 
 
-List of known issues for v2.2.0 release
-***************************************
+   Known issues listed on this page and tagged with the selected release are valid for that release.
+   Use the release filter to view known issues for a specific release.
+   A known issue can list one or both of the following entries:
 
-NCSDK-40250: Bootloader Serial Recovery mode is disabled in release configurations on Thingy:53
-  In the :ref:`Gesture Recognition application <app_gesture_recognition>`, bootloader Serial Recovery mode is disabled in release configurations.
+   * **Affected platforms:**
 
-  **Workaround:** Enable the following Kconfig options in the MCUboot configuration file :file:`configuration/thingy53_nrf5340_cpuapp/images/mcuboot/prj_release.conf`:
+     If a known issue does not have any specific platforms listed, it is valid for all hardware platforms.
 
-  .. code-block:: ini
+   * **Workaround:**
 
-     CONFIG_MCUBOOT_SERIAL=y
-     CONFIG_GPIO=y
+     Some known issues have a workaround.
+     Sometimes, they are discovered later and added over time.
 
-  This restores Serial Recovery mode at the cost of increased current consumption.
+   .. known-issues-filter::
 
-  **Affected platforms:** Thingy:53
+   .. rst-class:: wontfix v2-3-0 v2-2-0 v2-1-0 v2-0-0
 
-List of known issues for v2.1.0 release
-***************************************
+   Axon NPU asynchronous inference affects ongoing inference
+      The asynchronous inference prematurely copies the input vector into the :term:`Axon interlayer buffer` before the inference is enqueued.
+      This might overwrite the data of any inference that is already running.
+      The affected Axon driver versions are from 0.7.0 to 1.5.0.
 
-NCSDK-39297: CMake duplicates the board configuration directory in ``CONF_FILE`` paths when used with the nRF Connect for VS Code GUI
-  The application's CMake setup sets ``APPLICATION_CONFIG_DIR`` to ``configuration/<board>_<qualifiers>/``, which causes Zephyr to resolve ``CONF_FILE`` relative to that directory instead of the application root.
-  As a result, ``CONF_FILE`` must be set to a file name only (for example, :file:`prj_release.conf`), and must not include the ``configuration/<board>_<qualifiers>/`` prefix.
+      **Workaround:** Migrate to nRF Edge AI release v3.0.0 or later release.
+      If you must stay on an affected release, use synchronous inferences, or ensure that no inference will be executed during an :c:func:`nrf_axon_nn_model_infer_async` call.
 
-  However, the Kconfig fragment picker in the nRF Connect for VS Code extension inserts the path relative to the application root, for example::
+   .. rst-class:: v2-3-0
 
-    configuration/nrf54l15tag_nrf54l15_cpuapp/prj_release.conf
+   NCSDK-40932: DFU fails on Thingy:53 in the Gesture Recognition application
+      When using the Device Firmware Update (DFU) feature in the :ref:`Gesture Recognition application <app_gesture_recognition>` on Thingy:53, the DFU process fails.
 
-  CMake then prepends ``APPLICATION_CONFIG_DIR`` again, the board configuration sub-path is duplicated, and the build fails with an error similar to::
+      **Affected platforms:** Thingy:53
 
-    CMake Error at .../zephyr/cmake/modules/kconfig.cmake:318 (message):
-      File not found:
-      .../applications/gesture_recognition/configuration/nrf54l15tag_nrf54l15_cpuapp/configuration/nrf54l15tag_nrf54l15_cpuapp/prj.conf
+   .. rst-class:: v2-2-0
 
-  **Workaround:** Set ``CONF_FILE`` to the file name only, relative to ``APPLICATION_CONFIG_DIR``, and omit the ``configuration/<board>_<qualifiers>/`` prefix.
-  On the command line, pass the file name directly, for example::
+   NCSDK-40250: Bootloader Serial Recovery mode is disabled in release configurations on Thingy:53
+      In the :ref:`Gesture Recognition application <app_gesture_recognition>`, bootloader Serial Recovery mode is disabled in release configurations.
 
-      west build -b nrf54l15tag/nrf54l15/cpuapp -- -DCONF_FILE=prj_release.conf
+      **Workaround:** Enable the following Kconfig options in the MCUboot configuration file :file:`configuration/thingy53_nrf5340_cpuapp/images/mcuboot/prj_release.conf`:
 
-List of known issues for v2.0.0 release
-***************************************
+      .. code-block:: ini
 
-DRGN-27788: Bluetooth LE disables RRAM low-latency mode when using AXON NPU and Bluetooth LE simultaneously on the nRF54LM20B SoC
-  When running AXON and Bluetooth LE together on nRF54LM20B, Bluetooth LE might disable RRAM low-latency mode during radio activity, which may slow or corrupt an ongoing inference.
-  MPSL sets STANDBY mode in ``NRF_RRAMC->POWER.LOWPOWERCONFIG`` at the start of each radio slot and restores the application init value at the end.
-  In a power-optimized application, if the radio slot ends while an inference is running on Axon, the low-power (``NRF_RRAMC_LP_POWER_OFF``) value will be forced by MPSL, slowing down the rest of the inference.
+         CONFIG_MCUBOOT_SERIAL=y
+         CONFIG_GPIO=y
 
-  **Workaround:** Use ``CONFIG_MPSL_FORCE_RRAM_ON_ALL_THE_TIME`` to keep RRAM permanently in STANDBY mode.
-  This setting increases power consumption but ensures reliable performance.
+      This restores Serial Recovery mode at the cost of increased current consumption.
 
-  **Affected platforms:** nRF54LM20B SoC
+      **Affected platforms:** Thingy:53
+
+   .. rst-class:: v2-0-0
+
+   DRGN-27788: Bluetooth LE disables RRAM low-latency mode when using AXON NPU and Bluetooth LE simultaneously on the nRF54LM20B SoC
+      When running AXON and Bluetooth LE together on an nRF54LM20B device, Bluetooth LE might disable the RRAM low-latency mode during radio activity, which may slow down or corrupt an ongoing inference.
+      MPSL sets STANDBY mode in ``NRF_RRAMC->POWER.LOWPOWERCONFIG`` at the start of each radio slot and restores the application init value at the end.
+      In a power-optimized application, if the radio slot ends while an inference is running on Axon, the low-power (``NRF_RRAMC_LP_POWER_OFF``) value will be forced by MPSL, slowing down the rest of the inference.
+
+      **Workaround:** Use the ``CONFIG_MPSL_FORCE_RRAM_ON_ALL_THE_TIME`` Kconfig option to keep RRAM permanently in STANDBY mode.
+      This setting increases power consumption but ensures reliable performance.
+
+      **Affected platforms:** nRF54LM20B SoC

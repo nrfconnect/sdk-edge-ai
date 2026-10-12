@@ -8,7 +8,7 @@ Welcome to the |EAI| for |NCS|
    :depth: 2
 
 .. note::
-   This is an add-on for `nRF Connect SDK`_.
+   This is an add-on for :ref:`nRF Connect SDK <nrf:index>`.
 
 The |EAI| contains solutions and integrations for running machine learning models on Nordic Semiconductor devices.
 
@@ -43,6 +43,7 @@ See the following documentation:
    :caption: Subpages:
 
    overview.rst
+   model_lifecycle.rst
    quick_start.rst
    applications.rst
    samples.rst

@@ -18,21 +18,25 @@ The sample supports the following development kits:
 .. table-from-sample-yaml::
 
 When using Bluetooth LE transport, your host must be able to connect to the peripheral directly.
-If it cannot connect, you need a second development kit running the `Nordic central UART sample`_ as a USB serial bridge.
+If it cannot connect, you need a second development kit running the :ref:`Central UART sample <nrf:central_uart>` as a USB serial bridge.
 
 The default configuration on the nRF54L15 TAG reads a 6-axis BMI270 IMU and appends environmental data from an on-board BME688 sensor.
 
 Overview
 ********
 
-The sample periodically reads data from an on-board sensor and forwards it to a host over `Nordic UART Service (NUS)`_ (default) or UART.
+The sample reads data from an on-board sensor and forwards it to a host over :ref:`nrf:nus_service_readme` (default) or UART.
 By default, the sample uses CBOR messages wrapped in COBS framing, as defined in :file:`cddl/data_forwarder.cddl`.
-Session metadata is sent periodically so a host can join an active stream.
+While a streaming session is active, session metadata is sent periodically so a host can join the stream.
 
 The sample performs the following operations:
 
-* Initializes the selected sensor driver and starts sampling at a fixed rate.
-* Encodes each sample and sends it through the configured transport.
+#. Initializes the sensor driver without starting periodic sampling.
+#. Waits until the configured transport is ready to carry data.
+#. Starts sensor sampling and a protocol session.
+#. Encodes each sample and sends it through the transport.
+
+If the sensor or the session fails to start while the link is up, the sample retries after the period configured with the ``CONFIG_DATA_FWD_START_RETRY_MS`` Kconfig option.
 
 Transport
 =========
@@ -41,10 +45,15 @@ The sample can send protocol frames to the host over Bluetooth LE or UART.
 Select the transport using the ``DATA_FWD_TRANSPORT`` Kconfig option.
 
 Bluetooth LE NUS
-   Sample uses `Nordic UART Service (NUS)`_ for sending the protocol frames.
+   Sample uses :ref:`nrf:nus_service_readme` for sending the protocol frames.
+   The sensors are sampled only while a central is connected and subscribed to the NUS TX characteristic notifications.
+   Before that, advertising is enabled and the sensors remain stopped.
+   When the central unsubscribes or the link drops, the sample stops the protocol session and the sensors, then waits for the next connection.
+   This keeps the sensors off while no host is collecting data.
 
 UART transport
    Sample uses UART for sending the protocol frames.
+   The data link is always treated as connected, so sampling starts after initialization and continues until the device is reset.
 
    .. note::
       UART transport is not available on the nRF54L15 TAG device without any external UART-to-USB converter.
@@ -62,7 +71,7 @@ Bluetooth LE with direct host connection
    #. Follow the Bluetooth LE throughput tuning procedure in :file:`tools/data_forwarder_host/docs/ble_throughput_tuning.md`.
 
 Bluetooth LE with Central UART on a second DK
-   On the development kit running the `Nordic central UART sample`_ sample, set the following options in :file:`prj.conf` to increase the NUS notification payload size:
+   On the development kit running the :ref:`Central UART sample <nrf:central_uart>` sample, set the following options in :file:`prj.conf` to increase the NUS notification payload size:
 
    .. code-block:: ini
 
@@ -108,8 +117,8 @@ Adapting the sample for other boards
 To run the sample on a board that is not listed in :file:`sample.yaml`, add a devicetree overlay for that board target.
 See the following guides for the general workflow:
 
-* `Configuring devicetree`_
-* `Devicetree overlays`_
+* :ref:`nrf:configuring_devicetree`
+* :ref:`zephyr:use-dt-overlays`
 
 For this sample, you typically need to:
 
@@ -163,7 +172,7 @@ Complete the host-side setup for your chosen data collection workflow before bui
             CONFIG_DATA_FWD_PROTO_CRC=n
             CONFIG_DATA_FWD_PROTO_INT32_VALUES=n
 
-      #. Use a second development kit running the `Nordic central UART sample`_ sample as a serial bridge.
+      #. Use a second development kit running the :ref:`Central UART sample <nrf:central_uart>` sample as a serial bridge.
 
 Building and running
 ********************
@@ -184,9 +193,21 @@ Testing
    .. parsed-literal::
       :class: highlight
 
-      transport: BLE NUS transport ready
-      data_forwarder: Data forwarder started (sid 8779774)
-      transport: BLE connected
+      transport: Bluetooth LE NUS transport ready
+      data_forwarder: Data forwarder started
+      transport: Bluetooth LE connected
+      data_forwarder: Sampling session started (sid 8779774)
+
+   Sensor data is sent only after ``Sampling session started``.
+   When the central unsubscribes from notifications or disconnects, the log continues with the following notifications:
+
+   .. parsed-literal::
+      :class: highlight
+
+      transport: Bluetooth LE disconnected
+      data_forwarder: Transport link lost
+
+   The device then advertises again and waits for the next connection before sampling.
 
 Collecting data on the host
 ===========================
@@ -203,7 +224,7 @@ Use one of the following workflows to capture sensor data on your host computer:
 
       #. Run :ref:`data_forwarder_host_tool` on the host computer and connect to the device over Bluetooth LE.
 
-         Alternatively, if the host has no suitable Bluetooth LE adapter, use a second development kit running the `Nordic central UART sample`_ as a serial bridge.
+         Alternatively, if the host has no suitable Bluetooth LE adapter, use a second development kit running the :ref:`Central UART sample <nrf:central_uart>` as a serial bridge.
          Flash Central UART on the second kit, wait for it to connect to the peripheral, then connect the host tool to the Central UART USB serial port.
 
       #. Enter a label and start a sampling session.
@@ -226,7 +247,7 @@ Use one of the following workflows to capture sensor data on your host computer:
          a. Go to the :guilabel:`Data acquisition` tab.
          #. In the :guilabel:`Collect data` panel, set the desired values and click :guilabel:`Start sampling`.
 
-            .. figure:: ../edge_impulse/data_forwarder/images/ei_data_acquisition.png
+            .. figure:: images/ei_data_acquisition.png
                :scale: 80 %
                :alt: Sampling under Data acquisition in Edge Impulse studio
 
@@ -234,7 +255,7 @@ Use one of the following workflows to capture sensor data on your host computer:
 
          #. Observe the received sample data on the raw data graph under the panel.
 
-            .. figure:: ../edge_impulse/data_forwarder/images/ei_start_sampling.png
+            .. figure:: images/ei_start_sampling.png
                :scale: 80 %
                :alt: Sampling example
 
@@ -245,17 +266,17 @@ Dependencies
 
 This sample uses the following |NCS| libraries:
 
-* `Nordic UART Service (NUS)`_
+* :ref:`nrf:nus_service_readme`
 
 This sample uses the following Zephyr libraries:
 
-* `Logging`_
-* `Sensor`_
-* `UART`_
+* :ref:`zephyr:logging_api`
+* :ref:`zephyr:sensor`
+* :ref:`zephyr:uart_api`
 
 The data forwarder protocol uses the following Zephyr libraries:
 
-* `CRC`_
-* `ZCBOR`_
-* `Ring Buffers`_
+* :ref:`zephyr:crc`
+* :ref:`zephyr:cbor_api`
+* :ref:`zephyr:ring_buffers_v2`
 * :file:`include/zephyr/data/cobs.h`

@@ -35,9 +35,22 @@ int data_fwd_sensor_init(void)
 		return -ENODEV;
 	}
 
+	return 0;
+}
+
+int data_fwd_sensor_start(void)
+{
 	const uint32_t period_ns = Z_HZ_ns / FREQUENCY_HZ;
 
 	k_timer_start(&fetch_timer, K_NO_WAIT, K_NSEC(period_ns));
+
+	return 0;
+}
+
+int data_fwd_sensor_stop(void)
+{
+	k_timer_stop(&fetch_timer);
+	k_sem_reset(&fetch_sem);
 
 	return 0;
 }

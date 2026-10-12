@@ -59,13 +59,13 @@ Types and contexts
 ==================
 
 The DSP API provides a small set of reusable context types that store intermediate results and eliminate redundant computation when deriving multiple metrics from the same data.
-For example, :c:func:`nrf_dsp_stat_ctx_f32_t` and :c:func:`nrf_dsp_spectral_ctx_f32_t` contexts hold precomputed sums, sum-of-squares, variance, and other derived metrics.
+For example, :c:type:`nrf_dsp_stat_ctx_f32_t` and :c:type:`nrf_dsp_spectral_ctx_f32_t` contexts hold precomputed sums, sum-of-squares, variance, and other derived metrics.
 
 Key typedefs include:
 
-* :c:func:`nrf_dsp_stat_ctx_f32_t` — Floating-point statistics context (sum, tss, var, abssum)
-* :c:func:`nrf_dsp_spectral_ctx_f32_t` — Floating-point spectral context (magnitude sum, centroid)
-* :c:func:`nrf_dsp_sigma_factor_t` — Sigma factor enum used by statistical helpers
+* :c:type:`nrf_dsp_stat_ctx_f32_t` — Floating-point statistics context (sum, tss, var, abssum)
+* :c:type:`nrf_dsp_spectral_ctx_f32_t` — Floating-point spectral context (magnitude sum, centroid)
+* :c:type:`nrf_dsp_sigma_factor_t` — Sigma factor enum used by statistical helpers
 
 Usage pattern
 -------------

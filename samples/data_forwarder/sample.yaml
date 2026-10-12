@@ -12,9 +12,9 @@ common:
   harness_config:
     type: multi_line
     regex:
-      - "transport: BLE NUS transport ready"
+      - "transport: Bluetooth LE NUS transport ready"
       - "data_forwarder: Data forwarder started"
-      - "transport: BLE connected"
+      - "transport: Bluetooth LE connected"
 
 tests:
   sample.data_forwarder.bmi270.zdebug:
