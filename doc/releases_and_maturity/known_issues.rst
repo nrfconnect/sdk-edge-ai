@@ -30,6 +30,14 @@ Known issues
 
    .. known-issues-filter::
 
+   .. rst-class:: v3-0-0
+
+   NCSDK-41900: Edge Impulse does not support Axon NPU model variant
+      The ``edge-impulse-sdk-zephyr`` revision in the |EAI| west manifest is not aligned with the Axon driver API in this release.
+      The :ref:`Hello Edge Impulse sample application <hello_ei_sample>` does not build with the Axon NPU model variant, which is default on the ``nrf54lm20dk/nrf54lm20b/cpuapp`` target.
+
+      **Workaround:** In the sample use the CPU version of the model.
+
    .. rst-class:: wontfix v2-3-0 v2-2-0 v2-1-0 v2-0-0
 
    Axon NPU asynchronous inference affects ongoing inference
