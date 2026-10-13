@@ -283,7 +283,7 @@ Additional configuration
 
 Check and configure the following library options that are used by the application:
 
-* ``CONFIG_MEMFAULT_NCS_PROJECT_KEY`` - A key to your `Memfault`_ project.
+* ``CONFIG_MEMFAULT_PROJECT_KEY`` - A key to your `Memfault`_ project.
 * ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` - Number of classes the observed model predicts.
 * ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS`` - Number of observability contexts, one per observed model.
 * ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC`` - Interval of automatic metrics collection.
@@ -322,7 +322,7 @@ The file also sets the memory sizing for the enabled scope: ``CONFIG_NRF_EDGEAI_
 Check :ref:`nrf:cmake_options` and use :makevar:`EXTRA_CONF_FILE` variable to include this configuration file.
 
 .. note::
-   Set the ``CONFIG_MEMFAULT_NCS_PROJECT_KEY`` Kconfig option to your `Memfault`_ project key to successfully send metrics to Memfault.
+   Set the ``CONFIG_MEMFAULT_PROJECT_KEY`` Kconfig option to your `Memfault`_ project key to successfully send metrics to Memfault.
 
 Building and running
 ********************
