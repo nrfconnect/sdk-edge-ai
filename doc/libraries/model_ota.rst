@@ -176,6 +176,10 @@ Enforcement:
   ``nrf_edgeai_process_features()``, ``nrf_edgeai_run_inference()``, and the
   model auxiliary getters, and returns ``NRF_EDGEAI_ERR_UNAVAILABLE`` when the
   global state is not READY.
+- **Initialization** — ``nrf_edgeai_init()`` clears ``nrf_edgeai_t.state``,
+  including the OTA bit. As a temporary workaround, the library wraps it at
+  link time (``-Wl,--wrap=nrf_edgeai_init``): the wrapper restores the bit and
+  holds the guard reader for the duration of the call.
 - **Application / library code** — call ``model_ota_guard_acquire()`` before
   touching model-linked data outside ``nrf_edgeai_run_inference()`` (for example
   Axon quantization fields, direct ``nrf_axon_nn_model_infer_*()``, or other
