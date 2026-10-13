@@ -11,8 +11,6 @@
 #include <nrf_edgeai/rt/nrf_edgeai_model_types.h>
 #include <nrf_edgeai/rt/nrf_edgeai_output_types.h>
 
-#include <stdbool.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -192,8 +190,6 @@ struct nrf_edgeai_s {
 	nrf_edgeai_interfaces_t interfaces;
 	/** Edge AI runtime state */
 	nrf_edgeai_state_t state;
-    /** True when this solution loads its model from an OTA-managed partition. */
-    bool is_ota_managed;
 };
 
 #ifdef __cplusplus

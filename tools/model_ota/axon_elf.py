@@ -21,6 +21,14 @@ INTERLAYER_BUFFER_SYMBOL = "nrf_axon_interlayer_buffer"
 MODEL_SIZE_MARKER = "model_ota_axon_compiled_model_size"
 CONFIG_SCHEMA_VERSION = 1
 
+# App-owned storage emitted by the Axon compiler under NRF_AXON_MODEL_APP_STORAGE. Persistent vars
+# keep the "axon_model_<name>" prefix; compiler >= 2.0 names the other buffers "<name>_...".
+STORAGE_PREFIX = "axon_model_"
+PERSISTENT_VARS_SUFFIX = "_persistent_vars"
+PACKED_OUTPUT_SUFFIX = "_packed_output_buf"
+INPUT_VECTOR_LIST_SUFFIX = "_input_vector_list"
+POINTER_SIZE = 4
+
 
 # Undefined linker/compiler implementation symbols are not app dependencies.
 # Keep this explicit: generated model symbols beginning with "__" must not be
@@ -105,6 +113,8 @@ class ProbeMetadata:
     packed_output_symbol: str | None
     packed_output_allocated: bool
     keep_symbols: tuple[str, ...]
+    input_vector_cnt: int = 0
+    input_vector_list_symbol: str | None = None
 
 
 def load_symbol_index(elf_path: Path) -> SymbolIndex:
@@ -217,7 +227,6 @@ def _defined_storage(
         and entry.is_global
         and entry.is_object
         and entry.size > 0
-        and entry.name.startswith("axon_model_")
         and entry.name.endswith(suffix)
     ]
     if len(matches) > 1:
@@ -227,10 +236,8 @@ def _defined_storage(
 
 
 def _known_storage_symbol(entry: ElfSymbol) -> bool:
-    return (
-        entry.name == INTERLAYER_BUFFER_SYMBOL
-        or entry.name.startswith("axon_model_")
-        and entry.name.endswith(("_persistent_vars", "_packed_output_buf"))
+    return entry.name == INTERLAYER_BUFFER_SYMBOL or entry.name.endswith(
+        (PERSISTENT_VARS_SUFFIX, PACKED_OUTPUT_SUFFIX, INPUT_VECTOR_LIST_SUFFIX)
     )
 
 
@@ -295,8 +302,13 @@ def inspect_symbols(
     allocate_packed_output: bool = False,
 ) -> ProbeMetadata:
     index = SymbolIndex.build(symbols)
-    persistent = _defined_storage(index, "_persistent_vars", "persistent-vars")
-    packed = _defined_storage(index, "_packed_output_buf", "packed-output")
+    persistent = _defined_storage(index, PERSISTENT_VARS_SUFFIX, "persistent-vars")
+    packed = _defined_storage(index, PACKED_OUTPUT_SUFFIX, "packed-output")
+    input_vectors = _defined_storage(index, INPUT_VECTOR_LIST_SUFFIX, "input-vector-list")
+    if input_vectors is not None and input_vectors.size % POINTER_SIZE:
+        raise ValueError(
+            f"{input_vectors.name} size {input_vectors.size} is not a multiple of the pointer size"
+        )
     if persistent is not None and persistent.size % 4:
         raise ValueError(
             f"{persistent.name} size {persistent.size} is not a multiple of sizeof(int32_t)"
@@ -326,6 +338,8 @@ def inspect_symbols(
     app_symbols.add(INTERLAYER_BUFFER_SYMBOL)
     if persistent is not None:
         app_symbols.add(persistent.name)
+    if input_vectors is not None:
+        app_symbols.add(input_vectors.name)
     if allocate_packed_output and packed is not None:
         app_symbols.add(packed.name)
     return ProbeMetadata(
@@ -337,6 +351,8 @@ def inspect_symbols(
         packed_output_symbol=packed.name if packed else None,
         packed_output_allocated=allocate_packed_output,
         keep_symbols=tuple(sorted(app_symbols)),
+        input_vector_cnt=input_vectors.size // POINTER_SIZE if input_vectors else 0,
+        input_vector_list_symbol=input_vectors.name if input_vectors else None,
     )
 
 
@@ -369,17 +385,23 @@ def sanitize_model_id(model_id: str) -> str:
 
 
 def _storage_model_name(symbol: str | None, suffix: str) -> str | None:
-    prefix = "axon_model_"
-    if not symbol or not symbol.startswith(prefix) or not symbol.endswith(suffix):
+    if not symbol or not symbol.endswith(suffix):
         return None
-    return symbol[len(prefix) : -len(suffix)]
+    name = symbol[: -len(suffix)]
+    if name.startswith(STORAGE_PREFIX):
+        name = name[len(STORAGE_PREFIX) :]
+    return name or None
 
 
 def derive_axon_model_token(model_symbol: str, metadata: ProbeMetadata) -> str:
     """Uppercase token for NRF_AXON_MODEL_<TOKEN>_PACKED_OUTPUT_SIZE re-exports."""
-    from_storage = _storage_model_name(metadata.persistent_symbol, "_persistent_vars")
+    from_storage = _storage_model_name(metadata.persistent_symbol, PERSISTENT_VARS_SUFFIX)
     if from_storage is None:
-        from_storage = _storage_model_name(metadata.packed_output_symbol, "_packed_output_buf")
+        from_storage = _storage_model_name(metadata.packed_output_symbol, PACKED_OUTPUT_SUFFIX)
+    if from_storage is None:
+        from_storage = _storage_model_name(
+            metadata.input_vector_list_symbol, INPUT_VECTOR_LIST_SUFFIX
+        )
     if from_storage is not None:
         return sanitize_model_id(from_storage)
     if model_symbol.startswith("model_"):
@@ -406,7 +428,12 @@ def render_private_header(header_name: str, metadata: ProbeMetadata) -> str:
         f"#define MODEL_OTA_AXON_PERSISTENT_VARS_CAP {metadata.persistent_cap}",
         f"#define MODEL_OTA_AXON_PACKED_OUTPUT_BYTES {metadata.packed_output_bytes}",
         f"#define MODEL_OTA_AXON_PACKED_OUTPUT_ALLOC {int(metadata.packed_output_allocated)}",
+        f"#define MODEL_OTA_AXON_INPUT_VECTOR_CAP {metadata.input_vector_cnt}",
     ]
+    if metadata.input_vector_list_symbol:
+        lines.append(
+            f"#define MODEL_OTA_AXON_INPUT_VECTOR_LIST_SYM {metadata.input_vector_list_symbol}"
+        )
     if metadata.persistent_symbol:
         lines.append(
             f"#define MODEL_OTA_AXON_PERSISTENT_VARS_SYM {metadata.persistent_symbol}"

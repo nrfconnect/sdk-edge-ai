@@ -285,6 +285,7 @@ struct model_image_axon_expect {
 	uint32_t contract_hash;
 	uint32_t persistent_vars_cap;
 	uint32_t packed_output_cap; /**< allocated bytes; 0 when not allocated in app */
+	uint32_t input_vector_cap;  /**< app input_vector_list entries; 0 when the model has none */
 };
 
 /**

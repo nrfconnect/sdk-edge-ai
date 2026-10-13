@@ -6,12 +6,13 @@
 
 #include <model_ota/model_ota_guard.h>
 
-#include <nrf_edgeai/rt/nrf_edgeai_types.h>
-#include <nrf_edgeai/rt/private/nrf_edgeai_gate.h>
-
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/clock.h>
+
+#if IS_ENABLED(CONFIG_NRF_EDGEAI)
+#include <model_ota/model_ota_edgeai.h>
+#endif
 
 static K_MUTEX_DEFINE(guard_mutex);
 static K_CONDVAR_DEFINE(readers_cv);
@@ -133,23 +134,33 @@ void model_ota_guard_abort_update(void)
 	atomic_set(&global_state, MODEL_OTA_GUARD_READY);
 }
 
-bool nrf_edgeai_guard_inference_permitted(const nrf_edgeai_t *edgeai)
-{
-	ARG_UNUSED(edgeai);
+#if IS_ENABLED(CONFIG_NRF_EDGEAI)
+/* Strong overrides of the weak Edge AI runtime guard hooks. */
 
-	return model_ota_guard_inference_permitted();
+bool nrf_edgeai_guard_is_locked(const nrf_edgeai_t *p_edgeai)
+{
+	if (p_edgeai == NULL || !model_ota_edgeai_is_ota_managed(p_edgeai)) {
+		return false;
+	}
+
+	return !model_ota_guard_inference_permitted();
 }
 
-int nrf_edgeai_guard_inference_session_begin(const nrf_edgeai_t *edgeai)
+nrf_edgeai_err_t nrf_edgeai_guard_lock(const nrf_edgeai_t *p_edgeai)
 {
-	ARG_UNUSED(edgeai);
+	if (p_edgeai == NULL || !model_ota_edgeai_is_ota_managed(p_edgeai)) {
+		return NRF_EDGEAI_ERR_SUCCESS;
+	}
 
-	return reader_acquire();
+	return (reader_acquire() == 0) ? NRF_EDGEAI_ERR_SUCCESS : NRF_EDGEAI_ERR_UNAVAILABLE;
 }
 
-void nrf_edgeai_guard_inference_session_end(const nrf_edgeai_t *edgeai)
+void nrf_edgeai_guard_unlock(const nrf_edgeai_t *p_edgeai)
 {
-	ARG_UNUSED(edgeai);
+	if (p_edgeai == NULL || !model_ota_edgeai_is_ota_managed(p_edgeai)) {
+		return;
+	}
 
 	reader_release();
 }
+#endif /* CONFIG_NRF_EDGEAI */

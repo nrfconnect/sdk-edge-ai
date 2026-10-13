@@ -82,7 +82,7 @@ void run_person_det_tests(void)
 	 */
 	__ASSERT_NO_MSG(model->packed_output_buf != NULL);
 
-	model_input = nrf_axon_nn_model_1st_external_input(model);
+	model_input = &model->inputs[0];
 
 	result = nrf_axon_platform_init();
 	__ASSERT_NO_MSG(result == NRF_AXON_RESULT_SUCCESS);

@@ -166,14 +166,16 @@ short inferences cannot extend the wait beyond the configured limit.
 
 Enforcement:
 
-- **Edge AI runtime** — ``nrf_edgeai_run_inference()`` checks
-  ``nrf_edgeai_t.is_ota_managed`` and returns ``NRF_EDGEAI_ERR_UNAVAILABLE``
-  when global state is not READY. For OTA-managed contexts, the guard overrides
-  weak ``nrf_edgeai_guard_inference_session_*()`` hooks. The reader is held from
-  session begin through ``run_inference`` and ``propagate_outputs`` (Axon
-  dequantize reads quant fields from the XIP model struct). ``decode_outputs``
-  runs after session end — it only touches RAM outputs and firmware-side decode
-  metadata.
+- **Edge AI runtime** — wired loaders set the
+  ``MODEL_OTA_EDGEAI_STATE_OTA_MANAGED`` bit in
+  ``nrf_edgeai_t.state.rt.user_reserved``. The guard overrides the weak
+  ``nrf_edgeai_guard_lock()``, ``nrf_edgeai_guard_unlock()``, and
+  ``nrf_edgeai_guard_is_locked()`` runtime hooks and holds the global reader
+  only for contexts with that bit set. The runtime takes the lock in
+  ``nrf_edgeai_init()``, ``nrf_edgeai_feed_inputs()``,
+  ``nrf_edgeai_process_features()``, ``nrf_edgeai_run_inference()``, and the
+  model auxiliary getters, and returns ``NRF_EDGEAI_ERR_UNAVAILABLE`` when the
+  global state is not READY.
 - **Application / library code** — call ``model_ota_guard_acquire()`` before
   touching model-linked data outside ``nrf_edgeai_run_inference()`` (for example
   Axon quantization fields, direct ``nrf_axon_nn_model_infer_*()``, or other

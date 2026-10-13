@@ -64,6 +64,7 @@ MODEL_OTA_AXON_LOAD_DECL(MODEL_OTA_AXON_TARGET)
 		.contract_hash = MODEL_OTA_AXON_CONTRACT_HASH,
 		.persistent_vars_cap = MODEL_OTA_AXON_PERSISTENT_VARS_CAP,
 		.packed_output_cap = MODEL_OTA_AXON_PACKED_OUTPUT_BYTES,
+		.input_vector_cap = MODEL_OTA_AXON_INPUT_VECTOR_CAP,
 	};
 
 	if (out == NULL) {

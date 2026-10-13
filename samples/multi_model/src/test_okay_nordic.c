@@ -53,9 +53,9 @@ static void prefill_dummy_input(const nrf_axon_nn_compiled_model_input_s *in)
 
 static float dequantize_output(const int8_t *value, const nrf_axon_nn_compiled_model_s *model)
 {
-	const uint32_t deq_mult = model->output_dequant_mult;
-	const uint8_t deq_round = model->output_dequant_round;
-	const int8_t deq_zp = model->output_dequant_zp;
+	const uint32_t deq_mult = model->outputs[0].dequant_mult;
+	const uint8_t deq_round = model->outputs[0].dequant_round;
+	const int8_t deq_zp = model->outputs[0].dequant_zp;
 	const float scale = (float)deq_mult / (float)(1 << deq_round);
 
 	return (float)(value[0] - deq_zp) * scale;
@@ -75,10 +75,10 @@ void run_okay_nordic_tests(void)
 		return;
 	}
 #else
-	model = &model_axon_user_instance_wakeword;
+	model = &model_okay_nordic;
 #endif
 
-	model_input = nrf_axon_nn_model_1st_external_input(model);
+	model_input = &model->inputs[0];
 
 	result = nrf_axon_platform_init();
 	__ASSERT_NO_MSG(result == NRF_AXON_RESULT_SUCCESS);

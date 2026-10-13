@@ -321,6 +321,40 @@ class ModelSymbolDiscoveryTests(unittest.TestCase):
         )
 
 
+class Compiler2StorageTests(unittest.TestCase):
+    """Axon compiler >= 2.0 drops the axon_model_ prefix and adds an app input vector list."""
+
+    def probe_symbols(self) -> list[ElfSymbol]:
+        return [
+            symbol(axon_elf.MODEL_SIZE_MARKER, 32),
+            symbol("model_demo", 32),
+            symbol("demo_packed_output_buf", 20, read_only=False),
+            symbol("demo_input_vector_list", 8, read_only=False),
+        ]
+
+    def test_input_vector_list_is_app_storage(self) -> None:
+        metadata = axon_elf.inspect_symbols(self.probe_symbols(), allocate_packed_output=True)
+        self.assertEqual(metadata.model_symbol, "model_demo")
+        self.assertEqual(metadata.input_vector_cnt, 2)
+        self.assertEqual(metadata.input_vector_list_symbol, "demo_input_vector_list")
+        self.assertEqual(metadata.packed_output_symbol, "demo_packed_output_buf")
+        self.assertIn("demo_input_vector_list", metadata.keep_symbols)
+        self.assertIn("demo_packed_output_buf", metadata.keep_symbols)
+
+        private_text = axon_elf.render_private_header("nrf_axon_model_demo.h", metadata)
+        self.assertIn("#define MODEL_OTA_AXON_INPUT_VECTOR_CAP 2", private_text)
+        self.assertIn(
+            "#define MODEL_OTA_AXON_INPUT_VECTOR_LIST_SYM demo_input_vector_list", private_text
+        )
+        self.assertEqual(axon_elf.derive_axon_model_token(metadata.model_symbol, metadata), "DEMO")
+
+    def test_no_input_vector_list(self) -> None:
+        metadata = axon_elf.inspect_symbols(basic_probe_symbols(), persistent_vars_cap=8)
+        private_text = axon_elf.render_private_header("nrf_axon_model_demo.h", metadata)
+        self.assertIn("#define MODEL_OTA_AXON_INPUT_VECTOR_CAP 0", private_text)
+        self.assertNotIn("MODEL_OTA_AXON_INPUT_VECTOR_LIST_SYM", private_text)
+
+
 class ProvideTests(unittest.TestCase):
     def test_data_symbol_and_thumb_bit(self) -> None:
         index = SymbolIndex.build(

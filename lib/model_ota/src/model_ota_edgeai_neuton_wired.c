@@ -103,7 +103,7 @@ MODEL_OTA_EDGEAI_LOAD_DECL(MODEL_OTA_EDGEAI_SOLUTION_ID)
 	}
 
 	*out = &nrf_edgeai_;
-	nrf_edgeai_.is_ota_managed = true;
+	nrf_edgeai_.state.rt.user_reserved |= MODEL_OTA_EDGEAI_STATE_OTA_MANAGED;
 
 	return MODEL_IMAGE_OK;
 }

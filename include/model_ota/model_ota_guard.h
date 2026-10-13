@@ -23,10 +23,10 @@
  * an update that is given up on before touching flash releases the guard with
  * ``model_ota_guard_abort_update()``.
  *
- * OTA-wired Edge AI solutions set ``nrf_edgeai_t.is_ota_managed``; the runtime
- * checks that flag and calls ``nrf_edgeai_guard_inference_session_*()`` only
- * for those contexts (through propagate; decode uses RAM and app-side metadata
- * only).
+ * OTA-wired Edge AI solutions set ``MODEL_OTA_EDGEAI_STATE_OTA_MANAGED`` in
+ * ``nrf_edgeai_t.state.rt.user_reserved``; the guard overrides the runtime's weak
+ * ``nrf_edgeai_guard_lock()`` / ``nrf_edgeai_guard_unlock()`` hooks and holds
+ * the reader only for those contexts.
  *
  * For any other model access — direct Axon driver calls, reading quantization
  * fields from a loaded model image, etc. — call ``model_ota_guard_acquire()``

@@ -46,6 +46,14 @@
 int32_t MODEL_OTA_AXON_PERSISTENT_VARS_SYM[MODEL_OTA_AXON_PERSISTENT_VARS_CAP];
 #endif
 
+#ifdef MODEL_OTA_AXON_INPUT_VECTOR_LIST_SYM
+/*
+ * App-owned input vector list (Axon compiler >= 2.0). The linked model's input_vector_list
+ * field points here through the generated PROVIDE() linker fragment.
+ */
+const int8_t *MODEL_OTA_AXON_INPUT_VECTOR_LIST_SYM[MODEL_OTA_AXON_INPUT_VECTOR_CAP];
+#endif
+
 #if (MODEL_OTA_AXON_PACKED_OUTPUT_BYTES > 0) && MODEL_OTA_AXON_PACKED_OUTPUT_ALLOC
 /*
  * Opt-in (model_ota_axon_model(ALLOCATE_PACKED_OUTPUT)): app-owned storage for the

@@ -79,6 +79,7 @@ MODEL_OTA_EDGEAI_LOAD_DECL(MODEL_OTA_EDGEAI_SOLUTION_ID)
 		.contract_hash = MODEL_OTA_EDGEAI_AXON_CONTRACT_HASH,
 		.persistent_vars_cap = MODEL_OTA_AXON_PERSISTENT_VARS_CAP,
 		.packed_output_cap = MODEL_OTA_AXON_PACKED_OUTPUT_BYTES,
+		.input_vector_cap = MODEL_OTA_AXON_INPUT_VECTOR_CAP,
 	};
 
 	if (out == NULL) {
@@ -98,7 +99,7 @@ MODEL_OTA_EDGEAI_LOAD_DECL(MODEL_OTA_EDGEAI_SOLUTION_ID)
 	}
 
 	nrf_edgeai_.model.instance.p_void = (void *)model;
-	nrf_edgeai_.is_ota_managed = true;
+	nrf_edgeai_.state.rt.user_reserved |= MODEL_OTA_EDGEAI_STATE_OTA_MANAGED;
 	*out = &nrf_edgeai_;
 
 	return MODEL_IMAGE_OK;

@@ -19,9 +19,26 @@
 
 #include <nrf_edgeai/nrf_edgeai.h>
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief ``nrf_edgeai_t.state.rt.user_reserved`` bit set by wired loaders on contexts whose model
+ * lives in an OTA-managed partition.
+ *
+ * The model OTA guard overrides ``nrf_edgeai_guard_lock()`` / ``nrf_edgeai_guard_unlock()`` and
+ * only counts readers for contexts with this bit set.
+ */
+#define MODEL_OTA_EDGEAI_STATE_OTA_MANAGED (1U << 0)
+
+/** @return True when @p p_edgeai loads its model from an OTA-managed partition. */
+static inline bool model_ota_edgeai_is_ota_managed(const nrf_edgeai_t *p_edgeai)
+{
+	return (p_edgeai->state.rt.user_reserved & MODEL_OTA_EDGEAI_STATE_OTA_MANAGED) != 0U;
+}
 
 #define MODEL_OTA_EDGEAI_LOAD_DECL_(solution_id)                                                   \
 	enum model_image_result nrf_edgeai_load_user_model_##solution_id(nrf_edgeai_t **out)

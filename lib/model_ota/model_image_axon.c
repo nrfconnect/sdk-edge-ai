@@ -127,6 +127,12 @@ enum model_image_result model_image_load_axon(const uint8_t *partition_addr, siz
 		return MODEL_IMAGE_ERR_AXON_VALIDATE;
 	}
 
+	if (model->input_vector_list != NULL && model->input_cnt > expect->input_vector_cap) {
+		LOG_ERR("Model needs %u input vectors, app cap is %u", model->input_cnt,
+			expect->input_vector_cap);
+		return MODEL_IMAGE_ERR_AXON_VALIDATE;
+	}
+
 	*out_model = model;
 
 	LOG_INF("Loaded Axon model image '%s' v0x%08x", hdr.name, hdr.model_version);
