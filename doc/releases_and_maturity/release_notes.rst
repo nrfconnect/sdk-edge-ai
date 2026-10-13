@@ -12,6 +12,7 @@ Component-level changes are documented in the :ref:`axon_npu_changelog` and :ref
    :glob:
    :caption: Release notes:
 
+   releases/release_notes_v300.rst
    releases/release_notes_v230.rst
    releases/release_notes_v220.rst
    releases/release_notes_v210.rst
