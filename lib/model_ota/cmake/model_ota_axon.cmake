@@ -43,6 +43,7 @@ function(model_ota_axon_add_probe OUT_OBJ WORK_DIR HEADER HEADER_NAME HEADER_DIR
             -MMD -MF ${_probe_d}
             ${_zephyr_cflags}
             -I${MODEL_OTA_LIB_DIR}/src
+            -I${MODEL_OTA_LIB_DIR}/include
             -I${HEADER_DIR}
             -I${MODEL_OTA_MODULE_DIR}/include
             -include ${CMAKE_CURRENT_BINARY_DIR}/zephyr/include/generated/zephyr/autoconf.h
@@ -228,8 +229,8 @@ function(_model_ota_axon_slot)
     add_library(${_app_lib} OBJECT ${MODEL_OTA_AXON_APP_STUB})
     target_link_libraries(${_app_lib} PRIVATE zephyr_interface)
     target_include_directories(${_app_lib} PRIVATE
-                               ${MODEL_OTA_LIB_DIR}/src ${_header_dir}
-                               ${MODEL_OTA_MODULE_DIR}/include)
+                               ${MODEL_OTA_LIB_DIR}/src ${MODEL_OTA_LIB_DIR}/include
+                               ${_header_dir} ${MODEL_OTA_MODULE_DIR}/include)
     target_compile_options(${_app_lib} PRIVATE "SHELL:-include \"${_private_h}\"")
     set_source_files_properties(
       ${MODEL_OTA_AXON_APP_STUB}
@@ -248,8 +249,8 @@ function(_model_ota_axon_slot)
   add_library(${_image_obj} OBJECT ${_image_stub})
   target_link_libraries(${_image_obj} PRIVATE zephyr_interface)
   target_include_directories(${_image_obj} PRIVATE
-                             ${MODEL_OTA_LIB_DIR}/src ${_header_dir}
-                             ${MODEL_OTA_MODULE_DIR}/include)
+                             ${MODEL_OTA_LIB_DIR}/src ${MODEL_OTA_LIB_DIR}/include
+                             ${_header_dir} ${MODEL_OTA_MODULE_DIR}/include)
   target_compile_options(${_image_obj} PRIVATE "SHELL:-include \"${_private_h}\"")
   target_compile_definitions(${_image_obj} PRIVATE
     MODEL_OTA_IMAGE_LINK_BASE=${_partition_addr}

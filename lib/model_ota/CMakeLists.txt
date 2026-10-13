@@ -6,6 +6,8 @@
 
 zephyr_library()
 
+zephyr_library_include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 zephyr_library_include_directories_ifdef(
   CONFIG_MODEL_OTA_TESTING
   ${ZEPHYR_MCUBOOT_MODULE_DIR}/boot/bootutil/include

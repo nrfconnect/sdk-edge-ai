@@ -5,6 +5,7 @@
  */
 
 #include <model_ota/model_ota_guard.h>
+#include <model_ota/model_ota_guard_internal.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
@@ -13,6 +14,11 @@
 #if IS_ENABLED(CONFIG_NRF_EDGEAI)
 #include <model_ota/model_ota_edgeai.h>
 #endif
+
+enum model_ota_guard_state {
+	MODEL_OTA_GUARD_READY = 0,
+	MODEL_OTA_GUARD_BLOCKED,
+};
 
 static K_MUTEX_DEFINE(guard_mutex);
 static K_CONDVAR_DEFINE(readers_cv);

@@ -8,6 +8,20 @@ Overview
 
 ``lib/model_ota`` loads Neuton and Axon ML models from dedicated flash partitions at runtime, independently of the application image. Models are **MCUboot-wrapped linked partition images**: ``imgtool`` prepends a 32-byte MCUboot header at the partition base, and the model payload (magic ``NEI\\0``, format version 12) is linked at ``partition_base + 32`` so intra-image pointers are absolute flash addresses (XIP).
 
+Application headers
+*******************
+
+Public C headers live under :file:`include/model_ota/`:
+
+- :file:`model_ota_edgeai.h` / :file:`model_ota_axon.h` — wired loader declarations and helpers
+- :file:`model_image_result.h` — loader return codes (``MODEL_IMAGE_OK``, …)
+- :file:`model_ota_smp.h` — ``model_ota_smp_is_pending_reset()`` and upload notify callback
+- :file:`model_ota_guard.h` — ``model_ota_guard_inference_permitted()``, acquire/release
+
+SMP slot registration, upload arbitration, guard state machine, image format, contract hashing,
+and partition devicetree macros live under :file:`lib/model_ota/include/model_ota/` and are not
+part of the module include tree exposed to applications.
+
 Production update flow
 **********************
 
@@ -28,7 +42,8 @@ Image header (format v12, 84 bytes)
 Shared envelope (offsets 0–27):
 
 - magic ``NEI\\0``, ``format_version`` (12), ``params_type``, ``image_size``, ``model_version``
-- ``contract_hash`` (off 16) — FNV-1a over the firmware ABI contract (see ``model_contract.h``)
+- ``contract_hash`` (off 16) — FNV-1a over the firmware ABI contract (see
+  :file:`lib/model_ota/include/model_ota/model_contract.h`)
 - ``crc32`` (off 20) — CRC over the whole image with this field zeroed
 - ``name`` — pointer to a NUL-terminated string in the image
 
@@ -132,7 +147,8 @@ SMP upload coordination
 
 When ``CONFIG_MODEL_OTA_SMP`` is enabled, each OTA-wired model declares its MCUboot image index in a linker-built iterable section.
 The model OTA library registers its MCUmgr callback during system initialization and searches this table when an upload arrives, before the application loads or uses any model.
-Image indices are derived from the ``nordic,mcuboot-image`` bootchain in devicetree (:file:`include/model_ota/model_ota_partition.h`).
+Image indices are derived from the ``nordic,mcuboot-image`` bootchain in devicetree
+(:file:`lib/model_ota/include/model_ota/model_ota_partition.h`).
 The initialization rejects image index zero and duplicate model image indices.
 
 Inference guard (``CONFIG_MODEL_OTA``)
@@ -144,7 +160,7 @@ Direct Axon driver use and other model flash access require explicit
 ``model_ota_guard_acquire()`` / ``model_ota_guard_release()`` pairs in
 application or library code.
 
-Global state machine (``model_ota_guard.h``):
+Global state machine (library internal):
 
 - **READY** — model access and inference permitted (initial state at boot)
 - **BLOCKED** — SMP upload reserved, active or finished/aborted; all OTA-managed

@@ -113,7 +113,7 @@ function(model_ota_edgeai_neuton_model)
   add_library(${_image_obj} OBJECT ${MODEL_OTA_EDGEAI_NEUTON_IMAGE_STUB})
   target_link_libraries(${_image_obj} PRIVATE zephyr_interface)
   add_dependencies(${_image_obj} zephyr_generated_headers)
-  target_include_directories(${_image_obj} PRIVATE ${_model_dir})
+  target_include_directories(${_image_obj} PRIVATE ${MODEL_OTA_LIB_DIR}/include ${_model_dir})
   target_compile_options(${_image_obj} PRIVATE -ffunction-sections -fdata-sections)
   target_compile_definitions(${_image_obj} PRIVATE
                              MODEL_OTA_EDGEAI_NEUTON_MODEL_SRC=${_model_basename}

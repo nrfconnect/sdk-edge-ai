@@ -8,7 +8,7 @@
 A Neuton or Axon model is shipped as a self-contained, **MCUboot-wrapped linked partition image**.
 `imgtool` prepends a 32-byte MCUboot header at the partition base; the model descriptor and data
 are linked at `partition_base + 32`, with an 84-byte header (format version 12, see
-`include/model_ota/model_image.h`) holding a direct pointer to the descriptor, a firmware
+`lib/model_ota/include/model_ota/model_image.h`) holding a direct pointer to the descriptor, a firmware
 **contract hash** (offset 16), CRC-32/IEEE (offset 20), and the model's `nrf_edgeai_t` parameter
 block (offset 48): its feature scaling factors and decoded-output init. That block is shared by
 both backends; only a pure Axon model, having no `nrf_edgeai_t`, leaves it zeroed.
@@ -157,8 +157,8 @@ nrfutil device program --firmware gear_anomaly_model_partition.hex \
 
 ## References
 
-- Image format and loader: `include/model_ota/model_image.h`,
-  `include/model_ota/model_contract.h` (the one definition of the contract hash),
+- Image format and loader: `lib/model_ota/include/model_ota/model_image.h`,
+  `lib/model_ota/include/model_ota/model_contract.h` (the one definition of the contract hash),
   `lib/model_ota/src/model_ota_contract_probe.c` (how the host gets its value),
   `lib/model_ota/model_image_neuton.c`, `lib/model_ota/model_image_axon.c`
 - Production flow doc: `doc/libraries/model_ota.rst`

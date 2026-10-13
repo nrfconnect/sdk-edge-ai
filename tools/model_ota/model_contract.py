@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Nordic Semiconductor ASA
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 
-"""The string hashes the host tools need alongside include/model_ota/model_contract.h.
+"""The string hashes the host tools need alongside lib/model_ota/include/model_ota/model_contract.h.
 
 The contract hash itself is *not* computed here. It folds sizeof() of the runtime structs, which
 neither the preprocessor nor a host reimplementation can evaluate, so the build reads the

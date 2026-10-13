@@ -41,6 +41,8 @@
  * header at all under MODEL_OTA_WIRED. Models compiled directly into the app are unaffected.
  */
 
+#include <model_ota/model_image_result.h>
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -217,50 +219,6 @@ struct model_image_header {
 	 */
 	struct model_image_edgeai_params edgeai_params;
 } __packed;
-
-/** Return codes for @ref model_image_load_neuton and @ref model_image_load_axon. */
-enum model_image_result {
-	MODEL_IMAGE_OK = 0,
-	MODEL_IMAGE_ERR_NO_PARTITION = -1,
-	MODEL_IMAGE_ERR_FLASH_READ = -2,
-	MODEL_IMAGE_ERR_BAD_MAGIC = -3,
-	MODEL_IMAGE_ERR_BAD_FORMAT_VERSION = -4,
-	MODEL_IMAGE_ERR_TOO_LARGE = -5,
-	MODEL_IMAGE_ERR_BAD_CRC = -6,
-	/* -7 (model pointer out of range) retired: see -12. */
-	MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL = -8,
-	/* -9 (task mismatch) retired: the task is part of @ref contract_hash for both backends. */
-	/** Image's weight/neuron precision does not match the app's compiled precision. */
-	MODEL_IMAGE_ERR_PARAMS_TYPE_MISMATCH = -10,
-	/* -11 (too many outputs) retired: the output count is part of @ref contract_hash. */
-	/*
-	 * -12 (pointer out of range) retired, with -7: the partition base every image pointer was
-	 * linked against is part of @ref contract_hash, and containment within the image is gated
-	 * at build time by tools/model_ota/validate_model_image_layout.py.
-	 */
-	/** Image is not an Axon model (@ref params_type != @ref MODEL_IMAGE_PARAMS_AXON). */
-	MODEL_IMAGE_ERR_NOT_AXON_IMAGE = -13,
-	/** Loaded Axon model failed nrf_axon_nn_model_validate(). */
-	MODEL_IMAGE_ERR_AXON_VALIDATE = -14,
-	/** Image @ref params_type is not a supported Neuton precision (f32/q16/q8). */
-	MODEL_IMAGE_ERR_BAD_PARAMS_TYPE = -15,
-	/** Image @ref contract_hash does not match the app's compiled contract. */
-	MODEL_IMAGE_ERR_CONTRACT_MISMATCH = -16,
-	/* -17 (input count mismatch) retired: the input count is part of @ref contract_hash. */
-	/** Axon binding address does not match the running firmware. */
-	MODEL_IMAGE_ERR_BINDING_MISMATCH = -18,
-	/** Image needs more persistent vars than the app allocated. */
-	MODEL_IMAGE_ERR_PERSISTENT_VARS_TOO_MANY = -19,
-	/** Image needs more packed-output space than the app allocated. */
-	MODEL_IMAGE_ERR_PACKED_OUTPUT_TOO_LARGE = -20,
-	/* -21 (scale layout mismatch) retired: the layout is part of @ref contract_hash. */
-	/**
-	 * Image's FEATURES_EXTRACTION_MASK differs from the application's compiled-in one, so the
-	 * app's pipeline would index the image's flat feature arrays with the wrong per-slot
-	 * meaning. See @ref model_image_edgeai_params.p_extraction_mask.
-	 */
-	MODEL_IMAGE_ERR_DSP_MASK_MISMATCH = -22,
-};
 
 /**
  * App-side expectations validated by @ref model_image_load_neuton.

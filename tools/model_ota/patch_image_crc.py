@@ -19,7 +19,7 @@ import sys
 import zlib
 from pathlib import Path
 
-# Must match MODEL_IMAGE_CRC32_OFFSET in include/model_ota/model_image.h.
+# Must match MODEL_IMAGE_CRC32_OFFSET in lib/model_ota/include/model_ota/model_image.h.
 DEFAULT_CRC_OFFSET = 20
 
 

@@ -14,7 +14,7 @@
  * defines from model_ota_axon_model().
  */
 
-#include <model_ota/model_image.h>
+#include <model_ota/model_image_result.h>
 
 #include <drivers/axon/nrf_axon_nn_infer.h>
 

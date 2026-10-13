@@ -17,7 +17,7 @@ get_filename_component(_model_ota_module ${CMAKE_CURRENT_LIST_DIR}/../../.. ABSO
 set(MODEL_OTA_MODULE_DIR ${_model_ota_module} CACHE INTERNAL "edge-ai module root")
 
 # Offset from partition base to the linked model image payload. Must match bootutil
-# IMAGE_HEADER_SIZE (see include/model_ota/model_image.h).
+# IMAGE_HEADER_SIZE (see lib/model_ota/include/model_ota/model_image.h).
 set(MODEL_IMAGE_OFFSET_MCUBOOT 32)
 
 function(model_ota_model_image_offset out_var)
@@ -36,7 +36,7 @@ set(MODEL_OTA_LINKER_SCRIPT ${MODEL_OTA_LIB_DIR}/linker/model_image.ld)
 set(MODEL_OTA_CRC_TOOL ${MODEL_OTA_TOOLS_DIR}/patch_image_crc.py)
 set(MODEL_OTA_VALIDATE_TOOL ${MODEL_OTA_TOOLS_DIR}/validate_model_image_layout.py)
 set(MODEL_OTA_COMPAT_TOOL ${MODEL_OTA_TOOLS_DIR}/check_model_compat.py)
-set(MODEL_OTA_IMAGE_DEFS ${MODEL_OTA_MODULE_DIR}/include/model_ota/model_image.h)
+set(MODEL_OTA_IMAGE_DEFS ${MODEL_OTA_LIB_DIR}/include/model_ota/model_image.h)
 set(MODEL_OTA_CONTEXT_SLOT_TOOL ${MODEL_OTA_TOOLS_DIR}/emit_context_slot.py)
 
 # Hash of the solution ID. The preprocessor cannot hash a string literal, so the value is
@@ -134,6 +134,7 @@ function(model_ota_contract_probe)
             -MMD -MF ${_dep}
             ${_zephyr_cflags}
             -I${MODEL_OTA_LIB_DIR}/src
+            -I${MODEL_OTA_LIB_DIR}/include
             -I${MODEL_OTA_MODULE_DIR}/include
             -include ${CMAKE_CURRENT_BINARY_DIR}/zephyr/include/generated/zephyr/autoconf.h
             -D${_flavor_def}

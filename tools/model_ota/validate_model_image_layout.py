@@ -36,7 +36,7 @@ from axon_elf import lookup_symbol
 MAGIC = b"NEI\x00"
 PARAMS_AXON = 3
 
-# struct model_image_header (see include/model_ota/model_image.h), little-endian, __packed:
+# struct model_image_header (see lib/model_ota/include/model_ota/model_image.h), little-endian, __packed:
 #   magic[4] version:H params_type:B reserved:B image_size:I model_version:I
 #   contract_hash:I crc32:I name:I backend[20] edgeai_params[36]
 # backend Neuton (first 4 B): model:I, rest of the union slot zeroed

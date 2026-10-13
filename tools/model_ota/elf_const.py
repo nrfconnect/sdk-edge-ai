@@ -4,7 +4,8 @@
 
 """Read compile-time constants back out of a compiled object.
 
-The contract hash (include/model_ota/model_contract.h) mixes sizeof() of the runtime structs, and
+The contract hash (lib/model_ota/include/model_ota/model_contract.h) mixes sizeof() of the runtime
+structs, and
 neither the preprocessor nor a host reimplementation can fold that: only the compiler knows the
 target layout. So the build compiles lib/model_ota/src/model_ota_contract_probe.c with the
 application's own flags and the host reads the finished word out of that object, which is what

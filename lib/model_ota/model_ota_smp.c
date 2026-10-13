@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+#include <model_ota/model_ota_guard_internal.h>
 #include <model_ota/model_ota_smp.h>
-#include <model_ota/model_ota_guard.h>
+#include <model_ota/model_ota_smp_slot.h>
 
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>

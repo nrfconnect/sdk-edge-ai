@@ -23,7 +23,7 @@
 
 #if IS_ENABLED(CONFIG_MODEL_OTA_SMP)
 #include <model_ota/model_ota_partition.h>
-#include <model_ota/model_ota_smp.h>
+#include <model_ota/model_ota_smp_slot.h>
 #endif
 
 #ifndef MODEL_OTA_EDGEAI_SOLUTION_ID

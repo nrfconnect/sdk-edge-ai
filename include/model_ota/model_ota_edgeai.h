@@ -15,7 +15,7 @@
  * the MODEL_OTA_WIRED hook when a wired translation unit defines it before #include.
  */
 
-#include <model_ota/model_image.h>
+#include <model_ota/model_image_result.h>
 
 #include <nrf_edgeai/nrf_edgeai.h>
 
