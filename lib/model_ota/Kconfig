@@ -100,10 +100,11 @@ config MODEL_OTA_SMP_DRAIN_RETRY_WINDOW_MS
 	  When the first upload chunk is rejected because in-flight model access did
 	  not finish within CONFIG_MODEL_OTA_GUARD_DRAIN_TIMEOUT_MS, inference stays
 	  blocked for this long so that readers drain and a repeated upload attempt
-	  is accepted without waiting again. If the client does not retry within the
-	  window, or the retry still finds model access in flight, the block is
-	  lifted and inference continues on the unchanged model. Size this to cover
-	  the client's retry delay after an MGMT_ERR_EBUSY response.
+	  is accepted without waiting again. A retry that still finds model access
+	  in flight is rejected, keeps the block and restarts the window. If no
+	  retry arrives within the window, the block is lifted and inference
+	  continues on the unchanged model. Size this to cover the
+	  client's retry delay after an MGMT_ERR_EBUSY response.
 
 endif # MODEL_OTA_SMP
 

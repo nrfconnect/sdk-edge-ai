@@ -30,9 +30,11 @@ LOG_MODULE_REGISTER(model_ota_smp, CONFIG_MODEL_OTA_LOG_LEVEL);
  *             in-flight ones finish. img_mgmt dropped the upload session along
  *             with the rejection (DFU_STOPPED plus img_mgmt_reset_upload()), so
  *             a client retry arrives as another chunk 0 that only needs a
- *             no-drain re-check. Nothing was written, so if that retry does not
- *             come within CONFIG_MODEL_OTA_SMP_DRAIN_RETRY_WINDOW_MS, or comes
- *             while readers are still running, the guard is released and
+ *             no-drain re-check. A retry that still finds readers running is
+ *             rejected again and restarts the window, so the upload is
+ *             favoured over new inference while the client keeps retrying.
+ *             Nothing was written, so when CONFIG_MODEL_OTA_SMP_DRAIN_RETRY_WINDOW_MS
+ *             passes without a retry, the guard is released and
  *             inference continues on the unchanged model.
  * ARMED       Chunk 0 authorised with the guard blocked and drained, waiting for
  *             DFU_STARTED. Still rollback-safe: img_mgmt erases and writes only
@@ -55,7 +57,7 @@ static void drain_retry_window_expired(struct k_work *work);
 static K_MUTEX_DEFINE(smp_lock);
 static K_WORK_DELAYABLE_DEFINE(drain_retry_work, drain_retry_window_expired);
 
-static model_ota_smp_upload_notify_cb upload_notify_cb;
+static volatile model_ota_smp_upload_notify_cb upload_notify_cb;
 static enum smp_upload_state upload_state;
 /** Model slot of the session tracked by @ref upload_state; NULL when IDLE. */
 static const struct model_ota_smp_slot *upload_slot;
@@ -84,8 +86,9 @@ static const char *slot_name(const struct model_ota_smp_slot *slot)
 
 static void notify_upload_active(bool active)
 {
-	if (upload_notify_cb != NULL) {
-		upload_notify_cb(active);
+	const model_ota_smp_upload_notify_cb cb = upload_notify_cb;
+	if (cb != NULL) {
+		cb(active);
 	}
 }
 
@@ -147,10 +150,12 @@ static enum mgmt_cb_return reserve_guard(const struct model_ota_smp_slot *slot, 
 
 	case SMP_UPLOAD_DRAIN_RETRY:
 		if (model_ota_guard_retry_update() != 0) {
-			LOG_WRN("%s model SMP upload rejected - inference still running, "
-				"model left unchanged",
-				slot_name(slot));
-			release_guard();
+			LOG_WRN("%s model SMP upload deferred - inference still draining, "
+				"retry upload within %d ms",
+				slot_name(slot), CONFIG_MODEL_OTA_SMP_DRAIN_RETRY_WINDOW_MS);
+			upload_slot = slot;
+			(void)k_work_reschedule(&drain_retry_work,
+						K_MSEC(CONFIG_MODEL_OTA_SMP_DRAIN_RETRY_WINDOW_MS));
 			*rc = MGMT_ERR_EBUSY;
 
 			return MGMT_CB_ERROR_RC;
@@ -204,9 +209,7 @@ static enum mgmt_cb_return handle_dfu_chunk(const struct img_mgmt_upload_check *
 	const struct img_mgmt_upload_req *req = upload_check->req;
 	const struct model_ota_smp_slot *slot;
 
-	if (req == NULL) {
-		return MGMT_CB_OK;
-	}
+	__ASSERT(req != NULL, "img_mgmt upload check without request");
 
 	slot = slot_for_image(req->image);
 
@@ -311,9 +314,9 @@ static enum mgmt_cb_return model_ota_smp_callback(uint32_t event, enum mgmt_cb_r
 	} else {
 		switch (event) {
 			case MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK:
-				if (data != NULL && data_size == sizeof(struct img_mgmt_upload_check)) {
-					ret = handle_dfu_chunk(data, rc);
-				}
+				__ASSERT(data != NULL && data_size == sizeof(struct img_mgmt_upload_check),
+					 "Malformed img_mgmt upload check event");
+				ret = handle_dfu_chunk(data, rc);
 				break;
 
 			case MGMT_EVT_OP_IMG_MGMT_DFU_STARTED:

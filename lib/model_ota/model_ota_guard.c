@@ -54,6 +54,8 @@ static void reader_release(void)
 {
 	k_mutex_lock(&guard_mutex, K_FOREVER);
 
+	__ASSERT(global_readers > 0U, "model OTA guard released without an active reader");
+
 	if (global_readers > 0U) {
 		global_readers--;
 	}

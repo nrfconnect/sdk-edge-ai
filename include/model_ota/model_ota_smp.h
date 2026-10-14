@@ -17,11 +17,18 @@
 
 #include <stdbool.h>
 
-/** @return True after a model upload finished and reset is required. */
+/**
+ * @return True after a model upload finished and reset is required. Once true,
+ *         it stays true until reset.
+ */
 bool model_ota_smp_is_pending_reset(void);
 
 typedef void (*model_ota_smp_upload_notify_cb)(bool active);
 
+/**
+ * May be called at any time, including NULL to unregister. A notification already
+ * in progress may still run the previous callback.
+ */
 void model_ota_smp_set_upload_notify_cb(model_ota_smp_upload_notify_cb cb);
 
 #endif /* MODEL_OTA_SMP_H_ */

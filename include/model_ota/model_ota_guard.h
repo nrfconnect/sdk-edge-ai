@@ -19,7 +19,15 @@
 
 #include <stdbool.h>
 
-/** @return True when model access and inference are permitted. */
+/**
+ * @brief Snapshot of whether model access is currently permitted.
+ *
+ * Use for application policy only (for example skipping work or driving an LED).
+ * This is not synchronization: an upload may block the guard right after this
+ * returns true. Hold model_ota_guard_acquire() around any actual model access.
+ *
+ * @return True when model access and inference are permitted.
+ */
 bool model_ota_guard_inference_permitted(void);
 
 /**

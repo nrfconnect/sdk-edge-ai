@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/__assert.h>
 #include <zephyr/sys/crc.h>
 #include <zephyr/sys/util.h>
 #include <bootutil/image.h>
@@ -63,6 +64,9 @@ int model_image_read_and_validate(const uint8_t *partition_addr, size_t partitio
 		return MODEL_IMAGE_ERR_NO_PARTITION;
 	}
 
+	__ASSERT(partition_size >= payload_offset + sizeof(hdr),
+		 "Partition (%zu B) too small for model image header", partition_size);
+
 	memcpy(&hdr, partition_addr + payload_offset, sizeof(hdr));
 
 	if (!magic_is_valid(&hdr)) {
@@ -75,8 +79,7 @@ int model_image_read_and_validate(const uint8_t *partition_addr, size_t partitio
 		return MODEL_IMAGE_ERR_BAD_FORMAT_VERSION;
 	}
 
-	if (hdr.image_size < sizeof(hdr) ||
-	    payload_offset + hdr.image_size > partition_size) {
+	if (hdr.image_size < sizeof(hdr) || hdr.image_size > partition_size - payload_offset) {
 		LOG_ERR("Image size %u B does not fit partition (%zu B)", hdr.image_size,
 			partition_size);
 		return MODEL_IMAGE_ERR_TOO_LARGE;

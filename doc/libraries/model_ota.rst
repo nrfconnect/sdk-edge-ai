@@ -16,7 +16,8 @@ Public C headers live under :file:`include/model_ota/`:
 - :file:`model_ota_edgeai.h` / :file:`model_ota_axon.h` — wired loader declarations and helpers
 - :file:`model_image_result.h` — loader return codes (``MODEL_IMAGE_OK``, …)
 - :file:`model_ota_smp.h` — ``model_ota_smp_is_pending_reset()`` and upload notify callback
-- :file:`model_ota_guard.h` — ``model_ota_guard_inference_permitted()``, acquire/release
+- :file:`model_ota_guard.h` — ``model_ota_guard_acquire()`` / ``model_ota_guard_release()``,
+  and ``model_ota_guard_inference_permitted()`` (a policy snapshot, not synchronization)
 
 SMP slot registration, upload arbitration, guard state machine, image format, contract hashing,
 and partition devicetree macros live under :file:`lib/model_ota/include/model_ota/` and are not
@@ -233,9 +234,12 @@ the upload session together with the rejection, so the client's retry arrives as
 another chunk 0 and is accepted by a no-drain re-check
 (``model_ota_guard_retry_update()``).
 
-The guard is released and inference resumes when the retry still finds model
-access in flight, or when no retry arrives within the window. Nothing was
-erased or written in either case, so the device keeps running the current model.
+A retry that still finds model access in flight is rejected with
+``MGMT_ERR_EBUSY`` again, but the guard stays BLOCKED and the window restarts,
+so the upload takes precedence over new inference while the client keeps
+retrying. When the window passes without a retry, the guard is released and
+inference resumes. Nothing was erased or written, so the device keeps running
+the current model.
 
 ``model_ota_smp_is_pending_reset()`` tracks upload completion for application
 policy (LEDs, reboot prompts).
