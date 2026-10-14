@@ -30,8 +30,6 @@ typedef struct activity_color_s {
 #if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
 static const activity_color_t CLASS_COLORS[] = {
 	[CLASS_LABEL_WALKING] = {0.0f, 1.0f, 0.0f},
-	[CLASS_LABEL_WALKING_UPSTAIRS] = {0.0f, 1.0f, 1.0f},
-	[CLASS_LABEL_WALKING_DOWNSTAIRS] = {1.0f, 1.0f, 0.0f},
 	[CLASS_LABEL_SITTING] = {0.0f, 0.0f, 1.0f},
 	[CLASS_LABEL_STANDING] = {1.0f, 0.0f, 1.0f},
 	[CLASS_LABEL_LYING] = {1.0f, 0.0f, 0.0f},

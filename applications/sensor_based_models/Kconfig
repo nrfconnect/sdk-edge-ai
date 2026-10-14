@@ -14,8 +14,6 @@ choice SBM_MODEL_CHOICE
 		  Use the HAR (Human Activity Recognition) model recognizing
 		  the following activities:
 		  - Walking
-		  - Walking upstairs
-		  - Walking downstairs
 		  - Sitting
 		  - Standing
 		  - Lying

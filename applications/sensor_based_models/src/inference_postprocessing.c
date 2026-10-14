@@ -15,8 +15,6 @@ static const char *get_name_by_target(uint8_t predicted_target)
 #if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
 	static const char *const LABEL_VS_NAME[] = {
 		[CLASS_LABEL_WALKING] = "WALKING",
-		[CLASS_LABEL_WALKING_UPSTAIRS] = "WALKING_UPSTAIRS",
-		[CLASS_LABEL_WALKING_DOWNSTAIRS] = "WALKING_DOWNSTAIRS",
 		[CLASS_LABEL_SITTING] = "SITTING",
 		[CLASS_LABEL_STANDING] = "STANDING",
 		[CLASS_LABEL_LYING] = "LYING",
@@ -43,21 +41,12 @@ static const char *get_name_by_target(uint8_t predicted_target)
 
 /* Consecutive identical raw predictions required before a class is published.
  *
- * The counts are asymmetric on purpose. A class the model often predicts by
- * mistake must clear a higher bar than the class it is taken from, or the
- * false positive always wins the race to the repeat count. WALKING is the
- * dominant confusion for WALKING_UPSTAIRS, so while a stair ascent is in
- * progress a lower count for WALKING lets almost every window be published as
- * level walking.
- *
  * Probabilities are averaged for reporting but never gated: on-device testing
- * showed the model is over-confident on the ambulation classes, so a
- * probability threshold suppresses correct and incorrect predictions alike.
+ * showed the previous model was over-confident, so a probability threshold
+ * suppressed correct and incorrect predictions alike.
  */
 static const uint16_t MIN_REPEAT_COUNT[] = {
 	[CLASS_LABEL_WALKING] = 3,
-	[CLASS_LABEL_WALKING_UPSTAIRS] = 2,
-	[CLASS_LABEL_WALKING_DOWNSTAIRS] = 3,
 	[CLASS_LABEL_SITTING] = 3,
 	[CLASS_LABEL_STANDING] = 3,
 	[CLASS_LABEL_LYING] = 2,
