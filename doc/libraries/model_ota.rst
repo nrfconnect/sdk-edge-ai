@@ -68,6 +68,33 @@ A solution scales once on the way into the network, so exactly one of ``INPUT_FE
 
 When MCUboot wraps a partition, the model header starts at ``partition_base + 32``. Partition images are linked at that payload address (``model_ota_image_link_addr()`` in :file:`lib/model_ota/cmake/model_ota_common.cmake`). Do not flash the unsigned ``*_model_partition.hex`` into a model slot; use the signed ``*_model_mcuboot.signed.hex`` output from ``model_ota_mcuboot_sign()``.
 
+.. _lib_model_ota_signing:
+
+Model image signing
+*******************
+
+Each model partition is a separate MCUboot updateable image (image index 1 and up, from the ``nordic,mcuboot-image`` bootchain in devicetree), so its authenticity is checked by MCUboot exactly like the application's.
+
+Signing at build time:
+
+- ``model_ota_mcuboot_sign()`` runs ``imgtool sign`` on the raw ``*_model_image.bin`` with ``--pad-header``, ``--pad``, ``--overwrite-only`` and ``--rom-fixed`` at the partition base, using the partition size as the slot size.
+- The key is the application's ``CONFIG_MCUBOOT_SIGNATURE_KEY_FILE``, the same key that signs the application image. There is no separate model-signing key option.
+- The hash algorithm follows the bootloader (``--sha 512`` when ``CONFIG_MCUBOOT_BOOTLOADER_USES_SHA512`` is set).
+- The image version is ``CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION``, the application's version, not the ``VERSION`` passed to the model CMake helper.
+- The ``UUID_VID`` and ``UUID_CID`` arguments are passed to ``imgtool`` as ``--vid`` and ``--cid``. With ``uuid-vid-required`` and ``uuid-cid-required`` on the bootchain, MCUboot rejects an image signed for a different model slot.
+
+Verification on device:
+
+- MCUboot validates every model image on each boot.
+- The model images are listed in ``CONFIG_BOOT_OPTIONAL_IMAGES_MASK`` (``CONFIG_BOOT_OPTIONAL_IMAGES``), so a missing or invalid model does not stop the application from booting.
+- With ``CONFIG_BOOT_OPTIONAL_IMAGES_SCRUB`` (enabled by default), MCUboot erases the first sector of a model partition that fails validation. This removes both the MCUboot header and the model header, so the loaders see a bad magic (``MODEL_IMAGE_ERR_BAD_MAGIC``) and treat the partition as empty.
+- ``img_mgmt`` does not check the signature during an SMP upload. The upload overwrites the model partition in place, and the new image is verified by MCUboot on the next boot. The inference guard keeps OTA-managed inference blocked until that reset, so the application never runs an unverified model.
+- The application loaders do not verify the signature themselves. They rely on MCUboot having validated the partition during this boot, and they only check the magic, format version, size, CRC, contract hash, and capacities.
+
+.. note::
+
+   Because model and application images share one signing key, anyone who can sign a model can also sign application firmware that MCUboot boots. MCUboot can embed more than one public key (a comma-separated ``CONFIG_BOOT_SIGNATURE_KEY_FILE``), but it accepts any embedded key for any image index. It does not bind a key to a particular image. A model publisher therefore cannot currently be given signing rights for models only.
+
 Contract vs binding
 *******************
 
@@ -95,7 +122,8 @@ The solution ID hashed here is the ``SOLUTION_ID`` the CMake helper was called w
 
 .. note::
 
-   None of these hashes is a security control — not the contract hash, whose FNV-1a is unkeyed, and not the unkeyed ``blake2s`` over the strings either. Nor is the image CRC an authenticity check. All of them guard against accidents. Authenticity enforcement by MCUboot will be added in future commits.
+   None of these hashes is a security control — not the contract hash, whose FNV-1a is unkeyed, and not the unkeyed ``blake2s`` over the strings either. Nor is the image CRC an authenticity check. All of them guard against accidents.
+   Authenticity is enforced by MCUboot, see :ref:`lib_model_ota_signing`.
 
 **Binding table** (Axon only) — one device-wide ``{name_hash, address}`` table for every app-owned symbol any Axon image was linked against (``nrf_axon_interlayer_buffer``, persistent vars, op extensions, ``axonpro_*``). ``axon_elf.py binding-table`` unions the per-slot keep lists at finalize; ``model_ota_axon_keep_refs.S`` emits ``model_ota_axon_binding_table``, which ``model_image_load_axon()`` consults directly.
 
@@ -264,6 +292,9 @@ Kconfig
 *******
 
 - ``CONFIG_MODEL_OTA`` — master enable (``CONFIG_BOOTLOADER_MCUBOOT`` or ``CONFIG_MODEL_OTA_TESTING``)
+- With MCUboot (not ``CONFIG_MODEL_OTA_TESTING``), enable ``CONFIG_BOOT_OPTIONAL_IMAGES`` and
+  ``CONFIG_BOOT_OPTIONAL_IMAGES_SCRUB`` in the MCUboot sysbuild image (see
+  :ref:`lib_model_ota_signing`).
 - ``CONFIG_MODEL_OTA_TESTING`` — sample/dev mode: empty 32-byte header pad, direct partition hex flash
 - ``CONFIG_MODEL_OTA_NEUTON`` / ``CONFIG_MODEL_OTA_AXON`` — backends
 - ``CONFIG_MODEL_OTA_SMP`` — SMP upload callbacks and inference guard integration
