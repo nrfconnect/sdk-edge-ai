@@ -7,7 +7,11 @@
 #
 # model_ota_edgeai_neuton_model(TARGET <id> SOLUTION_ID <id> MODEL_SRC <abs nrf_edgeai_user_model.c>
 #                               PARTITION_NODELABEL <dt-nodelabel> NEURONS_CAP <n>
-#                               [NAME <str>] [VERSION <x.y.z>])
+#                               [NAME <str>] [VERSION <x.y.z>]
+#                               [UUID_VID <vid>] [UUID_CID <cid>])
+#
+# With CONFIG_BOOTLOADER_MCUBOOT, the partition image is also signed as
+# <TARGET>_model_mcuboot.signed.{bin,hex}; UUID_VID/UUID_CID go to imgtool --vid/--cid.
 
 include_guard(GLOBAL)
 
@@ -34,7 +38,8 @@ set(MODEL_OTA_EDGEAI_NEUTON_PAYLOAD_SECTIONS
 
 function(model_ota_edgeai_neuton_model)
   cmake_parse_arguments(MI ""
-    "TARGET;SOLUTION_ID;MODEL_SRC;PARTITION_NODELABEL;NAME;VERSION;NEURONS_CAP" "" ${ARGN})
+    "TARGET;SOLUTION_ID;MODEL_SRC;PARTITION_NODELABEL;NAME;VERSION;NEURONS_CAP;UUID_VID;UUID_CID"
+    "" ${ARGN})
 
   if(NOT MI_TARGET OR NOT MI_SOLUTION_ID OR NOT MI_MODEL_SRC OR NOT MI_PARTITION_NODELABEL
      OR NOT MI_NEURONS_CAP)
@@ -132,5 +137,7 @@ function(model_ota_edgeai_neuton_model)
     WORK_DIR ${_work_dir}
     PARTITION_ADDR ${_partition_addr}
     PARTITION_SIZE ${_partition_size}
-    NAME ${MI_NAME})
+    NAME ${MI_NAME}
+    UUID_VID ${MI_UUID_VID}
+    UUID_CID ${MI_UUID_CID})
 endfunction()

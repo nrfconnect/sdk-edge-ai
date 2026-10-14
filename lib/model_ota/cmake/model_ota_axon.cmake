@@ -9,11 +9,15 @@
 #                             HEADER <abs nrf_edgeai_user_model_axon.h>
 #                             PARTITION_NODELABEL <dt-nodelabel>
 #                             [NAME <str>] [VERSION <x.y.z>] [PERSISTENT_VARS_CAP <n>]
-#                             [MODEL_SYM <sym>] [ALLOCATE_PACKED_OUTPUT])
+#                             [MODEL_SYM <sym>] [ALLOCATE_PACKED_OUTPUT]
+#                             [UUID_VID <vid>] [UUID_CID <cid>])
 #
 # model_ota_axon_model(TARGET <id> HEADER <nrf_axon_model_*.h> PARTITION_NODELABEL <dt-nodelabel>
 #                      [NAME <str>] [VERSION <x.y.z>] [PERSISTENT_VARS_CAP <n>] [MODEL_SYM <sym>]
-#                      [ALLOCATE_PACKED_OUTPUT])
+#                      [ALLOCATE_PACKED_OUTPUT] [UUID_VID <vid>] [UUID_CID <cid>])
+#
+# With CONFIG_BOOTLOADER_MCUBOOT, the partition image is also signed as
+# <TARGET>_model_mcuboot.signed.{bin,hex}; UUID_VID/UUID_CID go to imgtool --vid/--cid.
 
 include_guard(GLOBAL)
 
@@ -62,7 +66,7 @@ endfunction()
 
 function(_model_ota_axon_slot)
   cmake_parse_arguments(MI "ALLOCATE_PACKED_OUTPUT" "FLAVOR"
-    "TARGET;HEADER;PARTITION_NODELABEL;NAME;VERSION;PERSISTENT_VARS_CAP;MODEL_SYM;MODEL_SRC;SOLUTION_ID"
+    "TARGET;HEADER;PARTITION_NODELABEL;NAME;VERSION;PERSISTENT_VARS_CAP;MODEL_SYM;MODEL_SRC;SOLUTION_ID;UUID_VID;UUID_CID"
     ${ARGN})
 
   if(NOT MI_FLAVOR OR NOT MI_TARGET OR NOT MI_HEADER OR NOT MI_PARTITION_NODELABEL)
@@ -300,37 +304,25 @@ function(_model_ota_axon_slot)
     COMMENT "Resolving Axon app symbols from ${_symbol_elf} (${MI_TARGET})"
     VERBATIM)
 
-  set(_exclude_from_all FALSE)
+  set(_image_extra "")
   if(_using_released_fw AND NOT MODEL_OTA_FW_ELF)
-    set(_exclude_from_all TRUE)
+    list(APPEND _image_extra EXCLUDE_FROM_ALL)
   endif()
 
-  if(_exclude_from_all)
-    model_ota_add_image(
-      TARGET ${MI_TARGET}
-      OBJ_LIB ${_image_obj}
-      WORK_DIR ${_work_dir}
-      PARTITION_ADDR ${_partition_addr}
-      PARTITION_SIZE ${_partition_size}
-      NAME ${MI_NAME}
-      LINK_SCRIPTS ${_model_syms_ld}
-      VALIDATE_ARGS --params-type 3 --config-header ${_private_h}
-      COMPAT_ARGS --elf ${_symbol_elf}
-      DEPENDS ${_model_syms_ld} ${_private_h}
-      EXCLUDE_FROM_ALL)
-  else()
-    model_ota_add_image(
-      TARGET ${MI_TARGET}
-      OBJ_LIB ${_image_obj}
-      WORK_DIR ${_work_dir}
-      PARTITION_ADDR ${_partition_addr}
-      PARTITION_SIZE ${_partition_size}
-      NAME ${MI_NAME}
-      LINK_SCRIPTS ${_model_syms_ld}
-      VALIDATE_ARGS --params-type 3 --config-header ${_private_h}
-      COMPAT_ARGS --elf ${_symbol_elf}
-      DEPENDS ${_model_syms_ld} ${_private_h})
-  endif()
+  model_ota_add_image(
+    TARGET ${MI_TARGET}
+    OBJ_LIB ${_image_obj}
+    WORK_DIR ${_work_dir}
+    PARTITION_ADDR ${_partition_addr}
+    PARTITION_SIZE ${_partition_size}
+    NAME ${MI_NAME}
+    UUID_VID ${MI_UUID_VID}
+    UUID_CID ${MI_UUID_CID}
+    LINK_SCRIPTS ${_model_syms_ld}
+    VALIDATE_ARGS --params-type 3 --config-header ${_private_h}
+    COMPAT_ARGS --elf ${_symbol_elf}
+    DEPENDS ${_model_syms_ld} ${_private_h}
+    ${_image_extra})
 endfunction()
 
 function(model_ota_edgeai_axon_model)

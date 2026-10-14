@@ -45,6 +45,8 @@ if(CONFIG_APP_MODEL_OTA)
       NAME regression
       VERSION 1.0.0
       PARTITION_NODELABEL model_storage
+      UUID_CID nRF54LM20_regression_model
+      UUID_VID nordicsemi.com
     )
   else()
     model_ota_edgeai_neuton_model(
@@ -55,19 +57,10 @@ if(CONFIG_APP_MODEL_OTA)
       NEURONS_CAP 2
       NAME regression
       VERSION 1.0.0
+      UUID_CID nRF54LM20_regression_model
+      UUID_VID nordicsemi.com
     )
   endif()
-
-  include(${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/model_ota/cmake/model_ota_mcuboot_sign.cmake)
-
-  model_ota_mcuboot_sign(
-    TARGET regression
-    MODEL_IMAGE_BIN ${CMAKE_CURRENT_BINARY_DIR}/model_ota/regression/regression_model_image.bin
-    MODEL_IMAGE_TARGET regression_model_image
-    PARTITION_NODELABEL model_storage
-    UUID_CID nRF54LM20_regression_model
-    UUID_VID nordicsemi.com
-  )
 
   model_ota_finalize()
   target_link_libraries(app PRIVATE MCUBOOT_BOOTUTIL)

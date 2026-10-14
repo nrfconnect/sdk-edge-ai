@@ -56,6 +56,8 @@ if(CONFIG_APP_MODEL_OTA)
     VERSION 1.0.0
     PARTITION_NODELABEL model_storage_ww
     PERSISTENT_VARS_CAP 1160
+    UUID_CID ww_kws_model_ww
+    UUID_VID nordicsemi.com
   )
   model_ota_edgeai_axon_model(
     TARGET kws
@@ -66,23 +68,6 @@ if(CONFIG_APP_MODEL_OTA)
     VERSION 1.0.0
     PARTITION_NODELABEL model_storage_kws
     PERSISTENT_VARS_CAP 6648
-  )
-
-  include(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/model_ota/cmake/model_ota_mcuboot_sign.cmake)
-
-  model_ota_mcuboot_sign(
-    TARGET ww
-    MODEL_IMAGE_BIN ${CMAKE_CURRENT_BINARY_DIR}/model_ota/ww/ww_model_image.bin
-    MODEL_IMAGE_TARGET ww_model_image
-    PARTITION_NODELABEL model_storage_ww
-    UUID_CID ww_kws_model_ww
-    UUID_VID nordicsemi.com
-  )
-  model_ota_mcuboot_sign(
-    TARGET kws
-    MODEL_IMAGE_BIN ${CMAKE_CURRENT_BINARY_DIR}/model_ota/kws/kws_model_image.bin
-    MODEL_IMAGE_TARGET kws_model_image
-    PARTITION_NODELABEL model_storage_kws
     UUID_CID ww_kws_model_kws
     UUID_VID nordicsemi.com
   )
