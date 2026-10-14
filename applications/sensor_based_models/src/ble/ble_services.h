@@ -4,15 +4,15 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#ifndef __BLE_NUS_H__
-#define __BLE_NUS_H__
+#ifndef BLE_SERVICES_H_
+#define BLE_SERVICES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 int ble_nus_init(void);
-void ble_nus_restart_connection(void);
+int ble_nus_unpair(void);
 int ble_nus_send_message(const char *message);
 
 /** @brief Send one classification line, optionally tagged with @p prefix.
@@ -27,4 +27,4 @@ int ble_nus_send_classification(const char *prefix, const char *class_name, int 
 }
 #endif
 
-#endif /* __BLE_NUS_H__ */
+#endif /* BLE_SERVICES_H_ */

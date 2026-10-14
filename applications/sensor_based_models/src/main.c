@@ -25,7 +25,7 @@
 #endif
 
 #if IS_ENABLED(CONFIG_BLE_NUS_OUTPUT)
-#include "ble/nus/ble_nus.h"
+#include "ble/ble_services.h"
 #endif
 #include "ble/ble_common.h"
 
@@ -112,8 +112,12 @@ static void on_button_click(button_click_t click)
 #endif
 	} else if (click == BUTTON_CLICK_LONG) {
 #if IS_ENABLED(CONFIG_BLE_NUS_OUTPUT)
-		LOG_INF("Long press: restarting BT connection");
-		ble_nus_restart_connection();
+		LOG_INF("Long press: removing Bluetooth bonds");
+		int err = ble_nus_unpair();
+
+		if (err) {
+			LOG_ERR("Failed to remove Bluetooth bonds (err %d)", err);
+		}
 #endif
 	}
 }

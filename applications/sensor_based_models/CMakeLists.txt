@@ -53,5 +53,5 @@ if(CONFIG_SBM_CAPTURE_24_MODEL)
 endif()
 
 if(CONFIG_BLE_NUS_OUTPUT)
-  target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ble/nus/ble_nus.c)
+  target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ble/ble_services.c)
 endif()

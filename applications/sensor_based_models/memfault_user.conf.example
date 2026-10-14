@@ -1,0 +1,12 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+# Copy this file to memfault_user.conf, set your project key, and merge it
+# after observability.conf when building:
+#
+#   west build ... -- -DEXTRA_CONF_FILE="observability.conf;memfault_user.conf"
+#
+
+CONFIG_MEMFAULT_NCS_PROJECT_KEY="<your-memfault-project-key>"

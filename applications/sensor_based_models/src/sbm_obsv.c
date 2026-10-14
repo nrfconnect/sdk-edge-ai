@@ -4,9 +4,6 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <errno.h>
-#include <stdlib.h>
-
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/__assert.h>
 #include <zephyr/sys/util.h>
@@ -22,6 +19,12 @@ LOG_MODULE_REGISTER(sbm_obsv);
 
 #define SBM_OBSV_CLASSES CLASS_LABEL_COUNT
 #define OBSV_WORDS(bytes) DIV_ROUND_UP(bytes, sizeof(uint32_t))
+
+#if IS_ENABLED(CONFIG_SBM_HAR_MODEL)
+#define SBM_OBSV_MODEL_ID 1U
+#elif IS_ENABLED(CONFIG_SBM_CAPTURE_24_MODEL)
+#define SBM_OBSV_MODEL_ID 2U
+#endif
 
 BUILD_ASSERT(CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES >= SBM_OBSV_CLASSES,
 	     "CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES is below the model class count");
@@ -47,16 +50,10 @@ static int model_info_get(nrf_edgeai_t *model, nrf_edgeai_obsv_model_info_t *inf
 	__ASSERT_NO_MSG(info != NULL);
 	__ASSERT_NO_MSG(nrf_edgeai_model_outputs_num(model) == SBM_OBSV_CLASSES);
 
-	const unsigned long model_id = strtoul(model->metadata.p_solution_id, NULL, 10);
-
-	if (model_id > UINT16_MAX) {
-		return -EINVAL;
-	}
-
 	const nrf_edgeai_dsp_feature_extraction_t *features_ctx =
 		nrf_edgeai_dsp_features_ctx(model);
 
-	info->model_id = (uint16_t)model_id;
+	info->model_id = SBM_OBSV_MODEL_ID;
 	info->num_classes = SBM_OBSV_CLASSES;
 	info->num_features = features_ctx != NULL ? features_ctx->overall_num : 0;
 	info->version = model->metadata.version.combined;
