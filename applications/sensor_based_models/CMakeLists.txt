@@ -36,6 +36,10 @@ target_sources(app PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src/ble/ble_common.c
 )
 
+target_sources_ifdef(CONFIG_SBM_OBSERVABILITY app PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/sbm_obsv.c
+)
+
 if(CONFIG_SBM_HAR_MODEL)
   target_sources(app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/models/har/nrf_edgeai_user_model.c

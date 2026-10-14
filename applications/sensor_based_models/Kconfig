@@ -62,6 +62,14 @@ config SBM_LOG_RAW_PREDICTIONS
 	  line types carry the same fields, so a recording can be analyzed as a
 	  raw prediction stream, as a published stream, or as both.
 
+config SBM_OBSERVABILITY
+	bool "Edge AI output observability"
+	depends on NRF_EDGEAI_OBSV
+	depends on NRF_EDGEAI_OBSV_MEMFAULT
+	help
+	  Collect observability metrics from the model class-probability
+	  output. Input and feature metrics are not collected.
+
 config BLE_NUS_OUTPUT
 	bool "Send classification results over BLE NUS"
 	depends on BT && BT_SMP

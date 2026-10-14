@@ -20,6 +20,10 @@
 #include "inference_postprocessing.h"
 #include "sensor/imu/imu.h"
 
+#if IS_ENABLED(CONFIG_SBM_OBSERVABILITY)
+#include "sbm_obsv.h"
+#endif
+
 #if IS_ENABLED(CONFIG_BLE_NUS_OUTPUT)
 #include "ble/nus/ble_nus.h"
 #endif
@@ -230,6 +234,10 @@ static void handle_inference_result(nrf_edgeai_t *model)
 	p_probabilities = model->decoded_output.classif.probabilities.p_f32;
 	__ASSERT_NO_MSG(p_probabilities != NULL);
 
+#if IS_ENABLED(CONFIG_SBM_OBSERVABILITY)
+	sbm_obsv_update_probs(p_probabilities);
+#endif
+
 #if IS_ENABLED(CONFIG_SBM_INFERENCE_POSTPROCESSING)
 	report_raw_prediction(predicted_target, p_probabilities[predicted_target]);
 
@@ -286,6 +294,14 @@ int main(void)
 
 	__ASSERT_NO_MSG(res == NRF_EDGEAI_ERR_SUCCESS);
 	__ASSERT_NO_MSG(p_model->input.window_size == INPUT_WINDOW_SAMPLES);
+
+#if IS_ENABLED(CONFIG_SBM_OBSERVABILITY)
+	int obsv_err = sbm_obsv_init(p_model);
+
+	if (obsv_err) {
+		LOG_ERR("Observability init failed (err %d)", obsv_err);
+	}
+#endif
 
 	nrf_edgeai_rt_version_t version = nrf_edgeai_runtime_version();
 

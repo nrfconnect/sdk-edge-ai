@@ -36,3 +36,11 @@ tests:
       - nrf54l15tag/nrf54l15/cpuapp
     extra_args:
       - CONFIG_BLE_NUS_OUTPUT=y
+  applications.sensor_based_models.observability:
+    build_only: true
+    platform_allow:
+      - nrf54l15tag/nrf54l15/cpuapp
+    integration_platforms:
+      - nrf54l15tag/nrf54l15/cpuapp
+    extra_args:
+      - EXTRA_CONF_FILE="observability.conf"

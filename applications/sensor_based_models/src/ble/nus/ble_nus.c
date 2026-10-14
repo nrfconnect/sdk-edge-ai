@@ -18,6 +18,10 @@
 
 #include <bluetooth/services/nus.h>
 
+#if IS_ENABLED(CONFIG_BT_MDS)
+#include <bluetooth/services/mds.h>
+#endif
+
 #include "../ble_common.h"
 #include "../../activity_led.h"
 
@@ -32,7 +36,11 @@ static const struct bt_data nus_ad[] = {
 };
 
 static const struct bt_data nus_sd[] = {
+#if IS_ENABLED(CONFIG_BT_MDS)
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_MDS_VAL),
+#else
 	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_NUS_VAL),
+#endif
 };
 
 static int nus_send_string(const char *msg)
@@ -76,6 +84,14 @@ static void nus_connected(struct bt_conn *conn, uint8_t err)
 	ble_common_set_connected(true);
 	activity_led_set_ble_connected(true);
 	LOG_INF("NUS connected %s", addr);
+
+#if IS_ENABLED(CONFIG_BT_MDS)
+	int security_err = bt_conn_set_security(conn, BT_SECURITY_L2);
+
+	if (security_err) {
+		LOG_WRN("Failed to request Bluetooth security (err %d)", security_err);
+	}
+#endif
 }
 
 static void nus_disconnected(struct bt_conn *conn, uint8_t reason)
@@ -111,9 +127,28 @@ BT_CONN_CB_DEFINE(nus_conn_callbacks) = {
 	.disconnected = nus_disconnected,
 };
 
+#if IS_ENABLED(CONFIG_BT_MDS)
+static bool mds_access_enable(struct bt_conn *conn)
+{
+	return bt_conn_get_security(conn) >= BT_SECURITY_L2;
+}
+
+static const struct bt_mds_cb mds_cb = {
+	.access_enable = mds_access_enable,
+};
+#endif
+
 int ble_nus_init(void)
 {
 	int err;
+
+#if IS_ENABLED(CONFIG_BT_MDS)
+	err = bt_mds_cb_register(&mds_cb);
+	if (err) {
+		LOG_ERR("MDS callback registration failed (err %d)", err);
+		return err;
+	}
+#endif
 
 	err = bt_enable(NULL);
 	if (err) {
