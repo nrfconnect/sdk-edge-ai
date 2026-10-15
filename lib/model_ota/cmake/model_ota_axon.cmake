@@ -317,6 +317,7 @@ function(_model_ota_axon_slot)
     PARTITION_ADDR ${_partition_addr}
     PARTITION_SIZE ${_partition_size}
     NAME ${MI_NAME}
+    VERSION ${MI_VERSION}
     UUID_VID ${MI_UUID_VID}
     UUID_CID ${MI_UUID_CID}
     LINK_SCRIPTS ${_model_syms_ld}

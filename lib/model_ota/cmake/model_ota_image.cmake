@@ -13,18 +13,20 @@ include(${CMAKE_CURRENT_LIST_DIR}/model_ota_common.cmake)
 # <TARGET>_model_mcuboot.signed.{bin,hex} in the build directory root.
 #
 # model_ota_mcuboot_sign(TARGET <prefix> MODEL_IMAGE_BIN <bin> MODEL_IMAGE_TARGET <target>
-#                        PARTITION_ADDR <addr> PARTITION_SIZE <size>
+#                        PARTITION_ADDR <addr> PARTITION_SIZE <size> VERSION <x.y.z[+build]>
 #                        [UUID_VID <vid>] [UUID_CID <cid>] [EXCLUDE_FROM_ALL])
+#
+# VERSION is the model's own version, written to the MCUboot image header.
 function(model_ota_mcuboot_sign)
   cmake_parse_arguments(SIGN "EXCLUDE_FROM_ALL"
-    "TARGET;MODEL_IMAGE_BIN;MODEL_IMAGE_TARGET;PARTITION_ADDR;PARTITION_SIZE;UUID_VID;UUID_CID"
+    "TARGET;MODEL_IMAGE_BIN;MODEL_IMAGE_TARGET;PARTITION_ADDR;PARTITION_SIZE;VERSION;UUID_VID;UUID_CID"
     "" ${ARGN})
 
   if(NOT SIGN_TARGET OR NOT SIGN_MODEL_IMAGE_BIN OR NOT SIGN_MODEL_IMAGE_TARGET
-     OR NOT SIGN_PARTITION_ADDR OR NOT SIGN_PARTITION_SIZE)
+     OR NOT SIGN_PARTITION_ADDR OR NOT SIGN_PARTITION_SIZE OR NOT SIGN_VERSION)
     message(FATAL_ERROR
             "model_ota_mcuboot_sign requires TARGET, MODEL_IMAGE_BIN, MODEL_IMAGE_TARGET, "
-            "PARTITION_ADDR and PARTITION_SIZE")
+            "PARTITION_ADDR, PARTITION_SIZE and VERSION")
   endif()
 
   if(NOT DEFINED IMGTOOL)
@@ -61,7 +63,7 @@ function(model_ota_mcuboot_sign)
   endif()
 
   set(_imgtool_sign ${PYTHON_EXECUTABLE} ${IMGTOOL} sign
-    --version ${CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION}
+    --version ${SIGN_VERSION}
     --header-size 32
     --pad-header
     ${_imgtool_hash_arg}
@@ -93,7 +95,7 @@ endfunction()
 
 # model_ota_add_image(TARGET <prefix> OBJ_LIB <obj-target> WORK_DIR <dir>
 #                     PARTITION_ADDR <addr> PARTITION_SIZE <size> NAME <str>
-#                     [UUID_VID <vid>] [UUID_CID <cid>]
+#                     VERSION <x.y.z> [UUID_VID <vid>] [UUID_CID <cid>]
 #                     [LINK_SCRIPTS <extra .ld>...]
 #                     [VALIDATE_ARGS <arg>...]
 #                     [COMPAT_ARGS <arg>...]
@@ -103,15 +105,15 @@ endfunction()
 # With CONFIG_BOOTLOADER_MCUBOOT, the image is also signed by model_ota_mcuboot_sign().
 function(model_ota_add_image)
   cmake_parse_arguments(IMG "EXCLUDE_FROM_ALL"
-    "TARGET;OBJ_LIB;WORK_DIR;PARTITION_ADDR;PARTITION_SIZE;NAME;UUID_VID;UUID_CID"
+    "TARGET;OBJ_LIB;WORK_DIR;PARTITION_ADDR;PARTITION_SIZE;NAME;VERSION;UUID_VID;UUID_CID"
     "LINK_SCRIPTS;VALIDATE_ARGS;COMPAT_ARGS;DEPENDS"
     ${ARGN})
 
   if(NOT IMG_TARGET OR NOT IMG_OBJ_LIB OR NOT IMG_WORK_DIR OR NOT IMG_PARTITION_ADDR
-     OR NOT IMG_PARTITION_SIZE OR NOT IMG_NAME)
+     OR NOT IMG_PARTITION_SIZE OR NOT IMG_NAME OR NOT IMG_VERSION)
     message(FATAL_ERROR
             "model_ota_add_image requires TARGET, OBJ_LIB, WORK_DIR, PARTITION_ADDR, "
-            "PARTITION_SIZE and NAME")
+            "PARTITION_SIZE, NAME and VERSION")
   endif()
 
   model_ota_image_link_addr(${IMG_PARTITION_ADDR} _image_link_addr)
@@ -206,6 +208,7 @@ function(model_ota_add_image)
       MODEL_IMAGE_TARGET ${IMG_TARGET}_model_image
       PARTITION_ADDR ${IMG_PARTITION_ADDR}
       PARTITION_SIZE ${IMG_PARTITION_SIZE}
+      VERSION ${IMG_VERSION}
       ${_sign_extra})
   endif()
 endfunction()

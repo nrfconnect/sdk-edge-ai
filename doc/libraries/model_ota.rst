@@ -80,7 +80,7 @@ Signing at build time:
 - When ``CONFIG_BOOTLOADER_MCUBOOT`` is set, each model CMake helper (``model_ota_edgeai_neuton_model()``, ``model_ota_edgeai_axon_model()``, ``model_ota_axon_model()``) runs ``imgtool sign`` on the raw ``*_model_image.bin`` with ``--pad-header``, ``--overwrite-only`` and ``--rom-fixed`` at the partition base, using the partition size as the slot size. The output is ``<TARGET>_model_mcuboot.signed.{bin,hex}`` (build target ``<TARGET>_model_mcuboot_signed``). In ``CONFIG_MODEL_OTA_TESTING`` mode no signed image is produced.
 - The key is the application's ``CONFIG_MCUBOOT_SIGNATURE_KEY_FILE``, the same key that signs the application image. There is no separate model-signing key option.
 - The hash algorithm follows the bootloader (``--sha 512`` when ``CONFIG_MCUBOOT_BOOTLOADER_USES_SHA512`` is set).
-- The image version is ``CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION``, the application's version, not the ``VERSION`` passed to the model CMake helper.
+- The image version is the ``VERSION`` passed to the model CMake helper.
 - The optional ``UUID_VID`` and ``UUID_CID`` arguments of the model CMake helper are passed to ``imgtool`` as ``--vid`` and ``--cid``. With ``uuid-vid-required`` and ``uuid-cid-required`` on the bootchain, MCUboot rejects an image signed for a different model slot.
 
 Verification on device:
