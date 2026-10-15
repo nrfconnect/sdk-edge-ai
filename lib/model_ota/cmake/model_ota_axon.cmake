@@ -79,7 +79,7 @@ function(model_ota_axon_bindings_ld OUT_VAR)
   if(MODEL_OTA_FW_CONTEXT)
     set(_symbol_context ${MODEL_OTA_FW_CONTEXT})
   else()
-    set(_symbol_context ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context.json)
+    set(_symbol_context ${CMAKE_CURRENT_BINARY_DIR}/model_ota/model_ota_context.json)
   endif()
 
   add_custom_command(
@@ -397,6 +397,8 @@ function(model_ota_axon_binding_finalize)
   set(_binding_lib model_ota_axon_binding)
   if(NOT TARGET ${_binding_lib})
     add_library(${_binding_lib} STATIC ${MODEL_OTA_AXON_KEEP_REFS})
+    set_target_properties(${_binding_lib} PROPERTIES
+      ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/model_ota)
     target_link_libraries(${_binding_lib} PRIVATE zephyr_interface)
     target_include_directories(${_binding_lib} PRIVATE ${MODEL_OTA_LIB_DIR}/src)
     target_compile_options(${_binding_lib} PRIVATE "SHELL:-include \"${_binding_h}\"")

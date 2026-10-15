@@ -30,13 +30,13 @@ endif()
 if(SB_CONFIG_APP_MODEL_OTA)
 	model_ota_register_provision_hex(
 		APP_IMAGE regression
-		MODEL_HEX ${CMAKE_BINARY_DIR}/regression/regression_model_mcuboot.signed.hex
+		MODEL_HEX ${CMAKE_BINARY_DIR}/regression/model_ota/regression/regression_model_mcuboot.signed.hex
 		FLASHER_NAME regression_model
 		SKIP_PROVISION_MERGE y
 	)
 
 	model_ota_create_provision_hex(
 		APP_IMAGE regression
-		MODEL_HEX ${CMAKE_BINARY_DIR}/regression/regression_model_mcuboot.signed.hex
+		MODEL_HEX ${CMAKE_BINARY_DIR}/regression/model_ota/regression/regression_model_mcuboot.signed.hex
 	)
 endif()

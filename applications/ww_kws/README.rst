@@ -141,8 +141,8 @@ Pass :file:`sysbuild_model_ota.conf` as ``SB_EXTRA_CONF_FILE``:
 
 This produces:
 
-* ``build/ww_kws/ww_model_mcuboot.signed.{bin,hex}`` - wakeword model (MCUboot image 1)
-* ``build/ww_kws/kws_model_mcuboot.signed.{bin,hex}`` - keyword-spotting model (MCUboot image 2)
+* ``build/ww_kws/model_ota/ww/ww_model_mcuboot.signed.{bin,hex}`` - wakeword model (MCUboot image 1)
+* ``build/ww_kws/model_ota/kws/kws_model_mcuboot.signed.{bin,hex}`` - keyword-spotting model (MCUboot image 2)
 * ``build/ww_kws/zephyr/zephyr.signed.{bin,hex}`` - application firmware (MCUboot image 0)
 * ``build/ww_kws_provision.hex`` - merged bootloader, application, and both signed models
 
@@ -185,11 +185,11 @@ SMP uses the application UART (``uart20`` on nRF54LM20 DK). Close any serial mon
 
 .. code-block:: console
 
-   mcumgr -c acm1 image upload -e -n 1 build/ww_kws/ww_model_mcuboot.signed.bin
+   mcumgr -c acm1 image upload -e -n 1 build/ww_kws/model_ota/ww/ww_model_mcuboot.signed.bin
    mcumgr -c acm1 image test <ww_model_hash>
    mcumgr -c acm1 reset
 
-   mcumgr -c acm1 image upload -e -n 2 build/ww_kws/kws_model_mcuboot.signed.bin
+   mcumgr -c acm1 image upload -e -n 2 build/ww_kws/model_ota/kws/kws_model_mcuboot.signed.bin
    mcumgr -c acm1 image test <kws_model_hash>
    mcumgr -c acm1 reset
 

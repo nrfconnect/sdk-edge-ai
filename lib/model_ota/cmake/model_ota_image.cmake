@@ -10,7 +10,7 @@ include_guard(GLOBAL)
 include(${CMAKE_CURRENT_LIST_DIR}/model_ota_common.cmake)
 
 # Signs a raw model partition image (.bin) as an MCUboot image, emitting
-# <TARGET>_model_mcuboot.signed.{bin,hex} in the build directory root.
+# model_ota/<TARGET>/<TARGET>_model_mcuboot.signed.{bin,hex}.
 #
 # model_ota_mcuboot_sign(TARGET <prefix> MODEL_IMAGE_BIN <bin> MODEL_IMAGE_TARGET <target>
 #                        PARTITION_ADDR <addr> PARTITION_SIZE <size> VERSION <x.y.z[+build]>
@@ -48,7 +48,7 @@ function(model_ota_mcuboot_sign)
     set(_write_block_size 16)
   endif()
 
-  set(_out_base ${CMAKE_CURRENT_BINARY_DIR}/${SIGN_TARGET}_model_mcuboot)
+  set(_out_base ${CMAKE_CURRENT_BINARY_DIR}/model_ota/${SIGN_TARGET}/${SIGN_TARGET}_model_mcuboot)
   set(_imgtool_hash_arg)
   if(CONFIG_MCUBOOT_BOOTLOADER_USES_SHA512)
     set(_imgtool_hash_arg --sha 512)
@@ -124,8 +124,8 @@ function(model_ota_add_image)
   set(_image_elf ${IMG_WORK_DIR}/${IMG_TARGET}_model_image.elf)
   set(_image_raw ${IMG_WORK_DIR}/${IMG_TARGET}_model_image_raw.bin)
   set(_image_bin ${IMG_WORK_DIR}/${IMG_TARGET}_model_image.bin)
-  set(_image_hex ${CMAKE_CURRENT_BINARY_DIR}/${IMG_TARGET}_model_partition.hex)
-  set(_generated_context ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context.json)
+  set(_image_hex ${IMG_WORK_DIR}/${IMG_TARGET}_model_partition.hex)
+  set(_generated_context ${CMAKE_CURRENT_BINARY_DIR}/model_ota/model_ota_context.json)
 
   if(MODEL_OTA_FW_CONTEXT)
     set(_compat_context ${MODEL_OTA_FW_CONTEXT})

@@ -119,7 +119,7 @@ Build combinations:
 
 This produces:
 
-* ``build/regression/regression_model_mcuboot.signed.{bin,hex}`` - regression model (MCUboot image 1)
+* ``build/regression/model_ota/regression/regression_model_mcuboot.signed.{bin,hex}`` - regression model (MCUboot image 1)
 * ``build/regression/zephyr/zephyr.signed.{bin,hex}`` - application firmware (MCUboot image 0)
 * ``build/regression_provision.hex`` - merged bootloader, application, and signed model
 

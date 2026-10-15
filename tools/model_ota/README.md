@@ -59,11 +59,11 @@ cd edge-ai/samples/multi_model
 nrfutil toolchain-manager launch --ncs-version v3.4.0 -- \
   west build -p always -b nrf54lm20dk/nrf54lm20b/cpuapp -d build . \
   -- -DEXTRA_CONF_FILE=overlay-ota.conf
-ls build/multi_model/*_model_partition.hex
+ls build/multi_model/model_ota/*/*_model_partition.hex
 ```
 
-The build also emits **`model_ota_context.json`** — archive this alongside `zephyr.hex` at
-firmware release. It is the only firmware artifact a later model rebuild needs.
+The build also emits **`model_ota/model_ota_context.json`** — archive this alongside
+`zephyr.hex` at firmware release. It is the only firmware artifact a later model rebuild needs.
 
 ### Context layout
 
@@ -82,15 +82,17 @@ model_ota_axon_bindings(SYMBOLS nrf_axon_nn_op_extension_tanh)
 
 ### Build directory layout
 
-Only the release artifacts stay at the build directory root; everything else the OTA build
-generates lives under `model_ota/`:
+All model OTA build outputs live under `model_ota/`:
 
-- `<name>_model_mcuboot.signed.{bin,hex}` - MCUboot-wrapped model image for SMP upload or
-  provisioning.
-- `model_ota_context.json` - firmware context, archived at release.
-- `model_ota/<name>/` - one subfolder per model: the OTA payload `<name>_model_image.bin`, the
-  linked `.elf`, the raw pre-CRC `.bin`, probes, generated headers, `context_slot.json`, and the
-  model's app-side static library.
+- `model_ota/model_ota_context.json` - firmware context, archived at release.
+- `model_ota/libmodel_ota_axon_binding.a` - app-side Axon binding table (when Axon slots are
+  present).
+- `model_ota/<name>/` - one subfolder per model slot:
+  - `<name>_model_image.bin`, linked `.elf`, raw pre-CRC `.bin`, probes, generated headers,
+    `context_slot.json`, and the model's app-side static library.
+  - `<name>_model_partition.hex` - Intel HEX for the unsigned partition image (testing builds).
+  - `<name>_model_mcuboot.signed.{bin,hex}` - MCUboot-wrapped image for SMP upload or
+    provisioning (production builds with MCUboot).
 
 ### Out-of-tree model partition rebuild
 

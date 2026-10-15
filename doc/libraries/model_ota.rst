@@ -26,8 +26,8 @@ part of the module include tree exposed to applications.
 Production update flow
 **********************
 
-1. Build and flash the full sysbuild chain (bootloader, signed application, signed model images). Archive ``model_ota_context.json`` from the build directory alongside ``zephyr.hex``. See :ref:`WW KWS model OTA <app_ww_kws_model_ota>` for provisioning with ``*_provision.hex``.
-2. Retrain the model (same task, same I/O shape, same solution pipeline). Rebuild only the affected ``*_model_image.bin``; the model CMake helper also produces ``*_model_mcuboot.signed.{bin,hex}``.
+1. Build and flash the full sysbuild chain (bootloader, signed application, signed model images). Archive ``model_ota/model_ota_context.json`` from the application build directory alongside ``zephyr.hex``. See :ref:`WW KWS model OTA <app_ww_kws_model_ota>` for provisioning with ``*_provision.hex``.
+2. Retrain the model (same task, same I/O shape, same solution pipeline). Rebuild only the affected ``model_ota/<target>/*_model_image.bin``; the model CMake helper also produces ``model_ota/<target>/*_model_mcuboot.signed.{bin,hex}``.
 3. Run ``check_model_compat.py`` against the archived context before release:
 
    - exit **0** — compatible; upload the signed model over SMP
@@ -66,7 +66,7 @@ Everything is stored in the runtime's own types, so ``model_image_bind_edgeai_pa
 
 A solution scales once on the way into the network, so exactly one of ``INPUT_FEATURES_SCALE_MIN/MAX`` and ``EXTRACTED_FEATURES_SCALE_MIN/MAX`` belongs to the model and travels in the image; the other stage's factors, if any, stay compiled into the application. ``model_ota_scale_select.h`` makes that choice for both the image stub and the wired application translation unit, so the two agree by construction — for either backend. Which one the loader reads back is not recorded in the image: it follows from the solution, so it is taken from ``nrf_edgeai_t.p_dsp`` (a context with a DSP pipeline scales its extracted features, one without scales its raw input features).
 
-When MCUboot wraps a partition, the model header starts at ``partition_base + 32``. Partition images are linked at that payload address (``model_ota_image_link_addr()`` in :file:`lib/model_ota/cmake/model_ota_common.cmake`). Do not flash the unsigned ``*_model_partition.hex`` into a model slot; use the signed ``*_model_mcuboot.signed.hex`` output.
+When MCUboot wraps a partition, the model header starts at ``partition_base + 32``. Partition images are linked at that payload address (``model_ota_image_link_addr()`` in :file:`lib/model_ota/cmake/model_ota_common.cmake`). Do not flash the unsigned ``model_ota/<target>/*_model_partition.hex`` into a model slot; use the signed ``model_ota/<target>/*_model_mcuboot.signed.hex`` output.
 
 .. _lib_model_ota_signing:
 
@@ -77,7 +77,7 @@ Each model partition is a separate MCUboot updateable image (image index 1 and u
 
 Signing at build time:
 
-- When ``CONFIG_BOOTLOADER_MCUBOOT`` is set, each model CMake helper (``model_ota_edgeai_neuton_model()``, ``model_ota_edgeai_axon_model()``, ``model_ota_axon_model()``) runs ``imgtool sign`` on the raw ``*_model_image.bin`` with ``--pad-header``, ``--overwrite-only`` and ``--rom-fixed`` at the partition base, using the partition size as the slot size. The output is ``<TARGET>_model_mcuboot.signed.{bin,hex}`` (build target ``<TARGET>_model_mcuboot_signed``). In ``CONFIG_MODEL_OTA_TESTING`` mode no signed image is produced.
+- When ``CONFIG_BOOTLOADER_MCUBOOT`` is set, each model CMake helper (``model_ota_edgeai_neuton_model()``, ``model_ota_edgeai_axon_model()``, ``model_ota_axon_model()``) runs ``imgtool sign`` on the raw ``model_ota/<TARGET>/*_model_image.bin`` with ``--pad-header``, ``--overwrite-only`` and ``--rom-fixed`` at the partition base, using the partition size as the slot size. The output is ``model_ota/<TARGET>/<TARGET>_model_mcuboot.signed.{bin,hex}`` (build target ``<TARGET>_model_mcuboot_signed``). In ``CONFIG_MODEL_OTA_TESTING`` mode no signed image is produced.
 - The key is the application's ``CONFIG_MCUBOOT_SIGNATURE_KEY_FILE``, the same key that signs the application image. There is no separate model-signing key option.
 - The hash algorithm follows the bootloader (``--sha 512`` when ``CONFIG_MCUBOOT_BOOTLOADER_USES_SHA512`` is set).
 - The image version is the ``VERSION`` passed to the model CMake helper.
