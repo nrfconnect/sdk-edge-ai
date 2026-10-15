@@ -64,7 +64,6 @@ function(model_ota_mcuboot_sign)
     --version ${CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION}
     --header-size 32
     --pad-header
-    --pad
     ${_imgtool_hash_arg}
     --slot-size ${SIGN_PARTITION_SIZE}
     --align ${_write_block_size}

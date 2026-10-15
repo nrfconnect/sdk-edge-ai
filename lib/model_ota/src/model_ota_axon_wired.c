@@ -12,6 +12,7 @@
 #include "model_ota_axon_model_config.h"
 
 #include "model_ota_stub_macros.h"
+#include "model_ota_wired_guard.h"
 
 #include <model_ota/model_contract.h>
 #include <model_ota/model_image.h>
@@ -67,9 +68,21 @@ MODEL_OTA_AXON_LOAD_DECL(MODEL_OTA_AXON_TARGET)
 		.input_vector_cap = MODEL_OTA_AXON_INPUT_VECTOR_CAP,
 	};
 
+	enum model_image_result rc;
+
 	if (out == NULL) {
 		return MODEL_IMAGE_ERR_AXON_VALIDATE;
 	}
 
-	return model_image_load_axon(partition_addr, partition_size, &expect, out);
+	*out = NULL;
+
+	if (!model_ota_wired_guard_acquire()) {
+		return MODEL_IMAGE_ERR_UPDATE_IN_PROGRESS;
+	}
+
+	rc = model_image_load_axon(partition_addr, partition_size, &expect, out);
+
+	model_ota_wired_guard_release();
+
+	return rc;
 }

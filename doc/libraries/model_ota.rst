@@ -77,7 +77,7 @@ Each model partition is a separate MCUboot updateable image (image index 1 and u
 
 Signing at build time:
 
-- When ``CONFIG_BOOTLOADER_MCUBOOT`` is set, each model CMake helper (``model_ota_edgeai_neuton_model()``, ``model_ota_edgeai_axon_model()``, ``model_ota_axon_model()``) runs ``imgtool sign`` on the raw ``*_model_image.bin`` with ``--pad-header``, ``--pad``, ``--overwrite-only`` and ``--rom-fixed`` at the partition base, using the partition size as the slot size. The output is ``<TARGET>_model_mcuboot.signed.{bin,hex}`` (build target ``<TARGET>_model_mcuboot_signed``). In ``CONFIG_MODEL_OTA_TESTING`` mode no signed image is produced.
+- When ``CONFIG_BOOTLOADER_MCUBOOT`` is set, each model CMake helper (``model_ota_edgeai_neuton_model()``, ``model_ota_edgeai_axon_model()``, ``model_ota_axon_model()``) runs ``imgtool sign`` on the raw ``*_model_image.bin`` with ``--pad-header``, ``--overwrite-only`` and ``--rom-fixed`` at the partition base, using the partition size as the slot size. The output is ``<TARGET>_model_mcuboot.signed.{bin,hex}`` (build target ``<TARGET>_model_mcuboot_signed``). In ``CONFIG_MODEL_OTA_TESTING`` mode no signed image is produced.
 - The key is the application's ``CONFIG_MCUBOOT_SIGNATURE_KEY_FILE``, the same key that signs the application image. There is no separate model-signing key option.
 - The hash algorithm follows the bootloader (``--sha 512`` when ``CONFIG_MCUBOOT_BOOTLOADER_USES_SHA512`` is set).
 - The image version is ``CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION``, the application's version, not the ``VERSION`` passed to the model CMake helper.
@@ -222,6 +222,10 @@ Enforcement:
   ``nrf_edgeai_process_features()``, ``nrf_edgeai_run_inference()``, and the
   model auxiliary getters, and returns ``NRF_EDGEAI_ERR_UNAVAILABLE`` when the
   global state is not READY.
+- **Model loading** — the wired loaders (``nrf_edgeai_load_user_model_<id>()``,
+  ``model_ota_load_axon_<target>()``) hold the global reader while they read the
+  partition, and return ``MODEL_IMAGE_ERR_UPDATE_IN_PROGRESS`` without touching
+  it when the global state is not READY.
 - **Initialization** — ``nrf_edgeai_init()`` clears ``nrf_edgeai_t.state``,
   including the OTA bit. As a temporary workaround, the library wraps it at
   link time (``-Wl,--wrap=nrf_edgeai_init``): the wrapper restores the bit and

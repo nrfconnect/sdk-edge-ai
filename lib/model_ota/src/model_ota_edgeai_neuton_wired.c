@@ -10,6 +10,7 @@
  */
 
 #include "model_ota_stub_macros.h"
+#include "model_ota_wired_guard.h"
 
 #include <model_ota/model_contract.h>
 #include <model_ota/model_image.h>
@@ -91,13 +92,18 @@ MODEL_OTA_EDGEAI_LOAD_DECL(MODEL_OTA_EDGEAI_SOLUTION_ID)
 
 	*out = NULL;
 
-	rc = model_image_load_neuton(partition_addr, partition_size, &nrf_edgeai_, model_neurons_cap_,
-				     ARRAY_SIZE(model_neurons_cap_), &expect);
-	if (rc != MODEL_IMAGE_OK) {
-		return rc;
+	if (!model_ota_wired_guard_acquire()) {
+		return MODEL_IMAGE_ERR_UPDATE_IN_PROGRESS;
 	}
 
-	rc = model_image_bind_edgeai_params(partition_addr, &nrf_edgeai_);
+	rc = model_image_load_neuton(partition_addr, partition_size, &nrf_edgeai_, model_neurons_cap_,
+				     ARRAY_SIZE(model_neurons_cap_), &expect);
+	if (rc == MODEL_IMAGE_OK) {
+		rc = model_image_bind_edgeai_params(partition_addr, &nrf_edgeai_);
+	}
+
+	model_ota_wired_guard_release();
+
 	if (rc != MODEL_IMAGE_OK) {
 		return rc;
 	}
