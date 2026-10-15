@@ -29,6 +29,8 @@ function(model_ota_add_wired_library)
   add_dependencies(${WL_LIB} zephyr_generated_headers ${WL_DEPENDS})
   target_include_directories(${WL_LIB} PRIVATE ${MODEL_OTA_LIB_DIR}/src
                                                ${MODEL_OTA_LIB_DIR}/include ${WL_INCLUDES})
+  target_compile_definitions(${WL_LIB} PRIVATE
+                             MODEL_IMAGE_PAYLOAD_OFFSET=${MODEL_IMAGE_OFFSET_MCUBOOT})
   if(WL_DEFINES)
     target_compile_definitions(${WL_LIB} PRIVATE ${WL_DEFINES})
   endif()

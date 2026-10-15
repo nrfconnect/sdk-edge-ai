@@ -84,7 +84,7 @@ static bool wait_for_readers_zero(k_timeout_t timeout)
 	while (global_readers > 0U) {
 		k_timeout_t remaining = sys_timepoint_timeout(deadline);
 
-		if (K_TIMEOUT_EQ(remaining, K_NO_WAIT) && !K_TIMEOUT_EQ(timeout, K_FOREVER)) {
+		if (K_TIMEOUT_EQ(remaining, K_NO_WAIT)) {
 			k_mutex_unlock(&guard_mutex);
 			return false;
 		}

@@ -10,7 +10,6 @@
 #include <string.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/__assert.h>
 #include <zephyr/sys/crc.h>
 #include <zephyr/sys/util.h>
 
@@ -47,8 +46,9 @@ static bool magic_is_valid(const struct model_image_header *hdr)
 	       hdr->magic[2] == MODEL_IMAGE_MAGIC2 && hdr->magic[3] == MODEL_IMAGE_MAGIC3;
 }
 
-int model_image_read_and_validate(const uint8_t *partition_addr, size_t partition_size,
-				  struct model_image_header *hdr_out)
+enum model_image_result model_image_read_and_validate(const uint8_t *partition_addr,
+						      size_t partition_size,
+						      struct model_image_header *hdr_out)
 {
 	struct model_image_header hdr;
 	const size_t payload_offset = MODEL_IMAGE_PAYLOAD_OFFSET;
@@ -57,9 +57,6 @@ int model_image_read_and_validate(const uint8_t *partition_addr, size_t partitio
 		LOG_ERR("partition_addr is NULL");
 		return MODEL_IMAGE_ERR_NO_PARTITION;
 	}
-
-	__ASSERT(partition_size >= payload_offset + sizeof(hdr),
-		 "Partition (%zu B) too small for model image header", partition_size);
 
 	memcpy(&hdr, partition_addr + payload_offset, sizeof(hdr));
 
@@ -105,7 +102,8 @@ int model_image_read_and_validate(const uint8_t *partition_addr, size_t partitio
 	return MODEL_IMAGE_OK;
 }
 
-int model_image_neuton_params_elem_size(uint8_t params_type, size_t *elem_size_out)
+enum model_image_result model_image_neuton_params_elem_size(uint8_t params_type,
+							    size_t *elem_size_out)
 {
 	switch (params_type) {
 	case MODEL_IMAGE_PARAMS_F32:

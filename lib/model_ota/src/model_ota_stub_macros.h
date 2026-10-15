@@ -90,4 +90,10 @@
 			     (uintptr_t)MODEL_OTA_IMAGE_LINK_BASE,                                 \
 		     STRINGIFY(label) " address must match MODEL_OTA_IMAGE_LINK_BASE")
 
+/** Compile-time check that @p label can hold the MCUboot header and a model image header. */
+#define MODEL_OTA_BUILD_ASSERT_PARTITION_FITS_HEADER(label)                                        \
+	BUILD_ASSERT(MODEL_OTA_PARTITION_SIZE(label) >=                                            \
+			     MODEL_IMAGE_PAYLOAD_OFFSET + sizeof(struct model_image_header),       \
+		     STRINGIFY(label) " is too small for a model image header")
+
 #endif /* MODEL_OTA_STUB_MACROS_H_ */

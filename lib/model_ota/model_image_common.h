@@ -23,8 +23,9 @@
  * @param[out] hdr_out             Validated header copy on success.
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
-int model_image_read_and_validate(const uint8_t *partition_addr, size_t partition_size,
-				  struct model_image_header *hdr_out);
+enum model_image_result model_image_read_and_validate(const uint8_t *partition_addr,
+						      size_t partition_size,
+						      struct model_image_header *hdr_out);
 
 /**
  * @brief Weight/neuron element size for a Neuton @ref model_image_params_type.
@@ -34,6 +35,7 @@ int model_image_read_and_validate(const uint8_t *partition_addr, size_t partitio
  *                           @p params_type only.
  * @retval MODEL_IMAGE_OK on success, @ref MODEL_IMAGE_ERR_BAD_PARAMS_TYPE otherwise.
  */
-int model_image_neuton_params_elem_size(uint8_t params_type, size_t *elem_size_out);
+enum model_image_result model_image_neuton_params_elem_size(uint8_t params_type,
+							    size_t *elem_size_out);
 
 #endif /* MODEL_IMAGE_COMMON_H_ */
