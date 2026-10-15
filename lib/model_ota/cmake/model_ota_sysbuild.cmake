@@ -36,7 +36,6 @@ function(model_ota_create_provision_hex)
 		OUTPUT ${provision_hex}
 		COMMAND ${PYTHON_EXECUTABLE} ${ZEPHYR_BASE}/scripts/build/mergehex.py
 			-o ${provision_hex}
-			--overlap replace
 			${merge_inputs}
 		DEPENDS
 			mcuboot_extra_byproducts
