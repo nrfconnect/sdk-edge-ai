@@ -75,5 +75,4 @@ if(CONFIG_APP_MODEL_OTA)
   target_sources(app PRIVATE src/model_update.c)
 
   model_ota_finalize()
-  target_link_libraries(app PRIVATE MCUBOOT_BOOTUTIL)
 endif()

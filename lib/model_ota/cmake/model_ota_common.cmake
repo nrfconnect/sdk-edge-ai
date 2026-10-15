@@ -5,14 +5,14 @@
 #
 # Shared helpers for model_ota Neuton/Axon partition-image builds.
 
-include_guard(GLOBAL)
+include_guard(DIRECTORY)
 
 set(MODEL_OTA_TOOLS_DIR ${ZEPHYR_EDGE_AI_MODULE_DIR}/tools/model_ota CACHE INTERNAL "edge-ai model_ota host tools")
 
 set(MODEL_OTA_LIB_DIR ${ZEPHYR_EDGE_AI_MODULE_DIR}/lib/model_ota CACHE INTERNAL "edge-ai model_ota library sources")
 
-# Offset from partition base to the linked model image payload. Must match bootutil
-# IMAGE_HEADER_SIZE (see lib/model_ota/include/model_ota/model_image.h).
+# Offset from partition base to the linked model image payload (the MCUboot image header).
+# Passed to the library sources as MODEL_IMAGE_PAYLOAD_OFFSET.
 set(MODEL_IMAGE_OFFSET_MCUBOOT 32)
 
 function(model_ota_model_image_offset out_var)

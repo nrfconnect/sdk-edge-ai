@@ -13,7 +13,6 @@
 #include <zephyr/sys/__assert.h>
 #include <zephyr/sys/crc.h>
 #include <zephyr/sys/util.h>
-#include <bootutil/image.h>
 
 LOG_MODULE_REGISTER(model_image, CONFIG_MODEL_OTA_LOG_LEVEL);
 
@@ -42,11 +41,6 @@ BUILD_ASSERT(sizeof(struct model_image_edgeai_params) == 36,
 BUILD_ASSERT(offsetof(struct model_image_edgeai_params, p_extraction_mask) % sizeof(uint32_t) == 0,
 	     "p_extraction_mask must be word-aligned");
 
-size_t model_image_partition_payload_offset(void)
-{
-	return IMAGE_HEADER_SIZE;
-}
-
 static bool magic_is_valid(const struct model_image_header *hdr)
 {
 	return hdr->magic[0] == MODEL_IMAGE_MAGIC0 && hdr->magic[1] == MODEL_IMAGE_MAGIC1 &&
@@ -57,7 +51,7 @@ int model_image_read_and_validate(const uint8_t *partition_addr, size_t partitio
 				  struct model_image_header *hdr_out)
 {
 	struct model_image_header hdr;
-	const size_t payload_offset = model_image_partition_payload_offset();
+	const size_t payload_offset = MODEL_IMAGE_PAYLOAD_OFFSET;
 
 	if (partition_addr == NULL) {
 		LOG_ERR("partition_addr is NULL");

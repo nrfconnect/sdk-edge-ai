@@ -12,14 +12,6 @@
 #include <stdint.h>
 
 /**
- * @brief Byte offset from a model partition base to the linked model image.
- *
- * Each partition reserves an MCUboot image-header slot at its base; the model payload is
- * linked immediately after that slot (@c IMAGE_HEADER_SIZE bytes).
- */
-size_t model_image_partition_payload_offset(void);
-
-/**
  * @brief Read the partition header and run checks shared by all backends.
  *
  * Reads @ref model_image_header directly from the memory-mapped (XIP) partition,

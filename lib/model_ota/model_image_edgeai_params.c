@@ -51,9 +51,8 @@ static enum model_image_result extraction_mask_matches(const struct model_image_
 enum model_image_result model_image_bind_edgeai_params(const uint8_t *partition_addr,
 							       nrf_edgeai_t *edgeai)
 {
-	const size_t payload_offset = model_image_partition_payload_offset();
 	const struct model_image_header *hdr =
-		(const struct model_image_header *)(partition_addr + payload_offset);
+		(const struct model_image_header *)(partition_addr + MODEL_IMAGE_PAYLOAD_OFFSET);
 	/* By value: hdr is __packed, so &hdr->edgeai_params would be a possibly-unaligned
 	 * pointer.
 	 */

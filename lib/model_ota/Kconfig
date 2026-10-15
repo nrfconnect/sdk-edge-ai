@@ -19,7 +19,6 @@ menuconfig MODEL_OTA
 	bool "Model-only OTA update (linked partition images)"
 	depends on BOOTLOADER_MCUBOOT || MODEL_OTA_TESTING
 	depends on FLASH && CRC && XIP
-	select MCUBOOT_BOOTUTIL_LIB if BOOTLOADER_MCUBOOT
 	help
 	  Library that loads and validates NN models from dedicated flash partitions at
 	  runtime, independently of the application image. Each model partition reserves
@@ -79,6 +78,7 @@ config MODEL_OTA_GUARD_DRAIN_TIMEOUT_MS
 config MODEL_OTA_SMP
 	bool "Coordinate inference with MCUboot SMP model uploads"
 	depends on BOOTLOADER_MCUBOOT
+	depends on MCUBOOT_BOOTUTIL_LIB
 	depends on MCUMGR
 	depends on MCUMGR_MGMT_NOTIFICATION_HOOKS
 	depends on MCUMGR_GRP_IMG

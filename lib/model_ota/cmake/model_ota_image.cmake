@@ -64,7 +64,7 @@ function(model_ota_mcuboot_sign)
 
   set(_imgtool_sign ${PYTHON_EXECUTABLE} ${IMGTOOL} sign
     --version ${SIGN_VERSION}
-    --header-size 32
+    --header-size ${MODEL_IMAGE_OFFSET_MCUBOOT}
     --pad-header
     ${_imgtool_hash_arg}
     --slot-size ${SIGN_PARTITION_SIZE}
