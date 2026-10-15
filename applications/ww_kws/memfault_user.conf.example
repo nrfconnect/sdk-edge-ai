@@ -3,9 +3,11 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-# Copy to memfault_user.conf, set your project key, and merge when building:
+# Copy to memfault_user.conf and set your Memfault project key.
+# Pass it last so the other configuration fragments cannot override it:
 #
-#   west build ... -- -DEXTRA_CONF_FILE="observability.conf;memfault_user.conf"
+#   west build ... \
+#     -- -DEXTRA_CONF_FILE="observability.conf;memfault_fota.conf;memfault_user.conf"
 #
 
-CONFIG_MEMFAULT_PROJECT_KEY="YOUR_MEMFAULT_PROJECT_KEY"
+CONFIG_MEMFAULT_PROJECT_KEY="your-memfault-project-key-here"

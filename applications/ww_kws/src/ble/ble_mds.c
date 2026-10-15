@@ -12,23 +12,59 @@
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/settings/settings.h>
 
+#if IS_ENABLED(CONFIG_MCUMGR_TRANSPORT_BT)
+#include <zephyr/mgmt/mcumgr/transport/smp_bt.h>
+#endif
+
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
 #include <bluetooth/services/mds.h>
+#endif
+
+#include "../memfault_fota.h"
 
 LOG_MODULE_REGISTER(ble_mds);
 
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
+#if IS_ENABLED(CONFIG_MCUMGR_TRANSPORT_BT) && IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
+/* SMP and MDS do not fit in one AD payload; keep SMP in AD for DFU discovery. */
+static const struct bt_data ad[] = {
+	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, SMP_BT_SVC_UUID_VAL),
+};
+static const struct bt_data sd[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_MDS_VAL),
+};
+#elif IS_ENABLED(CONFIG_MCUMGR_TRANSPORT_BT)
+static const struct bt_data ad[] = {
+	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, SMP_BT_SVC_UUID_VAL),
+};
+static const struct bt_data sd[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+};
+#elif IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_MDS_VAL),
 };
-
 static const struct bt_data sd[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
 };
+#else
+static const struct bt_data ad[] = {
+	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+};
+static const struct bt_data sd[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+};
+#endif
 
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
 static struct bt_conn *mds_conn;
+#endif
 static struct k_work adv_work;
 
 static void adv_work_handler(struct k_work *work)
@@ -65,11 +101,14 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	LOG_INF("Disconnected, reason 0x%02x %s", reason, bt_hci_err_to_str(reason));
 
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
 	if (conn == mds_conn) {
 		mds_conn = NULL;
 	}
+#endif
 }
 
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
 static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
@@ -87,6 +126,7 @@ static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_
 		mds_conn = conn;
 	}
 }
+#endif
 
 static void recycled_cb(void)
 {
@@ -97,10 +137,13 @@ static void recycled_cb(void)
 BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected = connected,
 	.disconnected = disconnected,
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
 	.security_changed = security_changed,
+#endif
 	.recycled = recycled_cb,
 };
 
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
 static bool mds_access_enable(struct bt_conn *conn)
 {
 	return mds_conn && (conn == mds_conn);
@@ -109,16 +152,19 @@ static bool mds_access_enable(struct bt_conn *conn)
 static const struct bt_mds_cb mds_cb = {
 	.access_enable = mds_access_enable,
 };
+#endif
 
 int init_app_ble(void)
 {
 	int err;
 
+#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
 	err = bt_mds_cb_register(&mds_cb);
 	if (err) {
 		LOG_ERR("MDS callback registration failed (err %d)", err);
 		return err;
 	}
+#endif
 
 	err = bt_enable(NULL);
 	if (err) {
@@ -134,6 +180,11 @@ int init_app_ble(void)
 			LOG_ERR("Failed to load settings (err %d)", err);
 			return err;
 		}
+	}
+
+	err = memfault_fota_init();
+	if (err != 0) {
+		return err;
 	}
 
 	k_work_init(&adv_work, adv_work_handler);

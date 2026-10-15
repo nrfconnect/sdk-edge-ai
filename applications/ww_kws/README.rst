@@ -111,7 +111,7 @@ Partition-resident models are optional via ``SB_CONFIG_APP_MODEL_OTA`` (set in :
 ``SB_CONFIG_APP_MODEL_OTA`` propagates to ``CONFIG_APP_MODEL_OTA`` on the ww_kws image.
   Models are loaded from ``model_storage_ww`` / ``model_storage_kws`` at boot instead of being compiled into the app.
   Also builds MCUboot-signed model images and enables SMP model upload (with inference paused during upload).
-  Applies the model and MCUboot overlays from :file:`sysbuild.cmake`.
+  Applies the model configuration and the model and MCUboot overlays from :file:`sysbuild.cmake`.
 
 Build combinations:
 
@@ -128,11 +128,42 @@ Build combinations:
      west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
        -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf
 
+* **Partition-resident models + BLE SMP DFU** (nRF Connect Device Manager):
+
+  .. code-block:: console
+
+     west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
+       -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf \
+          -DEXTRA_CONF_FILE=ble_mcumgr.conf
+
+* **Model OTA + BLE DFU + observability** (Memfault Diagnostic Service over the same BLE link):
+
+  .. code-block:: console
+
+     west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
+       -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf \
+          -DEXTRA_CONF_FILE="ble_mcumgr.conf;observability.conf;memfault_user.conf"
+
+* **Model OTA + Memfault application FOTA + observability** (Device Manager FOTA tab):
+
+  .. code-block:: console
+
+     west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d build applications/ww_kws \
+       -- -DSB_EXTRA_CONF_FILE=sysbuild_model_ota.conf \
+          -DEXTRA_CONF_FILE="observability.conf;memfault_fota.conf;memfault_user.conf"
+
+  Copy :file:`memfault_user.conf.example` to :file:`memfault_user.conf` and set the project key.
+  Pass :file:`memfault_user.conf` last so its project key is not overridden.
+  Increment :file:`VERSION` before each Memfault release upload.
+  When a model changes, pass ``-DWW_MODEL_ITERATION=<number>`` or ``-DKWS_MODEL_ITERATION=<number>`` after ``--`` in the build command.
+  The values are cached, so pass the desired iteration explicitly for release builds.
+
 Packaging and first-time provisioning
 --------------------------------------
 
 Model partition images are built when ``SB_CONFIG_APP_MODEL_OTA`` is enabled.
-Pass :file:`sysbuild_model_ota.conf` as ``SB_EXTRA_CONF_FILE``:
+Pass :file:`sysbuild_model_ota.conf` as ``SB_EXTRA_CONF_FILE``.
+The :file:`model_ota.conf` file is applied to the ww_kws image automatically:
 
 .. code-block:: console
 
@@ -144,6 +175,7 @@ This produces:
 * ``build/ww_kws/model_ota/ww/ww_model_mcuboot.signed.{bin,hex}`` - wakeword model (MCUboot image 1)
 * ``build/ww_kws/model_ota/kws/kws_model_mcuboot.signed.{bin,hex}`` - keyword-spotting model (MCUboot image 2)
 * ``build/ww_kws/zephyr/zephyr.signed.{bin,hex}`` - application firmware (MCUboot image 0)
+* ``build/dfu_application.zip`` - application and both models for nRF Connect Device Manager or Memfault
 * ``build/ww_kws_provision.hex`` - merged bootloader, application, and both signed models
 
 First-time provisioning must flash the **full sysbuild image chain**, not the application ``zephyr.hex`` alone.
@@ -205,6 +237,34 @@ Firmware-only OTA uses image index 0 and ``build/ww_kws/zephyr/zephyr.signed.bin
    mcumgr -c acm1 reset
 
 Each image can be updated independently.
+
+Model and firmware OTA over BLE
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pass :file:`ble_mcumgr.conf` as ``EXTRA_CONF_FILE`` to enable SMP over Bluetooth.
+The device advertises the standard MCUmgr SMP service used by `nRF Connect Device Manager`_.
+When :file:`observability.conf` is also enabled, the Memfault Diagnostic Service is advertised in the scan response.
+
+Upload :file:`build/dfu_application.zip` from the Device Manager Image tab to update the application and both models.
+Model images use in-place, overwrite-only MCUboot slots.
+Use the Device Manager **Confirm only** option for the multi-image update, then reset the device.
+The inference guard blocks model access after a model upload starts and keeps it blocked until reset.
+
+If Device Manager reports **Confirmation denied (32)**, rebuild from a pristine directory.
+The :file:`model_ota.conf` file enables confirmation of non-active model images for this workflow.
+
+Memfault-managed FOTA
+^^^^^^^^^^^^^^^^^^^^^
+
+Pass :file:`memfault_fota.conf` instead of :file:`ble_mcumgr.conf` to enable Memfault release-management FOTA in nRF Connect Device Manager.
+The configuration aligns the Memfault device ID and Bluetooth Device Information Service serial number with the SoC hardware ID.
+It also aligns the application MCUboot version, Memfault firmware version, and Device Information Service firmware revision with :file:`VERSION`.
+
+Upload :file:`build/dfu_application.zip` to Memfault to release the application and both models.
+Upload :file:`build/ww_kws/zephyr/zephyr.signed.bin` for an application-only release.
+The Memfault hardware version must match ``CONFIG_MEMFAULT_NCS_HW_VERSION``.
+
+Memfault observability and FOTA can share the same BLE connection because the Memfault Diagnostic Service and SMP use separate GATT services.
 
 Requirements
 ************

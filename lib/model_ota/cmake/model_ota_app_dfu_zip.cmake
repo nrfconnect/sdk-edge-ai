@@ -81,7 +81,8 @@ function(model_ota_create_dfu_application_zip)
 	set(model_idx 0)
 	foreach(model IN LISTS ARG_MODEL)
 		list(GET ARG_IMAGE_INDEX ${model_idx} image_index)
-		set(model_bin ${CMAKE_BINARY_DIR}/${model}_model_mcuboot.signed.bin)
+		set(model_bin
+			${CMAKE_CURRENT_BINARY_DIR}/model_ota/${model}/${model}_model_mcuboot.signed.bin)
 		set(zip_name "${model}_model_mcuboot.signed.bin")
 
 		model_ota_mcuboot_image_number_to_slot(model_slot_primary ${image_index} n)

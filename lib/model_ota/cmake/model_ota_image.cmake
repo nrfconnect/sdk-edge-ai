@@ -105,7 +105,7 @@ endfunction()
 function(model_ota_add_image)
   set(options EXCLUDE_FROM_ALL)
   set(oneValueArgs
-      TARGET OBJ_LIB WORK_DIR PARTITION_ADDR PARTITION_SIZE NAME VERSION UUID_VID UUID_CID)
+      TARGET OBJ_LIB WORK_DIR PARTITION_ADDR PARTITION_SIZE NAME VERSION SIGN_VERSION UUID_VID UUID_CID)
   set(multiValueArgs LINK_SCRIPTS VALIDATE_ARGS COMPAT_ARGS DEPENDS)
   cmake_parse_arguments(IMG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
@@ -190,6 +190,11 @@ function(model_ota_add_image)
 
   if(CONFIG_BOOTLOADER_MCUBOOT)
     set(_sign_extra "")
+    if(IMG_SIGN_VERSION)
+      set(_sign_version ${IMG_SIGN_VERSION})
+    else()
+      set(_sign_version ${IMG_VERSION})
+    endif()
     if(IMG_UUID_VID)
       list(APPEND _sign_extra UUID_VID ${IMG_UUID_VID})
     endif()
@@ -205,7 +210,7 @@ function(model_ota_add_image)
       MODEL_IMAGE_TARGET ${IMG_TARGET}_model_image
       PARTITION_ADDR ${IMG_PARTITION_ADDR}
       PARTITION_SIZE ${IMG_PARTITION_SIZE}
-      VERSION ${IMG_VERSION}
+      VERSION ${_sign_version}
       ${_sign_extra})
   endif()
 endfunction()

@@ -7,11 +7,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <zephyr/app_version.h>
 #include <zephyr/audio/dmic.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+#include <zephyr/dfu/mcuboot.h>
+#include <zephyr/storage/flash_map.h>
+#endif
 
 #include "ble/ble_mds.h"
 #include "control_output.h"
@@ -28,6 +33,40 @@ LOG_MODULE_REGISTER(main);
 #define DMIC_READ_TIMEOUT 100
 
 static const struct device *const dmic_dev = DEVICE_DT_GET(DT_NODELABEL(dmic_dev));
+
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+static void model_version_print(const char *name, uint8_t area_id)
+{
+	struct mcuboot_img_header hdr;
+	int err;
+
+	err = boot_read_bank_header(area_id, &hdr, sizeof(hdr));
+	if (err) {
+		LOG_INF("  %s model: not available (err %d)", name, err);
+		return;
+	}
+
+	LOG_INF("  %s model: %u.%u.%u+%u", name, hdr.h.v1.sem_ver.major, hdr.h.v1.sem_ver.minor,
+		hdr.h.v1.sem_ver.revision, hdr.h.v1.sem_ver.build_num);
+}
+#endif
+
+static void version_banner_print(void)
+{
+	LOG_INF("Versions:");
+	LOG_INF("  application: %s", APP_VERSION_STRING);
+#if IS_ENABLED(CONFIG_APP_MODEL_OTA)
+	model_version_print("ww", PARTITION_ID(model_storage_ww));
+	model_version_print("kws", PARTITION_ID(model_storage_kws));
+#else
+	LOG_INF("  models: built into application");
+#endif
+#if IS_ENABLED(CONFIG_WW_KWS_MEMFAULT_FOTA)
+	LOG_INF("  Memfault release: %s", CONFIG_MEMFAULT_NCS_FW_VERSION);
+#else
+	LOG_INF("  Memfault release: disabled");
+#endif
+}
 
 static int ww_loop(void)
 {
@@ -126,6 +165,8 @@ static int kws_loop(void)
 int main(void)
 {
 	int err;
+
+	version_banner_print();
 
 	err = dmic_init();
 	if (err) {

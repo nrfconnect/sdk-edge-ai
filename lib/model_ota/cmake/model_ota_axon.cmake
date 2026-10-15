@@ -8,12 +8,14 @@
 # model_ota_edgeai_axon_model(TARGET <id> SOLUTION_ID <id> MODEL_SRC <abs nrf_edgeai_user_model.c>
 #                             HEADER <abs nrf_edgeai_user_model_axon.h>
 #                             PARTITION_NODELABEL <dt-nodelabel>
-#                             [NAME <str>] [VERSION <x.y.z>] [PERSISTENT_VARS_CAP <n>]
+#                             [NAME <str>] [VERSION <x.y.z>] [SIGN_VERSION <x.y.z[+build]>]
+#                             [PERSISTENT_VARS_CAP <n>]
 #                             [MODEL_SYM <sym>] [ALLOCATE_PACKED_OUTPUT]
 #                             [UUID_VID <vid>] [UUID_CID <cid>])
 #
 # model_ota_axon_model(TARGET <id> HEADER <nrf_axon_model_*.h> PARTITION_NODELABEL <dt-nodelabel>
-#                      [NAME <str>] [VERSION <x.y.z>] [PERSISTENT_VARS_CAP <n>] [MODEL_SYM <sym>]
+#                      [NAME <str>] [VERSION <x.y.z>] [SIGN_VERSION <x.y.z[+build]>]
+#                      [PERSISTENT_VARS_CAP <n>] [MODEL_SYM <sym>]
 #                      [ALLOCATE_PACKED_OUTPUT] [UUID_VID <vid>] [UUID_CID <cid>])
 #
 # model_ota_axon_bindings(SYMBOLS <symbol>...)
@@ -96,8 +98,8 @@ endfunction()
 function(_model_ota_axon_slot)
   set(options ALLOCATE_PACKED_OUTPUT)
   set(oneValueArgs
-      FLAVOR TARGET HEADER PARTITION_NODELABEL NAME VERSION PERSISTENT_VARS_CAP MODEL_SYM MODEL_SRC
-      SOLUTION_ID UUID_VID UUID_CID)
+      FLAVOR TARGET HEADER PARTITION_NODELABEL NAME VERSION SIGN_VERSION PERSISTENT_VARS_CAP
+      MODEL_SYM MODEL_SRC SOLUTION_ID UUID_VID UUID_CID)
   cmake_parse_arguments(MI "${options}" "${oneValueArgs}" "" ${ARGN})
 
   model_ota_check_unparsed(MI)
@@ -312,6 +314,7 @@ function(_model_ota_axon_slot)
     PARTITION_SIZE ${_partition_size}
     NAME ${MI_NAME}
     VERSION ${MI_VERSION}
+    SIGN_VERSION ${MI_SIGN_VERSION}
     UUID_VID ${MI_UUID_VID}
     UUID_CID ${MI_UUID_CID}
     LINK_SCRIPTS ${_bindings_ld}

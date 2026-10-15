@@ -12,10 +12,13 @@
  * @ingroup ww_kws
  */
 
-#if IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS)
+#if IS_ENABLED(CONFIG_BT_PERIPHERAL)
 
 /**
- * @brief Initialize BLE and start MDS advertising.
+ * @brief Initialize Bluetooth and start connectable advertising.
+ *
+ * Advertises the SMP service when CONFIG_MCUMGR_TRANSPORT_BT is enabled and
+ * the Memfault Diagnostic Service when CONFIG_MODELS_OBSERVABILITY_MDS is enabled.
  *
  * @return 0 on success, -errno on failure.
  */
@@ -28,7 +31,7 @@ static inline int init_app_ble(void)
 	return 0;
 }
 
-#endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_MDS) */
+#endif /* IS_ENABLED(CONFIG_BT_PERIPHERAL) */
 
 /**
  * @}
