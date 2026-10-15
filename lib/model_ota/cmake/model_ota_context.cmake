@@ -49,12 +49,13 @@ function(model_ota_using_released_fw OUT_VAR)
 endfunction()
 
 function(model_ota_context_register_slot)
-  cmake_parse_arguments(S ""
-    "TARGET;BACKEND;PARTITION_NODELABEL;NAME;NEURONS_CAP;PERSISTENT_VARS_CAP;PACKED_OUTPUT_CAP"
-    "" ${ARGN})
-  if(NOT S_TARGET OR NOT S_BACKEND OR NOT S_PARTITION_NODELABEL)
-    message(FATAL_ERROR "model_ota_context_register_slot requires TARGET, BACKEND, PARTITION_NODELABEL")
-  endif()
+  set(oneValueArgs
+    TARGET BACKEND PARTITION_NODELABEL NAME NEURONS_CAP PERSISTENT_VARS_CAP PACKED_OUTPUT_CAP)
+  cmake_parse_arguments(S "" "${oneValueArgs}" "" ${ARGN})
+
+  model_ota_check_unparsed(S)
+  model_ota_check_required_all(S TARGET BACKEND PARTITION_NODELABEL)
+
   if(NOT S_NAME)
     set(S_NAME ${S_TARGET})
   endif()
@@ -92,10 +93,12 @@ endfunction()
 # export_model_ota_context.py. Every backend has at least the contract hash there, since that value
 # is read out of a compiled probe object rather than computed at configure time.
 function(model_ota_context_register_slot_build)
-  cmake_parse_arguments(S "" "SLOT_JSON" "" ${ARGN})
-  if(NOT S_SLOT_JSON)
-    message(FATAL_ERROR "model_ota_context_register_slot_build requires SLOT_JSON")
-  endif()
+  set(oneValueArgs SLOT_JSON)
+  cmake_parse_arguments(S "" "${oneValueArgs}" "" ${ARGN})
+
+  model_ota_check_unparsed(S)
+  model_ota_check_required_all(S ${oneValueArgs})
+
   set_property(GLOBAL APPEND PROPERTY model_ota_context_slot_build_json ${S_SLOT_JSON})
 endfunction()
 
@@ -106,16 +109,14 @@ endfunction()
 #                            [CONFIG_HEADER <axon_config.h>] [NEURONS_CAP <n>]
 #                            OUT_SLOT_JSON <var>)
 function(model_ota_add_context_slot)
-  cmake_parse_arguments(CS ""
-    "TARGET;BACKEND;PARTITION_NODELABEL;NAME;WORK_DIR;CONTRACT_PROBE;CONFIG_HEADER;NEURONS_CAP;OUT_SLOT_JSON"
-    "" ${ARGN})
+  set(oneValueArgs
+      TARGET BACKEND PARTITION_NODELABEL NAME WORK_DIR CONTRACT_PROBE CONFIG_HEADER NEURONS_CAP
+      OUT_SLOT_JSON)
+  cmake_parse_arguments(CS "" "${oneValueArgs}" "" ${ARGN})
 
-  if(NOT CS_TARGET OR NOT CS_BACKEND OR NOT CS_PARTITION_NODELABEL OR NOT CS_WORK_DIR
-     OR NOT CS_CONTRACT_PROBE OR NOT CS_OUT_SLOT_JSON)
-    message(FATAL_ERROR
-            "model_ota_add_context_slot requires TARGET, BACKEND, PARTITION_NODELABEL, "
-            "WORK_DIR, CONTRACT_PROBE and OUT_SLOT_JSON")
-  endif()
+  model_ota_check_unparsed(CS)
+  model_ota_check_required_all(CS TARGET BACKEND PARTITION_NODELABEL WORK_DIR CONTRACT_PROBE
+                               OUT_SLOT_JSON)
   if(NOT CS_NAME)
     set(CS_NAME ${CS_TARGET})
   endif()

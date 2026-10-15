@@ -94,14 +94,15 @@ function(model_ota_axon_bindings_ld OUT_VAR)
 endfunction()
 
 function(_model_ota_axon_slot)
-  cmake_parse_arguments(MI "ALLOCATE_PACKED_OUTPUT" "FLAVOR"
-    "TARGET;HEADER;PARTITION_NODELABEL;NAME;VERSION;PERSISTENT_VARS_CAP;MODEL_SYM;MODEL_SRC;SOLUTION_ID;UUID_VID;UUID_CID"
-    ${ARGN})
+  set(options ALLOCATE_PACKED_OUTPUT)
+  set(oneValueArgs
+      FLAVOR TARGET HEADER PARTITION_NODELABEL NAME VERSION PERSISTENT_VARS_CAP MODEL_SYM MODEL_SRC
+      SOLUTION_ID UUID_VID UUID_CID)
+  cmake_parse_arguments(MI "${options}" "${oneValueArgs}" "" ${ARGN})
 
-  if(NOT MI_FLAVOR OR NOT MI_TARGET OR NOT MI_HEADER OR NOT MI_PARTITION_NODELABEL)
-    message(FATAL_ERROR
-            "_model_ota_axon_slot requires FLAVOR, TARGET, HEADER and PARTITION_NODELABEL")
-  endif()
+  model_ota_check_unparsed(MI)
+  model_ota_check_required_all(MI FLAVOR TARGET HEADER PARTITION_NODELABEL)
+
   if(MI_FLAVOR STREQUAL "edgeai_axon")
     if(NOT MI_MODEL_SRC OR NOT MI_SOLUTION_ID)
       message(FATAL_ERROR
@@ -335,10 +336,12 @@ endfunction()
 #
 # model_ota_axon_bindings(SYMBOLS <symbol>...)
 function(model_ota_axon_bindings)
-  cmake_parse_arguments(B "" "" "SYMBOLS" ${ARGN})
-  if(NOT B_SYMBOLS)
-    message(FATAL_ERROR "model_ota_axon_bindings requires SYMBOLS")
-  endif()
+  set(multiValueArgs SYMBOLS)
+  cmake_parse_arguments(B "" "" "${multiValueArgs}" ${ARGN})
+
+  model_ota_check_unparsed(B)
+  model_ota_check_required_multi(B SYMBOLS)
+
   get_property(_finalized GLOBAL PROPERTY model_ota_axon_binding_finalized)
   if(_finalized)
     message(FATAL_ERROR "model_ota_axon_bindings must be called before model_ota_finalize()")

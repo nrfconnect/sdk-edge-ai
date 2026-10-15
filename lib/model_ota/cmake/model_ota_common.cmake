@@ -7,6 +7,8 @@
 
 include_guard(DIRECTORY)
 
+include(${CMAKE_CURRENT_LIST_DIR}/model_ota_args.cmake)
+
 set(MODEL_OTA_TOOLS_DIR ${ZEPHYR_EDGE_AI_MODULE_DIR}/tools/model_ota CACHE INTERNAL "edge-ai model_ota host tools")
 
 set(MODEL_OTA_LIB_DIR ${ZEPHYR_EDGE_AI_MODULE_DIR}/lib/model_ota CACHE INTERNAL "edge-ai model_ota library sources")
@@ -90,13 +92,11 @@ endfunction()
 # contracts cover the generated nrf_edgeai_t pipeline, which is only visible with the source in
 # scope.
 function(model_ota_contract_probe)
-  cmake_parse_arguments(CP ""
-    "OUT_OBJ;WORK_DIR;FLAVOR;IMAGE_BASE;MODEL_SRC;SOLUTION_ID_HASH" "" ${ARGN})
+  set(oneValueArgs OUT_OBJ WORK_DIR FLAVOR IMAGE_BASE MODEL_SRC SOLUTION_ID_HASH)
+  cmake_parse_arguments(CP "" "${oneValueArgs}" "" ${ARGN})
 
-  if(NOT CP_OUT_OBJ OR NOT CP_WORK_DIR OR NOT CP_FLAVOR OR NOT CP_IMAGE_BASE)
-    message(FATAL_ERROR
-            "model_ota_contract_probe requires OUT_OBJ, WORK_DIR, FLAVOR and IMAGE_BASE")
-  endif()
+  model_ota_check_unparsed(CP)
+  model_ota_check_required_all(CP OUT_OBJ WORK_DIR FLAVOR IMAGE_BASE)
 
   if(CP_FLAVOR STREQUAL "edgeai_neuton")
     set(_flavor_def MODEL_OTA_CONTRACT_PROBE_EDGEAI_NEUTON)
@@ -225,11 +225,13 @@ endfunction()
 # The library must be compiled with -ffunction-sections -fdata-sections so each array lands in
 # its own named input section.
 function(model_ota_discard_register)
-  cmake_parse_arguments(MD "" "LIB;DESCRIPTION" "SECTIONS" ${ARGN})
+  set(oneValueArgs LIB DESCRIPTION)
+  set(multiValueArgs SECTIONS)
+  cmake_parse_arguments(MD "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-  if(NOT MD_LIB OR NOT MD_SECTIONS)
-    message(FATAL_ERROR "model_ota_discard_register requires LIB and SECTIONS")
-  endif()
+  model_ota_check_unparsed(MD)
+  model_ota_check_required_all(MD ${oneValueArgs})
+  model_ota_check_required_multi(MD SECTIONS)
 
   target_compile_options(${MD_LIB} PRIVATE -ffunction-sections -fdata-sections)
 

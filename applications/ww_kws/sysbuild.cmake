@@ -25,14 +25,14 @@ if(SB_CONFIG_APP_MODEL_OTA)
 		APP_IMAGE ww_kws
 		MODEL_HEX ${CMAKE_BINARY_DIR}/ww_kws/model_ota/ww/ww_model_mcuboot.signed.hex
 		FLASHER_NAME ww_kws_model_ww
-		SKIP_PROVISION_MERGE y
+		SKIP_PROVISION_MERGE
 	)
 
 	model_ota_register_provision_hex(
 		APP_IMAGE ww_kws
 		MODEL_HEX ${CMAKE_BINARY_DIR}/ww_kws/model_ota/kws/kws_model_mcuboot.signed.hex
 		FLASHER_NAME ww_kws_model_kws
-		SKIP_PROVISION_MERGE y
+		SKIP_PROVISION_MERGE
 	)
 
 	model_ota_create_provision_hex(

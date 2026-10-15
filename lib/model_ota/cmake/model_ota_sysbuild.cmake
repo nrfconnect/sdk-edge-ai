@@ -4,19 +4,22 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 # Sysbuild helpers for model-only OTA.
-#
+
+include(${CMAKE_CURRENT_LIST_DIR}/model_ota_args.cmake)
+
 # model_ota_register_provision_hex() registers the model partition hex as an extra
 # sysbuild flash domain (west flash programs it after the bootloader and app)
 # and, when MCUboot is enabled, builds a single merged provision hex for
 # nrfutil or west flash --hex-file.
 
 function(model_ota_create_provision_hex)
-	cmake_parse_arguments(ARG "" "APP_IMAGE" "MODEL_HEX" ${ARGN})
+	set(oneValueArgs APP_IMAGE)
+	set(multiValueArgs MODEL_HEX)
+	cmake_parse_arguments(ARG "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-	if(NOT ARG_APP_IMAGE OR NOT ARG_MODEL_HEX)
-		message(FATAL_ERROR
-			"${CMAKE_CURRENT_FUNCTION}() requires APP_IMAGE and one or more MODEL_HEX paths")
-	endif()
+	model_ota_check_unparsed(ARG)
+	model_ota_check_required_all(ARG APP_IMAGE)
+	model_ota_check_required_multi(ARG MODEL_HEX)
 
 	foreach(model_hex IN LISTS ARG_MODEL_HEX)
 		if(NOT IS_ABSOLUTE "${model_hex}")
@@ -49,12 +52,12 @@ function(model_ota_create_provision_hex)
 endfunction()
 
 function(model_ota_register_provision_hex)
-	cmake_parse_arguments(ARG "SKIP_PROVISION_MERGE" "APP_IMAGE;MODEL_HEX;FLASHER_NAME" "" ${ARGN})
+	set(options SKIP_PROVISION_MERGE)
+	set(oneValueArgs APP_IMAGE MODEL_HEX FLASHER_NAME)
+	cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "" ${ARGN})
 
-	if(NOT ARG_APP_IMAGE OR NOT ARG_MODEL_HEX)
-		message(FATAL_ERROR
-			"${CMAKE_CURRENT_FUNCTION}() requires APP_IMAGE and MODEL_HEX")
-	endif()
+	model_ota_check_unparsed(ARG)
+	model_ota_check_required_all(ARG APP_IMAGE MODEL_HEX)
 	if(NOT ARG_FLASHER_NAME)
 		set(ARG_FLASHER_NAME ${ARG_APP_IMAGE}_model)
 	endif()

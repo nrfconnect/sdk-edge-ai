@@ -37,16 +37,12 @@ set(MODEL_OTA_EDGEAI_NEUTON_PAYLOAD_SECTIONS
 )
 
 function(model_ota_edgeai_neuton_model)
-  cmake_parse_arguments(MI ""
-    "TARGET;SOLUTION_ID;MODEL_SRC;PARTITION_NODELABEL;NAME;VERSION;NEURONS_CAP;UUID_VID;UUID_CID"
-    "" ${ARGN})
+  set(oneValueArgs
+      TARGET SOLUTION_ID MODEL_SRC PARTITION_NODELABEL NAME VERSION NEURONS_CAP UUID_VID UUID_CID)
+  cmake_parse_arguments(MI "" "${oneValueArgs}" "" ${ARGN})
 
-  if(NOT MI_TARGET OR NOT MI_SOLUTION_ID OR NOT MI_MODEL_SRC OR NOT MI_PARTITION_NODELABEL
-     OR NOT MI_NEURONS_CAP)
-    message(FATAL_ERROR
-            "model_ota_edgeai_neuton_model requires TARGET, SOLUTION_ID, MODEL_SRC, "
-            "PARTITION_NODELABEL and NEURONS_CAP")
-  endif()
+  model_ota_check_unparsed(MI)
+  model_ota_check_required_all(MI TARGET SOLUTION_ID MODEL_SRC PARTITION_NODELABEL NEURONS_CAP)
   if(TARGET ota_edgeai_neuton_${MI_TARGET})
     message(FATAL_ERROR "model_ota_edgeai_neuton_model: duplicate TARGET ${MI_TARGET}")
   endif()

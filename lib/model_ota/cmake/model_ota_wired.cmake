@@ -14,14 +14,12 @@ include(${CMAKE_CURRENT_LIST_DIR}/model_ota_common.cmake)
 #                             [DISCARD_SECTIONS <section>...] [DEFINES <d>...]
 #                             [INCLUDES <dir>...] [DEPENDS <target>...])
 function(model_ota_add_wired_library)
-  cmake_parse_arguments(WL ""
-    "LIB;SOURCE;ARCHIVE_DIR;MODEL_SRC;DESCRIPTION" "DISCARD_SECTIONS;DEFINES;INCLUDES;DEPENDS"
-    ${ARGN})
+  set(oneValueArgs LIB SOURCE ARCHIVE_DIR MODEL_SRC DESCRIPTION)
+  set(multiValueArgs DISCARD_SECTIONS DEFINES INCLUDES DEPENDS)
+  cmake_parse_arguments(WL "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-  if(NOT WL_LIB OR NOT WL_SOURCE OR NOT WL_ARCHIVE_DIR OR NOT WL_DESCRIPTION)
-    message(FATAL_ERROR
-            "model_ota_add_wired_library requires LIB, SOURCE, ARCHIVE_DIR and DESCRIPTION")
-  endif()
+  model_ota_check_unparsed(WL)
+  model_ota_check_required_all(WL LIB SOURCE ARCHIVE_DIR DESCRIPTION)
 
   add_library(${WL_LIB} STATIC ${WL_SOURCE})
   set_target_properties(${WL_LIB} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${WL_ARCHIVE_DIR})
