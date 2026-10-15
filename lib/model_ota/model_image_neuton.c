@@ -83,13 +83,8 @@ enum model_image_result model_image_load_neuton(const uint8_t *partition_addr, s
 	img_model = hdr.neuton.model;
 	neurons_num = img_model->meta.neurons_num;
 
-	if (neurons_num > expect->neurons_cap) {
-		LOG_ERR("Model needs %u neurons, app cap is %u", neurons_num, expect->neurons_cap);
-		return MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL;
-	}
-
 	if (neurons_num > neurons_buf_cap) {
-		LOG_ERR("Model needs %u neurons, only %u provided", neurons_num,
+		LOG_ERR("Model needs %u neurons, app cap is %u", neurons_num,
 			(unsigned)neurons_buf_cap);
 		return MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL;
 	}

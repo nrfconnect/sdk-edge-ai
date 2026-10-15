@@ -223,16 +223,14 @@ struct model_image_header {
 /**
  * App-side expectations validated by @ref model_image_load_neuton.
  *
- * Only what the contract hash cannot express: the neuron scratch *capacity* (an inequality, so
- * that an oversized model reports "needs new firmware" rather than "incompatible"), and the
- * weight precision. Precision is deliberately redundant with the hash - it selects the
+ * The neuron scratch capacity is not part of it: it is the size of the buffer passed to
+ * @ref model_image_load_neuton. Precision is deliberately redundant with the hash - it selects the
  * nrf_edgeai_model_neuton_params_* union member and therefore the element size of the caller's
  * neuron buffer, so it is worth re-checking directly rather than trusting a 32-bit hash with a
  * memory-safety property.
  */
 struct model_image_neuton_expect {
 	uint8_t params_type;  /**< expected enum model_image_params_type */
-	uint16_t neurons_cap; /**< MODEL_OTA_NEUTON_NEURONS_CAP scratch buffer capacity */
 	uint32_t contract_hash; /**< expected @ref model_image_header.contract_hash */
 };
 
@@ -264,8 +262,10 @@ struct model_image_axon_expect {
  * @param[out] edgeai          Runtime context to wire; @c model.instance must already point at
  *                             the caller-owned writable @ref nrf_edgeai_model_neuton_t.
  * @param[out] neurons_buf     Caller-owned RAM scratch for neuron activations.
- * @param[in]  neurons_buf_cap Capacity of neurons_buf, in elements (not bytes).
- * @param[in]  expect          App-side contract and capacity expectations (required).
+ * @param[in]  neurons_buf_cap Capacity of neurons_buf, in elements (not bytes). A model that
+ *                             needs more is rejected with
+ *                             @ref MODEL_IMAGE_ERR_NEURONS_BUF_TOO_SMALL.
+ * @param[in]  expect          App-side contract expectations (required).
  * @retval MODEL_IMAGE_OK (0) on success, a negative @ref model_image_result otherwise.
  */
 enum model_image_result model_image_load_neuton(const uint8_t *partition_addr,

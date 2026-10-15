@@ -81,7 +81,6 @@ MODEL_OTA_EDGEAI_LOAD_DECL(MODEL_OTA_EDGEAI_SOLUTION_ID)
 		MODEL_OTA_PARTITION_SIZE(MODEL_OTA_PARTITION_NODELABEL);
 	const struct model_image_neuton_expect expect = {
 		.params_type = MODEL_IMAGE_PARAMS_TYPE_OF(MODEL_PARAMS_TYPE),
-		.neurons_cap = MODEL_OTA_NEUTON_NEURONS_CAP,
 		.contract_hash = MODEL_OTA_EDGEAI_NEUTON_CONTRACT_HASH,
 	};
 	enum model_image_result rc;
