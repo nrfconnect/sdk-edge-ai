@@ -61,8 +61,6 @@ static volatile model_ota_smp_upload_notify_cb upload_notify_cb;
 static enum smp_upload_state upload_state;
 /** Model slot of the session tracked by @ref upload_state; NULL when IDLE. */
 static const struct model_ota_smp_slot *upload_slot;
-/** False when the linker-built slot table is invalid; all image uploads are then rejected. */
-static bool slot_table_valid;
 
 static const struct model_ota_smp_slot *slot_for_image(uint8_t image_index)
 {
@@ -308,32 +306,27 @@ static enum mgmt_cb_return model_ota_smp_callback(uint32_t event, enum mgmt_cb_r
 
 	k_mutex_lock(&smp_lock, K_FOREVER);
 
-	if (event == MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK && !slot_table_valid) {
-		*rc = MGMT_ERR_EBADSTATE;
-		ret = MGMT_CB_ERROR_RC;
-	} else {
-		switch (event) {
-			case MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK:
-				__ASSERT(data != NULL && data_size == sizeof(struct img_mgmt_upload_check),
-					 "Malformed img_mgmt upload check event");
-				ret = handle_dfu_chunk(data, rc);
-				break;
+	switch (event) {
+	case MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK:
+		__ASSERT(data != NULL && data_size == sizeof(struct img_mgmt_upload_check),
+			 "Malformed img_mgmt upload check event");
+		ret = handle_dfu_chunk(data, rc);
+		break;
 
-			case MGMT_EVT_OP_IMG_MGMT_DFU_STARTED:
-				handle_dfu_started();
-				break;
+	case MGMT_EVT_OP_IMG_MGMT_DFU_STARTED:
+		handle_dfu_started();
+		break;
 
-			case MGMT_EVT_OP_IMG_MGMT_DFU_PENDING:
-				handle_dfu_pending();
-				break;
+	case MGMT_EVT_OP_IMG_MGMT_DFU_PENDING:
+		handle_dfu_pending();
+		break;
 
-			case MGMT_EVT_OP_IMG_MGMT_DFU_STOPPED:
-				handle_dfu_stopped();
-				break;
+	case MGMT_EVT_OP_IMG_MGMT_DFU_STOPPED:
+		handle_dfu_stopped();
+		break;
 
-			default:
-				break;
-		}
+	default:
+		break;
 	}
 
 	k_mutex_unlock(&smp_lock);
@@ -349,39 +342,7 @@ static struct mgmt_callback model_ota_smp_mgmt_cb = {
 
 static int model_ota_smp_init(void)
 {
-	size_t slot_count = 0;
-
-	/*
-	 * Register before validating the table so a bad model-slot configuration
-	 * fails closed: the application still boots, but image uploads are refused.
-	 */
 	mgmt_callback_register(&model_ota_smp_mgmt_cb);
-
-	STRUCT_SECTION_FOREACH(model_ota_smp_slot, slot) {
-		if (slot->image_index == 0U) {
-			LOG_ERR("%s model uses reserved MCUboot image index 0", slot_name(slot));
-			LOG_ERR("All image uploads disabled due to invalid model slot table");
-			return 0;
-		}
-
-		STRUCT_SECTION_FOREACH(model_ota_smp_slot, other) {
-			if (other == slot) {
-				break;
-			}
-
-			if (other->image_index == slot->image_index) {
-				LOG_ERR("%s and %s models share MCUboot image index %u",
-					slot_name(other), slot_name(slot), slot->image_index);
-				LOG_ERR("All image uploads disabled due to invalid model slot table");
-				return 0;
-			}
-		}
-
-		slot_count++;
-	}
-
-	slot_table_valid = true;
-	LOG_DBG("Protecting %u model SMP slots", (unsigned int)slot_count);
 
 	return 0;
 }

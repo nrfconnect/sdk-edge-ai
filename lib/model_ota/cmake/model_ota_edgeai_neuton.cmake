@@ -59,6 +59,7 @@ function(model_ota_edgeai_neuton_model)
 
   model_ota_pack_version("${MI_VERSION}" _version_u32)
   dt_nodelabel(_partition_node NODELABEL ${MI_PARTITION_NODELABEL} REQUIRED)
+  model_ota_claim_partition(${MI_TARGET} ${_partition_node})
   dt_reg_addr(_partition_addr PATH ${_partition_node})
   dt_reg_size(_partition_size PATH ${_partition_node})
   model_ota_image_link_addr(${_partition_addr} _image_link_addr)

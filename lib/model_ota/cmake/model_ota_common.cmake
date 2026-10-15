@@ -34,6 +34,19 @@ set(MODEL_OTA_COMPAT_TOOL ${MODEL_OTA_TOOLS_DIR}/check_model_compat.py)
 set(MODEL_OTA_IMAGE_DEFS ${MODEL_OTA_LIB_DIR}/include/model_ota/model_image.h)
 set(MODEL_OTA_CONTEXT_SLOT_TOOL ${MODEL_OTA_TOOLS_DIR}/emit_context_slot.py)
 
+# Record that model TARGET owns the partition at devicetree PARTITION_NODE (a path, so aliased
+# nodelabels of one node collide). Each partition is one MCUboot image, so two models sharing it
+# would also share an image index.
+function(model_ota_claim_partition target partition_node)
+  string(MAKE_C_IDENTIFIER "${partition_node}" _key)
+  get_property(_owner GLOBAL PROPERTY model_ota_partition_owner_${_key})
+  if(_owner)
+    message(FATAL_ERROR
+            "model_ota: ${target} and ${_owner} both use partition ${partition_node}")
+  endif()
+  set_property(GLOBAL PROPERTY model_ota_partition_owner_${_key} ${target})
+endfunction()
+
 # Hash of the solution ID. The preprocessor cannot hash a string literal, so the value is
 # computed here and passed to the stubs as MODEL_OTA_SOLUTION_ID_HASH (see
 # lib/model_ota/src/model_ota_scale_select.h).

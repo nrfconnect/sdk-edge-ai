@@ -179,7 +179,7 @@ When ``CONFIG_MODEL_OTA_SMP`` is enabled, each OTA-wired model declares its MCUb
 The model OTA library registers its MCUmgr callback during system initialization and searches this table when an upload arrives, before the application loads or uses any model.
 Image indices are derived from the ``nordic,mcuboot-image`` bootchain in devicetree
 (:file:`lib/model_ota/include/model_ota/model_ota_partition.h`).
-The initialization rejects image index zero and duplicate model image indices.
+The build rejects a model partition that maps to image index zero, and two model declarations that share a partition (and therefore an image index).
 
 Inference guard (``CONFIG_MODEL_OTA``)
 **************************************

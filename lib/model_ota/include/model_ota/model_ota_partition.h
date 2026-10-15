@@ -45,16 +45,18 @@
 /** Partition + bootchain checks for OTA-wired models. */
 #define MODEL_OTA_PARTITION_ASSERT(label)                                                         \
 	BUILD_ASSERT(DT_MAPPED_PARTITION_EXISTS(DT_NODELABEL(label)),                             \
-		     #label " must be a zephyr,mapped-partition");                               \
+		     STRINGIFY(label) " must be a zephyr,mapped-partition");                      \
 	BUILD_ASSERT(MODEL_OTA_IMAGE_INDEX_MATCH_COUNT(label) == 1,                               \
-		     #label " must be the primary slot of exactly one mcuboot-image")
+		     STRINGIFY(label) " must be the primary slot of exactly one mcuboot-image");  \
+	BUILD_ASSERT(MODEL_OTA_IMAGE_INDEX(label) != 0,                                           \
+		     STRINGIFY(label) " must not use MCUboot image index 0 (the application)")
 
 #elif IS_ENABLED(CONFIG_MODEL_OTA_TESTING)
 
 /** Testing mode: mapped partition only (no MCUboot bootchain). */
 #define MODEL_OTA_PARTITION_ASSERT(label)                                                         \
 	BUILD_ASSERT(DT_MAPPED_PARTITION_EXISTS(DT_NODELABEL(label)),                             \
-		     #label " must be a zephyr,mapped-partition")
+		     STRINGIFY(label) " must be a zephyr,mapped-partition")
 
 #else
 
