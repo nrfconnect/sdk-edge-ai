@@ -53,8 +53,8 @@ def require_pyelftools() -> None:
         raise ImportError("pyelftools is required (use NCS toolchain Python)") from _IMPORT_ERROR
 
 
-def read_u32(elf_path: Path, symbol: str) -> int:
-    """Value of a 4-byte object defined in @p elf_path.
+def read_symbol_bytes(elf_path: Path, symbol: str) -> bytes:
+    """Contents of an object defined in @p elf_path, st_size bytes long.
 
     Handles a relocatable object, where st_value is the offset into the symbol's section, as well
     as a linked ELF, where it is an address and sh_addr the section base.
@@ -76,18 +76,24 @@ def read_u32(elf_path: Path, symbol: str) -> int:
             )
         entry = defined[0]
         size = int(entry["st_size"])
-        if size != 4:
-            raise ValueError(f"{elf_path}: {symbol} is {size} B, expected 4")
         section_index = entry["st_shndx"]
         if not isinstance(section_index, int):
             raise ValueError(f"{elf_path}: {symbol} is not in a normal section ({section_index})")
         section = elffile.get_section(section_index)
         offset = int(entry["st_value"]) - int(section["sh_addr"])
-        data = section.data()[offset : offset + 4]
-        if len(data) != 4:
+        data = section.data()[offset : offset + size]
+        if len(data) != size:
             raise ValueError(
                 f"{elf_path}: {symbol} at offset {offset} lies outside section {section.name}"
             )
+    return data
+
+
+def read_u32(elf_path: Path, symbol: str) -> int:
+    """Value of a 4-byte object defined in @p elf_path."""
+    data = read_symbol_bytes(elf_path, symbol)
+    if len(data) != 4:
+        raise ValueError(f"{elf_path}: {symbol} is {len(data)} B, expected 4")
     return int(struct.unpack("<I", data)[0])
 
 

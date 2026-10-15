@@ -13,13 +13,12 @@ import sys
 from pathlib import Path
 
 from axon_elf import (
+    CONTEXT_BINDINGS_KEY,
     compiled_model_size_from_probe,
-    load_symbol_index,
-    lookup_symbol,
+    load_binding_symbols,
+    read_binding_table,
 )
 from model_contract import MODEL_IMAGE_FORMAT_VERSION
-
-OP_EXTENSION_PREFIX = "nrf_axon_nn_op_extension_"
 
 SLOT_COMMON = (
     "target",
@@ -35,8 +34,6 @@ SLOT_NEUTON = SLOT_COMMON + ("neurons_cap",)
 SLOT_AXON = SLOT_COMMON + (
     "persistent_vars_cap",
     "packed_output_cap",
-    "binding_symbols",
-    "binding_addresses",
 )
 
 
@@ -79,9 +76,16 @@ def main(argv=None) -> int:
     parser.add_argument("--manifest", type=Path, required=True, help="JSON manifest of slots")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--build-dir", type=Path, required=True)
-    parser.add_argument("--elf", type=Path, help="zephyr.elf for Axon binding addresses")
+    parser.add_argument("--elf", type=Path, help="zephyr.elf holding the Axon binding table")
+    parser.add_argument(
+        "--binding-symbols",
+        type=Path,
+        help="merged Axon binding symbol list from 'axon_elf.py binding-table --symbols-json'",
+    )
     parser.add_argument("--autoconf", type=Path, help="zephyr autoconf.h")
     args = parser.parse_args(argv)
+    if args.binding_symbols is not None and args.elf is None:
+        parser.error("--binding-symbols requires --elf")
 
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     interlayer = parse_autoconf(args.autoconf or Path(), "CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE")
@@ -93,10 +97,12 @@ def main(argv=None) -> int:
         "interlayer_buffer_size": interlayer,
         "psum_buffer_size": psum,
         "compiled_model_size": compiled_size,
-        "slots": [],
     }
-
-    elf_index = load_symbol_index(args.elf) if args.elf and args.elf.is_file() else None
+    if args.binding_symbols is not None:
+        context[CONTEXT_BINDINGS_KEY] = read_binding_table(
+            args.elf, load_binding_symbols(args.binding_symbols)
+        )
+    context["slots"] = []
 
     for slot in manifest.get("slots", []):
         backend = slot.get("backend", "neuton")
@@ -109,17 +115,6 @@ def main(argv=None) -> int:
             entry = pick_fields(merged, SLOT_NEUTON)
         else:
             entry = pick_fields(merged, SLOT_AXON)
-            if args.elf and args.elf.is_file() and elf_index is not None:
-                addresses = {}
-                for sym in entry.get("binding_symbols", []):
-                    sym_entry = lookup_symbol(args.elf, sym, elf_index)
-                    if sym_entry is None or sym_entry.is_undefined:
-                        continue
-                    addr = sym_entry.address
-                    if sym.startswith(OP_EXTENSION_PREFIX):
-                        addr |= 1
-                    addresses[sym] = addr
-                entry["binding_addresses"] = addresses
         context["slots"].append(entry)
 
     args.out.write_text(json.dumps(context, indent=2) + "\n", encoding="utf-8")

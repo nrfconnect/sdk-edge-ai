@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import struct
 import sys
 import tempfile
 import unittest
@@ -254,6 +255,29 @@ class BindingTableTests(unittest.TestCase):
             self.assertIn("MODEL_OTA_AXON_BINDING_REFS(X)", text)
             self.assertIn("X(nrf_axon_interlayer_buffer)", text)
 
+    def test_binding_table_symbols_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            keep = root / "keep.json"
+            symbols_json = root / "symbols.json"
+            keep.write_text(
+                json.dumps({"target": "app", "keep_symbols": ["b_sym", "a_sym"]}),
+                encoding="utf-8",
+            )
+            result = axon_elf.main(
+                [
+                    "binding-table",
+                    "--keep-json",
+                    str(keep),
+                    "-o",
+                    str(root / "binding.h"),
+                    "--symbols-json",
+                    str(symbols_json),
+                ]
+            )
+            self.assertEqual(result, 0)
+            self.assertEqual(axon_elf.load_binding_symbols(symbols_json), ["a_sym", "b_sym"])
+
     def test_binding_table_hash_collision_fails(self) -> None:
         metadata = ProbeMetadata(
             model_symbol="model_a",
@@ -355,32 +379,69 @@ class Compiler2StorageTests(unittest.TestCase):
         self.assertNotIn("MODEL_OTA_AXON_INPUT_VECTOR_LIST_SYM", private_text)
 
 
+def binding_table_bytes(entries: list[tuple[str, int]]) -> bytes:
+    data = struct.pack("<I", len(entries))
+    for name, address in entries:
+        data += struct.pack("<II", axon_elf.symbol_name_hash(name), address)
+    return data
+
+
+class BindingTableReadTests(unittest.TestCase):
+    SYMBOLS = ["nrf_axon_interlayer_buffer", "nrf_axon_nn_op_extension_relu"]
+
+    def test_decode_maps_hashes_to_names(self) -> None:
+        data = binding_table_bytes(
+            [("nrf_axon_nn_op_extension_relu", 0x1235), ("nrf_axon_interlayer_buffer", 0x200003C0)]
+        )
+        self.assertEqual(
+            axon_elf.decode_binding_table(data, self.SYMBOLS),
+            {"nrf_axon_interlayer_buffer": 0x200003C0, "nrf_axon_nn_op_extension_relu": 0x1235},
+        )
+
+    def test_decode_rejects_count_mismatch(self) -> None:
+        data = binding_table_bytes([("nrf_axon_interlayer_buffer", 0x200003C0)])
+        with self.assertRaisesRegex(ValueError, "binding symbol list has 2"):
+            axon_elf.decode_binding_table(data, self.SYMBOLS)
+
+    def test_decode_rejects_unknown_hash(self) -> None:
+        data = binding_table_bytes([("unknown", 1), ("nrf_axon_interlayer_buffer", 2)])
+        with self.assertRaisesRegex(ValueError, "not in symbol list"):
+            axon_elf.decode_binding_table(data, self.SYMBOLS)
+
+
 class ProvideTests(unittest.TestCase):
-    def test_data_symbol_and_thumb_bit(self) -> None:
-        index = SymbolIndex.build(
-            [
-                symbol(
-                    "nrf_axon_interlayer_buffer",
-                    4096,
-                    address=0x200003C0,
-                    read_only=False,
+    def test_provide_every_context_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            context = root / "model_ota_context.json"
+            out = root / "syms.ld"
+            context.write_text(
+                json.dumps(
+                    {
+                        "axon_bindings": {
+                            "nrf_axon_nn_op_extension_relu": 0x1235,
+                            "nrf_axon_interlayer_buffer": 0x200003C0,
+                        },
+                        "slots": [],
+                    }
                 ),
-                symbol(
-                    "nrf_axon_nn_op_extension_relu",
-                    0,
-                    type="FUNC",
-                    address=0x1234,
-                ),
-            ]
-        )
-        script, missing = axon_elf.build_provide_script(
-            Path("unused.elf"),
-            ["nrf_axon_interlayer_buffer", "nrf_axon_nn_op_extension_relu"],
-            index,
-        )
-        self.assertEqual(missing, [])
-        self.assertIn("PROVIDE(nrf_axon_interlayer_buffer = 0x200003C0);", script)
-        self.assertIn("PROVIDE(nrf_axon_nn_op_extension_relu = 0x1235);", script)
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                axon_elf.main(["provide", "--context", str(context), "-o", str(out)]), 0
+            )
+            self.assertEqual(
+                out.read_text(),
+                "PROVIDE(nrf_axon_interlayer_buffer = 0x200003C0);\n"
+                "PROVIDE(nrf_axon_nn_op_extension_relu = 0x1235);\n",
+            )
+
+    def test_provide_requires_bindings(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            context = Path(temporary) / "model_ota_context.json"
+            context.write_text(json.dumps({"slots": []}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "missing axon_bindings"):
+                axon_elf.load_context_bindings(context)
 
 
 if __name__ == "__main__":

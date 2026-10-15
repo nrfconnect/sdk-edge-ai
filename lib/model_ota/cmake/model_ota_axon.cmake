@@ -16,6 +16,8 @@
 #                      [NAME <str>] [VERSION <x.y.z>] [PERSISTENT_VARS_CAP <n>] [MODEL_SYM <sym>]
 #                      [ALLOCATE_PACKED_OUTPUT] [UUID_VID <vid>] [UUID_CID <cid>])
 #
+# model_ota_axon_bindings(SYMBOLS <symbol>...)
+#
 # With CONFIG_BOOTLOADER_MCUBOOT, the partition image is also signed as
 # <TARGET>_model_mcuboot.signed.{bin,hex}; UUID_VID/UUID_CID go to imgtool --vid/--cid.
 
@@ -64,6 +66,33 @@ function(model_ota_axon_add_probe OUT_OBJ WORK_DIR HEADER HEADER_NAME HEADER_DIR
   set(${OUT_OBJ} ${_probe_o} PARENT_SCOPE)
 endfunction()
 
+# PROVIDE() fragment shared by every Axon image link: the firmware's axon_bindings, from the
+# generated context in-tree or MODEL_OTA_FW_CONTEXT out-of-tree. Image targets must depend on the
+# model_ota_axon_bindings_ld target rather than only on the file, so the fragment has one producer.
+function(model_ota_axon_bindings_ld OUT_VAR)
+  set(_bindings_ld ${CMAKE_CURRENT_BINARY_DIR}/model_ota/axon_bindings.ld)
+  set(${OUT_VAR} ${_bindings_ld} PARENT_SCOPE)
+  if(TARGET model_ota_axon_bindings_ld)
+    return()
+  endif()
+
+  if(MODEL_OTA_FW_CONTEXT)
+    set(_symbol_context ${MODEL_OTA_FW_CONTEXT})
+  else()
+    set(_symbol_context ${CMAKE_CURRENT_BINARY_DIR}/model_ota_context.json)
+  endif()
+
+  add_custom_command(
+    OUTPUT ${_bindings_ld}
+    COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_ELF} provide
+            --context ${_symbol_context}
+            -o ${_bindings_ld}
+    DEPENDS ${MODEL_OTA_AXON_ELF} ${_symbol_context}
+    COMMENT "Resolving Axon app symbols from ${_symbol_context}"
+    VERBATIM)
+  add_custom_target(model_ota_axon_bindings_ld DEPENDS ${_bindings_ld})
+endfunction()
+
 function(_model_ota_axon_slot)
   cmake_parse_arguments(MI "ALLOCATE_PACKED_OUTPUT" "FLAVOR"
     "TARGET;HEADER;PARTITION_NODELABEL;NAME;VERSION;PERSISTENT_VARS_CAP;MODEL_SYM;MODEL_SRC;SOLUTION_ID;UUID_VID;UUID_CID"
@@ -98,11 +127,6 @@ function(_model_ota_axon_slot)
   endif()
 
   model_ota_using_released_fw(_using_released_fw)
-  if(_using_released_fw AND NOT MODEL_OTA_FW_ELF)
-    message(FATAL_ERROR
-            "Out-of-tree Axon model images require MODEL_OTA_FW_ELF pointing to the "
-            "released zephyr.elf")
-  endif()
 
   model_ota_pack_version("${MI_VERSION}" _version_u32)
   dt_nodelabel(_partition_node NODELABEL ${MI_PARTITION_NODELABEL} REQUIRED)
@@ -185,7 +209,6 @@ function(_model_ota_axon_slot)
     WORK_DIR ${_work_dir}
     CONTRACT_PROBE ${_contract_probe_o}
     CONFIG_HEADER ${_private_h}
-    KEEP_JSON ${_keep_json}
     OUT_SLOT_JSON _context_slot)
   add_dependencies(${_meta_target} ${MI_TARGET}_contract_slot)
 
@@ -278,37 +301,7 @@ function(_model_ota_axon_slot)
     PROPERTIES OBJECT_DEPENDS "${_image_deps}")
   add_dependencies(${_image_obj} ${_meta_target} zephyr_generated_headers)
 
-  set(_model_syms_ld ${_work_dir}/${MI_TARGET}_model_syms.ld)
-  set(_zephyr_elf ${CMAKE_CURRENT_BINARY_DIR}/zephyr/zephyr.elf)
-
-  if(MODEL_OTA_FW_ELF)
-    set(_symbol_elf ${MODEL_OTA_FW_ELF})
-  else()
-    set(_symbol_elf ${_zephyr_elf})
-  endif()
-
-  set(_provide_deps ${MODEL_OTA_AXON_ELF} $<TARGET_OBJECTS:${_image_obj}>)
-  if(MODEL_OTA_FW_ELF)
-    list(APPEND _provide_deps ${MODEL_OTA_FW_ELF})
-  else()
-    list(APPEND _provide_deps ${_zephyr_elf})
-  endif()
-
-  add_custom_command(
-    OUTPUT ${_model_syms_ld}
-    COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_ELF} provide
-            --object $<TARGET_OBJECTS:${_image_obj}>
-            --elf ${_symbol_elf}
-            -o ${_model_syms_ld}
-    DEPENDS ${_provide_deps}
-    COMMAND_EXPAND_LISTS
-    COMMENT "Resolving Axon app symbols from ${_symbol_elf} (${MI_TARGET})"
-    VERBATIM)
-
-  set(_image_extra "")
-  if(_using_released_fw AND NOT MODEL_OTA_FW_ELF)
-    list(APPEND _image_extra EXCLUDE_FROM_ALL)
-  endif()
+  model_ota_axon_bindings_ld(_bindings_ld)
 
   model_ota_add_image(
     TARGET ${MI_TARGET}
@@ -320,11 +313,10 @@ function(_model_ota_axon_slot)
     VERSION ${MI_VERSION}
     UUID_VID ${MI_UUID_VID}
     UUID_CID ${MI_UUID_CID}
-    LINK_SCRIPTS ${_model_syms_ld}
+    LINK_SCRIPTS ${_bindings_ld}
     VALIDATE_ARGS --params-type 3 --config-header ${_private_h}
-    COMPAT_ARGS --elf ${_symbol_elf}
-    DEPENDS ${_model_syms_ld} ${_private_h}
-    ${_image_extra})
+    DEPENDS ${_bindings_ld} ${_private_h})
+  add_dependencies(${MI_TARGET}_model_image model_ota_axon_bindings_ld)
 endfunction()
 
 function(model_ota_edgeai_axon_model)
@@ -335,7 +327,27 @@ function(model_ota_axon_model)
   _model_ota_axon_slot(FLAVOR axon ${ARGN})
 endfunction()
 
+# Make application symbols bindable by future Axon model images although no model built with
+# this firmware references them - typically an op extension a retrained model may start using.
+# Each symbol is added to the device-wide binding table (so the loader accepts it and the linker
+# keeps it) and to model_ota_context.json's axon_bindings (so an out-of-tree image can link
+# against it). Call before model_ota_finalize().
+#
+# model_ota_axon_bindings(SYMBOLS <symbol>...)
+function(model_ota_axon_bindings)
+  cmake_parse_arguments(B "" "" "SYMBOLS" ${ARGN})
+  if(NOT B_SYMBOLS)
+    message(FATAL_ERROR "model_ota_axon_bindings requires SYMBOLS")
+  endif()
+  get_property(_finalized GLOBAL PROPERTY model_ota_axon_binding_finalized)
+  if(_finalized)
+    message(FATAL_ERROR "model_ota_axon_bindings must be called before model_ota_finalize()")
+  endif()
+  set_property(GLOBAL APPEND PROPERTY model_ota_axon_app_bindings ${B_SYMBOLS})
+endfunction()
+
 function(model_ota_axon_binding_finalize)
+  set_property(GLOBAL PROPERTY model_ota_axon_binding_finalized TRUE)
   model_ota_using_released_fw(_using_released_fw)
   if(_using_released_fw)
     return()
@@ -346,21 +358,36 @@ function(model_ota_axon_binding_finalize)
     return()
   endif()
 
+  get_property(_app_bindings GLOBAL PROPERTY model_ota_axon_app_bindings)
+  if(_app_bindings)
+    list(REMOVE_DUPLICATES _app_bindings)
+    list(SORT _app_bindings)
+    list(JOIN _app_bindings "\", \"" _app_bindings_json)
+    set(_app_keep_json ${CMAKE_CURRENT_BINARY_DIR}/model_ota/app_axon_keep.json)
+    file(CONFIGURE OUTPUT ${_app_keep_json}
+         CONTENT "{\"target\": \"app\", \"keep_symbols\": [\"${_app_bindings_json}\"]}\n"
+         @ONLY)
+    list(APPEND _keep_json_files ${_app_keep_json})
+  endif()
+
   set(_shared_include_dir ${CMAKE_CURRENT_BINARY_DIR}/model_ota/include)
   file(MAKE_DIRECTORY ${_shared_include_dir})
   target_include_directories(app PRIVATE ${_shared_include_dir})
 
   set(_binding_h ${_shared_include_dir}/model_ota/axon_binding_table.h)
+  set(_binding_symbols_json ${CMAKE_CURRENT_BINARY_DIR}/model_ota/axon_binding_symbols.json)
   set(_binding_cmd
     ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_ELF} binding-table
     -o ${_binding_h}
+    --symbols-json ${_binding_symbols_json}
   )
   foreach(_keep_json ${_keep_json_files})
     list(APPEND _binding_cmd --keep-json ${_keep_json})
   endforeach()
+  set_property(GLOBAL PROPERTY model_ota_axon_binding_symbols_json ${_binding_symbols_json})
 
   add_custom_command(
-    OUTPUT ${_binding_h}
+    OUTPUT ${_binding_h} ${_binding_symbols_json}
     COMMAND ${_binding_cmd}
     DEPENDS ${_keep_json_files} ${MODEL_OTA_AXON_ELF}
     COMMENT "Merging Axon OTA binding table"

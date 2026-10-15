@@ -125,7 +125,9 @@ The solution ID hashed here is the ``SOLUTION_ID`` the CMake helper was called w
    None of these hashes is a security control — not the contract hash, whose FNV-1a is unkeyed, and not the unkeyed ``blake2s`` over the strings either. Nor is the image CRC an authenticity check. All of them guard against accidents.
    Authenticity is enforced by MCUboot, see :ref:`lib_model_ota_signing`.
 
-**Binding table** (Axon only) — one device-wide ``{name_hash, address}`` table for every app-owned symbol any Axon image was linked against (``nrf_axon_interlayer_buffer``, persistent vars, op extensions, ``axonpro_*``). ``axon_elf.py binding-table`` unions the per-slot keep lists at finalize; ``model_ota_axon_keep_refs.S`` emits ``model_ota_axon_binding_table``, which ``model_image_load_axon()`` consults directly.
+**Binding table** (Axon only) — one device-wide ``{name_hash, address}`` table for every app-owned symbol any Axon image was linked against (``nrf_axon_interlayer_buffer``, persistent vars, op extensions, ``axonpro_*``), plus any symbol the application declared with ``model_ota_axon_bindings()``. ``axon_elf.py binding-table`` unions the per-slot keep lists at finalize; ``model_ota_axon_keep_refs.S`` emits ``model_ota_axon_binding_table``, which ``model_image_load_axon()`` consults directly.
+
+The same table, decoded back to symbol names, is exported as the top-level ``axon_bindings`` map in ``model_ota_context.json``. Since the loader accepts any row of that table for any slot, a model for one slot may use an op extension that only another slot's model, or only the application, made bindable. Out-of-tree image links resolve app symbols from ``axon_bindings`` and ``check_model_compat.py`` checks image bindings against it, so the released ``zephyr.elf`` is not needed.
 
 Host tools
 **********
@@ -135,7 +137,7 @@ Under ``tools/model_ota/``:
 - ``patch_image_crc.py`` — patches CRC at offset 20
 - ``validate_model_image_layout.py`` — post-link build gate
 - ``elf_const.py`` — reads the compiler-folded contract hash out of a slot's contract probe
-- ``axon_elf.py`` — Axon probe inspect, device-wide binding-table merge, and ``PROVIDE()`` fragment from ``zephyr.elf``
+- ``axon_elf.py`` — Axon probe inspect, device-wide binding-table merge, and ``PROVIDE()`` fragment from the context's ``axon_bindings``
 - ``export_model_ota_context.py`` / ``model_ota_context.cmake`` — emit ``model_ota_context.json``
 - ``check_model_compat.py`` — pre-flash compatibility verdict, and the build's contract-hash gate
 
@@ -147,6 +149,9 @@ Include ``lib/model_ota/cmake/model_ota.cmake`` once, then:
 - ``model_ota_edgeai_neuton_model()`` — Edge AI Lab solution, Neuton backend
 - ``model_ota_edgeai_axon_model()`` — Edge AI Lab solution, Axon backend
 - ``model_ota_axon_model()`` — raw Axon model (no ``nrf_edgeai_t`` wrapper)
+- ``model_ota_axon_bindings(SYMBOLS <symbol>...)`` — make application symbols bindable by future
+  Axon images although no shipped model uses them (for example an op extension); call before
+  ``model_ota_finalize()``
 - ``model_ota_finalize()`` — after all slot declarations; merges the Axon binding table and
   exports ``model_ota_context.json`` once the application links
 
@@ -156,21 +161,19 @@ MCUboot helpers:
 
 - ``model_ota_register_provision_hex()`` / ``model_ota_create_provision_hex()`` (:file:`lib/model_ota/cmake/model_ota_sysbuild.cmake`) — register signed model hex files as sysbuild flash domains and merge bootloader, app, and models into ``*_provision.hex``
 
-Optional CMake cache variables for **out-of-tree** model partition builds against shipped
+Optional CMake cache variable for **out-of-tree** model partition builds against shipped
 firmware (see ``tools/model_ota/README.md``):
 
-- ``MODEL_OTA_FW_ELF`` — released ``zephyr.elf`` (Axon symbol resolution; required with context for Axon out-of-tree)
-- ``MODEL_OTA_FW_CONTEXT`` — released ``model_ota_context.json`` (build-time compat check)
+- ``MODEL_OTA_FW_CONTEXT`` — released ``model_ota_context.json`` (Axon symbol resolution from
+  ``axon_bindings`` and the build-time compat check)
 
-When either is set, in-tree context export is skipped and partition-loader wiring is omitted.
+When it is set, in-tree context export is skipped and partition-loader wiring is omitted.
 The application build is deliberately blocked (before any app source is compiled) and reports
 how to build a partition image. Configure with ``west build --cmake-only``, then::
 
   cmake --build build/multi_model --target <name>_model_image
 
 A default ``west build`` or ``cmake --build`` without ``--target`` fails on that block.
-Axon partition images are excluded from the default build unless ``MODEL_OTA_FW_ELF`` is also
-set (``axon_elf.py provide`` needs a released ELF).
 
 SMP upload coordination
 ***********************

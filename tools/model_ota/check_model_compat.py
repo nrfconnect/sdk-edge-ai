@@ -24,7 +24,7 @@ import struct
 import sys
 from pathlib import Path
 
-from axon_elf import load_symbol_index, lookup_symbol
+from axon_elf import CONTEXT_BINDINGS_KEY
 from model_contract import MODEL_IMAGE_FORMAT_VERSION, symbol_name_hash
 import validate_model_image_layout as layout
 
@@ -188,7 +188,42 @@ def check_neuton(slot: dict, hdr: dict, image_path: Path) -> int:
     return EXIT_OK
 
 
-def check_axon(slot: dict, hdr: dict, image_path: Path, elf_path: Path | None) -> int:
+def check_axon_bindings(bindings: dict | None, slot: dict, hdr: dict) -> int:
+    """Mirror model_image_load_axon(): every image binding row must match the firmware's table.
+
+    The firmware table is device-wide, so an image may bind any symbol any slot - or the
+    application itself, via model_ota_axon_bindings() - made bindable.
+    """
+    if not hdr["binding_count"]:
+        return EXIT_OK
+    if bindings is None:
+        print("image has %u binding entries but the context has no %s"
+              % (hdr["binding_count"], CONTEXT_BINDINGS_KEY), file=sys.stderr)
+        return EXIT_INCOMPATIBLE
+
+    by_hash = {symbol_name_hash(name): (name, address) for name, address in bindings.items()}
+    base = image_link_addr(slot)
+    data = hdr["raw"]
+    for i in range(hdr["binding_count"]):
+        off = hdr["binding_ptr"] - base + i * 8
+        if off < 0 or off + 8 > len(data):
+            print("binding table extends past image", file=sys.stderr)
+            return EXIT_INCOMPATIBLE
+        name_hash, address = struct.unpack_from("<II", data, off)
+        match = by_hash.get(name_hash)
+        if match is None:
+            print("binding hash 0x%08x not bound by firmware (requires firmware update)"
+                  % name_hash, file=sys.stderr)
+            return EXIT_NEEDS_FW
+        name, fw_addr = match
+        if fw_addr != address:
+            print("binding mismatch for %s: image 0x%08x != firmware 0x%08x"
+                  % (name, address, fw_addr), file=sys.stderr)
+            return EXIT_INCOMPATIBLE
+    return EXIT_OK
+
+
+def check_axon(slot: dict, hdr: dict, image_path: Path, bindings: dict | None) -> int:
     payload_cap = max_model_image_size(slot)
     if payload_cap is not None and payload_cap < 0:
         print(
@@ -223,41 +258,9 @@ def check_axon(slot: dict, hdr: dict, image_path: Path, elf_path: Path | None) -
         )
         return EXIT_NEEDS_FW
 
-    if elf_path is not None and hdr["binding_count"]:
-        index = load_symbol_index(elf_path)
-        base = image_link_addr(slot)
-        data = hdr["raw"]
-        binding_ptr = hdr["binding_ptr"]
-        for i in range(hdr["binding_count"]):
-            off = binding_ptr - base + i * 8
-            if off + 8 > len(data):
-                print("binding table extends past image", file=sys.stderr)
-                return EXIT_INCOMPATIBLE
-            name_hash, address = struct.unpack_from("<II", data, off)
-            symbols = slot.get("binding_symbols", [])
-            matched = False
-            for sym in symbols:
-                if symbol_name_hash(sym) != name_hash:
-                    continue
-                matched = True
-                entry = lookup_symbol(elf_path, sym, index)
-                if entry is None or entry.is_undefined:
-                    print("binding symbol %s missing from firmware elf" % sym, file=sys.stderr)
-                    return EXIT_INCOMPATIBLE
-                fw_addr = entry.address
-                if sym.startswith("nrf_axon_nn_op_extension_"):
-                    fw_addr |= 1
-                if fw_addr != address:
-                    print(
-                        "binding mismatch for %s: image 0x%08x != firmware 0x%08x"
-                        % (sym, address, fw_addr),
-                        file=sys.stderr,
-                    )
-                    return EXIT_INCOMPATIBLE
-                break
-            if not matched:
-                print("binding hash 0x%08x not in firmware context" % name_hash, file=sys.stderr)
-                return EXIT_INCOMPATIBLE
+    rc = check_axon_bindings(bindings, slot, hdr)
+    if rc != EXIT_OK:
+        return rc
 
     print("compatible: Axon image %s matches firmware context" % image_path.name)
     return EXIT_OK
@@ -268,7 +271,6 @@ def main(argv=None) -> int:
     parser.add_argument("--context", type=Path, required=True)
     parser.add_argument("--image", type=Path, required=True)
     parser.add_argument("--slot", help="Target/name of the model slot in the context")
-    parser.add_argument("--elf", type=Path, help="Firmware zephyr.elf for binding address checks")
     parser.add_argument(
         "--report-only",
         action="store_true",
@@ -310,7 +312,7 @@ def main(argv=None) -> int:
         return rc
 
     if backend == "axon" or hdr["params_type"] == PARAMS_AXON:
-        rc = check_axon(slot, hdr, args.image, args.elf)
+        rc = check_axon(slot, hdr, args.image, context.get(CONTEXT_BINDINGS_KEY))
     else:
         rc = check_neuton(slot, hdr, args.image)
 

@@ -10,14 +10,16 @@ import argparse
 import json
 import os
 import re
+import struct
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
-OP_EXTENSION_PREFIX = "nrf_axon_nn_op_extension_"
 INTERLAYER_BUFFER_SYMBOL = "nrf_axon_interlayer_buffer"
+BINDING_TABLE_SYMBOL = "model_ota_axon_binding_table"
+CONTEXT_BINDINGS_KEY = "axon_bindings"
 MODEL_SIZE_MARKER = "model_ota_axon_compiled_model_size"
 CONFIG_SCHEMA_VERSION = 1
 
@@ -44,7 +46,7 @@ _UNDEFINED_ALLOWLIST = frozenset(
 )
 
 
-from elf_const import ELFFile, SymbolTableSection, require_pyelftools
+from elf_const import ELFFile, SymbolTableSection, read_symbol_bytes, require_pyelftools
 from model_contract import symbol_name_hash
 
 
@@ -182,39 +184,6 @@ def compiled_model_size_from_probe(probe: Path) -> int:
     if len(markers) != 1:
         raise ValueError(f"probe must define exactly one {MODEL_SIZE_MARKER} marker")
     return markers[0].size
-
-
-def collect_provide_symbols(objects: Sequence[Path]) -> list[str]:
-    """Undefined globals across image objects that must be resolved from zephyr.elf.
-
-    TODO: emit only the symbols the linked image actually keeps. Since the Axon backend of an
-    Edge AI Lab solution compiles the generated solution source into the image object (for its
-    nrf_edgeai_t parameter arrays), this now also picks up every runtime function reachable from
-    that solution's nrf_edgeai_t - 28 PROVIDE lines for classif_axon against 3 for a pure Axon
-    model. --gc-sections drops all of them and they never enter the loader's binding table (that
-    comes from the probe), so this is noise rather than a defect, but it implies a binding to app
-    addresses the image has no relationship with, and makes the image link fail if the
-    application ever stops linking one of those functions.
-
-    Fix: restrict the result to the probe-derived keep list (MODEL_OTA_AXON_KEEP_REFS) plus the
-    interlayer buffer and the app-storage symbols. For a pure Axon model that set is already
-    exactly what this returns, so the change is behaviour-preserving there and makes the emitted
-    fragment the same shape for both flavors.
-    """
-    defined: set[str] = set()
-    undefined: set[str] = set()
-    for obj in objects:
-        index = load_symbol_index(obj)
-        for entry in index.symbols:
-            if not entry.is_global or not entry.name:
-                continue
-            if entry.is_undefined:
-                undefined.add(entry.name)
-            else:
-                defined.add(entry.name)
-    need = undefined - defined - _UNDEFINED_ALLOWLIST
-    need.add(INTERLAYER_BUFFER_SYMBOL)
-    return sorted(need)
 
 
 def _defined_storage(
@@ -550,24 +519,70 @@ def atomic_write_if_changed(path: Path, data: str | bytes) -> bool:
     return True
 
 
-def build_provide_script(
-    elf_path: Path,
-    symbols: Sequence[str],
-    index: SymbolIndex | None = None,
-) -> tuple[str, list[str]]:
-    symbol_index = index or load_symbol_index(elf_path)
-    lines: list[str] = []
-    missing: list[str] = []
-    for symbol in symbols:
-        entry = lookup_symbol(elf_path, symbol, symbol_index)
-        if entry is None or entry.is_undefined:
-            missing.append(symbol)
-            continue
-        address = entry.address
-        if symbol.startswith(OP_EXTENSION_PREFIX) and entry.is_function:
-            address |= 1
-        lines.append(f"PROVIDE({symbol} = 0x{address:X});")
-    return "\n".join(lines) + ("\n" if lines else ""), missing
+def render_binding_symbols_json(symbols: Sequence[str]) -> str:
+    return json.dumps({"binding_symbols": list(symbols)}, indent=2) + "\n"
+
+
+def load_binding_symbols(path: Path) -> list[str]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    symbols = payload.get("binding_symbols")
+    if not isinstance(symbols, list) or not all(isinstance(entry, str) for entry in symbols):
+        raise ValueError(f"{path}: binding_symbols must be a JSON string array")
+    return symbols
+
+
+def decode_binding_table(data: bytes, symbols: Sequence[str]) -> dict[str, int]:
+    """Map a raw [count, hash0, addr0, ...] binding table back to symbol names.
+
+    The addresses are the ones the linker wrote into the firmware, so a Thumb function already
+    carries bit 0 - exactly the value the loader compares an image's binding entry against.
+    """
+    if len(data) < 4 or len(data) % 8 != 4:
+        raise ValueError(f"{BINDING_TABLE_SYMBOL} has malformed size {len(data)} B")
+    (count,) = struct.unpack_from("<I", data, 0)
+    if len(data) != 4 + 8 * count:
+        raise ValueError(f"{BINDING_TABLE_SYMBOL} count {count} disagrees with its size {len(data)} B")
+    if count != len(symbols):
+        raise ValueError(
+            f"{BINDING_TABLE_SYMBOL} has {count} entries, binding symbol list has {len(symbols)}"
+        )
+    by_hash = {symbol_name_hash(symbol): symbol for symbol in symbols}
+    bindings: dict[str, int] = {}
+    for i in range(count):
+        name_hash, address = struct.unpack_from("<II", data, 4 + 8 * i)
+        symbol = by_hash.get(name_hash)
+        if symbol is None:
+            raise ValueError(f"{BINDING_TABLE_SYMBOL} hash 0x{name_hash:08X} not in symbol list")
+        bindings[symbol] = address
+    return dict(sorted(bindings.items()))
+
+
+def read_binding_table(elf_path: Path, symbols: Sequence[str]) -> dict[str, int]:
+    """The device-wide binding table as linked into @p elf_path, keyed by symbol name."""
+    return decode_binding_table(read_symbol_bytes(elf_path, BINDING_TABLE_SYMBOL), symbols)
+
+
+def load_context_bindings(context_path: Path) -> dict[str, int]:
+    context = json.loads(context_path.read_text(encoding="utf-8"))
+    bindings = context.get(CONTEXT_BINDINGS_KEY)
+    if not isinstance(bindings, dict) or not all(
+        isinstance(name, str) and isinstance(address, int) for name, address in bindings.items()
+    ):
+        raise ValueError(
+            f"{context_path}: missing {CONTEXT_BINDINGS_KEY} (symbol -> address); the firmware "
+            "has no Axon binding table"
+        )
+    return bindings
+
+
+def build_provide_script(bindings: dict[str, int]) -> str:
+    """PROVIDE() every bindable firmware symbol; the image link only pulls in the ones it uses.
+
+    A model referencing an app symbol the firmware does not bind fails the image link with an
+    undefined reference: the loader would reject such an image anyway.
+    """
+    lines = [f"PROVIDE({symbol} = 0x{address:X});" for symbol, address in sorted(bindings.items())]
+    return "\n".join(lines) + ("\n" if lines else "")
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
@@ -594,32 +609,18 @@ def cmd_binding_table(args: argparse.Namespace) -> int:
     for path in args.keep_json:
         if not path.is_file():
             raise ValueError(f"keep JSON not found: {path}")
-    header = render_binding_table_header(merge_keep_symbols(args.keep_json))
+    symbols = merge_keep_symbols(args.keep_json)
+    header = render_binding_table_header(symbols)
     atomic_write_if_changed(args.output, header)
+    if args.symbols_json is not None:
+        atomic_write_if_changed(args.symbols_json, render_binding_symbols_json(symbols))
     return 0
 
 
 def cmd_provide(args: argparse.Namespace) -> int:
-    objects: list[Path] = []
-    for entry in args.object:
-        if isinstance(entry, list):
-            objects.extend(entry)
-        else:
-            objects.append(entry)
-    if not objects:
-        raise ValueError("at least one --object is required")
-    if not args.elf.is_file():
-        raise ValueError(f"ELF not found: {args.elf}")
-
-    for obj in objects:
-        if not obj.is_file():
-            raise ValueError(f"object not found: {obj}")
-
-    symbols: list[str] = collect_provide_symbols(objects)
-    script, missing = build_provide_script(args.elf, symbols)
-    if missing:
-        raise ValueError(f"symbols not found in {args.elf}: {', '.join(missing)}")
-    atomic_write_if_changed(args.output, script)
+    if not args.context.is_file():
+        raise ValueError(f"firmware context not found: {args.context}")
+    atomic_write_if_changed(args.output, build_provide_script(load_context_bindings(args.context)))
     return 0
 
 
@@ -660,11 +661,17 @@ def create_parser() -> argparse.ArgumentParser:
     )
     binding_table.add_argument("--keep-json", type=Path, action="append", required=True)
     binding_table.add_argument("-o", "--output", type=Path, required=True)
+    binding_table.add_argument(
+        "--symbols-json",
+        type=Path,
+        help="also write the merged symbol list for the model_ota_context.json export",
+    )
     binding_table.set_defaults(func=cmd_binding_table)
 
-    provide = sub.add_parser("provide", help="emit a PROVIDE() linker fragment")
-    provide.add_argument("--object", type=Path, nargs="+", required=True)
-    provide.add_argument("--elf", type=Path, required=True)
+    provide = sub.add_parser(
+        "provide", help="emit a PROVIDE() linker fragment from model_ota_context.json"
+    )
+    provide.add_argument("--context", type=Path, required=True)
     provide.add_argument("-o", "--output", type=Path, required=True)
     provide.set_defaults(func=cmd_provide)
 

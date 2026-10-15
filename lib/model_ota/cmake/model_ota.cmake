@@ -8,6 +8,7 @@
 #   model_ota_edgeai_neuton_model() — Edge AI Lab solution, Neuton backend
 #   model_ota_edgeai_axon_model()   — Edge AI Lab solution, Axon backend
 #   model_ota_axon_model()          — raw Axon model (no nrf_edgeai_t wrapper)
+#   model_ota_axon_bindings()       — extra app symbols future Axon images may bind
 #   model_ota_finalize()            — Axon binding table + model_ota_context.json export
 
 include_guard(GLOBAL)

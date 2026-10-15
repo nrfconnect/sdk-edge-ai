@@ -28,7 +28,8 @@ that cannot be expressed directly in the toolchain:
   is what keeps the released value equal to the one images carry. That verdict is fatal even under
   `--report-only`, which only makes the capacity verdicts a report.
 - `export_model_ota_context.py` - invoked from CMake to emit `model_ota_context.json` per app
-  build (partition map, caps, contract hashes, Axon symbol addresses).
+  build (partition map, caps, contract hashes, and the device-wide Axon `axon_bindings` map read
+  out of the linked `model_ota_axon_binding_table`).
 - `elf_const.py` - reads a compile-time constant back out of an object. The contract hash mixes
   `sizeof` of the runtime structs, so only the compiler can fold it; the build compiles
   `lib/model_ota/src/model_ota_contract_probe.c` per slot and this reads the finished word,
@@ -61,8 +62,23 @@ nrfutil toolchain-manager launch --ncs-version v3.4.0 -- \
 ls build/multi_model/*_model_partition.hex
 ```
 
-The build also emits **`model_ota_context.json`** — archive this alongside `zephyr.hex` and
-`zephyr/zephyr.elf` at firmware release.
+The build also emits **`model_ota_context.json`** — archive this alongside `zephyr.hex` at
+firmware release. It is the only firmware artifact a later model rebuild needs.
+
+### Context layout
+
+- Top level: `format_version`, Axon buffer sizes, and `axon_bindings`.
+- `axon_bindings` - symbol name to address, exactly the device-wide binding table the Axon loader
+  checks image bindings against (Thumb functions carry bit 0). Present only with Axon slots.
+- `slots[]` - per-slot partition map, `contract_hash` and capacities.
+
+The binding table is device-wide, so a model for one slot may use any op extension or buffer
+another slot made bindable. To make an application symbol bindable that no shipped model uses
+(for example an op extension a retrained model may need), declare it before `model_ota_finalize()`:
+
+```cmake
+model_ota_axon_bindings(SYMBOLS nrf_axon_nn_op_extension_tanh)
+```
 
 ### Build directory layout
 
@@ -83,26 +99,20 @@ Configure first, then build one partition target explicitly:
 
 ```bash
 west build -p always -b nrf54lm20dk/nrf54lm20b/cpuapp -d build . --cmake-only \
-  -- -DMODEL_OTA_FW_ELF=/path/to/released/zephyr.elf \
-     -DMODEL_OTA_FW_CONTEXT=/path/to/released/model_ota_context.json
+  -- -DMODEL_OTA_FW_CONTEXT=/path/to/released/model_ota_context.json
 
 cmake --build build/ww_kws --target ww_model_image
 ```
 
-| Variable | File | Used for |
-|----------|------|----------|
-| `MODEL_OTA_FW_ELF` | `zephyr.elf` | Axon image link (`axon_elf.py provide` — app RAM symbol addresses) |
-| `MODEL_OTA_FW_CONTEXT` | `model_ota_context.json` | Build-time `check_model_compat.py` (`--report-only`) |
+`MODEL_OTA_FW_CONTEXT` feeds both the Axon image link (`axon_elf.py provide` turns
+`axon_bindings` into `PROVIDE()` lines) and the build-time `check_model_compat.py`
+(`--report-only`). A model that references an application symbol the released firmware does not
+bind fails the image link with an undefined reference; the loader would reject it anyway.
 
-**Neuton** partition images do not use the ELF (pass only `MODEL_OTA_FW_CONTEXT` to skip
-in-tree context export). **Axon** models require **both** variables when building out-of-tree.
-
-When either variable is set, CMake skips `model_ota_context` export and omits app partition-loader
+When the variable is set, CMake skips `model_ota_context` export and omits app partition-loader
 wiring. The application build (`app`, `zephyr.elf`) is deliberately blocked and prints how to
 build a partition image instead. Use `cmake --build <build-dir> --target <name>_model_image`
 — a plain `west build` or default `cmake --build` without `--target` fails on that block.
-Axon `*_model_image` targets are excluded from the default build unless `MODEL_OTA_FW_ELF` is set
-(because `axon_elf.py provide` has no symbol source without a released ELF).
 
 `model_ota_edgeai_neuton_model()` in `lib/model_ota/cmake/model_ota_edgeai_neuton.cmake`,
 `model_ota_edgeai_axon_model()` and `model_ota_axon_model()` in
@@ -126,7 +136,8 @@ Per-slot app-facing constants live in generated `model_ota/slots/<target>.h` hea
 header is `model_ota/axon_binding_table.h`; both sit under the shared build include root
 `model_ota/include/`.
 
-Raw Axon per-image build steps wire app-owned RAM via `axon_elf.py provide` from `zephyr.elf`.
+Axon per-image build steps wire app-owned symbols via `axon_elf.py provide` from the context's
+`axon_bindings` (the generated one in-tree, `MODEL_OTA_FW_CONTEXT` out-of-tree).
 By default the linked image's optional `packed_output_buf` field is NULL; pass
 `ALLOCATE_PACKED_OUTPUT` to allocate app-owned storage and wire it into the image for models that
 require a dedicated packing buffer.
@@ -142,8 +153,8 @@ python3 tools/model_ota/check_model_compat.py \
   --slot ww
 ```
 
-For Axon models, also pass `--elf` pointing at the firmware ELF used when the context was
-exported (or the current build's `zephyr.elf` if in-tree).
+For Axon models, every image binding row is checked against the context's `axon_bindings`, as the
+loader does. A symbol the firmware does not bind exits 2 (requires firmware update).
 
 ## Flashing (separate from the app)
 

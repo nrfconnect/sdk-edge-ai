@@ -11,44 +11,28 @@ include(${CMAKE_CURRENT_LIST_DIR}/model_ota_common.cmake)
 
 set(MODEL_OTA_CONTEXT_EXPORT ${MODEL_OTA_TOOLS_DIR}/export_model_ota_context.py)
 
-# Released firmware artifacts for out-of-tree model partition builds (see tools/model_ota/README.md):
-#   MODEL_OTA_FW_ELF     — shipped zephyr.elf (Axon PROVIDE() symbol resolution)
-#   MODEL_OTA_FW_CONTEXT — shipped model_ota_context.json (build-time compat check)
+# Released firmware artifact for out-of-tree model partition builds (see tools/model_ota/README.md):
+#   MODEL_OTA_FW_CONTEXT — shipped model_ota_context.json (Axon PROVIDE() symbol resolution and
+#                          build-time compat check)
 function(model_ota_resolve_fw_vars)
   if(COMMAND zephyr_get)
-    zephyr_get(MODEL_OTA_FW_ELF)
     zephyr_get(MODEL_OTA_FW_CONTEXT)
   endif()
 
-  if(DEFINED MODEL_OTA_FW_ELF AND "${MODEL_OTA_FW_ELF}" STREQUAL "")
-    unset(MODEL_OTA_FW_ELF CACHE)
-  endif()
   if(DEFINED MODEL_OTA_FW_CONTEXT AND "${MODEL_OTA_FW_CONTEXT}" STREQUAL "")
     unset(MODEL_OTA_FW_CONTEXT CACHE)
   endif()
 
-  if(MODEL_OTA_FW_ELF)
-    set(MODEL_OTA_FW_ELF "${MODEL_OTA_FW_ELF}" CACHE FILEPATH
-        "Released zephyr.elf for out-of-tree Axon model OTA" FORCE)
-  endif()
   if(MODEL_OTA_FW_CONTEXT)
     set(MODEL_OTA_FW_CONTEXT "${MODEL_OTA_FW_CONTEXT}" CACHE FILEPATH
         "Released model_ota_context.json for out-of-tree model OTA" FORCE)
   endif()
 
   if(MODEL_OTA_FW_CONTEXT AND MODEL_OTA_FW_CONTEXT MATCHES "\\.elf$")
-    message(FATAL_ERROR
-            "MODEL_OTA_FW_CONTEXT must be model_ota_context.json; use MODEL_OTA_FW_ELF for zephyr.elf")
-  endif()
-  if(MODEL_OTA_FW_ELF AND NOT EXISTS "${MODEL_OTA_FW_ELF}")
-    message(FATAL_ERROR "MODEL_OTA_FW_ELF not found: ${MODEL_OTA_FW_ELF}")
+    message(FATAL_ERROR "MODEL_OTA_FW_CONTEXT must be model_ota_context.json, not an ELF")
   endif()
   if(MODEL_OTA_FW_CONTEXT AND NOT EXISTS "${MODEL_OTA_FW_CONTEXT}")
     message(FATAL_ERROR "MODEL_OTA_FW_CONTEXT not found: ${MODEL_OTA_FW_CONTEXT}")
-  endif()
-  if(MODEL_OTA_FW_ELF AND NOT MODEL_OTA_FW_CONTEXT)
-    message(FATAL_ERROR
-            "MODEL_OTA_FW_ELF requires MODEL_OTA_FW_CONTEXT when building Axon partition images out-of-tree")
   endif()
 endfunction()
 
@@ -57,7 +41,7 @@ if(COMMAND zephyr_get)
 endif()
 
 function(model_ota_using_released_fw OUT_VAR)
-  if(MODEL_OTA_FW_ELF OR MODEL_OTA_FW_CONTEXT)
+  if(MODEL_OTA_FW_CONTEXT)
     set(${OUT_VAR} TRUE PARENT_SCOPE)
   else()
     set(${OUT_VAR} FALSE PARENT_SCOPE)
@@ -119,11 +103,11 @@ endfunction()
 #
 # model_ota_add_context_slot(TARGET <id> BACKEND <axon|neuton> PARTITION_NODELABEL <label>
 #                            NAME <str> WORK_DIR <dir> CONTRACT_PROBE <obj>
-#                            [CONFIG_HEADER <axon_config.h>] [KEEP_JSON <axon_keep.json>]
-#                            [NEURONS_CAP <n>] OUT_SLOT_JSON <var>)
+#                            [CONFIG_HEADER <axon_config.h>] [NEURONS_CAP <n>]
+#                            OUT_SLOT_JSON <var>)
 function(model_ota_add_context_slot)
   cmake_parse_arguments(CS ""
-    "TARGET;BACKEND;PARTITION_NODELABEL;NAME;WORK_DIR;CONTRACT_PROBE;CONFIG_HEADER;KEEP_JSON;NEURONS_CAP;OUT_SLOT_JSON"
+    "TARGET;BACKEND;PARTITION_NODELABEL;NAME;WORK_DIR;CONTRACT_PROBE;CONFIG_HEADER;NEURONS_CAP;OUT_SLOT_JSON"
     "" ${ARGN})
 
   if(NOT CS_TARGET OR NOT CS_BACKEND OR NOT CS_PARTITION_NODELABEL OR NOT CS_WORK_DIR
@@ -142,14 +126,11 @@ function(model_ota_add_context_slot)
   if(CS_CONFIG_HEADER)
     list(APPEND _emit_cmd --config ${CS_CONFIG_HEADER})
   endif()
-  if(CS_KEEP_JSON)
-    list(APPEND _emit_cmd --keep-json ${CS_KEEP_JSON})
-  endif()
 
   add_custom_command(
     OUTPUT ${_slot_json}
     COMMAND ${_emit_cmd}
-    DEPENDS ${CS_CONTRACT_PROBE} ${MODEL_OTA_CONTEXT_SLOT_TOOL} ${CS_CONFIG_HEADER} ${CS_KEEP_JSON}
+    DEPENDS ${CS_CONTRACT_PROBE} ${MODEL_OTA_CONTEXT_SLOT_TOOL} ${CS_CONFIG_HEADER}
     COMMENT "Emitting OTA context slot metadata (${CS_TARGET})"
     VERBATIM)
   add_custom_target(${CS_TARGET}_contract_slot DEPENDS ${_slot_json})
@@ -179,7 +160,7 @@ function(model_ota_block_app_build)
 
   add_custom_target(model_ota_app_build_blocked
     COMMAND ${CMAKE_COMMAND} -E echo
-            "MODEL_OTA_FW_ELF/MODEL_OTA_FW_CONTEXT set: this build tree only produces model partition images; build one with 'cmake --build ${APPLICATION_BINARY_DIR} --target <name>_model_image'"
+            "MODEL_OTA_FW_CONTEXT set: this build tree only produces model partition images; build one with 'cmake --build ${APPLICATION_BINARY_DIR} --target <name>_model_image'"
     COMMAND ${CMAKE_COMMAND} -E false
     VERBATIM)
 
@@ -218,6 +199,12 @@ function(model_ota_context_finalize)
 }
 ")
 
+  get_property(_binding_symbols GLOBAL PROPERTY model_ota_axon_binding_symbols_json)
+  set(_binding_args "")
+  if(_binding_symbols)
+    set(_binding_args --binding-symbols ${_binding_symbols})
+  endif()
+
   add_custom_command(
     OUTPUT ${_out}
     COMMAND ${PYTHON_EXECUTABLE} ${MODEL_OTA_CONTEXT_EXPORT}
@@ -225,12 +212,17 @@ function(model_ota_context_finalize)
             --out ${_out}
             --build-dir ${CMAKE_CURRENT_BINARY_DIR}
             --elf ${_zephyr_elf}
+            ${_binding_args}
             --autoconf ${_autoconf}
     DEPENDS ${MODEL_OTA_CONTEXT_EXPORT} ${_manifest} ${_zephyr_elf} ${_slot_build_files}
+            ${_binding_symbols}
     COMMENT "Exporting model OTA firmware context"
     VERBATIM
   )
 
   add_custom_target(model_ota_context ALL DEPENDS ${_out})
   add_dependencies(model_ota_context zephyr)
+  if(TARGET model_ota_axon_bindings_ld)
+    add_dependencies(model_ota_axon_bindings_ld model_ota_context)
+  endif()
 endfunction()
