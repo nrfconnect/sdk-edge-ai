@@ -7,7 +7,7 @@ Data forwarder
    :local:
    :depth: 2
 
-This sample streams real sensor measurements from a development kit to a host computer.
+This sample streams real sensor measurements from a development kit to a host PC.
 It uses a CBOR-based framing protocol for :ref:`data_forwarder_host_tool`, with an optional ASCII mode for `Edge Impulse's data forwarder`_ CLI compatibility.
 
 Requirements
