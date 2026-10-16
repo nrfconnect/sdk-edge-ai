@@ -94,6 +94,12 @@ Development kits
            - .. figure:: images/nrf54l15tag_bottom.jpeg
                 :alt: nRF54L15 TAG bottom view
 
+   .. tab:: nRF7120 DK
+
+      The nRF7120 DK is supported by an Axon configuration that runs inference on the Axon NPU.
+      Bluetooth LE and MCUboot are enabled, like on the other kits, so the kit acts as a Bluetooth LE HID device and supports firmware updates.
+      Only the debug build type (:file:`prj.conf`) is provided for this kit.
+
 Sensor BMI270
 =============
 
@@ -204,6 +210,41 @@ The application supports two execution backends:
 
 The Neuton model is used by default on all boards that do not have the Axon NPU.
 You can use the Axon model by enabling the ``CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON`` Kconfig option.
+
+Generated model files
+=====================
+
+The :file:`src/nrf_edgeai_generated/` directory contains model files exported from the `Nordic Edge AI Lab`_.
+These files are committed to the repository so that the application builds without access to the Lab.
+
+The application selects the model directory at build time based on the board name and the selected backend:
+
+* :file:`src/nrf_edgeai_generated/<board>/Axon/` - Used when the ``CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON`` Kconfig option is enabled.
+* :file:`src/nrf_edgeai_generated/<board>/Neuton/` - Used for the Neuton backend on boards that provide both backends.
+* :file:`src/nrf_edgeai_generated/<board>/` - Used for the Neuton backend on boards that provide only this backend.
+
+Each model directory contains the following files:
+
+* :file:`nrf_edgeai_user_model.c` and :file:`nrf_edgeai_user_model.h` - Generated model definition and its API.
+* :file:`nrf_edgeai_user_model_axon.h` - Compiled Axon network, present in Axon model directories only.
+* :file:`nrf_edgeai_user_types.h` - Generated type definitions used by the model.
+* :file:`prj_example.conf` - Kconfig fragment showing the options required by the exported model.
+
+Regenerating the model files
+----------------------------
+
+To regenerate the files for a board, complete the following steps:
+
+1. Open the corresponding solution in the `Nordic Edge AI Lab`_.
+   The solution identifier is stored in the ``EDGEAI_LAB_SOLUTION_ID_STR`` macro in the existing :file:`nrf_edgeai_user_model.c` file.
+#. Export the model for the target board and backend.
+   For Axon models, the Axon Neural Network Compiler version used for the existing files is recorded in the header comment of the :file:`nrf_edgeai_user_model_axon.h` file.
+#. Replace the contents of the model directory with the exported output.
+
+.. note::
+   Do not hand-edit the files in the :file:`src/nrf_edgeai_generated/` directory.
+   Instead, delete the previously generated files and copy in the newly generated model, so that no files from the previous model are left behind.
+   The Axon model requires a driver that is compatible with the version declared in the :file:`nrf_edgeai_user_model_axon.h` file.
 
 Choosing Bluetooth LE HID pairing security
 ==========================================
