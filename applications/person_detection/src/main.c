@@ -14,6 +14,7 @@
 #include <zephyr/drivers/video.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/minmax.h>
 
 #include <axon/nrf_axon_platform.h>
 #include <drivers/axon/nrf_axon_driver.h>
