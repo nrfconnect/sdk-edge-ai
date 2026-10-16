@@ -34,7 +34,7 @@ preapproved_binaries:
   - lib/nrf_edgeai/cortex-m33/libnrf_edgeai_cortex-m33.a
   - lib/nrf_edgeai/cortex-m4/libnrf_edgeai_cortex-m4.a
   - samples/edge_impulse/hello_ei/ei_model_nrf_accel_sim_axon_v54.zip
-  - samples/edge_impulse/hello_ei/ei_model_nrf_accel_sim_cpu_v55.zip
+  - samples/edge_impulse/hello_ei/ei_model_nrf_accel_sim_cpu_v60.zip
   - tools/axon/compiler/bin/Darwin/libnrf-axon-nn-compiler-lib-arm64.dylib
   - tools/axon/compiler/bin/Linux/libnrf-axon-nn-compiler-lib-amd64.so
   - tools/axon/compiler/bin/Linux/libnrf-axon-nn-compiler-lib-arm64.so
