@@ -34,7 +34,7 @@ that cannot be expressed directly in the toolchain:
   `sizeof` of the runtime structs, so only the compiler can fold it; the build compiles
   `lib/model_ota/src/model_ota_contract_probe.c` per slot and this reads the finished word,
   which is why no host script reimplements the hash.
-- `emit_context_slot.py` - turn a slot's probe (and, for Axon, its generated config header)
+- `export_context_slot.py` - turn a slot's probe (and, for Axon, its generated config header)
   into the build-time half of its `model_ota_context.json` entry.
 - `model_contract.py` - the *string* hashes the preprocessor cannot do: the solution ID mixed into
   the solution contract, and the Axon binding table's symbol names. Both are 32-bit `blake2s`
@@ -182,6 +182,6 @@ nrfutil device program --firmware gear_anomaly_model_partition.hex \
   `lib/model_ota/src/model_ota_edgeai_neuton_wired.c`,
   `lib/model_ota/src/model_ota_axon_image_stub.c`,
   `lib/model_ota/src/model_ota_stub_macros.h`, `lib/model_ota/linker/model_image.ld`
-- Axon wiring: `tools/model_ota/axon_elf.py`, `tools/model_ota/emit_context_slot.py`
+- Axon wiring: `tools/model_ota/axon_elf.py`, `tools/model_ota/export_context_slot.py`
 - Edge AI Lab wired loaders: `lib/model_ota/src/model_ota_edgeai_neuton_wired.c`,
   `lib/model_ota/src/model_ota_edgeai_axon_wired.c`, `include/model_ota/model_ota_edgeai.h`

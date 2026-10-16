@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
-"""Emit build-time slot metadata for model_ota_context.json export.
+"""Export build-time slot metadata for model_ota_context.json.
 
 The contract hash is the compiler's own value, read back out of the slot's contract probe (see
 lib/model_ota/src/model_ota_contract_probe.c). With --config, Axon slots also publish caps from

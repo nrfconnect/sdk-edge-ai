@@ -34,7 +34,7 @@ set(MODEL_OTA_CRC_TOOL ${MODEL_OTA_TOOLS_DIR}/patch_image_crc.py)
 set(MODEL_OTA_VALIDATE_TOOL ${MODEL_OTA_TOOLS_DIR}/validate_model_image_layout.py)
 set(MODEL_OTA_COMPAT_TOOL ${MODEL_OTA_TOOLS_DIR}/check_model_compat.py)
 set(MODEL_OTA_IMAGE_DEFS ${MODEL_OTA_LIB_DIR}/include/model_ota/model_image.h)
-set(MODEL_OTA_CONTEXT_SLOT_TOOL ${MODEL_OTA_TOOLS_DIR}/emit_context_slot.py)
+set(MODEL_OTA_CONTEXT_SLOT_TOOL ${MODEL_OTA_TOOLS_DIR}/export_context_slot.py)
 
 # Record that model TARGET owns the partition at devicetree PARTITION_NODE (a path, so aliased
 # nodelabels of one node collide). Each partition is one MCUboot image, so two models sharing it
