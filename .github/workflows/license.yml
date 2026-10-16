@@ -29,6 +29,7 @@ jobs:
         cache-dependency-path: ncs/nrf/scripts/ci/requirements.txt
         pip-install: |
           -r ncs/nrf/scripts/ci/requirements.txt
+          west
 
     - name: Run license checks
       id: license_checks
@@ -36,6 +37,7 @@ jobs:
         BASE_REF: ${{ github.base_ref }}
       working-directory: ncs/edge-ai
       run: |
+        git config --global diff.renames false
         ../nrf/scripts/ci/check_license.py \
             --github \
             -l ./scripts/ci/license_allow_list.yaml \
