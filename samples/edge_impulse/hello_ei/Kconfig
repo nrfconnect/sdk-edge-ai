@@ -8,7 +8,7 @@ mainmenu "Hello Edge Impulse sample application"
 
 config EDGE_IMPULSE_MODEL_PATH
 	string "Edge Impulse model deployment path"
-	default 'ei_model_nrf_accel_sim_cpu_v55.zip'
+	default 'ei_model_nrf_accel_sim_cpu_v60.zip'
 	help
 	  Specifies local file path of an archive containing Edge Impulse model deployment.
 	  It can be either C++ Library, Zephyr library or Axon Library deployment.
