@@ -1,0 +1,8 @@
+# Scenario/platform combinations skipped when using twister --quarantine-list.
+# See https://docs.zephyrproject.org/latest/develop/test/twister.html#quarantine
+
+- scenarios:
+    - edgeai.obsv
+    - edgeai.obsv.cpd_strict
+    - edgeai.obsv.mcd_wide
+  comment: "https://nordicsemi.atlassian.net/browse/NCSDK-41978"
