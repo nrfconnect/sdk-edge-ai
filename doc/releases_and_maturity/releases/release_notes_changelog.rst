@@ -19,4 +19,12 @@ For the list of potential issues, see the :ref:`known_issues` page.
 Changelog
 *********
 
-No changes since the latest |EAI| release.
+* Removed:
+
+  * The support for the ``nrf52dk/nrf52832``, ``nrf52840dk/nrf52840``, and ``nrf5340dk/nrf5340/cpuapp`` board targets in the following samples:
+
+    * :ref:`runtime_classification_sample`
+    * :ref:`runtime_anomaly_sample`
+    * :ref:`runtime_regression_sample` -- removed ``nrf52dk/nrf52832``, ``nrf52840dk/nrf52840``, and ``nrf5340dk/nrf5340/cpuapp``.
+
+  * The support for the ``thingy53/nrf5340/cpuapp`` board target in the :ref:`Gesture Recognition application <app_gesture_recognition>`.

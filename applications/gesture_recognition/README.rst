@@ -47,20 +47,6 @@ Development kits
 
 .. tabs::
 
-   .. tab:: Thingy53
-
-      The `Nordic Thingy:53 <Nordic Thingy:53 Multi-protocol IoT prototyping platform_>`_  is an easy-to-use IoT prototyping platform.
-      It allows to create prototypes and proofs-of-concept without building custom hardware.
-      The Thingy:53 is built around the nRF5340 SoC, a dual-core wireless SoC.
-      The processing power and memory size of its dual Arm Cortex-M33 processors enable it to run embedded machine learning (ML) models directly on the device.
-
-      The Thingy:53 also includes multiple integrated sensors, such as environmental sensors, color and light sensors, accelerometers, and a magnetometer.
-      It is powered by a rechargeable lithium-polymer (Li-Po) battery that can be charged through USB-C.
-      There is also an external 4-pin JST connector compatible with the Stemma, Qwiic, and Grove standards for hardware accessories.
-
-      .. figure:: images/nordic_thingy.jpg
-         :alt: Nordic Thingy:53 kit
-
    .. tab:: nRF54LM20 DK
 
       The :doc:`nRF54LM20 DK <zephyr:boards/nordic/nrf54lm20dk/doc/index>` development kit has two variants with different SoCs: nRF54LM20A and nRF54LM20B.
@@ -130,21 +116,6 @@ The following table explains the LED indications for control modes and Bluetooth
      - No Bluetooth connection
      - Presentation Control mode
      - Music Control mode
-
-   * - Thingy:53
-     - Press the button on top of the device to switch between Presentation Control and Music Control modes.
-     - * LED glows red.
-
-       .. figure:: images/device-led-no-ble-connect_thingy.gif
-          :alt: Thingy53 LED red, no BLE connection
-     - * LED glows blue.
-
-       .. figure:: images/device-led-ble-connect-presentation-mode_thingy.gif
-          :alt: Thingy53 LED blue, presentation mode
-     - * LED glows green.
-
-       .. figure:: images/device-led-ble-connect-music-mode_thingy.gif
-          :alt: Thingy53 LED green, music mode
 
    * - nRF54LM20 DK
      - Press the **BUTTON 0** to switch between Presentation Control and Music Control modes.
@@ -411,11 +382,6 @@ Make sure the default (initial) position of the device matches the following:
 
 .. tabs::
 
-   .. group-tab:: Thingy53
-
-      .. figure:: images/initial_orientation_thingy.gif
-         :alt: Initial orientation (Thingy53)
-
    .. group-tab:: nRF54LM20 DK
 
       .. figure:: images/initial_orientation_54lm20.gif
@@ -432,38 +398,6 @@ The gestures are performed with the device in the initial position.
 Keep in mind the device orientation, as it is important for the recognition to work correctly.
 
 .. tabs::
-
-   .. group-tab:: Thingy53
-
-      .. list-table:: Swipe right and left
-         :header-rows: 1
-
-         * - Swipe right
-           - Swipe left
-         * - .. figure:: images/swipe_right_thingy.gif
-                :alt: Swipe right
-           - .. figure:: images/swipe_left_thingy.gif
-                :alt: Swipe left
-
-      .. list-table:: Rotation clockwise and counter-clockwise
-         :header-rows: 1
-
-         * - Rotation clockwise
-           - Rotation counter-clockwise
-         * - .. figure:: images/rotation_right_thingy.gif
-                :alt: Rotation clockwise
-           - .. figure:: images/rotation_left_thingy.gif
-                :alt: Rotation counter-clockwise
-
-      .. list-table:: Double shake and double tap
-         :header-rows: 1
-
-         * - Double shake
-           - Double tap
-         * - .. figure:: images/double_shake_thingy.gif
-                :alt: Double shake
-           - .. figure:: images/double_tap_thingy.gif
-                :alt: Double tap
 
    .. group-tab:: nRF54LM20 DK
 
