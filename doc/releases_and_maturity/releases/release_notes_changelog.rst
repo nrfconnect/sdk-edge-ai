@@ -19,6 +19,11 @@ For the list of potential issues, see the :ref:`known_issues` page.
 Changelog
 *********
 
+* Updated:
+
+  * ``edge-impulse-sdk-zephyr`` in the west manifest to v1.95.28.
+  * The :ref:`Hello Edge Impulse sample application <hello_ei_sample>` CPU model to version compatible with |EI| SDK.
+
 * Removed:
 
   * The support for the ``nrf52dk/nrf52832``, ``nrf52840dk/nrf52840``, and ``nrf5340dk/nrf5340/cpuapp`` board targets in the following samples:
