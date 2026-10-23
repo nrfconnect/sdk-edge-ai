@@ -1,0 +1,2 @@
+smpclient[ble]>=7.3
+requests>=2.31
