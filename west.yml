@@ -15,7 +15,7 @@ manifest:
     - name: nrf
       remote: ncs
       repo-path: sdk-nrf
-      revision: v3.5.0-preview4
+      revision: 1eb2023e4495dc393af85ffd0d7af3b911e73dbf
       import: true
 
     - name: edge-impulse-sdk-zephyr
