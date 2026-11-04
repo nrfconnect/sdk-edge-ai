@@ -73,9 +73,6 @@ Choose the method that works best for your project:
   Enable the ``CONFIG_DATA_FWD_PROTO_ASCII_MODE`` Kconfig option when streaming directly to |EIS| using the `Edge Impulse's data forwarder`_ CLI.
   You can also use the :ref:`data_forwarder_host_tool` to visualize and save the streamed sensor data to your local machine and than upload it to |EIS| manually.
 
-* Quick start with Thingy:53 - If you have a Thingy:53, install the Edge Impulse - Wi-Fi firmware using the `nRF Programmer`_ mobile app, then use the `nRF Edge Impulse`_ mobile app to forward sensor data wirelessly.
-  This is the fastest way to start collecting data without writing any code.
-
 * Upload existing datasets - If you already have data, you can upload synthetic data or public datasets directly to |EIS|.
   Check `Edge Impulse Datasets`_ for community-contributed datasets you can use as a starting point.
 

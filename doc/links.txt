@@ -11,8 +11,6 @@
 .. _`nRF54LM20B`: https://www.nordicsemi.com/Products/nRF54LM20B
 .. _`Axon NPU`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Axon-NPU
 .. _`Neuton models`: https://www.nordicsemi.com/Products/Technologies/Edge-AI/Neuton-models
-.. _`nRF Edge Impulse`: https://www.nordicsemi.com/Products/Development-tools/nRF-Edge-Impulse
-.. _`nRF Programmer`: https://www.nordicsemi.com/Products/Development-tools/nRF-Programmer
 .. _`Nordic Edge AI Lab ready-to-use models`: https://app.lab.nordicsemi.com/#/ready-to-use-models
 .. _`nRF Connect Device Manager`: https://www.nordicsemi.com/Products/Development-tools/nrf-connect-device-manager
 
