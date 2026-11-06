@@ -89,14 +89,39 @@ config MODELS_OBSERVABILITY
 	help
 	  Auto-selected umbrella: set when observability is enabled for at least one model. Each model
 	  has its own observability file (src/ww/ww_obsv.c, src/kws/kws_obsv.c) gated by its own
-	  option; this symbol only gates what is shared, such as the Memfault Diagnostic Service.
+	  option; this symbol only gates what is shared, such as the observability transport.
+
+choice MODELS_OBSERVABILITY_TRANSPORT
+	prompt "Observability transport"
+	depends on MODELS_OBSERVABILITY
+	default MODELS_OBSERVABILITY_MDS if BT_MDS
+	default MODELS_OBSERVABILITY_MEMFAULT_HTTP if MEMFAULT_HTTP_ENABLE
+	help
+	  Transport used to send the observability data of the observed models to Memfault.
+	  Only one transport can be used at a time, because both transports drain the same
+	  Memfault data. Each transport configuration file (observability_ble.conf,
+	  observability_wifi.conf) selects its transport and enables the stack it needs.
 
 config MODELS_OBSERVABILITY_MDS
-	def_bool y
-	depends on MODELS_OBSERVABILITY
+	bool "Bluetooth LE with the Memfault Diagnostic Service"
 	depends on BT_MDS
 	depends on BT_SMP
 	depends on NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
+	help
+	  Expose the Memfault Diagnostic Service. A gateway, such as a phone or a web browser,
+	  connects to the device and forwards the observability data to Memfault.
+
+config MODELS_OBSERVABILITY_MEMFAULT_HTTP
+	bool "Direct upload to Memfault over HTTPS"
+	depends on MEMFAULT_HTTP_ENABLE
+	depends on MEMFAULT_PERIODIC_UPLOAD
+	depends on NET_CONNECTION_MANAGER
+	depends on NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
+	help
+	  Keep a network (for example Wi-Fi) connection up, and let the Memfault SDK upload the
+	  observability data directly to Memfault over HTTPS.
+
+endchoice
 
 endmenu
 

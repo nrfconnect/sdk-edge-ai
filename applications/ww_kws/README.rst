@@ -55,7 +55,21 @@ Use either file as the starting point for observing your own model.
 The wakeword model emits a single probability ``p``.
 The probability metrics are defined over a distribution, so the score is expanded into a two-class ``[1 - p, p]`` vector inside :file:`src/ww/ww_obsv.c`.
 
-Metrics are collected every 24 hours (see the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT`` Kconfig option) and sent to the `Memfault`_ using `Custom Data Recording <Memfault Custom Data Recording_>`_ registered by the :ref:`nrf_edgeai_obsv_lib`.
+Metrics are collected periodically and sent to `Memfault`_ as `Custom Data Recording <Memfault Custom Data Recording_>`_.
+You can change the interval using the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC`` Kconfig option.
+Memfault accepts only one Custom Data Recording per device per day, unless the device is in `Developer Mode <Memfault Developer Mode_>`_.
+
+The data is sent using one of the following transports:
+
+* Bluetooth LE - The device exposes the :ref:`nrf:mds_readme`.
+  A gateway, such as a mobile phone or a computer with a web browser, connects to the device and forwards the data to Memfault.
+* Wi-Fi (nRF7120 DK only) - The device connects to a Wi-Fi access point and uploads the data directly to Memfault over HTTPS, without a gateway.
+
+You can select the transport in your configuration file.
+Each transport configuration file sets its option of the ``MODELS_OBSERVABILITY_TRANSPORT`` Kconfig choice.
+For details, see :ref:`app_ww_kws_config_files`.
+
+The Wi-Fi connection handling is implemented in :file:`src/wifi/memfault_http_obsv.c` and is based on the :ref:`nrf:memfault_sample` sample.
 
 Replacing models
 ================
@@ -166,11 +180,13 @@ Additional configuration
 
 Check and configure the following library options that are used by the application:
 
-* ``CONFIG_MEMFAULT_NCS_PROJECT_KEY`` - A key to your `Memfault`_ project.
+* ``CONFIG_MEMFAULT_PROJECT_KEY`` - A key to your `Memfault`_ project.
+* ``CONFIG_MEMFAULT_NCS_DEVICE_ID_HW_ID`` - Uses the SoC device ID as the Memfault device ID.
+  Set this option in the :file:`observability.conf` file.
 * ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES`` - Number of classes the observed model predicts.
 * ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS`` - Number of observability contexts, one per observed model.
 * ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC`` - Interval of automatic metrics collection.
-  For testing, use a shorter interval and enable server debug mode for the device in the  `Memfault`_ dashboard.
+* ``CONFIG_MEMFAULT_PERIODIC_UPLOAD_INTERVAL_SECS`` - Interval of the upload to Memfault with the Wi-Fi transport.
 
 Build types
 ===========
@@ -192,20 +208,56 @@ The application supports the following build types:
      - :file:`prj_release.conf`
      - Release version of the application with logging disabled and compiler optimizations.
 
+.. _app_ww_kws_config_files:
+
 Configuration files
 ===================
 
-The application provides predefined :file:`observability.conf` configuration file for enabling observability.
+Enable observability by combining :file:`observability.conf` with exactly one transport configuration:
 
-This file enables observability for both bundled models (``CONFIG_MODELS_OBSERVABILITY_WW`` and ``CONFIG_MODELS_OBSERVABILITY_KWS``), Bluetooth LE, Memfault Diagnostic Service and required dependencies.
-Enable only one of the two options to observe just the wakeword or just the keyword spotting model.
+.. list-table:: Wakeword and Keyword Spotting observability configuration files
+   :widths: auto
+   :header-rows: 1
 
+   * - File name
+     - Description
+   * - :file:`observability.conf`
+     - Enables observability for both bundled models (``CONFIG_MODELS_OBSERVABILITY_WW`` and ``CONFIG_MODELS_OBSERVABILITY_KWS``), the metrics, and the Memfault SDK.
+       It does not enable any transport.
+   * - :file:`observability_ble.conf`
+     - Bluetooth LE transport.
+       Enables the Memfault Diagnostic Service and bonding.
+   * - :file:`observability_wifi.conf`
+     - Wi-Fi transport (nRF7120 DK only).
+       Enables the Wi-Fi station, TLS, and direct upload to Memfault over HTTPS.
+       It also enables the shell for provisioning Wi-Fi credentials, also in the release build type.
+   * - :file:`observability_wifi.overlay`
+     - Devicetree overlay required by the Wi-Fi transport.
+       Increases the DMIC queue size.
+
+To observe only one model, disable the other model option in :file:`observability.conf`.
 The file also sets the memory sizing for the enabled scope: ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES``, ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS`` and the shared ``CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE``.
 
-Check :ref:`nrf:cmake_options` and use :makevar:`EXTRA_CONF_FILE` variable to include this configuration file.
+Include the configuration files using the :makevar:`EXTRA_CONF_FILE` variable.
+For the Wi-Fi transport, also include the overlay using the :makevar:`EXTRA_DTC_OVERLAY_FILE` variable.
+See :ref:`nrf:cmake_options` for details.
+
+.. tabs::
+
+   .. group-tab:: nRF54LM20 DK
+
+      .. code-block:: console
+
+         west build -b nrf54lm20dk/nrf54lm20b/cpuapp -- -DEXTRA_CONF_FILE="observability.conf;observability_ble.conf"
+
+   .. group-tab:: nRF7120 DK
+
+      .. code-block:: console
+
+         west build -b nrf7120dk/nrf7120e/cpuapp -- -DEXTRA_CONF_FILE="observability.conf;observability_wifi.conf" -DEXTRA_DTC_OVERLAY_FILE=observability_wifi.overlay
 
 .. note::
-   Set the ``CONFIG_MEMFAULT_NCS_PROJECT_KEY`` Kconfig option to your `Memfault`_ project key to successfully send metrics to Memfault.
+   Set the ``CONFIG_MEMFAULT_PROJECT_KEY`` Kconfig option to your `Memfault`_ project key to successfully send metrics to Memfault.
 
 Building and running
 ********************
@@ -230,10 +282,48 @@ Testing
 
 If you have enabled the model observability, also complete the following steps:
 
-#. Connect gateway to your device.
-   Ready-to-use gateways are `nRF Connect Device Manager`_ or `Memfault WebBluetooth Client`_.
-   Check Testing section of :ref:`nrf:peripheral_mds` for details.
-#. Wait for a duration set by the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC`` Kconfig option.
+#. Connect the device to Memfault using the selected transport:
+
+   .. tabs::
+
+      .. group-tab:: Bluetooth LE
+
+         Connect gateway to your device, for example, `nRF Connect Device Manager`_ or `Memfault WebBluetooth Client`_.
+         See the Testing section of :ref:`nrf:peripheral_mds` for details.
+
+      .. group-tab:: Wi-Fi
+
+         a. In the Zephyr log terminal, add the credentials of your Wi-Fi access point:
+
+            .. code-block:: console
+
+               wifi cred add -s <NetworkSSID> -k <SecurityMode> -p <NetworkPassword>
+
+            The credentials are stored on the device, so you only need to add them once.
+            For more information about configuring the Wi-Fi credentials, see the :ref:`Wi-Fi credentials <zephyr:lib_wifi_credentials>` library documentation.
+
+         #. Connect to the access point using one of the following methods:
+
+            * Run the ``wifi cred auto_connect`` command.
+            * Perform a pin reset by pressing the **RESET** button.
+              Other reset types will not work, because they leave the Wi-Fi core running.
+
+         #. Observe the ``Network connected, Memfault upload enabled`` message in the logs.
+
+         The device then uploads data periodically and reconnects automatically when the network becomes available again.
+
+         .. note::
+            You do not need to provision certificates.
+            The Memfault root certificates are built into the firmware and installed at boot (``CONFIG_MEMFAULT_NCS_PROVISION_CERTIFICATES``).
+
+#. In `Memfault`_, enable `Developer Mode <Memfault Developer Mode_>`_ for the device.
+#. Wait for the metrics to be collected (``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC``).
+   With the Wi-Fi transport, also wait for the next upload (``CONFIG_MEMFAULT_PERIODIC_UPLOAD_INTERVAL_SECS``).
+
+   .. note::
+      Without Developer Mode, Memfault silently discards Custom Data Recordings above its limit of one per device per day.
+      The firmware does not report an error.
+
 #. In a web browser, navigate to `Memfault`_.
 #. In the left-hand menu, go to :guilabel:`CDR Payloads`.
 #. Select a CDR payload from your test device with "edgeai_observability" as reason.

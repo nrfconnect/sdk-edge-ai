@@ -26,3 +26,4 @@ target_sources(app PRIVATE
 target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_WW app PRIVATE src/ww/ww_obsv.c)
 target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_KWS app PRIVATE src/kws/kws_obsv.c)
 target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_MDS app PRIVATE src/ble/ble_mds.c)
+target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_MEMFAULT_HTTP app PRIVATE src/wifi/memfault_http_obsv.c)

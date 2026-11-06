@@ -35,9 +35,9 @@ tests:
       - nrf54lm20dk/nrf54lm20b/cpuapp
       - nrf7120dk/nrf7120e/cpuapp
 
-  applications.ww_kws.obsv.zdebug:
+  applications.ww_kws.obsv_ble.zdebug:
     extra_args:
-      - EXTRA_CONF_FILE="observability.conf"
+      - EXTRA_CONF_FILE="observability.conf;observability_ble.conf"
     platform_allow:
       - nrf54lm20dk/nrf54lm20b/cpuapp
       - nrf7120dk/nrf7120e/cpuapp
@@ -45,13 +45,32 @@ tests:
       - nrf54lm20dk/nrf54lm20b/cpuapp
       - nrf7120dk/nrf7120e/cpuapp
 
-  applications.ww_kws.obsv.zrelease:
+  applications.ww_kws.obsv_ble.zrelease:
     extra_args:
       - FILE_SUFFIX=release
-      - EXTRA_CONF_FILE="observability.conf"
+      - EXTRA_CONF_FILE="observability.conf;observability_ble.conf"
     platform_allow:
       - nrf54lm20dk/nrf54lm20b/cpuapp
       - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
+
+  applications.ww_kws.obsv_wifi.zdebug:
+    extra_args:
+      - EXTRA_CONF_FILE="observability.conf;observability_wifi.conf"
+      - EXTRA_DTC_OVERLAY_FILE="observability_wifi.overlay"
+    platform_allow:
+      - nrf7120dk/nrf7120e/cpuapp
+    integration_platforms:
+      - nrf7120dk/nrf7120e/cpuapp
+
+  applications.ww_kws.obsv_wifi.zrelease:
+    extra_args:
+      - FILE_SUFFIX=release
+      - EXTRA_CONF_FILE="observability.conf;observability_wifi.conf"
+      - EXTRA_DTC_OVERLAY_FILE="observability_wifi.overlay"
+    platform_allow:
+      - nrf7120dk/nrf7120e/cpuapp
+    integration_platforms:
       - nrf7120dk/nrf7120e/cpuapp
