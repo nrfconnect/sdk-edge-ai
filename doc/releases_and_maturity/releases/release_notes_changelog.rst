@@ -22,8 +22,12 @@ Changelog
 * Added:
 
   * Support for the ``nrf7120dk/nrf7120e/cpuapp`` board target in the :ref:`WW KWS <app_ww_kws>`, :ref:`Person detection <app_person_detection>`, and :ref:`Gesture recognition <app_gesture_recognition>` applications, running inference on the Axon NPU.
+  * Support for model observability over Wi-Fi in the :ref:`WW KWS <app_ww_kws>` application on the nRF7120 DK, with direct Memfault upload over HTTPS (:file:`observability_wifi.conf` and :file:`observability_wifi.overlay`).
 
 * Updated:
+
+  * The Bluetooth LE transport for model observability in the :ref:`WW KWS <app_ww_kws>` application has been moved from the :file:`observability.conf` configuration file to :file:`observability_ble.conf`.
+    The application is built with the ``-DEXTRA_CONF_FILE="observability.conf;observability_ble.conf"`` option to keep the previous behavior.
 
   * ``edge-impulse-sdk-zephyr`` in the west manifest to v1.95.28.
   * The :ref:`Hello Edge Impulse sample application <hello_ei_sample>` CPU model to version compatible with |EI| SDK.
