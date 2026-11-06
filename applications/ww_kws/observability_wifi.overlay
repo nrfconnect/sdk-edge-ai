@@ -1,0 +1,12 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+/* Wi-Fi connection setup can stall the audio path for longer than the default four blocks
+ * (about 120 ms), so give the DMIC more buffering when Wi-Fi is enabled.
+ */
+&dmic_dev {
+	queue-size = <16>;
+};

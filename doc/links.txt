@@ -39,6 +39,7 @@
 
 .. _`Memfault`: https://memfault.com/
 .. _`Memfault Custom Data Recording`: https://docs.memfault.com/docs/mcu/custom-data-recording
+.. _`Memfault Developer Mode`: https://docs.memfault.com/docs/platform/rate-limiting#server-side-developer-mode
 .. _`Memfault Over-the-Air Updates`: https://docs.memfault.com/docs/platform/ota
 
 .. ### Source: edgeimpulse.com
