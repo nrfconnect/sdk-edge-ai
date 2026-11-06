@@ -98,6 +98,17 @@ config MODELS_OBSERVABILITY_MDS
 	depends on BT_SMP
 	depends on NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
 
+config MODELS_OBSERVABILITY_MEMFAULT_HTTP
+	def_bool y
+	depends on MODELS_OBSERVABILITY
+	depends on MEMFAULT_HTTP_ENABLE
+	depends on MEMFAULT_PERIODIC_UPLOAD
+	depends on NET_CONNECTION_MANAGER
+	depends on NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
+	help
+	  Keep a network (for example Wi-Fi) connection up, and let the Memfault SDK upload the
+	  observability data directly to Memfault over HTTPS.
+
 endmenu
 
 source "Kconfig.zephyr"

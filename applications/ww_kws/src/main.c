@@ -13,6 +13,7 @@
 #include <zephyr/logging/log.h>
 
 #include "ble/ble_mds.h"
+#include "wifi/memfault_http_obsv.h"
 #include "control_output.h"
 #include "dmic.h"
 #include "kws/kws.h"
@@ -141,6 +142,11 @@ int main(void)
 	}
 
 	err = init_app_ble();
+	if (err) {
+		return err;
+	}
+
+	err = init_app_memfault_http();
 	if (err) {
 		return err;
 	}
