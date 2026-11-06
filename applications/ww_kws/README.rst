@@ -228,7 +228,8 @@ Enable observability by combining :file:`observability.conf` with exactly one tr
        It also enables the shell for provisioning Wi-Fi credentials, also in the release build type.
    * - :file:`observability_wifi.overlay`
      - Devicetree overlay required by the Wi-Fi transport.
-       Increases the DMIC queue size.
+       Reserves the Wi-Fi ROM patch regions and increases the DMIC queue size.
+       Because the resulting image exceeds 1 MB, the model data is placed above the patch regions.
 
 To observe only one model, disable the other model option in :file:`observability.conf`.
 The file also sets the memory sizing for the enabled scope: ``CONFIG_NRF_EDGEAI_OBSV_MAX_CLASSES``, ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS`` and the shared ``CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE``.
