@@ -187,7 +187,7 @@ You can use the Axon model by enabling the ``CONFIG_NRF_EDGEAI_GESTURE_RECOGNITI
 
 .. note::
    The nRF7120 DK supports only the Axon model.
-   The Neuton model is not yet available for this kit.
+   The Neuton model is not yet available for this kit, so the ``CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_NEUTON`` Kconfig option cannot be selected.
 
 Generated model files
 =====================

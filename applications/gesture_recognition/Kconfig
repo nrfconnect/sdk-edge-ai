@@ -26,8 +26,10 @@ choice NRF_EDGEAI_GESTURE_RECOGNITION_MODEL
 
 config NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_NEUTON
 	bool "Neuton (CPU)"
+	depends on !SOC_NRF7120E
 	help
-	  Use the Neuton model. Works on all supported boards.
+	  Use the Neuton model. Available on all supported boards except nRF7120E,
+	  which supports only the Axon model.
 
 config NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON
 	bool "Axon (NPU)"
