@@ -262,7 +262,7 @@ ZTEST(obsv_encoder, test_all_metrics_conform_to_cddl_schema)
 	nrf_edgeai_obsv_metric_t msd;
 
 	const nrf_edgeai_obsv_model_info_t model = {
-		.model_id = UINT16_MAX,
+		.model_id = UINT32_MAX,
 		.num_classes = TEST_NUM_CLASSES,
 		.num_features = TEST_NUM_FEATURES,
 		.version = UINT32_MAX,
