@@ -74,3 +74,14 @@ tests:
       - nrf7120dk/nrf7120e/cpuapp
     integration_platforms:
       - nrf7120dk/nrf7120e/cpuapp
+
+  applications.ww_kws.power_measurement.zrelease:
+    extra_args:
+      - FILE_SUFFIX=release
+      - EXTRA_CONF_FILE="power_measurement.conf"
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
