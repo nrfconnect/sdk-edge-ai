@@ -19,6 +19,11 @@
 };
 
 / {
+	/* Power measurement trace line, used with CONFIG_INFERENCE_GPIO_TRACE. */
+	zephyr,user {
+		infer-trace-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+	};
+
 	spibb0: spibb0 {
 		compatible = "zephyr,spi-bitbang";
 		status = "okay";

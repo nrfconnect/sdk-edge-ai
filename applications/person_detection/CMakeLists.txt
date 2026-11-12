@@ -12,3 +12,5 @@ target_sources(app PRIVATE
   src/postprocessing.c
   src/drivers/arducam_mega.c
 )
+
+target_sources_ifdef(CONFIG_INFERENCE_GPIO_TRACE app PRIVATE src/inference_trace.c)

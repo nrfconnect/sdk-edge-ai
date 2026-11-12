@@ -3,6 +3,13 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+/ {
+	/* Power measurement trace line, used with CONFIG_INFERENCE_GPIO_TRACE. */
+	zephyr,user {
+		infer-trace-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+	};
+};
+
 &axon {
 	status = "okay";
 };
