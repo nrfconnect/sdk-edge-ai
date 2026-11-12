@@ -173,6 +173,19 @@ tests:
       - nrf7120dk/nrf7120e/cpuapp
     extra_args:
       - FILE_SUFFIX=release_no_ble
+  applications.gesture_recognition.none.power_measurement.zrelease_no_ble:
+    sysbuild: true
+    build_only: true
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
+    extra_args:
+      - FILE_SUFFIX=release_no_ble
+      - EXTRA_CONF_FILE="power_measurement.conf"
+      - CONFIG_LOG=n
   applications.gesture_recognition.none.power_consumption_test:
     sysbuild: true
     build_only: true

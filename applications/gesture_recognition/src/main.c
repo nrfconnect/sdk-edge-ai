@@ -29,6 +29,7 @@
 #include "ux_state_manager.h"
 #endif
 #include "inference_postprocessing.h"
+#include "inference_trace.h"
 #include "ble/ble_common.h"
 
 #if IS_ENABLED(CONFIG_BLE_MODE_HID)
@@ -401,7 +402,9 @@ static void execute_inference(int16_t *input_data)
 	res = nrf_edgeai_feed_inputs(p_model, (void *)input_data, NRF_EDGEAI_INPUT_DATA_LEN);
 
 	if (res == NRF_EDGEAI_ERR_SUCCESS) {
+		inference_trace_set(true);
 		res = nrf_edgeai_run_inference(p_model);
+		inference_trace_set(false);
 
 		if (res == NRF_EDGEAI_ERR_SUCCESS) {
 			handle_inference_result(p_model);
