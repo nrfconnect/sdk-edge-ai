@@ -47,10 +47,11 @@ Development kits
 
 .. tabs::
 
-   .. tab:: nRF54LM20 DK
+   .. tab:: nRF54LM20 DK and nRF7120 DK
 
       The :doc:`nRF54LM20 DK <zephyr:boards/nordic/nrf54lm20dk/doc/index>` development kit has two variants with different SoCs: nRF54LM20A and nRF54LM20B.
-      Both variants require a sensor evaluation board:
+      The :doc:`nRF7120 DK <zephyr:boards/nordic/nrf7120dk/doc/index>` is supported with the nRF7120E SoC variant (``nrf7120dk/nrf7120e/cpuapp``), which runs inference on the Axon NPU.
+      Both kits require the Sensor Evaluation Board (PCA63568):
 
       .. list-table::
          :header-rows: 0
@@ -61,7 +62,7 @@ Development kits
            - .. figure:: images/sensor_EB_bottom.jpeg
                 :alt: Sensor Evaluation Board bottom view
 
-      The Sensor Evaluation Board is connected to the DK through the **EXP** port on the nRF54LM20 DK board:
+      On both kits, the Sensor Evaluation Board is connected to the DK through the **EXP** port:
 
       .. figure:: images/nrf54lm20_EB.jpeg
          :alt: nRF54LM20 DK sensor EXP port
@@ -80,29 +81,6 @@ Development kits
            - .. figure:: images/nrf54l15tag_bottom.jpeg
                 :alt: nRF54L15 TAG bottom view
 
-   .. tab:: nRF7120 DK
-
-      The nRF7120 DK is supported with the nRF7120E SoC variant (``nrf7120dk/nrf7120e/cpuapp``), which runs inference on the Axon NPU.
-      Bluetooth LE and MCUboot are enabled, like on the other kits, so the kit acts as a Bluetooth LE HID device and supports firmware updates.
-      All build types listed in :ref:`gesture_recognition_build_types` are provided for this kit.
-
-      The kit requires the Sensor Evaluation Board (PCA63568), connected through the **Expansion Board Header** on the nRF7120 DK.
-      The BMI270 sensor is accessed over SPI22 on the following pins:
-
-      .. list-table::
-         :header-rows: 1
-
-         * - Signal
-           - nRF7120 DK pin
-         * - SPI Clock
-           - ``P3.4``
-         * - SPI MOSI
-           - ``P3.9``
-         * - SPI MISO
-           - ``P3.10``
-         * - Chip select
-           - ``P3.1``
-
 Sensor BMI270
 =============
 
@@ -118,6 +96,8 @@ User interface
 **************
 
 This section describes the user interface available on development kits in this application.
+
+.. _gesture_recognition_buttons_leds:
 
 Buttons and LEDs
 ================
@@ -204,6 +184,10 @@ The application supports two execution backends:
 
 The Neuton model is used by default on all boards that do not have the Axon NPU.
 You can use the Axon model by enabling the ``CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON`` Kconfig option.
+
+.. note::
+   The nRF7120 DK supports only the Axon model.
+   The Neuton model is not yet available for this kit, so the ``CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_NEUTON`` Kconfig option cannot be selected.
 
 Generated model files
 =====================
@@ -404,7 +388,7 @@ Testing
       Connected 9C:B6:D0:C0:CE:FC (public)
       Security changed: 9C:B6:D0:C0:CE:FC (public) level 2
 
-   After Bluetooth connection, the device changes LED indication from red to green, or red to blue depending on the keyboard control mode.
+   After Bluetooth connection, the LED indication changes depending on the keyboard control mode, as described in :ref:`gesture_recognition_buttons_leds`.
    You can now use the device to control media playback or presentation slides by making gestures.
 
 Gestures overview
@@ -448,10 +432,13 @@ Make sure the default (initial) position of the device matches the following:
 
 .. tabs::
 
-   .. group-tab:: nRF54LM20 DK
+   .. group-tab:: nRF54LM20 DK and nRF7120 DK
 
       .. figure:: images/initial_orientation_54lm20.gif
          :alt: Initial orientation (nRF54LM20 DK)
+
+      The animation shows the nRF54LM20 DK.
+      The nRF7120 DK uses the same model as the nRF54LM20 DK, so hold it in the same orientation.
 
    .. group-tab:: nRF54L15 TAG
 
@@ -465,7 +452,7 @@ Keep in mind the device orientation, as it is important for the recognition to w
 
 .. tabs::
 
-   .. group-tab:: nRF54LM20 DK
+   .. group-tab:: nRF54LM20 DK and nRF7120 DK
 
       .. list-table:: Swipe right and left
          :header-rows: 1
