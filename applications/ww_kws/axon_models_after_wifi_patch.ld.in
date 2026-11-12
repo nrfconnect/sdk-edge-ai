@@ -1,0 +1,22 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+/*
+ * The nRF7120 Wi-Fi ROM patches sit at fixed addresses from 0x100000. With the
+ * Wi-Fi transport, the image is larger than 1 MB, so rodata would run through
+ * the patch range. Move the Axon model constants and command buffers, the
+ * largest read-only objects, above the patches so that the rest of rodata ends
+ * below them.
+ *
+ * Included before the rodata section (ROM_SECTIONS), so these input sections
+ * match here first. No memory region is given, so the FLASH region pointer used
+ * by the following sections does not move.
+ */
+.axon_models @AXON_MODELS_ADDR@ :
+{
+	*(.rodata.axon_model_const_axon_user_instance_*)
+	*(.rodata.cmd_buffer_axon_user_instance_*)
+}

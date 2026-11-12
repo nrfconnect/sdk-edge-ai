@@ -17,8 +17,9 @@
 LOG_MODULE_REGISTER(dmic);
 
 #define BLOCK_SIZE (DMIC_SAMPLE_BYTES * DMIC_SAMPLES_IN_BLOCK)
+#define BLOCK_COUNT DT_PROP(DT_NODELABEL(dmic_dev), queue_size)
 
-K_MEM_SLAB_DEFINE_STATIC(dmic_mem_slab, BLOCK_SIZE, 4, 4);
+K_MEM_SLAB_DEFINE_STATIC(dmic_mem_slab, BLOCK_SIZE, BLOCK_COUNT, 4);
 
 int dmic_init(void)
 {
