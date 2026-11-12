@@ -27,7 +27,7 @@
  * @param num_classes Expected number of output classes.
  * @param info        Output metadata for nrf_edgeai_obsv_init().
  * @retval 0 Success.
- * @retval -EINVAL Solution ID is out of range for uint16_t model_id.
+ * @retval -EINVAL Solution ID is out of range for uint32_t model_id.
  */
 static inline int obsv_model_info_from_model(nrf_edgeai_t *model, uint16_t num_classes,
 					     nrf_edgeai_obsv_model_info_t *info)
@@ -36,16 +36,18 @@ static inline int obsv_model_info_from_model(nrf_edgeai_t *model, uint16_t num_c
 	__ASSERT_NO_MSG(info != NULL);
 	__ASSERT_NO_MSG(nrf_edgeai_model_outputs_num(model) == num_classes);
 
+	errno = 0;
 	const unsigned long model_id = strtoul(model->metadata.p_solution_id, NULL, 10);
 
-	if (model_id > UINT16_MAX) {
+	/* strtoul() sets ERANGE for any solution ID above UINT32_MAX.*/
+	if (errno == ERANGE) {
 		return -EINVAL;
 	}
 
 	const nrf_edgeai_dsp_feature_extraction_t *features_ctx =
 		nrf_edgeai_dsp_features_ctx(model);
 
-	info->model_id = (uint16_t)model_id;
+	info->model_id = (uint32_t)model_id;
 	info->num_classes = num_classes;
 	info->num_features = features_ctx != NULL ? features_ctx->overall_num : 0;
 	info->version = model->metadata.version.combined;
