@@ -30,7 +30,7 @@ extern "C" {
  */
 typedef struct nrf_edgeai_obsv_model_info_s {
 	/** @brief Application-defined model identifier. */
-	uint16_t model_id;
+	uint32_t model_id;
 	/** @brief Number of model output classes. */
 	uint16_t num_classes;
 	/** @brief Length of the input-feature vector, in elements. 0 if the model
@@ -113,8 +113,8 @@ int nrf_edgeai_obsv_core_reset(nrf_edgeai_obsv_core_t *p_ctx);
  * @retval -EINVAL @p p_ctx or @p p_metric is NULL, or @p p_metric->snapshot is NULL.
  * @retval -EALREADY @p p_metric was already registered (init not called again).
  */
-int nrf_edgeai_obsv_core_register(nrf_edgeai_obsv_core_t *p_ctx,
-				  nrf_edgeai_obsv_metric_t *p_metric, const void *p_cfg);
+int nrf_edgeai_obsv_core_register(nrf_edgeai_obsv_core_t *p_ctx, nrf_edgeai_obsv_metric_t *p_metric,
+				  const void *p_cfg);
 
 /**
  * @brief Deregister a previously registered metric.
