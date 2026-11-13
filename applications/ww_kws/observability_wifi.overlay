@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+/* Wi-Fi ROM patch regions, required with observability_wifi.conf on the nRF7120 DK. */
+#include <vendor/nordic/wifi/nrf7120_wifi_patch_0_1_0.dtsi>
+
 /* Wi-Fi connection setup can stall the audio path for longer than the default four blocks
  * (about 120 ms), so give the DMIC more buffering when Wi-Fi is enabled.
  */
