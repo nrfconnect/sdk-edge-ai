@@ -1,0 +1,31 @@
+name: Python scripts tests
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/scripts-test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test-scripts:
+    name: Run tests for python scripts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/requirements-test.txt
+          pip-install: -r scripts/requirements-test.txt
+      # Builds the Cortex-M33 ELF fixtures in scripts/model_ota/tests/test_elf_const.py.
+      - name: Install ARM cross compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi
+      - name: Run tests
+        run: python -m pytest scripts
