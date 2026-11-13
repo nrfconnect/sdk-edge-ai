@@ -27,3 +27,14 @@ target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_WW app PRIVATE src/ww/ww_obsv.c
 target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_KWS app PRIVATE src/kws/kws_obsv.c)
 target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_MDS app PRIVATE src/ble/ble_mds.c)
 target_sources_ifdef(CONFIG_MODELS_OBSERVABILITY_MEMFAULT_HTTP app PRIVATE src/wifi/memfault_http_obsv.c)
+
+if(CONFIG_WIFI_NRF71_PATCH)
+  # Without the patch regions in the devicetree, the Wi-Fi ROM patches are
+  # silently left out of the image and the Wi-Fi core never starts.
+  dt_nodelabel(umac_patch NODELABEL umac_rom_patch_addr)
+  if(NOT umac_patch)
+    message(FATAL_ERROR
+      "The Wi-Fi transport needs the Wi-Fi ROM patch regions. "
+      "Add -DEXTRA_DTC_OVERLAY_FILE=observability_wifi.overlay")
+  endif()
+endif()
