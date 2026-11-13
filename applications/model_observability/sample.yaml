@@ -1,0 +1,22 @@
+sample:
+  description: Model Observability application
+  name: model observability
+
+common:
+  sysbuild: true
+  build_only: true
+  tags:
+    - ci_build
+    - sysbuild
+    - ci_applications_model_observability
+  platform_allow:
+    - nrf54l15tag/nrf54l15/cpuapp
+  integration_platforms:
+    - nrf54l15tag/nrf54l15/cpuapp
+
+tests:
+  applications.model_observability: {}
+
+  applications.model_observability.obsv:
+    extra_args:
+      - EXTRA_CONF_FILE="observability.conf"

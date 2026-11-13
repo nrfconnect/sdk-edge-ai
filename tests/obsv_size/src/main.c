@@ -43,7 +43,7 @@ struct model_fixture {
 static struct model_fixture first;
 static struct model_fixture second;
 
-static void setup_model(struct model_fixture *fixture, uint16_t model_id, uint16_t num_classes)
+static void setup_model(struct model_fixture *fixture, uint32_t model_id, uint16_t num_classes)
 {
 	const nrf_edgeai_obsv_model_info_t model = {
 		.model_id = model_id,

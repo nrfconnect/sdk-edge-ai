@@ -1,0 +1,47 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Model Observability application"
+
+config MODEL_OBSERVABILITY
+	bool "Edge AI observability for the model"
+	depends on NRF_EDGEAI_OBSV
+	depends on NRF_EDGEAI_OBSV_MEMFAULT
+	help
+	  Collect observability metrics from the model output probabilities
+	  (src/model_obsv.c) and publish them as a Memfault CDR.
+
+choice APP_BLE
+	prompt "Bluetooth LE service"
+	default APP_BLE_NUS
+
+config APP_BLE_NUS
+	bool "Nordic UART Service (NUS)"
+	help
+	  Send the recognized class and its probability as a
+	  "<class>,<probability_pct>\r\n" text line after each inference.
+
+config APP_BLE_MDS
+	bool "Memfault Diagnostic Service (MDS)"
+	help
+	  Expose the staged observability CDR over MDS. A bonded phone
+	  (nRF Memfault app) drains it and forwards it to the Memfault cloud.
+	  The recognized class is only logged, not sent over Bluetooth LE.
+
+endchoice
+
+configdefault BT_NUS
+	default y if APP_BLE_NUS
+
+configdefault BT_MDS
+	default y if APP_BLE_MDS
+
+configdefault BT_SMP
+	default y if APP_BLE_MDS
+
+endmenu
+
+source "Kconfig.zephyr"
