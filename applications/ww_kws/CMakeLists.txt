@@ -37,4 +37,23 @@ if(CONFIG_WIFI_NRF71_PATCH)
       "The Wi-Fi transport needs the Wi-Fi ROM patch regions. "
       "Add -DEXTRA_DTC_OVERLAY_FILE=observability_wifi.overlay")
   endif()
+
+  # Place the Axon models above the Wi-Fi ROM patches, page aligned.
+  dt_reg_addr(umac_patch_addr PATH ${umac_patch})
+  dt_reg_size(umac_patch_size PATH ${umac_patch})
+  math(EXPR AXON_MODELS_ADDR
+    "((${umac_patch_addr} + ${umac_patch_size} + 0xFFF) / 0x1000) * 0x1000"
+    OUTPUT_FORMAT HEXADECIMAL)
+
+  # The models are placed outside the FLASH memory region, so the linker does not
+  # check that they fit in the code partition. Check it in the linker snippet.
+  dt_chosen(code_partition PROPERTY "zephyr,code-partition")
+  dt_reg_addr(code_partition_addr PATH ${code_partition})
+  dt_reg_size(code_partition_size PATH ${code_partition})
+  math(EXPR CODE_PARTITION_END "${code_partition_addr} + ${code_partition_size}"
+    OUTPUT_FORMAT HEXADECIMAL)
+  configure_file(axon_models_after_wifi_patch.ld.in
+    ${CMAKE_CURRENT_BINARY_DIR}/axon_models_after_wifi_patch.ld @ONLY)
+  zephyr_linker_sources(ROM_SECTIONS
+    ${CMAKE_CURRENT_BINARY_DIR}/axon_models_after_wifi_patch.ld)
 endif()
