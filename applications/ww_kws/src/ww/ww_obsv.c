@@ -11,6 +11,8 @@
 #include <nrf_edgeai_obsv/nrf_edgeai_obsv_memfault.h>
 #include <nrf_edgeai_obsv/nrf_edgeai_obsv_metrics.h>
 
+#include <memfault/metrics/metrics.h>
+
 #include "../model_utils.h"
 #include "ww_obsv.h"
 
@@ -22,7 +24,7 @@ LOG_MODULE_REGISTER(ww_obsv);
  * therefore expanded into [1 - p, p] = [absent, present].
  */
 #define WW_MODEL_OUTPUTS 1U
-#define WW_OBSV_CLASSES	 2U
+#define WW_OBSV_CLASSES  2U
 
 /* Mel feature vector length produced by the model DSP front end. */
 #define WW_OBSV_FEATURES 40U
@@ -60,6 +62,58 @@ static nrf_edgeai_obsv_metric_t msd;
 static uint32_t msd_buf[OBSV_WORDS(NRF_EDGEAI_OBSV_MSD_STORAGE_BYTES(WW_OBSV_FEATURES))];
 #endif
 
+static const struct nrf_edgeai_obsv_memfault_keys ww_mflt_keys = {
+	.model = {
+		.model_id = MEMFAULT_METRICS_KEY(edgeai_obsv_ww_model_id),
+		.model_version = MEMFAULT_METRICS_KEY(edgeai_obsv_ww_model_version),
+		.num_inferences = MEMFAULT_METRICS_KEY(edgeai_obsv_ww_num_inferences),
+		.num_feature_updates = MEMFAULT_METRICS_KEY(edgeai_obsv_ww_num_feature_updates),
+	},
+	.mcd = {
+		.version = MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_version),
+		.entropy = {
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin00),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin01),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin02),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin03),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin04),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin05),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin06),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin07),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin08),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin09),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin10),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin11),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin12),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin13),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin14),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_entropy_bin15),
+		},
+		.top2_margin = {
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin00),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin01),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin02),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin03),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin04),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin05),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin06),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin07),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin08),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin09),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin10),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin11),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin12),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin13),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin14),
+			MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_top2margin_bin15),
+		},
+		.switches = MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_switches),
+		.comparisons = MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_comparisons),
+		.majority_frames = MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_majority_frames),
+		.confident_switches = MEMFAULT_METRICS_KEY(edgeai_obsv_ww_mcd_confident_switches),
+	},
+};
+
 int ww_obsv_init(nrf_edgeai_t *model)
 {
 	nrf_edgeai_obsv_model_info_t info;
@@ -79,9 +133,7 @@ int ww_obsv_init(nrf_edgeai_t *model)
 		return err;
 	}
 
-	/* Create each metric over its own buffer, then register it. The dump and CDR
-	 * payload follow the registration order.
-	 */
+	/* Create each metric over its own buffer, then register it. */
 #if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_CLASS_PRED_DIST)
 	nrf_edgeai_obsv_metric_cpd_create(&cpd, cpd_buf, WW_OBSV_CLASSES);
 	err = nrf_edgeai_obsv_register(&ctx, &cpd, NULL);
@@ -123,7 +175,7 @@ int ww_obsv_init(nrf_edgeai_t *model)
 	}
 #endif
 
-	err = nrf_edgeai_obsv_memfault_init(&ctx);
+	err = nrf_edgeai_obsv_memfault_init(&ctx, &ww_mflt_keys);
 	if (err) {
 		LOG_ERR("Memfault transport init failed (err %d)", err);
 	}

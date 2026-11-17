@@ -68,6 +68,7 @@ config MODELS_OBSERVABILITY_WW
 	bool "Edge AI observability for the wakeword model"
 	depends on NRF_EDGEAI_OBSV
 	depends on NRF_EDGEAI_OBSV_MEMFAULT
+	depends on NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC
 	depends on APP_MODE_WW_GATED_KWS || APP_MODE_WW_ONLY
 	help
 	  Collect observability metrics for the wakeword model. Its single output is expanded into
@@ -77,6 +78,7 @@ config MODELS_OBSERVABILITY_KWS
 	bool "Edge AI observability for the keyword spotting model"
 	depends on NRF_EDGEAI_OBSV
 	depends on NRF_EDGEAI_OBSV_MEMFAULT
+	depends on NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC
 	depends on APP_MODE_WW_GATED_KWS || APP_MODE_KWS_ONLY
 	depends on NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS >= 2 || !MODELS_OBSERVABILITY_WW
 	help
@@ -96,7 +98,6 @@ config MODELS_OBSERVABILITY_MDS
 	depends on MODELS_OBSERVABILITY
 	depends on BT_MDS
 	depends on BT_SMP
-	depends on NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT
 
 endmenu
 
