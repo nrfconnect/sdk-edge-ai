@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -47,12 +48,12 @@
  * (hdr + 1) steps past the header to the first counter.
  */
 
-#define MCD_ROW_ENTROPY	  0U
-#define MCD_ROW_MARGIN	  1U
+#define MCD_ROW_ENTROPY   0U
+#define MCD_ROW_MARGIN    1U
 #define MCD_ROW_STABILITY 2U
 
-#define MCD_STAB_SWITCHES	  0U
-#define MCD_STAB_COMPARISONS	  1U
+#define MCD_STAB_SWITCHES         0U
+#define MCD_STAB_COMPARISONS      1U
 #define MCD_STAB_MAJORITY_FRAMES  2U
 #define MCD_STAB_CONFIDENT_SWITCH 3U
 
@@ -165,6 +166,39 @@ static void mcd_snapshot(nrf_edgeai_obsv_metric_snapshot_t *out, void *priv)
 	out->num_rows = NRF_EDGEAI_OBSV_MCD_NUM_ROWS;
 	out->num_cols = hdr->bin_num;
 	out->counts = mcd_counts(hdr);
+}
+
+int nrf_edgeai_obsv_metric_mcd_snapshot_decode(const nrf_edgeai_obsv_metric_snapshot_t *snapshot,
+					       struct nrf_edgeai_obsv_mcd_snapshot *out)
+{
+	if ((snapshot == NULL) || (out == NULL) ||
+	    (snapshot->metric_id != NRF_EDGEAI_OBSV_METRIC_ID_MODEL_CERTAINTY_DESC)) {
+		return -EINVAL;
+	}
+
+	if (snapshot->version != METRIC_MODEL_CERTAINTY_DESC_VERSION) {
+		return -ENOTSUP;
+	}
+
+	if ((snapshot->num_rows != NRF_EDGEAI_OBSV_MCD_NUM_ROWS) ||
+	    (snapshot->num_cols < (MCD_STAB_CONFIDENT_SWITCH + 1U)) || (snapshot->counts == NULL)) {
+		return -EBADMSG;
+	}
+
+	const uint32_t *stability =
+		snapshot->counts + (size_t)MCD_ROW_STABILITY * snapshot->num_cols;
+
+	*out = (struct nrf_edgeai_obsv_mcd_snapshot){
+		.num_bins = snapshot->num_cols,
+		.entropy = snapshot->counts + (size_t)MCD_ROW_ENTROPY * snapshot->num_cols,
+		.top2_margin = snapshot->counts + (size_t)MCD_ROW_MARGIN * snapshot->num_cols,
+		.switches = stability[MCD_STAB_SWITCHES],
+		.comparisons = stability[MCD_STAB_COMPARISONS],
+		.majority_frames = stability[MCD_STAB_MAJORITY_FRAMES],
+		.confident_switches = stability[MCD_STAB_CONFIDENT_SWITCH],
+	};
+
+	return 0;
 }
 
 void nrf_edgeai_obsv_metric_mcd_create(nrf_edgeai_obsv_metric_t *metric, void *buf,

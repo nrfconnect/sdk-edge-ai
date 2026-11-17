@@ -307,6 +307,42 @@ _Static_assert(sizeof(_nrf_obsv_mcd_hdr_t) == 8,
 void nrf_edgeai_obsv_metric_mcd_create(nrf_edgeai_obsv_metric_t *metric, void *buf,
 				       uint16_t n_classes);
 
+/**
+ * @brief Semantic view of a model certainty descriptor snapshot.
+ *
+ * Histogram pointers refer to the snapshot's storage and remain valid for the
+ * same lifetime as @ref nrf_edgeai_obsv_metric_snapshot_t::counts.
+ */
+struct nrf_edgeai_obsv_mcd_snapshot {
+	/** @brief Number of bins in each histogram. */
+	uint16_t num_bins;
+	/** @brief Normalized entropy histogram. */
+	const uint32_t *entropy;
+	/** @brief Top-2 probability margin histogram. */
+	const uint32_t *top2_margin;
+	/** @brief Number of dominant-class switches. */
+	uint32_t switches;
+	/** @brief Number of consecutive inference pairs compared. */
+	uint32_t comparisons;
+	/** @brief Number of inferences whose winning probability exceeded 0.5. */
+	uint32_t majority_frames;
+	/** @brief Number of switches into a winner whose probability exceeded 0.5. */
+	uint32_t confident_switches;
+};
+
+/**
+ * @brief Decode an MCD metric snapshot into semantic fields.
+ *
+ * @param snapshot Generic snapshot produced by the MCD metric.
+ * @param out      Semantic view populated on success.
+ * @retval 0 Snapshot decoded successfully.
+ * @retval -EINVAL An argument is NULL or @p snapshot is not an MCD snapshot.
+ * @retval -ENOTSUP The snapshot version is unsupported.
+ * @retval -EBADMSG The snapshot dimensions or counter storage are invalid.
+ */
+int nrf_edgeai_obsv_metric_mcd_snapshot_decode(const nrf_edgeai_obsv_metric_snapshot_t *snapshot,
+					       struct nrf_edgeai_obsv_mcd_snapshot *out);
+
 #endif /* CONFIG_NRF_EDGEAI_OBSV_METRIC_MODEL_CERTAINTY_DESC */
 
 #if defined(CONFIG_NRF_EDGEAI_OBSV_METRIC_MEL_ENERGY_DESC)
