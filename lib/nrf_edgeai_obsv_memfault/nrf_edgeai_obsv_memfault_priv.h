@@ -7,43 +7,11 @@
 #ifndef NRF_EDGEAI_OBSV_MEMFAULT_PRIV_H
 #define NRF_EDGEAI_OBSV_MEMFAULT_PRIV_H
 
-/*
- * Staging layout and external linkage for CONFIG_ZTEST. Production code should
- * use nrf_edgeai_obsv_memfault.h only.
- */
+#include <nrf_edgeai_obsv/nrf_edgeai_obsv_memfault.h>
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#include <nrf_edgeai_obsv/nrf_edgeai_obsv_encode_sizes.h>
-#include <nrf_edgeai_obsv/nrf_edgeai_obsv_core.h>
-
-/** @brief Staging buffer size for the Memfault CDR transport. */
-#define NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ \
-	NRF_EDGEAI_OBSV_ENCODE_LIST_BUF_SIZE(CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS)
-
-struct nrf_edgeai_obsv_ctx;
-
-typedef struct nrf_edgeai_obsv_mflt_staging {
-	/** @brief Registered observability contexts (up to MAX_CONTEXTS). */
-	struct nrf_edgeai_obsv_ctx *ctxs[CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_MAX_CONTEXTS];
-	/** @brief Number of registered contexts. */
-	uint8_t num_ctxs;
-	/**
-	 * @brief Staged CDR payload: obsv-list = [+ obsv-payload].
-	 *
-	 * Sized for MAX_CONTEXTS payloads plus a small array-header overhead.
-	 */
-	uint8_t buf[NRF_EDGEAI_OBSV_ENCODE_LIST_BUFSZ];
-	uint16_t len;
-	/** @brief A CDR is staged and not yet drained; collect() refuses to overwrite it. */
-	bool ready;
-	/** @brief A collect() is encoding; a concurrent collect() refuses to start. */
-	bool collecting;
-	/** @brief A collect() was refused while @c ready; the drain schedules a retry. */
-	bool collect_pending;
-	uint32_t staged_duration_ms;
-	uint32_t last_collect_ms;
-} nrf_edgeai_obsv_mflt_staging_t;
+struct nrf_edgeai_obsv_mflt_registration {
+	struct nrf_edgeai_obsv_ctx *ctx;
+	const struct nrf_edgeai_obsv_memfault_keys *keys;
+};
 
 #endif /* NRF_EDGEAI_OBSV_MEMFAULT_PRIV_H */

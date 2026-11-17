@@ -6,4 +6,4 @@
 
 zephyr_library()
 
-zephyr_library_sources(nrf_edgeai_obsv_memfault.c)
+zephyr_library_sources(nrf_edgeai_obsv_memfault_heartbeat.c)
