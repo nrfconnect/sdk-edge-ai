@@ -58,3 +58,98 @@ section.numbered-step > h4::before {
     display: inline-block;
     padding-left: 1.5em;
 }
+
+/* Figures in docutils tables (board photos, activity GIFs, …).
+ * Scale within cells at high zoom, but keep the same main-column width as body text
+ * so images do not slide under the floated local ToC. */
+.rst-content .wy-table-responsive:has(table.docutils td figure),
+.rst-content .wy-table-responsive:has(table.docutils td .figure) {
+    overflow-x: auto;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+@media screen and (min-width: 1000px) {
+    .rst-content:has(.contents.local) .wy-table-responsive:has(table.docutils td figure),
+    .rst-content:has(nav.contents.local) .wy-table-responsive:has(table.docutils td figure),
+    .rst-content:has(.contents.local) .wy-table-responsive:has(table.docutils td .figure),
+    .rst-content:has(nav.contents.local) .wy-table-responsive:has(table.docutils td .figure) {
+        max-width: calc(100% - var(--ncs-right-toc-width) - 3rem);
+    }
+}
+
+.rst-content table.docutils:has(td figure),
+.rst-content table.docutils:has(td .figure),
+.rst-content table.docutils.activity-gifs,
+.rst-content table.docutils.board-photos {
+    width: 100%;
+    max-width: 100%;
+    table-layout: fixed;
+}
+
+.rst-content table.docutils:has(td figure) td,
+.rst-content table.docutils:has(td .figure) td,
+.rst-content table.docutils.activity-gifs td,
+.rst-content table.docutils.board-photos td {
+    min-width: 0;
+    vertical-align: top;
+}
+
+.rst-content table.docutils:has(td figure) td p,
+.rst-content table.docutils:has(td .figure) td p,
+.rst-content table.docutils.activity-gifs td p,
+.rst-content table.docutils.board-photos td p {
+    max-width: 100% !important;
+}
+
+.rst-content table.docutils:has(td figure) td figure,
+.rst-content table.docutils:has(td .figure) td figure,
+.rst-content table.docutils:has(td figure) td .figure,
+.rst-content table.docutils:has(td .figure) td .figure,
+.rst-content table.docutils.activity-gifs td figure,
+.rst-content table.docutils.board-photos td figure,
+.rst-content table.docutils.activity-gifs td .figure,
+.rst-content table.docutils.board-photos td .figure {
+    max-width: 100% !important;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+.rst-content table.docutils:has(td figure) td figure img,
+.rst-content table.docutils:has(td .figure) td figure img,
+.rst-content table.docutils:has(td figure) td .figure img,
+.rst-content table.docutils:has(td .figure) td .figure img,
+.rst-content table.docutils.activity-gifs td figure img,
+.rst-content table.docutils.board-photos td figure img,
+.rst-content table.docutils.activity-gifs td .figure img,
+.rst-content table.docutils.board-photos td .figure img {
+    max-width: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Standalone activity figures (e.g. initial orientation). */
+.rst-content figure.activity-gif {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.rst-content figure.activity-gif img {
+    max-width: min(100%, 420px) !important;
+    width: auto !important;
+    height: auto !important;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
+@media screen and (min-width: 1000px) {
+    .rst-content:has(.contents.local) figure.activity-gif,
+    .rst-content:has(nav.contents.local) figure.activity-gif {
+        max-width: calc(100% - var(--ncs-right-toc-width) - 3rem);
+    }
+}
