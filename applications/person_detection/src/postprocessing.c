@@ -43,23 +43,30 @@ struct model_input_size {
 	float height;
 };
 
+/**
+ * Note: the model output indices should be referred to by
+ * their preprocessor macro name from the source .tflite file. However,
+ * the model file is already included in main.c, so cannot
+ * be included here. The preprocessor macro name is listed next
+ * to the output_idx field value.
+ */
 static const struct model_head_desc head_descs[MODEL_HEADS] = {
 	{
 		.head_id = MODEL_HEAD_STRIDE_32,
 		.stride_px = 32,
-		.output_idx = 2,
+		.output_idx = 0, /* PERSON_DET_1807_OUTPUT_NDX */
 		.anchors = {{116.f, 90.f}, {156.f, 198.f}, {373.f, 326.f}},
 	},
 	{
 		.head_id = MODEL_HEAD_STRIDE_16,
 		.stride_px = 16,
-		.output_idx = 1,
+		.output_idx = 1, /* PERSON_DET_1808_OUTPUT_NDX */
 		.anchors = {{30.f, 61.f}, {62.f, 45.f}, {59.f, 119.f}},
 	},
 	{
 		.head_id = MODEL_HEAD_STRIDE_8,
 		.stride_px = 8,
-		.output_idx = 0,
+		.output_idx = 2, /* PERSON_DET_1809_OUTPUT_NDX */
 		.anchors = {{10.f, 13.f}, {16.f, 30.f}, {33.f, 23.f}},
 	},
 };
