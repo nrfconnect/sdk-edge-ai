@@ -26,6 +26,7 @@ sys.path.insert(0, str(ZEPHYR_BASE / 'doc' / '_extensions'))
 sys.path.insert(0, str(ZEPHYR_BASE / 'scripts'))
 
 from edge_ai_project_info import (
+    get_intersphinx_ncs_docs_version,
     get_manifest_revision,
     get_version_string,
     strip_v,
@@ -211,9 +212,14 @@ edge_ai_substitutions = SUBSTITUTIONS
 #
 # Hosted NCS inventories are published at nrfconnectdocs.nordicsemi.com.
 # See https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html
+#
+# Intersphinx uses the newest *published* sdk-nrf tag at or before the manifest
+# revision (see ``get_intersphinx_ncs_docs_version``), not the manifest SHA.
 
-_NCS_DOCS_BASE = f"https://nrfconnectdocs.nordicsemi.com/ncs/{NCS_VERSION_NUMBER}"
-_NCS_DOCS_STORAGE = f"https://ncsdoc.z6.web.core.windows.net/ncs/{NCS_VERSION_NUMBER}"
+NCS_INTERPSPHINX_VERSION = get_intersphinx_ncs_docs_version(NCS_VERSION, NRF_BASE)
+
+_NCS_DOCS_BASE = f"https://nrfconnectdocs.nordicsemi.com/ncs/{NCS_INTERPSPHINX_VERSION}"
+_NCS_DOCS_STORAGE = f"https://ncsdoc.z6.web.core.windows.net/ncs/{NCS_INTERPSPHINX_VERSION}"
 
 intersphinx_mapping = {
     "nrf": (f"{_NCS_DOCS_BASE}/nrf/", f"{_NCS_DOCS_STORAGE}/nrf/objects.inv"),

@@ -69,6 +69,8 @@ jobs:
         run: |
           west init -l .
           west update -o=--depth=1 -n
+          NRF_DIR="$(west list nrf -f {abspath})"
+          git -C "${NRF_DIR}" fetch origin 'refs/tags/v*:refs/tags/v*'
 
       - name: Set build context
         run: |
