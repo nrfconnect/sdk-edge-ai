@@ -31,10 +31,12 @@ COMPILER_STDOUT_FILE_NAME = "compiler_lib_stdout.tmp"
 REMOVE_COMPILER_LIB_STDOUT_FILE = False
 LOG_COMPILER_STDOUT_IN_LINUX = False
 
+INT32_MAX = (1 << 31) - 1  # 2147483647
+INT32_MIN = -(1 << 31)     # -2147483648
+
 
 def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, model_name: str, x_test, y_test, quantized_data, labels: str, test_vectors_ndx: list, test_flag, normalized_scaleshift=False, disable_op_quantization=True, skip_softmax_op=False, op_radix=8, interlayer_buffer_size=0, psum_buffer_size=0, header_file_test_vector_count=0, conv2d_setting='local_psum', psum_buffer_loc='interlayer_buffer', transpose_kernel=False, tflite_axon_graph_object=None) -> str:
     camel_case_name = util.get_camel_case_model_name(model_name)
-    # api_defn = ""
     file_content = ""
 
     """
@@ -67,6 +69,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     # model_labels_content_bin = bytearray()
     model_layer_desc_struct_bin = bytearray()
     model_compilation_options_bin = bytearray()
+    # model_input_interface_bin = bytearray()
+    # model_output_interface_bin = bytearray()
 
     tflite_test_file_content = ""
     tflite_test_layer_vectors = ""
@@ -81,7 +85,6 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     max_single_scaling_error = -1
     max_single_error_layer_name = ""
     max_single_error_ch = 0
-    # single_scale_shift_error_per_ch_results = ""
     axon_layer_num = 0
     tflite_identifier = 0
     total_layer_count = 0
@@ -90,138 +93,142 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
         test_ndx = test_vectors_ndx[0]
     digit = 0
     pad_details = None
-    # last_operation_name=""
     last_operator_options = None
-    model_input_axon_layer_num = None
-    model_output_axon_layer_num = None
-    model_input_tf_index = None
-    model_output_tf_index = None
+
     if isinstance(skip_softmax_op, list):
         skip_softmax_op = skip_softmax_op[0]
-    """
-    definitions for axonpro errata, mostly related to the non-zero padding
-    """
-    max_interior_padded_layer_len = 0  # TBR
-    """
-    end of defn
-    """
+
     subgraph = tflite_axon_graph_object.get_tflite_subgraph()
-    # tflite_operators_len = tflite_axon_graph_object.get_tflite_operators_len()
-    interpreter = tflite_axon_graph_object.get_tflite_interpreter()
     inputs = tflite_axon_graph_object.get_tflite_input_details()
     outputs = tflite_axon_graph_object.get_tflite_output_details()
-    tensor_details = tflite_axon_graph_object.get_tflite_tensor_details()
+    interpreter = tflite_axon_graph_object.get_tflite_interpreter()
     ops_details = tflite_axon_graph_object.get_tflite_operator_details()
+    tensor_details = tflite_axon_graph_object.get_tflite_tensor_details()
+    # tflite_operators_len = tflite_axon_graph_object.get_tflite_operators_len()
 
-    model_input_operator_name = inputs[0]['name']
-    model_output_operator_name = outputs[0]['name']
+    tflite_model_input_operations = tflite_axon_graph_object.get_tflite_input_operations()
+    tflite_model_output_operations = tflite_axon_graph_object.get_tflite_output_operations()
+
+    model_inputs = copy.deepcopy(inputs)
+    model_outputs = copy.deepcopy(outputs)
 
     operators_detail_graph = tflite_axon_graph_object.get_axon_operator_graph_info()
+    # verify the input output shapes of the axon layers
+    # tflite_axon_graph_object.verify_axon_operations_input_output_shapes()
     axon_last_layer_num,  last_layer_ndx = tflite_axon_graph_object.get_axon_layer_num_of_output_operator()
-    scale, model_ip_zeropoint = inputs[0]['quantization']
-    input_shape = inputs[0]['shape']
-    model_ip_datawidth = inputs[0]['dtype']
+    axon_first_layer_num, first_layer_ndx = tflite_axon_graph_object.get_axon_layer_num_of_input_operator()
 
-    if model_ip_datawidth == np.float32:
-        if operators_detail_graph[0]['op_name'] == "QUANTIZE":
-            logger.debug(
-                "input is float, getting the input quantization from QUANTIZE operator")
-            scale, model_ip_zeropoint = tensor_details[operators_detail_graph[0]
-                                                       ['op_tensors'][0]]['quantization']
-            model_ip_datawidth = tensor_details[operators_detail_graph[0]
-                                                ['op_tensors'][0]]['dtype']
-        else:
-            raise Exception("float input models are not supported!!")
-    if model_ip_datawidth == np.uint8:
-        if operators_detail_graph[0]['op_name'] == "QUANTIZE":
-            logger.debug(
-                "input is uint8, getting the input quantization from QUANTIZE operator")
-            scale, model_ip_zeropoint = tensor_details[operators_detail_graph[0]
-                                                       ['op_tensors'][0]]['quantization']
-            model_ip_datawidth = tensor_details[operators_detail_graph[0]
-                                                ['op_tensors'][0]]['dtype']
-        else:
-            raise Exception(
-                f"{model_name} has uint8 inputs, which are not supported!")
+    op_tensor_layer_map = tflite_axon_graph_object.get_op_tensor_axon_tflite_layer_map()
+    layer_op_tensor_map = tflite_axon_graph_object.get_axon_tflite_layer_op_tensor_map()
+    ip_tensor_layer_map = tflite_axon_graph_object.get_ip_tensor_axon_tflite_layer_map()
+    layer_ip_tensor_map = tflite_axon_graph_object.get_axon_tflite_layer_ip_tensor_map()
 
-    # if (skip_softmax_op and operators_detail_graph[last_layer_ndx[0]]['op_name'] == "SOFTMAX"):
-    #     #FIXME when multiple outputs are present!
-    #     if type(last_layer_ndx) is not list:
-    #         last_layer_ndx = [last_layer_ndx]
-    #     last_layer_ndx[0] = tflite_axon_graph_object.get_index_for_axon_layer_num(
-    #         axon_last_layer_num[0]-1)
+    # ensure that the inputs to the model can be quantized, and collect all the input information available
+    for n, _ip in enumerate(inputs):
+        if _ip['dtype'] == np.float32 or _ip['dtype'] == np.uint8 or _ip['dtype'] == np.uint16:
+            if tflite_model_input_operations[n]['op_name'] == "QUANTIZE":
+                logger.debug(
+                    f"input {n} is float, getting the input quantization from QUANTIZE operator")
+                model_inputs[n]['quantization'] = tensor_details[tflite_model_input_operations[n]
+                                                                 ['outputs'][0]]['quantization']
+                model_inputs[n]['dtype'] = tensor_details[tflite_model_input_operations[n]
+                                                          ['outputs'][0]]['dtype']
+            else:
+                raise Exception(
+                    f"ip {n} of {model_name} is {np.dtype(_ip['dtype']).name}, which is not supported!")
+
+        # calculate the ip multiplier and scaleshift for each of the inputs to the model
+        model_inputs[n]['scaleshift'] = util.optimized_ip_scaling_shift(
+            1/model_inputs[n]['quantization'][0], 0, 20, 31)[1]
+        model_inputs[n]['multiplier'] = int(np.round(
+            (1/model_inputs[n]['quantization'][0])*(2**model_inputs[n]['scaleshift'])))
+        model_inputs[n]['tensor_shape'] = ops.TensorShape(
+            model_inputs[n]['shape'])
+        model_inputs[n]['tflite_layer_ndx'] = tflite_model_input_operations[n]['index']
+        model_inputs[n]['axon_tflite_layer_ndx'] = ip_tensor_layer_map[_ip['index']]
+
+        # start filling up the file content with the input details for debugging
+        ip_binfile_content_name = model_name.upper(
+        ) + f"_L{tflite_model_input_operations[n]['index']}_INPUT{n}"
+        if ops_details[0]['op_name'] == 'UNIDIRECTIONAL_SEQUENCE_LSTM':
+            file_content += (
+                f"\n#define {ip_binfile_content_name}_BATCH {model_inputs[n]['tensor_shape'].height}"
+                f"\n#define {ip_binfile_content_name}_TIMESTEPS {model_inputs[n]['tensor_shape'].width}"
+                f"\n#define {ip_binfile_content_name}_FEATURES {model_inputs[n]['tensor_shape'].depth}"
+            )
+        else:
+            file_content += (
+                f"\n#define {ip_binfile_content_name}_BATCH {model_inputs[n]['tensor_shape'].batch}"
+                f"\n#define {ip_binfile_content_name}_CHANNEL {model_inputs[n]['tensor_shape'].depth}"
+                f"\n#define {ip_binfile_content_name}_HEIGHT {model_inputs[n]['tensor_shape'].height}"
+                f"\n#define {ip_binfile_content_name}_WIDTH {model_inputs[n]['tensor_shape'].width}"
+            )
+        file_content += (
+            f"\n#define {ip_binfile_content_name}_QUANTIZE_INV_SCALING_FACTOR {model_inputs[n]['multiplier']}"
+            f"\n#define {ip_binfile_content_name}_QUANTIZE_INV_SCALING_FACTOR_SHIFT {int(model_inputs[n]['scaleshift'])}"
+            f"\n#define {ip_binfile_content_name}_QUANTIZE_ZERO_POINT {int(model_inputs[n]['quantization'][1])}"
+            f"\n#define {ip_binfile_content_name}_BYTEWIDTH {tflite_axon_wrapper.GetAxonByteWidthEnum(model_inputs[n]['dtype']).name}\n"
+        )
 
     if skip_softmax_op:
         for ndx, layer_ndx in enumerate(last_layer_ndx):
             if ops_details[layer_ndx]['op_name'] == "SOFTMAX":
                 last_layer_ndx[ndx] = tflite_axon_graph_object.get_index_for_axon_layer_num(
                     axon_last_layer_num[ndx]-1)
+                new_op_tensor = layer_op_tensor_map.pop(layer_ndx)
+                op_tensor_layer_map[new_op_tensor] = last_layer_ndx[ndx]
+                layer_op_tensor_map[last_layer_ndx[ndx]] = new_op_tensor
 
-    # getting the output scale of the actual final output
-    model_op_scale, model_op_zeropoint = copy.deepcopy(
-        # tensor_details[operators_detail_graph[last_layer_ndx[0]]['op_tensors'][0]]['quantization'])
-        tensor_details[operators_detail_graph[last_layer_ndx[-1]]['op_tensors'][0]]['quantization'])
-    model_op_scaleshift = util.optimized_ip_scaling_shift(
-        (model_op_scale), 16, 30, 31)[1]
-    model_op_multiplier = int(
-        np.round((model_op_scale)*(2**model_op_scaleshift)))
+    # axon_model_output_layers = tflite_axon_graph_object.get_axon_output_op_graph_details(last_layer_ndx)
+    # axon_model_input_layers = tflite_axon_graph_object.get_axon_input_op_graph_details(first_layer_ndx)
 
-    output_shape = outputs[0]['shape']
-    model_op_datawidth = outputs[0]['dtype']
-    if model_op_datawidth == np.float32 and operators_detail_graph[len(operators_detail_graph)-1]['op_name'] != "DEQUANTIZE":
-        # cehck if there is a dequantize if the output layer is float32
-        raise Exception("float output models are not supported!!")
+    for n, _op in enumerate(outputs):
+        if _op['dtype'] == np.float32 and tflite_model_output_operations[n]['op_name'] == "DEQUANTIZE":
+            # update the quantization accordingly
+            logger.debug(
+                f"output {n} is float, getting the output quantization from DEQUANTIZE operator")
+            model_outputs[n]['quantization'] = tensor_details[tflite_model_output_operations[n]
+                                                              ['inputs'][0]]['quantization']
+            model_outputs[n]['dtype'] = tensor_details[tflite_model_output_operations[n]
+                                                       ['inputs'][0]]['dtype']
+        else:
+            Exception(
+                f"op {n} of {model_name} is {np.dtype(_op['dtype']).name}, which is not supported!")
+        model_outputs[n]['scaleshift'] = util.optimized_ip_scaling_shift(
+            (model_outputs[n]['quantization'][0]), 16, 30, 31)[1]
+        model_outputs[n]['multiplier'] = int(np.round(
+            (model_outputs[n]['quantization'][0])*(2**model_outputs[n]['scaleshift'])))
+        model_outputs[n]['tensor_shape'] = ops.TensorShape(
+            model_outputs[n]['shape'])
+        model_outputs[n]['tflite_layer_ndx'] = tflite_model_output_operations[n]['index']
+        model_outputs[n]['axon_tflite_layer_ndx'] = op_tensor_layer_map[_op['index']]
 
-    model_ip_scaleshift = util.optimized_ip_scaling_shift(
-        1/scale, 0, 20, 31)[1]
-    model_ip_multiplier = int(np.round((1/scale)*(2**model_ip_scaleshift)))
     # quantized data calculation
-    data_q = quantized_data
+    data_q = quantized_data[:]
 
-    model_ip_shape = ops.TensorShape(input_shape)
-    # prepare a text file for adding all the constants into the file and then generate the const.h file
-    if (ops_details[0]['op_name'] == 'UNIDIRECTIONAL_SEQUENCE_LSTM'):
-        file_content += "\n#define " + model_name.upper() + "_L0_INPUT_BATCH "+str(model_ip_shape.height)+"\n#define " + model_name.upper() + "_L0_TIME_STEPS "+str(model_ip_shape.width)+"\n#define " + model_name.upper() + "_L0_INPUT_FEATURES "+str(model_ip_shape.depth)+"\n" + \
-            "\n" + "#define " + model_name.upper() + "_L0_INPUT_QUANTIZE_INV_SCALING_FACTOR "+str(model_ip_multiplier)+"\n" + "#define " + model_name.upper() + \
-            "_L0_INPUT_QUANTIZE_INV_SCALING_FACTOR_SHIFT " + \
-            str(int(model_ip_scaleshift))+"\n" + "#define " + model_name.upper() + \
-            "_L0_INPUT_QUANTIZE_ZERO_POINT "+str(int(model_ip_zeropoint))
-        file_content += "\n#define " + model_name.upper() + "_L0_INPUT_BYTEWIDTH " + \
-            tflite_axon_wrapper.GetAxonByteWidthEnum(
-                model_ip_datawidth).name + "\n"
-    else:
-        file_content += "\n#define " + model_name.upper() + "_L0_INPUT_BATCH "+str(model_ip_shape.batch)+"\n#define " + model_name.upper() + "_L0_INPUT_CHANNEL "+str(model_ip_shape.depth)+"\n#define " + model_name.upper() + "_L0_INPUT_HEIGHT "+str(model_ip_shape.height)+"\n" + "#define " + model_name.upper() + "_L0_INPUT_WIDTH "+str(model_ip_shape.width) + \
-            "\n" + "#define " + model_name.upper() + "_L0_INPUT_QUANTIZE_INV_SCALING_FACTOR "+str(model_ip_multiplier)+"\n" + "#define " + model_name.upper() + \
-            "_L0_INPUT_QUANTIZE_INV_SCALING_FACTOR_SHIFT " + \
-            str(int(model_ip_scaleshift))+"\n" + "#define " + model_name.upper() + \
-            "_L0_INPUT_QUANTIZE_ZERO_POINT "+str(int(model_ip_zeropoint))
-        file_content += "\n#define " + model_name.upper() + "_L0_INPUT_BYTEWIDTH " + \
-            tflite_axon_wrapper.GetAxonByteWidthEnum(
-                model_ip_datawidth).name + "\n"
     if (test_flag):
         prediction_digits = []
         # adding code to run the tflite inference to compare the output from the implementation on python
-        test_ = data_q[test_ndx]
-        # test_ = np.expand_dims(test_, axis=0)
-        test_ = util.check_input_shape_for_inference(test_, input_shape)
-        interpreter.set_tensor(inputs[0]['index'], test_)
-        # Run inference.
+        for ndx, model_input in enumerate(model_inputs):
+            test_ = util.check_input_shape_for_inference(
+                data_q[ndx][test_ndx], model_input['shape'])
+            interpreter.set_tensor(model_input["index"], test_)
+            # we have a multichannel input
+            if (model_input['tensor_shape'].depth > 1) and model_input['tensor_shape'].shape_size > 3:
+                test_ = test_.transpose(0, 3, 1, 2)
+                tflite_test_file_content += util.write_array_to_file(
+                    test_.squeeze(), model_name.lower()+f"_l0_test_input{ndx}")
+                tflite_test_layer_vectors += "\n\nconst int8_t* " + model_name.lower() + \
+                    "_layer_vectors[] = {\n    " + \
+                    model_name.lower()+f"_l0_test_input{ndx},\n  "
+
+        # # Run inference.
         interpreter.invoke()
         # Save the class predictions for all test samples.
         output = interpreter.tensor(outputs[0]['index'])
         digit = np.argmax(output()[0])
         prediction_digits.append(digit)
 
-        if (model_ip_shape.depth > 1) and model_ip_shape.shape_size > 3:  # we have a multichannel input
-            test_ = test_.transpose(0, 3, 1, 2)
-        tflite_test_file_content += util.write_array_to_file(
-            test_.squeeze(), model_name.lower()+"_l0_test_input")
-
-        # tflite_test_layer_vectors += "\n\nconst int8_t* "+ model_name.lower()+"_
-        # input_test_vectors[] = {\n    " +  model_name.lower()+"_test_input,\n  };\n"
-        tflite_test_layer_vectors += "\n\nconst int8_t* " + model_name.lower() + \
-            "_layer_vectors[] = {\n    " + \
-            model_name.lower()+"_l0_test_input,\n  "
     else:
         """
         const int8_t** tinyml_vww_input_test_vectors = NULL;
@@ -240,8 +247,6 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     """
     model_descriptor_defn = "\n{ "  # open(template_dir + "define_model_description.txt.template").read()
     model_descriptor_content = ""
-    # paddings = []
-    # reshape_ip_shape = None
     reshape_op_shape = None
     SWAP_MAXPOOL_OP = False
     SWAP_INPUT_TO_NEXT_RESHAPE = False
@@ -251,8 +256,6 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
         tflite_identifier = new_op['index']
         previous_op_name = ""
         transpose_layer = False
-        # LEAKY_RELU_FLAG=False
-        # leaky_relu_alpha_scale=1
         filter_tensor = np.array([], dtype=np.int32)
         filter_offset = -1
         b_prime = np.array([], dtype=np.int32)
@@ -262,32 +265,10 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
         scale_q = np.array([], dtype=np.int32)
         scale_q_offset = -1
         cpu_op_additional_attrib_list = np.array([], dtype=np.int32)
-        # cpu_operation_enum=0
-        # layer_max_value=None
-        # layer_min_value=None
         model_descriptor = model_descriptor_defn
         operators = subgraph.Operators(new_op['index'])
         operator_code = new_op['op_code']
-        # ops_options_ndx = operators.BuiltinOptionsType()
         try:
-            if (new_op["op_name"] == "RESHAPE") and i == 0 and test_flag:
-                # have to perform special handling if RESHAPE is the first operator
-                # check if the test input needs to be transposed
-                # we only transpose the test input if the reshape puts some element in the channel
-                reshape_ip_shape = ops.TensorShape(
-                    tensor_details[subgraph.Operators(i).InputsAsNumpy()[0]]['shape'])
-                reshape_op_shape = ops.TensorShape(
-                    tensor_details[subgraph.Operators(i).OutputsAsNumpy()[0]]['shape'])
-                if (reshape_op_shape.depth != reshape_ip_shape.depth) and test_flag:
-                    # we have to transpose the input
-                    original_shape = data_q.shape
-                    data_q = data_q.reshape(len(
-                        data_q), reshape_op_shape.height, reshape_op_shape.width, reshape_op_shape.depth)
-                    data_q = data_q.transpose(0, 3, 1, 2)
-                    data_q = data_q.reshape(original_shape)
-                else:
-                    data_q = data_q.reshape(len(
-                        data_q), reshape_op_shape.height, reshape_op_shape.width, reshape_op_shape.depth)
             if new_op['options_initialized']:
                 options = new_op['operator_options']
             else:
@@ -305,6 +286,11 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             transpose_layer = transpose_kernel and previous_op_name != "FULLY_CONNECTED"
 
             if ("SOFTMAX" in op_name and skip_softmax_op):
+                # last_operation_detail = last_operator_options.operation_detail
+                # model_output_axon_layer_nums.append(last_operation_detail['axon_layer_num'])
+                # model_output_tf_indices.append(last_operation_detail['index'])
+                # model_output_operator_names.append(last_operation_detail['op_name'])
+                # figure out if this is one of the outputs
                 raise KeyError(-901)
             if ("LEAKY_RELU" == op_name):
                 raise KeyError(-910)
@@ -314,7 +300,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 if new_op['op_name'] == "READ_VARIABLE" or new_op['op_name'] == "ASSIGN_VARIABLE":
                     raise KeyError(-913)
 
-            if (new_op['operator_support'].value) == "CONVERTED_PASSTHROUGH":
+            if (new_op['operator_support'].value) == "CONVERTED_PASSTHROUGH":  # NOT TESTED FIXME
                 tflite_axon_graph_object.update_axon_operator_graph(new_op)
                 raise KeyError(-914)
 
@@ -328,14 +314,41 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                     raise Exception(
                         f"The operator {op_name} in the model {model_name} is not supported, {error_text}")
 
-            if -1 in new_op['axon_ip_ops'] and new_op['axon_layer_num'] >= 0:
-                model_input_axon_layer_num = new_op['axon_layer_num']
-                model_input_tf_index = new_op['index']
-                model_input_operator_name = op_name
-            if new_op['axon_op_ops'] == [] and new_op['axon_layer_num'] >= 0:
-                model_output_axon_layer_num = new_op['axon_layer_num']
-                model_output_tf_index = new_op['index']
-                model_output_operator_name = op_name
+            if any(v < 0 for v in new_op['axon_ip_ops']) and new_op['axon_layer_num'] >= 0 or (i in layer_ip_tensor_map):
+                _ip_tensor_index = layer_ip_tensor_map.get(i, None)
+                for _i in model_inputs:
+                    if _i['index'] == _ip_tensor_index:
+                        _i['axon_layer_num'] = new_op['axon_layer_num']
+                        # assert _i['axon_tflite_layer_ndx'] == new_op['index']
+                        _i['axon_tflite_layer_ndx'] = new_op['index']
+                        _i['axon_input_op_name'] = op_name
+                        # update the input shape with the axon layer num input shape.
+                        # also check if the shapes do not match, they may not match due to the present of a split axis or an unpack operation like in the LSTM, verify that and update the input shape accordingly
+                        if _i['tensor_shape'].get_length() == new_op['operator_options'].ip_shape.get_length():
+                            _i['tensor_shape'] = new_op['operator_options'].ip_shape
+                        else:
+                            logger.debug(
+                                f"input shape length does not match the axon layer input shape for axon layer {new_op['axon_layer_num']} @tf {new_op['index']} ")
+                            # check what is up here!
+                            if new_op['axon_ip_axis_offset'] is not None:
+                                # the input is going into a split op first and then into the actual axon input
+                                # pick up the input shape of the previous split operation
+                                previous_split_operation = operators_detail_graph[new_op['inputs'][0]]
+                                previous_split_op_shape = tensor_details[
+                                    previous_split_operation['ip_tensors'][0]]['shape']
+                                _i['tensor_shape'] = ops.TensorShape(
+                                    previous_split_op_shape)
+                        break
+
+            if ((new_op['axon_op_ops'] == [] or new_op['axon_op_ops'][0] == 0) and new_op['axon_layer_num'] >= 0) or (i in layer_op_tensor_map):
+                _op_tensor_index = layer_op_tensor_map.get(i, None)
+                for o in model_outputs:
+                    if o['index'] == _op_tensor_index:
+                        o['axon_layer_num'] = new_op['axon_layer_num']
+                        # assert o['axon_tflite_layer_ndx'] == new_op['index']
+                        o['axon_tflite_layer_ndx'] = new_op['index']
+                        o['axon_output_op_name'] = op_name
+                        break
 
             ip_shape, kernel_shape, bias_shape = options.GetInputShapes()
             op_shape = options.GetOutputShape()
@@ -348,7 +361,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             logger.debug(
                 f"axon layer no {axon_layer_num}[@{tflite_identifier}]: {op_name}:{meta_data}, ip shape:{ip_shape} k/w shape:{kernel_shape} bias shape:{bias_shape} op shape:{op_shape}")
 
-            layer_name = f"{model_name.upper()}_AXON_LAYER_{str(axon_layer_num)}_TF_ID_{str(tflite_identifier)}_{op_name.upper()}"
+            layer_name = f"{model_name.upper()}_AXON_LAYER_{axon_layer_num}_TF_ID_{tflite_identifier}_{op_name.upper()}"
             line_info = "\n#define " + layer_name.upper()
 
             # get the input and output bitwidths
@@ -368,17 +381,13 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
 
             ip_zeropoint = copy.deepcopy(ip_q['zero_points'])
             ip_scales = copy.deepcopy(ip_q['scales'])
-            # op_radix_scales = copy.deepcopy(op_q['scales']) #FIXME - this needs to be handled properly
-            # op_radix_zp = copy.deepcopy(op_q['zero_points']) #FIXME - this needs to be handled properly
             op_scales = copy.deepcopy(op_q['scales'])
             op_zeropoint = copy.deepcopy(op_q['zero_points'])
 
-            # last_operation_name=op_name
             last_operator_options = options
 
             # set flags inside the operator options here to influence the calculation of tensors and other values
-            # FIXME need to set this once for the full model and forget
-            # may be not we might use this to normalize scaleshifts based on layers
+            # FIXME need to set this once for the full model and forget but may be not we might use this to normalize scaleshifts based on layers
             options.SetNormalizedScaleshiftsFlag(normalized_scaleshift)
             # logger.debug(f"options setting the skip softmax op flag to {skip_softmax_op}")
             options.SetSkipSoftmaxOpFlag(skip_softmax_op)
@@ -386,14 +395,11 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             options.SetOpQuantizationDisableFlag(disable_op_quantization)
             transpose_layer = options.SetTransposeKernelFlag(transpose_layer)
 
-            # if (i == last_layer_ndx[0]) and disable_op_quantization:
             if (i in last_layer_ndx) and disable_op_quantization:
                 op_scales[0] = 1
                 options.SetOpQScale(op_scales[0])
                 op_zeropoint[0] = 0
                 options.SetOpQZeropoint(op_zeropoint[0])
-                # model_op_scale = 1
-                # model_op_zeropoint = 0
 
             if (operator_code in cpu_operator_options.cpu_operators_list):
                 logger.info(f"{op_name} is a cpu operation!")
@@ -401,7 +407,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 filter_tensor = options.GetFilterTensor()
                 if (filter_tensor.size == 0):
                     file_content += line_info.lower()+"_filters NULL"
-                scale_q, scale_shift = options.GetMultiplierandScaleshift()
+                cpu_operator_options.cpu_operators_list[operator_code].HandleOperatorOptions(options, operators_detail_graph)
+                scale_f, scale_q, scale_shift = options.GetMultiplierandScaleshift()
                 b_prime = options.GetBPrimeTensor()
                 if (b_prime.size == 0):
                     file_content += line_info.lower()+"_bias_prime NULL"
@@ -409,10 +416,6 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 ip_zeropoint, op_zeropoint = options.GetIpOpZeropoints()
                 cpu_op_additional_attrib_list = options.GetCpuAdditionalAttributesTensor()
 
-                # if (i == last_layer_ndx[0]) and disable_op_quantization:
-                if (i in last_layer_ndx) and disable_op_quantization:
-                    op_scales[0] = 1
-                    op_zeropoint[0] = 0
                 previous_op_datawidth = np.int8
                 previous_op_index = tflite_axon_graph_object.get_index_for_axon_layer_num(
                     new_op['axon_ip_ops'][0])
@@ -430,7 +433,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 else:
                     file_content = options.WriteWeightTensorToFile(
                         file_content, layer_name.upper(), filter_tensor)
-                scale_q, scale_shift = options.GetMultiplierandScaleshift()
+                scale_f, scale_q, scale_shift = options.GetMultiplierandScaleshift()
                 b_prime = options.GetBPrimeTensor()
                 if b_prime.size == 0:
                     file_content += line_info.lower()+"_bias_prime NULL"
@@ -442,9 +445,31 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 ip_zeropoint, op_zeropoint = options.GetIpOpZeropoints()
                 ip_datawidth, op_datawidth = options.GetIpOpBitwidth()
 
+                # Check if bias prime term exceeds 32bits
+                bprime_out_of_range = bool(
+                    np.any((b_prime < INT32_MIN) | (b_prime > INT32_MAX)))
+                if bprime_out_of_range:
+                    logger.error(f"b_prime={b_prime} exceeds 32bits!")
+                # Check if left shift of output zero point exceeds 32bits
+                op_zeropoint_left_shifted = op_zeropoint << scale_shift.astype(
+                    object)
+                op_zeropoint_left_shifted_out_of_range = bool(np.any(
+                    (op_zeropoint_left_shifted < INT32_MIN) | (op_zeropoint_left_shifted > INT32_MAX))
+                    & (op_name != 'UNIDIRECTIONAL_SEQUENCE_LSTM'))
+                if op_zeropoint_left_shifted_out_of_range:
+                    logger.error(
+                        f"op_zeropoint_left_shifted={op_zeropoint_left_shifted} exceeds 32bits!")
+                # Check if the precision of the combined scaling factor is sufficient (int32 scale_q != 0)
+                scale_q_precision_insufficient = ip_datawidth == np.int16 and np.any(
+                    (scale_q == 0) != (scale_f == 0))
+                if scale_q_precision_insufficient:
+                    logger.error(
+                        f"scale_q={scale_q} precision of the combined scaling factor is NOT sufficient!")
+                if bprime_out_of_range or op_zeropoint_left_shifted_out_of_range or scale_q_precision_insufficient:
+                    raise Exception(f"quantization failed with error!")
+
                 # check here if we need to swap the MAXPOOL operations height and width
                 if (op_name == "AVERAGE_POOL_2D") or (op_name == "MAX_POOL_2D"):
-                    # if (i != 0 and operators_detail_graph[i-1]['op_name'] == "RESHAPE") and (i != last_layer_ndx[0] and operators_detail_graph[i+1]['op_name'] == "RESHAPE"):
                     if (i != 0 and operators_detail_graph[i-1]['op_name'] == "RESHAPE") and (i not in last_layer_ndx and operators_detail_graph[i+1]['op_name'] == "RESHAPE"):
                         # check to see if we need to swap the MAXPOOL
                         maxpool_reshape_ip_ = ops.TensorShape(
@@ -476,19 +501,36 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 activation_function)
             file_content += line_info + "_ACTIVATION_FUNCTION "+activation_function_enum.name
             # and op_radix > 8:
-            # if (disable_op_quantization) and (i == last_layer_ndx[0]):
             if (disable_op_quantization) and (i in last_layer_ndx):
-                if (op_radix <= 0):
-                    op_radix = util.get_output_radix(op_radix, np.array(
-                        min(scale_shift)), model_op_scale, model_op_zeropoint, op_datawidth)
-                else:
-                    if (op_radix > scale_shift):
-                        op_radix = scale_shift
-                op_datawidth = np.int32
-                scale_shift -= op_radix
-                model_op_multiplier = 1
-                model_op_zeropoint = 0
-                model_op_scaleshift = op_radix
+                unquant_op_datawidth = np.int32
+                _op_index = layer_op_tensor_map[i]
+                # find at which index in the output is _op_index
+                for o in model_outputs:
+                    if o['index'] == _op_index:
+                        min_scale_shift_in_range, max_scale_shift_in_range = options.GetScaleShiftsRange()
+                        if (op_radix <= 0):
+                            op_radix = util.get_output_radix(op_radix, max_scale_shift_in_range,
+                                o['quantization'][0], o['quantization'][1], op_datawidth, unquant_op_datawidth)
+                        else:
+                            if (op_radix > max_scale_shift_in_range):
+                                op_radix = max_scale_shift_in_range
+                        options.SetLayerOutputRadix(op_radix)
+
+                        op_datawidth = unquant_op_datawidth
+                        #adjust scale accordingly based on the output radix chosen
+                        scale_shift = max_scale_shift_in_range - op_radix
+                        scale_q = np.array(int(np.round(scale_f*(2**int(max_scale_shift_in_range)))), dtype=np.int32)
+
+                        op_scales[0] = 1.0 /(2**op_radix)
+                        op_zeropoint[0] = 0
+                        options.SetOpQScale(op_scales[0])
+                        options.SetOpQZeropoint(op_zeropoint[0])
+
+                        o['quantization'] = (op_scales[0], op_zeropoint[0])
+                        o['multiplier'] = 1
+                        o['dtype'] = op_datawidth
+                        o['scaleshift'] = scale_shift
+                        break
 
             file_content += line_info + \
                 "_INPUT_ZERO_POINT "+str(ip_zeropoint[0])
@@ -527,15 +569,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 "[@UPPER_LAYER_TYPE]", op_name.upper())
             model_descriptor = model_descriptor.replace(
                 "[@lower_layer_type]", op_name.lower())
-            # cpu_enum_name=""
-            # if(cpu_operation_enum>0):
-            #   cpu_enum_name = "+" + str(cpu_operation_enum)
             model_descriptor = model_descriptor.replace(
                 "[@nrf_axon_nn_op_e]", (axons_operation_enum.name))
-            # track_info = nodes['track_info'][i]
-            # model_descriptor = model_descriptor.replace("[@CURRENT_TRACK_NO]",str(track_info[0]))
-            # model_descriptor = model_descriptor.replace("[@INPUT_TRACK_NO]",str(track_info[1]))
-            # model_descriptor = model_descriptor.replace("[@INPUT_MERGE_TRACK_NO]",str(track_info[2]))
 
             filter_bytewidth_enum = options.GetFilterBytewidthEnum()
             stride_x, stride_y = options.GetOperationStrides()
@@ -543,7 +578,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             dilation_x, dilation_y = options.GetOperationDilation()
 
             if new_op['reuse_filters_flag']:
-                # we have filters which can be reused, use the value of that filter and do not fill the filter in the bin file
+                # we have filters which can be reused, use the offset value of that filter and do not fill the filter in the bin file
                 filter_offset = operators_detail_graph[new_op['reuse_filters_flag']
                                                        ]['operator_options'].GetBinFileFilterOffset()
             else:
@@ -566,7 +601,6 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             model_const_bin, cpu_op_additional_attrib_offset = options.WriteTensorToBinFile(
                 model_const_bin, cpu_op_additional_attrib_list)
 
-            # FIXME swapping the values for testing
             if (op_name == "MAX_POOL_2D") and SWAP_MAXPOOL_OP:
                 stride_x, stride_y = stride_y, stride_x
                 ops_ip_shape.height, ops_ip_shape.width = ops_ip_shape.width, ops_ip_shape.height
@@ -589,7 +623,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             """
             model_descriptor_layer_struct[0].input_id_cnt = len(
                 new_op['axon_ip_ops'])
-            model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_count = {str(model_descriptor_layer_struct[0].input_id_cnt)}, "
+            model_descriptor += f"\n{op_name.lower()}_layer_{i}_axon_{axon_layer_num}_tfid_{tflite_identifier}_input_count = {model_descriptor_layer_struct[0].input_id_cnt}, "
 
             if model_descriptor_layer_struct[0].input_id_cnt > 1:
                 for input_idx in range(model_descriptor_layer_struct[0].input_id_cnt):
@@ -597,7 +631,8 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                     if new_op['axon_ip_ops'][input_idx] >= 0:
                         input_operator_index = tflite_axon_graph_object.get_index_for_axon_layer_num(
                             new_op['axon_ip_ops'][input_idx])
-                    elif new_op['axon_ip_ops'][input_idx] == -1:  # input to the model
+                    # elif new_op['axon_ip_ops'][input_idx] == -1:  # input to the model
+                    else:  # input to the model
                         input_operator_index = tflite_axon_graph_object.get_index_of_input_operator(
                             i)
                     input_operators = operators_detail_graph[input_operator_index]['op_tensors']
@@ -617,7 +652,6 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                     model_descriptor_layer_struct[0].input_dimensions[input_idx].width = input_ops_shape.width
                     shape_text = "shapes_(C,H,W,DW)"
                     if transpose_layer:
-                        # FIXME Testing here transpose
                         # swap the height and width of the operators
                         shape_text = "shapes_(C,W,H,DW)"
                         model_descriptor_layer_struct[0].input_dimensions[input_idx].height, model_descriptor_layer_struct[0].input_dimensions[
@@ -644,7 +678,6 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
                 model_descriptor_layer_struct[0].input_dimensions[0].height = ops_ip_shape.height
                 model_descriptor_layer_struct[0].input_dimensions[0].width = ops_ip_shape.width
                 if transpose_layer:
-                    # FIXME Testing here transpose
                     # swap the height and width of the operators
                     model_descriptor_layer_struct[0].input_dimensions[0].height, model_descriptor_layer_struct[0].input_dimensions[
                         0].width = model_descriptor_layer_struct[0].input_dimensions[0].width, model_descriptor_layer_struct[0].input_dimensions[0].height
@@ -695,8 +728,7 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             model_descriptor_layer_struct[0].pad_top = ops_padding_details.pad_top
             model_descriptor_layer_struct[0].pad_bottom = ops_padding_details.pad_bottom
             if transpose_layer:
-                # FIXME Testing here transpose
-                if not (op_name == "STRIDED_SLICE"):
+                if (op_name != "STRIDED_SLICE"):
                     model_descriptor_layer_struct[0].filter_dimensions.height, model_descriptor_layer_struct[
                         0].filter_dimensions.width = model_descriptor_layer_struct[0].filter_dimensions.width, model_descriptor_layer_struct[0].filter_dimensions.height
                 model_descriptor_layer_struct[0].stride_x, model_descriptor_layer_struct[
@@ -716,19 +748,17 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             model_descriptor_layer_struct[0].input_zero_point = ip_zeropoint[0]
             model_descriptor_layer_struct[0].output_zero_point = op_zeropoint[0]
 
-            # layer_op_scale, layer_op_zeropoint = copy.deepcopy(
-            #     tensor_details[new_op['op_tensors'][0]]['quantization'])
             layer_op_q = options.GetOpQuantizationParameters()
             layer_output_radix = options.GetLayerOutputRadix()
             file_content += line_info + \
                 "_LAYER_OUTPUT_RADIX "+str(layer_output_radix)
             layer_op_scale, layer_op_zeropoint = layer_op_q['scales'], layer_op_q['zero_points']
             layer_op_scaleshift = util.optimized_ip_scaling_shift(
-                layer_op_scale, 8, 30, 31, op_zp=layer_op_zeropoint)[1]
+                layer_op_scale, layer_output_radix, 30, 31, op_zp=layer_op_zeropoint)[1]
             layer_op_multiplier = int(
                 np.round((layer_op_scale)*(2**layer_op_scaleshift)))
-            if layer_output_radix > 0 and layer_output_radix < layer_op_scaleshift:
-                layer_op_scaleshift -= layer_output_radix
+            #if layer_output_radix > 0 and layer_output_radix <= layer_op_scaleshift:
+            #    layer_op_scaleshift -= layer_output_radix
 
             model_descriptor_layer_struct[0].output_dequant_shift = layer_op_scaleshift
             model_descriptor_layer_struct[0].output_dequant_multiplier = layer_op_multiplier
@@ -763,8 +793,6 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
             max_interior_layer_len = max(
                 util.get_length_from_shape(op_shape), max_interior_layer_len)
             pad_details = options.GetOperationPaddings()
-            max_interior_padded_layer_len = max(util.get_length_from_shape(
-                ip_shape, pad_details), max_interior_padded_layer_len)
             # update the operator_options in the graph with the actual operator option class object
             new_op['operator_options'] = options
             total_layer_count += 1
@@ -851,23 +879,6 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
     # src_file_content = src_file_content.replace("[@lower_model_name]", model_name.lower())
     # src_file_content = src_file_content.replace("[@CamelModelName]", camel_case_name)
 
-    """
-    #define [@UPPER_MODEL_NAME]_MAX_PARALLEL_TRACKS // maximum number of concurrent tracks in the model. Typically 1.
-    #define [@UPPER_MODEL_NAME]_MIN_IO_BUFFER_LENGTH // length in bytes of the largest inner layer output
-    #define [@UPPER_MODEL_NAME]_INPUT_LENGTH // length in bytes of the input vector
-    #define [@UPPER_MODEL_NAME]_OUPUT_LENGTH // length in bytes of the output vector
-    #define [@UPPER_MODEL_NAME]_LAYER_COUNT // number of descrete operations in the model.
-
-    """
-    file_content += "\n#define " + model_name.upper() + "_MIN_IO_BUFFER_LENGTH (" + \
-        str(max_interior_layer_len) + \
-        ") // length in bytes of the largest inner layer output"
-    file_content += "\n#define " + model_name.upper() + "_INPUT_LENGTH (" + \
-        str(util.get_size_from_tensor_shape(input_shape)) + \
-        ") // length in bytes of the input vector"
-    file_content += "\n#define " + model_name.upper() + "_OUTPUT_LENGTH (" + \
-        str(util.get_size_from_tensor_shape(output_shape, op_datawidth)) + \
-        ") // length in bytes of the output vector"
     file_content += "\n#define " + model_name.upper() + "_LAYER_COUNT (" + \
         str(axon_layer_num)+") // number of descrete operations in the model."
     file_content += "\n#define " + model_name.upper() + "_PSUM_NEEDED (" + \
@@ -886,27 +897,82 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
         -1).astype(np.uint32)
     model_meta_information_struct[0].model_name.offset = np.array(
         -1).astype(np.uint32)
-    model_meta_information_struct[0].input_quant.mult = model_ip_multiplier
-    model_meta_information_struct[0].input_quant.round = model_ip_scaleshift
-    model_meta_information_struct[0].input_quant.zero_point = model_ip_zeropoint
-    model_meta_information_struct[0].output_dequant.mult = model_op_multiplier
-    model_meta_information_struct[0].output_dequant.round = model_op_scaleshift
-    model_meta_information_struct[0].output_dequant.zero_point = model_op_zeropoint
-    model_desc_info_hdr_struct[0].title.offset = np.array(-1).astype(np.uint32)
-    model_desc_info_hdr_struct[0].title.length = 28
-    model_desc_info_hdr_struct[0].version.offset = np.array(
-        -1).astype(np.uint32)
-    model_desc_info_hdr_struct[0].version.length = 4
+    # model_meta_information_struct[0].input_quant.mult = model_inputs[0]['multiplier']
+    # model_meta_information_struct[0].input_quant.round = model_inputs[0]['scaleshift']
+    # model_meta_information_struct[0].input_quant.zero_point = model_inputs[0]['quantization'][1]
+    # model_meta_information_struct[0].output_dequant.mult = model_outputs[-1]['multiplier']
+    # model_meta_information_struct[0].output_dequant.round = model_outputs[-1]['scaleshift']
+    # model_meta_information_struct[0].output_dequant.zero_point = model_outputs[-1]['quantization'][1]
+    model_bin.append_model_title(model_desc_info_hdr_struct[0].title)
+    model_bin.append_model_version(model_desc_info_hdr_struct[0].version)
     model_desc_info_hdr_struct[0].consts.offset = np.array(
         -1).astype(np.uint32)
-    # model_desc_info_hdr_struct[0].consts.length = len(model_const_bin)
     model_desc_info_hdr_struct[0].meta.offset = np.array(-1).astype(np.uint32)
-    # model_desc_info_hdr_struct[0].layers.length = len(model_descriptor_bin)
     model_desc_info_hdr_struct[0].layers.offset = np.array(
         -1).astype(np.uint32)
 
     model_desc_info_hdr_struct[0].compilation_option.offset = np.array(
         -1).astype(np.uint32)
+
+    """update input/output interface here"""
+    model_desc_info_hdr_struct[0].model_input_info.offset = np.array(
+        -1).astype(np.uint32)
+    model_desc_info_hdr_struct[0].model_output_info.offset = np.array(
+        -1).astype(np.uint32)
+    model_input_interface_struct = mw.get_model_io_interface_struct(
+        model_wrapper_ffi, len(model_inputs))
+
+    for n, _ip in enumerate(model_inputs):
+        model_input_interface_struct[n].dimensions.batch_cnt = _ip['tensor_shape'].batch
+        model_input_interface_struct[n].dimensions.height = _ip['tensor_shape'].height
+        model_input_interface_struct[n].dimensions.width = _ip['tensor_shape'].width
+        model_input_interface_struct[n].dimensions.channel_cnt = _ip['tensor_shape'].depth
+        model_input_interface_struct[n].dimensions.byte_width = tflite_axon_wrapper.GetAxonByteWidthEnum(
+            _ip['dtype']).value
+        model_input_interface_struct[n].quantization.mult = int(
+            _ip['multiplier'])
+        model_input_interface_struct[n].quantization.round = int(
+            _ip['scaleshift'])
+        model_input_interface_struct[n].quantization.zero_point = int(
+            _ip['quantization'][1])
+        model_input_interface_struct[n].tf_tensor_index = int(_ip['index'])
+        model_input_interface_struct[n].axon_layer_index = int(
+            _ip['axon_layer_num'])
+        model_bin.append_string_data(
+            _ip['name'], model_input_interface_struct[n].name, add_null=True)
+
+    input_interface_bin = mw.get_bytearray_from_struct(
+        model_wrapper_ffi, model_input_interface_struct)
+
+    model_output_interface_struct = mw.get_model_io_interface_struct(
+        model_wrapper_ffi, len(outputs))
+
+    for n, _op in enumerate(model_outputs):
+        model_output_interface_struct[n].dimensions.batch_cnt = _op['tensor_shape'].batch
+        model_output_interface_struct[n].dimensions.height = _op['tensor_shape'].height
+        model_output_interface_struct[n].dimensions.width = _op['tensor_shape'].width
+        model_output_interface_struct[n].dimensions.channel_cnt = _op['tensor_shape'].depth
+        model_output_interface_struct[n].dimensions.byte_width = tflite_axon_wrapper.GetAxonByteWidthEnum(
+            _op['dtype']).value
+        model_output_interface_struct[n].quantization.mult = int(
+            _op['multiplier'])
+        model_output_interface_struct[n].quantization.round = int(
+            _op['scaleshift'])
+        model_output_interface_struct[n].quantization.zero_point = int(
+            _op['quantization'][1])
+        model_output_interface_struct[n].axon_layer_index = int(
+            _op['axon_layer_num'])
+        model_output_interface_struct[n].tf_tensor_index = int(_op['index'])
+        model_bin.append_string_data(
+            _op['name'], model_output_interface_struct[n].name, add_null=True)
+
+    output_interface_bin = mw.get_bytearray_from_struct(
+        model_wrapper_ffi, model_output_interface_struct)
+
+    # Counts go in meta information
+    model_meta_information_struct[0].model_input_count = len(model_inputs)
+    model_meta_information_struct[0].model_output_count = len(model_outputs)
+
     """update compiler options here"""
     model_compilation_options_struct[0].interlayer_buffer_size = interlayer_buffer_size
     model_compilation_options_struct[0].psum_buffer_size = psum_buffer_size
@@ -969,8 +1035,10 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
         model_const_bin, model_desc_info_hdr_struct[0].consts)
     model_bin.append_bin_data(
         model_compilation_options_bin, model_desc_info_hdr_struct[0].compilation_option)
-    model_bin.append_model_title(model_desc_info_hdr_struct[0].title)
-    model_bin.append_model_version(model_desc_info_hdr_struct[0].version)
+    model_bin.append_bin_data(
+        input_interface_bin, model_desc_info_hdr_struct[0].model_input_info)
+    model_bin.append_bin_data(
+        output_interface_bin, model_desc_info_hdr_struct[0].model_output_info)
 
     model_desc_info_hdr_bin = mw.get_bytearray_from_struct(
         model_wrapper_ffi, model_desc_info_hdr_struct)
@@ -987,13 +1055,14 @@ def generate_compiler_outputs(compiler_api_filepath: str, tflite_filename: str, 
         logger.info(f"true Classification : {labels[y_test[test_ndx]]}")
         logger.info(f"tflite Model Prediction : {labels[digit]}")
     logger.debug(f"number of ops in the model {total_layer_count}")
-    logger.debug(
-        f"{model_input_operator_name} at axon layer number {model_input_axon_layer_num} [@{model_input_tf_index}] is the axon input to the model")
-    logger.debug(
-        f"{model_output_operator_name} at axon layer number {model_output_axon_layer_num} [@{model_output_tf_index}] is the axon output of the model")
+    for i, _ip in enumerate(model_inputs):
+        logger.debug(
+            f"{_ip['axon_input_op_name']} at axon layer number {_ip['axon_layer_num']} [@{_ip['tflite_layer_ndx']}] is the axon input to the model")
+    for i, _op in enumerate(model_outputs):
+        logger.debug(
+            f"{_op['axon_output_op_name']} at axon layer number {_op['axon_layer_num']} [@{_op['tflite_layer_ndx']}] is the axon output of the model")
 
-    # logger.debug(f"the total command buffer length is {str(np.int32(command_buff_len))}") #REMOVE
-    return log_content, model_const_bin, model_descriptor_bin, final_model_bin, file_content, op_radix
+    return model_const_bin, model_descriptor_bin, log_content, final_model_bin, file_content, op_radix
 
 
 def run_test_app(use_exe=False):

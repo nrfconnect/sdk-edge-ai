@@ -93,7 +93,7 @@ class CpuOpDummy(CpuExtension):
 
         # perform the necessary operations on the scaleshift values
         scale = ip_scales/op_scales
-        error1, scale_shift_op_1 = util.optimized_ip_scaling_shift(
+        error1, scale_shift_op_1, _, _, = util.optimized_ip_scaling_shift(
             scale, 8, 31, 31, op_q['zero_points'])
         scale_q = np.array(
             [abs(np.round(scale[0]*2**scale_shift_op_1)).astype(np.int32)])
@@ -161,18 +161,21 @@ class CpuSoftmax(CpuExtension):
 
         # performing needed scaling optimizations
         scale = 1/op_scales
-        error1, scale_shift_op_1 = util.optimized_ip_scaling_shift(
+        error1, scale_shift_op_1, _, scale_shift_max, = util.optimized_ip_scaling_shift(
             scale, 8, 31, 31, op_zeropoint)
         scale_q = np.array(
             [abs(np.round(scale[0]*2**scale_shift_op_1)).astype(np.int32)])
+        scale_f = np.array([scale[0]])
         scale_shift = np.array([scale_shift_op_1], dtype=np.int8)
+        scale_shifts_range = np.array([[scale_shift_op_1, scale_shift_max]], dtype=np.int8)
+
         filter_tensor = np.array([])  # input_tensor[1]
         bias_tensor = np.array([])  # input_tensor[2]
 
         # perform some operations as needed on these vectors
         operator_object.SetFilterTensor(filter_tensor)
         # setting scale values
-        operator_object.SetMultiplierandScaleshift(scale_q, scale_shift)
+        operator_object.SetMultiplierandScaleshift(scale_f, scale_q, scale_shift, scale_shifts_range)
         # set the bias_prime tensor
         operator_object.SetBPrimeTensor(bias_tensor)
         # setting the input zero point
@@ -215,7 +218,8 @@ class CpuSoftmax(CpuExtension):
             (len(bin(int(max(abs(op_max), abs(op_min))))) - 2)
         previous_operator_object.SetScaleshiftMaxRange(scaleshift_max_range)
         previous_operator_object.SetOpBitwidth(np.int32)
-        previous_operator_object.SetLayerOutputRadix(12) #setting the output layer radix
+        previous_operator_object.SetLayerOutputRadix(
+            12)  # setting the output layer radix
         return 0
 
 
@@ -243,19 +247,22 @@ class CpuActivation(CpuExtension):
 
         # performing needed scaling optimizations
         scale = 1/op_scales
-        error1, scale_shift_op_1 = util.optimized_ip_scaling_shift(
+        error1, scale_shift_op_1, _, scale_shift_max = util.optimized_ip_scaling_shift(
             scale, 8, 31, 31, op_zeropoint)
         scale_q = np.array(
             [abs(np.round(scale[0]*2**scale_shift_op_1)).astype(np.int32)])
+        scale_f = np.array([scale[0]])
         # scale_shift = np.array([scale_shift_op_1],dtype=np.int8) -12
         scale_shift = np.array([scale_shift_op_1], dtype=np.int8)
+        scale_shifts_range = np.array([[scale_shift_op_1, scale_shift_max]], dtype=np.int8)
+
         filter_tensor = np.array([])  # input_tensor[1]
         bias_tensor = np.array([])  # input_tensor[2]
 
         # perform some operations as needed on these vectors
         operator_object.SetFilterTensor(filter_tensor)
         # setting scale values
-        operator_object.SetMultiplierandScaleshift(scale_q, scale_shift)
+        operator_object.SetMultiplierandScaleshift(scale_f, scale_q, scale_shift, scale_shifts_range)
         # set the bias_prime tensor
         operator_object.SetBPrimeTensor(bias_tensor)
         # setting the input zero point
@@ -269,7 +276,7 @@ class CpuActivation(CpuExtension):
             return -2
         previous_operator_object.SetOpQScale(np.array([1]))
         previous_operator_object.SetOpQZeropoint(np.array([0]))
-        previous_operator_object.SetScaleshiftMaxRange(28)
+        previous_operator_object.SetScaleshiftMaxRange(31)
         previous_operator_object.SetOpBitwidth(np.int16)
         previous_operator_object.SetLayerOutputRadix(12)
         return 0
@@ -292,7 +299,7 @@ class CpuReshape(CpuExtension):
         self.swap_operator_op_codes = [tflite.BuiltinOperator.UNPACK,
                                        tflite.BuiltinOperator.FULLY_CONNECTED]
 
-    def determine_reshape_is_passthrough(ip_shape, op_shape, shape, operator_list, op_index):
+    def determine_reshape_is_passthrough(ip_shape, op_shape, shape, operator_list, op_index, ip_tensor_indices):
         """
         Reshapes are to be determined if they are passthroughs in the executor depending on pre-defined conditions.
         These conditions are as described, if they do not fall under any of the conditions they will be treated as reshapes and handled by the compiler
@@ -302,7 +309,7 @@ class CpuReshape(CpuExtension):
         4. Other conditions as below
         5. Reshapes before and after an LSTM are to be dropped irrespective as the compiler dechannelizes and rechannelizes the tensors.
         """
-        if op_index == 0 or op_index == (len(operator_list)-1) or (0 in operator_list[op_index]['inputs']):  # first or last op is reshape, treated as passthorugh
+        if op_index == 0 or op_index == (len(operator_list)-1) or any(v in operator_list[op_index]['inputs'] for v in ip_tensor_indices):  # first or last op is reshape, treated as passthorugh
             return True
 
         if operator_list[op_index-1]['op_name'] == "UNIDIRECTIONAL_SEQUENCE_LSTM" or operator_list[op_index+1]['op_name'] == "UNIDIRECTIONAL_SEQUENCE_LSTM":
@@ -332,6 +339,10 @@ class CpuReshape(CpuExtension):
 
             if ip_shape.shape_size == 4 and op_shape.shape_size == 3:
                 if ip_shape.depth == 1 and (ip_shape.width == op_shape.depth):
+                    return True
+
+            if ip_shape.shape_size == 4 and op_shape.shape_size == 2:
+                if ip_shape.depth == 1 and (ip_shape.width*ip_shape.height == op_shape.width):
                     return True
 
             if operator_list[op_index+1]['op_name'] == "FULLY_CONNECTED":
@@ -394,13 +405,15 @@ class CpuReshape(CpuExtension):
         op_q = operator_object.GetOpQuantizationParameters()
 
         # performing needed scaling optimizations
-        scale_q = ip_q['scales'] / op_q['scales']
-        result = util.optimized_ip_scaling_shift((scale_q), 8, 28, 28)
+        scale_f = ip_q['scales'] / op_q['scales']
+        error1, scale_shift_op_1, _, scale_shift_max = util.optimized_ip_scaling_shift((scale_f), 8, 28, 28)
         # error = result[0]
-        scaleshift = result[1]
+        scaleshift = scale_shift_op_1
         scale_multipliers = np.array(
-            [abs(int(np.round((scale_q)*2**scaleshift)))])
+            [abs(int(np.round((scale_f)*2**scaleshift)))])
+        scale_f = np.array([scale_f])
         scale_shift = np.array([scaleshift])
+        scale_shifts_range = np.array([[scale_shift_op_1, scale_shift_max]], dtype=np.int8)
 
         filter_tensor = np.array([])  # input_tensor[1]
         bias_tensor = np.array([])  # input_tensor[2]
@@ -409,7 +422,7 @@ class CpuReshape(CpuExtension):
         operator_object.SetFilterTensor(filter_tensor)
         # setting scale values
         operator_object.SetMultiplierandScaleshift(
-            scale_multipliers, scale_shift)
+            scale_f, scale_multipliers, scale_shift, scale_shifts_range)
         # set the bias_prime tensor
         operator_object.SetBPrimeTensor(bias_tensor)
         return 0
@@ -423,7 +436,9 @@ class CpuReshape(CpuExtension):
 
     @classmethod
     def DetermineCpuExtensionSupport(cls, operator_object, op_list, op_index):
-        if 0 not in op_list[op_index]['inputs']:  # ensuring this is not the first op
+        ip_tensor_indices = operator_object.model_input_tensor_indices
+        # ensuring this is not the first op
+        if any(v not in op_list[op_index]['inputs'] for v in ip_tensor_indices):
             ip_to_reshape_op = op_list[op_index-1]
             if ip_to_reshape_op['op_name'] == "UNIDIRECTIONAL_SEQUENCE_LSTM":
                 inner_most_dim_is_width = True
@@ -442,7 +457,7 @@ class CpuReshape(CpuExtension):
                 operator_object.operators_detail_graph[op_index]['inputs'][1])
         else:
             shape = op_of_reshape.shape
-        if cls.determine_reshape_is_passthrough(ip_to_reshape, op_of_reshape, shape, op_list, op_index):
+        if cls.determine_reshape_is_passthrough(ip_to_reshape, op_of_reshape, shape, op_list, op_index, ip_tensor_indices):
             return ops_options.OperatorSupportEnum.PASSTHROUGH
         return ops_options.OperatorSupportEnum.SUPPORTED
 
@@ -473,11 +488,13 @@ class CpuResizeNearestNeighbor(CpuExtension):
         op_q = operator_object.GetOpQuantizationParameters()
 
         # performing needed scaling optimizations
-        scale_q = 1
+        scale_f = 1.0
         scaleshift = 0
         scale_multipliers = np.array(
-            [abs(int(np.round((scale_q)*2**scaleshift)))])
+            [abs(int(np.round((scale_f)*2**scaleshift)))])
+        scale_f = np.array([scale_f])
         scale_shift = np.array([scaleshift])
+        scale_shifts_range = np.array([[scale_shift, scale_shift]], dtype=np.int8)
 
         filter_tensor = np.array([])  # input_tensor[1]
         bias_tensor = np.array([])  # input_tensor[2]
@@ -486,7 +503,7 @@ class CpuResizeNearestNeighbor(CpuExtension):
         operator_object.SetFilterTensor(filter_tensor)
         # setting scale values
         operator_object.SetMultiplierandScaleshift(
-            scale_multipliers, scale_shift)
+            scale_f, scale_multipliers, scale_shift, scale_shifts_range)
         # set the bias_prime tensor
         operator_object.SetBPrimeTensor(bias_tensor)
         return 0

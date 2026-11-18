@@ -16,12 +16,13 @@ logger = logging.getLogger(__name__)
 
 class UserHandleHelpers:
     @staticmethod
-    def get_tflite_output_quantization(tflite_model_path):
-        interpreter = tf.lite.Interpreter(model_path=tflite_model_path)
-        interpreter.allocate_tensors()
-        op_scale = interpreter.get_output_details(
+    def get_tflite_output_quantization(tflite_path, tflite_interpreter):
+        if not isinstance(tflite_interpreter, tf.lite.Interpreter):
+            tflite_interpreter = tf.lite.Interpreter(model_path=tflite_path)
+            tflite_interpreter.allocate_tensors()
+        op_scale = tflite_interpreter.get_output_details(
         )[0]['quantization_parameters']['scales'][0]
-        op_zeropoint = interpreter.get_output_details(
+        op_zeropoint = tflite_interpreter.get_output_details(
         )[0]['quantization_parameters']['zero_points'][0]
         return op_scale, op_zeropoint
 
@@ -100,6 +101,7 @@ def user_handle_anomaly_detection_accuracy_results(input_yaml_dict, x_test, y_te
     test_io_vector_ndx = np.array(
         util.convert_range_to_list(input_yaml_dict['test_vectors']))
     per_audio_label_dataset = False
+    x_test = x_test[0]
     if len(y_test) == (len(x_test)//per_audio_label_feature_count):
         per_audio_label_dataset = True
         # figure out if the input will be sampled from a larger data set or not
@@ -116,11 +118,12 @@ def user_handle_anomaly_detection_accuracy_results(input_yaml_dict, x_test, y_te
     sampled_x_test = np.array([x_test[test_vector_ndx]
                               for test_vector_ndx in test_io_vector_ndx])
 
-    tflite_path = input_yaml_dict['tflite_model']
+    tflite_path = input_yaml_dict['tflite_model_path']
+    tflite_interpreter = kwargs.get('tflite_interpreter', None)
     op_scale, op_zeropoint = UserHandleHelpers.get_tflite_output_quantization(
-        tflite_path)
-    _, q8_tflite_results = tc.test_tflite_model(
-        tflite_path, sampled_x_test, sampled_x_test, False, True)
+        tflite_path, tflite_interpreter)
+    _, q8_tflite_results = tc.get_tflite_model_test_results(
+        tflite_path, sampled_x_test, sampled_x_test, False, True, tflite_interpreter=tflite_interpreter)
     f32_tflite_results = (np.array(
         q8_tflite_results, dtype=np.float32).squeeze() - op_zeropoint)*op_scale
     q8_axon_inference_results = axon_inference_csv
@@ -309,6 +312,9 @@ def user_handle_fomo_fd_accuracy_results(input_yaml_dict, x_test, y_test, axon_i
     # get the tflite inference done here.
     test_io_vector_ndx = np.array(
         util.convert_range_to_list(input_yaml_dict['test_vectors']))
+    # inputs and other params are now passed as list to support multiple inputs and outputs
+    x_test = x_test[0]
+    output_shape = output_shape[0]  # thus picking up the basic value
     sampled_x_test = np.array([x_test[test_vector_ndx]
                               for test_vector_ndx in test_io_vector_ndx])
     if y_test is None:
@@ -331,11 +337,12 @@ def user_handle_fomo_fd_accuracy_results(input_yaml_dict, x_test, y_test, axon_i
         return_text += f"\n\t\tFloat\t{float_acc:.4f}"
 
     # tflite inference
-    tflite_path = input_yaml_dict['tflite_model']
+    tflite_path = input_yaml_dict['tflite_model_path']
+    tflite_interpreter = kwargs.get('tflite_interpreter', None)
     op_scale, op_zeropoint = UserHandleHelpers.get_tflite_output_quantization(
-        tflite_path)
-    _, q8_tflite_results = tc.test_tflite_model(
-        tflite_path, sampled_x_test, None, False, True)
+        tflite_path, tflite_interpreter)
+    _, q8_tflite_results = tc.get_tflite_model_test_results(
+        tflite_path, sampled_x_test, None, False, True, tflite_interpreter=tflite_interpreter)
     tflite_output = (np.array(q8_tflite_results,
                      dtype=np.float32).squeeze() - op_zeropoint)*op_scale
     # tflite_heatmap = np.array(tflite_output[:,:,:,0]<=tflite_output[:,:,:,1]).astype(np.uint8)

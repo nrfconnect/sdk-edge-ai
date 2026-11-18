@@ -393,6 +393,10 @@ def get_model_compilations_options_struct(ffi_model_wrapper_object):
     return ffi_model_wrapper_object.new("nrf_axon_nn_model_compilation_options_s compilation_options[]", 1)
 
 
+def get_model_io_interface_struct(ffi_model_wrapper_object, count=1):
+    return ffi_model_wrapper_object.new("nrf_axon_nn_model_io_interface_s interface_options[]", count)
+
+
 def get_integer_value(binary_value, signed=False):
     return int.from_bytes(binary_value, byteorder='little', signed=signed)
 
@@ -576,12 +580,14 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
     f.readinto(ffi_object.buffer(model_meta_info_struct))
     f.seek(0)
     layer_count = model_meta_info_struct[0].model_layer_cnt
-    model_ip_multiplier = model_meta_info_struct[0].input_quant.mult
-    model_ip_scaleshift = model_meta_info_struct[0].input_quant.round
-    model_ip_zp = model_meta_info_struct[0].input_quant.zero_point
-    # model_op_multiplier = model_meta_info_struct[0].output_quant.mult
-    # model_op_scaleshift = model_meta_info_struct[0].outut_quant.round
-    # model_op_zp = model_meta_info_struct[0].output_quant.zero_point
+    # model_ip_multiplier = model_meta_info_struct[0].input_quant.mult
+    # model_ip_scaleshift = model_meta_info_struct[0].input_quant.round
+    # model_ip_zp = model_meta_info_struct[0].input_quant.zero_point
+    # model_op_multiplier = model_meta_info_struct[0].output_dequant.mult
+    # model_op_scaleshift = model_meta_info_struct[0].output_dequant.round
+    # model_op_zp = model_meta_info_struct[0].output_dequant.zero_point
+    model_input_count = model_meta_info_struct[0].model_input_count
+    model_output_count = model_meta_info_struct[0].model_output_count
 
     if (model_meta_info_struct[0].model_labels.offset != -1):
         labels = bin_file_data[model_meta_info_struct[0].model_labels.offset:
@@ -594,9 +600,14 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
 
     # print(f"model_layer_cnt {layer_count}, {model_meta_info_struct[0].placeholder0_test_model_info}, {model_meta_info_struct[0].placeholder1_test_model_info}")
     logger.debug(f"model_layer_cnt {layer_count}")
-    logger.debug(f"model_input_inv_scaling_multiplier {model_ip_multiplier}")
-    logger.debug(f"model_input_rounding {model_ip_scaleshift}")
-    logger.debug(f"model_input_zero_point {model_ip_zp}")
+    logger.debug(f"model_input_cnt {model_input_count}")
+    logger.debug(f"model_output_cnt {model_output_count}")
+    # logger.debug(f"model_input_inv_scaling_multiplier {model_ip_multiplier}")
+    # logger.debug(f"model_input_rounding {model_ip_scaleshift}")
+    # logger.debug(f"model_input_zero_point {model_ip_zp}")
+    # logger.debug(f"model_output_scaling_multiplier {model_op_multiplier}")
+    # logger.debug(f"model_output_rounding {model_op_scaleshift}")
+    # logger.debug(f"model_output_zero_point {model_op_zp}")
     # model_layer_desc = bin_file_data[model_desc_struct[0].layers.offset:model_desc_struct[0].layers.offset+model_desc_struct[0].layers.length]
     model_const = bin_file_data[model_desc_struct[0].consts.offset:
                                 model_desc_struct[0].consts.offset+model_desc_struct[0].consts.length]
@@ -609,13 +620,81 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
         ffi_object)
     model_layer_description_struct = get_model_descriptor_layer_struct(
         ffi_object, layer_cnt=layer_count)
+    model_input_info_struct = get_model_io_interface_struct(
+        ffi_object, model_input_count)
+    model_output_info_struct = get_model_io_interface_struct(
+        ffi_object, model_output_count)
+
     f.seek(model_desc_struct[0].layers.offset)
     f.readinto(ffi_object.buffer(model_layer_description_struct))
 
     f.seek(0)
     f.seek(model_desc_struct[0].compilation_option.offset)
     f.readinto(ffi_object.buffer(model_compilation_options_struct))
+
+    f.seek(0)
+    f.seek(model_desc_struct[0].model_input_info.offset)
+    f.readinto(ffi_object.buffer(model_input_info_struct))
+
+    logger.debug("model input info")
+    for _ip in range(model_input_count):
+        input_name = bin_file_data[model_input_info_struct[_ip].name.offset:
+                                   model_input_info_struct[_ip].name.offset+model_input_info_struct[_ip].name.length]
+        logger.debug(f"\tname {input_name}")
+        logger.debug(
+            f"\ttf_tensor_index {model_input_info_struct[_ip].tf_tensor_index}")
+        logger.debug(
+            f"\taxon_layer_index {model_input_info_struct[_ip].axon_layer_index}")
+        logger.debug(f"\tinput {_ip} dimensions :")
+        logger.debug(
+            f"\t\tbatch {model_input_info_struct[_ip].dimensions.batch_cnt}")
+        logger.debug(
+            f"\t\tchannel {model_input_info_struct[_ip].dimensions.channel_cnt}")
+        logger.debug(
+            f"\t\theight {model_input_info_struct[_ip].dimensions.height}")
+        logger.debug(
+            f"\t\twidth {model_input_info_struct[_ip].dimensions.width}")
+        logger.debug(
+            f"\t\tbyte_width {model_input_info_struct[_ip].dimensions.byte_width}")
+        logger.debug(f"\tinput {_ip} quantization :")
+        logger.debug(
+            f"\t\tmultiplier {model_input_info_struct[_ip].quantization.mult}")
+        logger.debug(
+            f"\t\tround {model_input_info_struct[_ip].quantization.round}")
+        logger.debug(
+            f"\t\tzero_point {model_input_info_struct[_ip].quantization.zero_point}")
+
+    f.seek(0)
+    f.seek(model_desc_struct[0].model_output_info.offset)
+    f.readinto(ffi_object.buffer(model_output_info_struct))
     f.close()
+    logger.debug("model output info")
+    for _op in range(model_output_count):
+        output_name = bin_file_data[model_output_info_struct[_op].name.offset:
+                                    model_output_info_struct[_op].name.offset+model_output_info_struct[_op].name.length]
+        logger.debug(f"\tname {output_name}")
+        logger.debug(
+            f"\ttf_tensor_index {model_output_info_struct[_op].tf_tensor_index}")
+        logger.debug(
+            f"\taxon_layer_index {model_output_info_struct[_op].axon_layer_index}")
+        logger.debug(f"\toutput {_op} dimensions :")
+        logger.debug(
+            f"\t\tbatch {model_output_info_struct[_op].dimensions.batch_cnt}")
+        logger.debug(
+            f"\t\tchannel {model_output_info_struct[_op].dimensions.channel_cnt}")
+        logger.debug(
+            f"\t\theight {model_output_info_struct[_op].dimensions.height}")
+        logger.debug(
+            f"\t\twidth {model_output_info_struct[_op].dimensions.width}")
+        logger.debug(
+            f"\t\tbyte_width {model_output_info_struct[_op].dimensions.byte_width}")
+        logger.debug(f"\toutput {_op} quantization :")
+        logger.debug(
+            f"\t\tmultiplier {model_output_info_struct[_op].quantization.mult}")
+        logger.debug(
+            f"\t\tround {model_output_info_struct[_op].quantization.round}")
+        logger.debug(
+            f"\t\tzero_point {model_output_info_struct[_op].quantization.zero_point}")
 
     logger.debug("Compilation Options : ")
     logger.debug(
@@ -797,10 +876,6 @@ def TestModelBinFile(binary_file_path, compiler_types_header_path=r"../include/n
             logger.debug(
                 f"cpu ops additional attrib list : {cpu_op_additional_attribs}")
 
-    logger.debug(f"model_input_inv_scaling_multiplier {model_ip_multiplier}")
-    logger.debug(f"model_input_rounding {model_ip_scaleshift}")
-    logger.debug(f"model_input_zero_point {model_ip_zp}")
-
 
 INCLUDE = "#include"
 
@@ -814,5 +889,6 @@ if __name__ == "__main__":
     2 . run or debug the app using python integrated debugger
     """
     bin_file_path = r"../model_desc_bins/axon_model_fc4_kws_bin_.bin"
+    bin_file_path = r"C:\Users\zaan\axons_blip\axons-ml\test\scripts\intermediate\nrf_axon_model_st_model_zoo_person_det_bin_.bin"
     print(f"running test for bin file : {os.path.basename(bin_file_path)}")
     TestModelBinFile(bin_file_path)

@@ -7,31 +7,17 @@
 #include <zephyr/kernel.h>
 #include <zephyr/irq.h>
 #include <zephyr/sys_clock.h>
-#include <zephyr/sys/printk.h>
-
-#include <zephyr/logging/log.h>
 #include "axon/nrf_axon_platform.h"
-// #define MY_LOG_LEVEL LOG_LEVEL_NONE
-#define MY_LOG_LEVEL LOG_LEVEL_DBG
-
-LOG_MODULE_REGISTER(kws, MY_LOG_LEVEL);
-
 extern void base_inference_main(void);
 int main(void)
 {
-#if 0
-  /**
-   * @FIXME!!! IS THIS NEEDED FOR NON-FPGA DEBUGGING?
-   */
-  printk("DEBUG LOOP\n");
-  k_busy_wait(3*1000*1000); // ~8 seconds
-#endif
-  while (1) {
-    printk("Hello world from %s\n", CONFIG_BOARD);
-    printk("ticks per second %u\n", nrf_axon_platform_get_clk_hz());
+	while (1) {
+		nrf_axon_platform_printf("Hello world from %s\n", CONFIG_BOARD);
+		nrf_axon_platform_printf("ticks per second %u\n",
+			nrf_axon_platform_get_clk_hz());
 
-    // Start inference
-    base_inference_main();
-    k_sleep(K_FOREVER);
-  }
+		/* do inference test */
+		base_inference_main();
+		k_sleep(K_FOREVER);
+	}
 }

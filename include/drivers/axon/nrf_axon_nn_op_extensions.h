@@ -326,7 +326,7 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh_dequantize_input(uint16_t argc,
 	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
 /**
- * @brief Implements reshape operator.
+ * @brief Implements reshape operator for int8 input and output
  *
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_base2_args_s)/
@@ -337,7 +337,40 @@ nrf_axon_result_e nrf_axon_nn_op_extension_tanh_dequantize_input(uint16_t argc,
 nrf_axon_result_e nrf_axon_nn_op_extension_reshape(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
+/**
+ * @brief Implements reshape operator for int16 input and output
+ *
+ * @param[in] argc number of elements in args. Must equal
+ *            sizeof(nrf_axon_nn_op_extension_base2_args_s)/
+ *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base2_args_s,
+ *            with parameters to the function.
+ */
+nrf_axon_result_e nrf_axon_nn_op_extension_reshape_16(
+	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
+
+/**
+ * @brief Converts input from CHW (Axon format) to HWC (TFLite format) for int8 input and output
+ *
+ * @param[in] argc number of elements in args. Must equal
+ *            sizeof(nrf_axon_nn_op_extension_base2_args_s)/
+ *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base2_args_s,
+ *            with parameters to the function.
+ */
 nrf_axon_result_e nrf_axon_nn_op_extension_reshape_from_axon(
+	uint16_t argc,	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
+
+/**
+ * @brief Converts input from CHW (Axon format) to HWC (TFLite format) for int16 input and output
+ *
+ * @param[in] argc number of elements in args. Must equal
+ *            sizeof(nrf_axon_nn_op_extension_base2_args_s)/
+ *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
+ * @param[in] args up-casted nrf_axon_nn_op_extension_base2_args_s,
+ *            with parameters to the function.
+ */
+nrf_axon_result_e nrf_axon_nn_op_extension_reshape_from_axon_16(
 	uint16_t argc,	NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
 /**
@@ -499,7 +532,7 @@ typedef struct  {
 } nrf_axon_nn_op_extension_space_to_from_batch_args_s;
 
 /**
- * @brief Implements space_to_batch operator.
+ * @brief Implements space_to_batch operator for int8 input/output.
  *
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_batch_to_space_args_s)/
@@ -511,7 +544,7 @@ nrf_axon_result_e nrf_axon_nn_cpu_op_space_to_batch(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
 /**
- * @brief Implements batch_to_space operator.
+ * @brief Implements batch_to_space operator for int8 input/output.
  *
  * @param[in] argc number of elements in args. Must equal
  *            sizeof(nrf_axon_nn_op_extension_batch_to_space_args_s)/
@@ -522,6 +555,29 @@ nrf_axon_result_e nrf_axon_nn_cpu_op_space_to_batch(
 nrf_axon_result_e nrf_axon_nn_cpu_op_batch_to_space(
 	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 
+/**
+ * @brief Implements space_to_batch operator for int16 input/output.
+ *
+ * @param[in] argc number of elements in args. Must equal
+ *            sizeof(nrf_axon_nn_op_extension_batch_to_space_args_s)/
+ *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
+ * @param[in] args up-casted nrf_axon_nn_op_extension_batch_to_space_args_s,
+ *            with parameters to the function.
+ */
+nrf_axon_result_e nrf_axon_nn_cpu_op_space_to_batch_16(
+	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
+
+/**
+ * @brief Implements batch_to_space operator for int16 input/output.
+ *
+ * @param[in] argc number of elements in args. Must equal
+ *            sizeof(nrf_axon_nn_op_extension_batch_to_space_args_s)/
+ *            sizeof(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)
+ * @param[in] args up-casted nrf_axon_nn_op_extension_batch_to_space_args_s,
+ *            with parameters to the function.
+ */
+nrf_axon_result_e nrf_axon_nn_cpu_op_batch_to_space_16(
+	uint16_t argc, NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE *args);
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
