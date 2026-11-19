@@ -260,6 +260,12 @@ See :ref:`nrf:cmake_options` for details.
 .. note::
    Set the ``CONFIG_MEMFAULT_PROJECT_KEY`` Kconfig option to your `Memfault`_ project key to successfully send metrics to Memfault.
 
+Power measurement
+=================
+
+To measure the power consumption during inference, include the :file:`power_measurement.conf` configuration file.
+See :ref:`app_power_measurements` for more information.
+
 Building and running
 ********************
 
