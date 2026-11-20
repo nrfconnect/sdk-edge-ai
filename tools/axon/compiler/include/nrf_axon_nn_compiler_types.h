@@ -149,6 +149,7 @@ typedef enum {
 	NRF_AXON_NN_OP_UNIDIRECTIONAL_SEQUENCE_LSTM,
 	NRF_AXON_NN_OP_MEAN,
 	NRF_AXON_NN_OP_PACK,
+	NRF_AXON_NN_OP_QUANTIZE,
 	/* Operations implemented as extensions on the CPU*/
 	NRF_AXON_NN_OP_FIRST_EXTENSION = 100,
 	NRF_AXON_NN_OP_SOFTMAX = NRF_AXON_NN_OP_FIRST_EXTENSION,
@@ -403,6 +404,17 @@ typedef struct {
 } nrf_axon_nn_model_quant_parameters_s;
 
 /**
+ * @brief Input Output interface structure
+ */
+typedef struct {
+	uint32_t tf_tensor_index;
+	uint32_t axon_layer_index;
+	nrf_axon_nn_model_bin_item_s name;
+	nrf_axon_nn_compiler_model_layer_dimensions_s dimensions;
+	nrf_axon_nn_model_quant_parameters_s quantization;
+} nrf_axon_nn_model_io_interface_s;
+
+/**
  * @brief meta data for the model included in the binary file.
  */
 typedef struct {
@@ -415,13 +427,10 @@ typedef struct {
 	nrf_axon_nn_model_bin_item_s model_labels;
 	/* number of layers (nodes) in the model. */
 	uint32_t model_layer_cnt;
-	/*
-	 * quantization for the model input. All other layers can infer the input quantization
-	 * from the output quantization of their inputs.
-	 */
-	nrf_axon_nn_model_quant_parameters_s input_quant;
-	/* dequantization parameters for the model output. */
-	nrf_axon_nn_model_quant_parameters_s output_dequant;
+
+	uint32_t model_input_count;
+
+	uint32_t model_output_count;
 } nrf_axon_nn_model_meta_info_s;
 
 /**
@@ -443,6 +452,10 @@ typedef struct {
 	nrf_axon_nn_model_bin_item_s consts;
 	/* location size of nrf_axon_nn_model_compilation_options_s in the bin file. */
 	nrf_axon_nn_model_bin_item_s compilation_option;
+	/* location/size of the nrf_axon_nn_model_io_interface_s in the bin file*/
+	nrf_axon_nn_model_bin_item_s model_input_info;
+	/* location/size of the nrf_axon_nn_model_io_interface_s in the bin file*/
+	nrf_axon_nn_model_bin_item_s model_output_info;
 } nrf_axon_nn_model_desc_hdr_s;
 
 /**

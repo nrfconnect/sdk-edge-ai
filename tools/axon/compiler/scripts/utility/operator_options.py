@@ -198,8 +198,10 @@ class OperatorOptions:
     op_q = init_q  # {}
     stride_q = init_q
     api_defn = ""
+    scales_f = np.array([])  # unquantized floating-point scale values
     scale_multipliers = np.array([])
     scale_shifts = np.array([])
+    scale_shifts_range = np.empty((0, 2), dtype=np.int8)
     command_buf_len = 0
     cmd_buf_len_multiplier = 1
     stride_x = 0
@@ -279,8 +281,10 @@ class OperatorOptions:
         self.op_q = self.init_q.copy()  # {}
         self.stride_q = self.init_q.copy()
         self.api_defn = ""
+        self.scales_f = np.array([])
         self.scale_multipliers = np.array([])
         self.scale_shifts = np.array([])
+        scale_shifts_range = np.empty((0, 2), dtype=np.int8)
         self.command_buf_len = 0
         self.cmd_buf_len_multiplier = 1
         self.stride_x = 0
@@ -596,8 +600,8 @@ class OperatorOptions:
 
     def NormalizeScaleshifts(self):
         # check here if there are multiple scaling values for each channel output
-        if self.op_shape.depth <= 1:
-            return
+        if self.scale_shifts.size <= 1:
+          return
         if (self.LEAKY_RELU_FLAG):
             scale_shifts = np.concatenate(
                 [self.scale_shifts, self.scale_shifts])
@@ -609,11 +613,21 @@ class OperatorOptions:
 
         min_error_ndx = np.argmin(self.scale_shifts)
         single_scaleshift = self.scale_shifts[min_error_ndx]
+
+        #if scale shifts have a range, then pick one from there
+        if self.scale_shifts_range.shape[0] > 0:
+            min_scale_shift_in_range, max_scale_shift_in_range = self.GetScaleShiftsRange()
+            single_scaleshift = min_scale_shift_in_range
+
         self.scale_multipliers = np.round(
             scale*2**single_scaleshift.astype(np.float32)).astype(np.int32)
         errors_ = util.scale_error(scale, single_scaleshift)
         min_error_ndx = np.argmax(errors_)
         self.scale_shifts = np.array([single_scaleshift], dtype=np.int8)
+
+        if self.op_shape.depth <= 1:
+            self.scale_multipliers = np.full(scale.shape, self.scale_multipliers)
+            self.scale_shifts = np.full(scale.shape, single_scaleshift)
 
     # default one
     def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
@@ -637,15 +651,19 @@ class OperatorOptions:
                 )[leaky_relu_tflite_operator.OutputsAsNumpy()[0]]['quantization_parameters']
                 leaky_relu_op_scale = leaky_relu_op_q['scales']
                 leaky_relu_op_zeropoint = leaky_relu_op_q['zero_points']
-                scale_shift, scale_q, error = util.optimize_scaling_shift_per_channel(
+                scales_f, scale_shift, scale_q, error, scale_shift_range = util.optimize_scaling_shift_per_channel(
                     self.ip_q['scales'], leaky_relu_op_scale, self.w_q['scales'], leaky_relu_op_zeropoint)
                 # combine both the scale shifts value into one single array
                 scale_q_negative = np.int32(self.leaky_relu_alpha*scale_q)
+                scale_f_negative = np.float32(self.leaky_relu_alpha*scales_f)
                 self.scale_multipliers = np.array(
                     list(map(list, zip(scale_q_negative, scale_q)))).reshape(-1)
+                self.scales_f = np.array(
+                    list(map(list, zip(scale_f_negative, scales_f)))).reshape(-1)
                 # self.scale_shifts = np.array(
                 #     list(map(list, zip(scale_shift)))).reshape(-1)
                 self.scale_shifts = scale_shift
+                self.scale_shifts_range = scale_shift_range
                 self.op_q['scales'] = leaky_relu_op_scale
                 self.op_q_zeropoint = leaky_relu_op_zeropoint
             # elif next_op_is_not_last_op and ("SOFTMAX" in next_op_names) and not self.skip_softmax_op:
@@ -685,7 +703,7 @@ class OperatorOptions:
             #     self.op_bitwidth = np.int16
             #     self.layer_output_radix = 12
             else:
-                self.scale_shifts, self.scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+                self.scales_f, self.scale_shifts, self.scale_multipliers, error, self.scale_shifts_range = util.optimize_scaling_shift_per_channel(
                     self.ip_q['scales'], self.op_q['scales'], self.w_q['scales'], self.op_q_zeropoint, max_scale=self.scaleshift_max_range)
 
             # if(self.normalize_scaleshifts):#checking for the scaling error when we provide only one scaling value for all the channels
@@ -707,6 +725,19 @@ class OperatorOptions:
             #     self.scale_shifts -= self.layer_output_radix
             #   else:
             #     raise Exception(f"The output radix {self.layer_output_radix} cannot be acheived with the current scaling values")
+
+    def GetScaleShiftsRange(self):
+        if self.scale_shifts_range.shape[0] == 0:
+            return None
+        else:
+            start = np.max(self.scale_shifts_range[:, 0])
+            end = np.min(self.scale_shifts_range[:, 1])
+            if start <= end:
+                scale_shifts_range = np.array([start, end], dtype=self.scale_shifts_range.dtype)
+            else: # a smaller scaleshift will be chosen
+                single_scaleshift = min(start, end)
+                scale_shifts_range = np.array([single_scaleshift, single_scaleshift], dtype=self.scale_shifts_range.dtype)
+            return scale_shifts_range
 
     def GetOperationName(self):
         return self.operator_name
@@ -1052,7 +1083,7 @@ class OperatorOptions:
             self.NormalizeScaleshifts()
         if (self.layer_output_radix):  # if a non zero output radix is calculated for the scales, need to subtract that from the scaleshifts, currently only applicable to LOGISTICS
             self.HandleOutputRadix()
-        return self.scale_multipliers, self.scale_shifts
+        return self.scales_f, self.scale_multipliers, self.scale_shifts
 
     def GetFilterTensor(self):
         # if self.transpose_kernel:
@@ -1077,9 +1108,11 @@ class OperatorOptions:
     def SetBPrimeTensor(self, bprime_tensor):
         self.b_prime_tensor = bprime_tensor
 
-    def SetMultiplierandScaleshift(self, scale_multipliers, scale_shifts):
+    def SetMultiplierandScaleshift(self, scales_f, scale_multipliers, scale_shifts, scale_shifts_range):
+        self.scales_f = scales_f
         self.scale_multipliers = scale_multipliers
         self.scale_shifts = scale_shifts
+        self.scale_shifts_range = scale_shifts_range
 
     def GetTfliteInterpreter(self):
         return self.tflite_interpreter
@@ -1938,8 +1971,10 @@ class Pool2DOptions(OperatorOptions):
         if self.operator_name == "MAX_POOL_2D":
             # self.ip_q_zeropoint[0] = 0
             self.op_q_zeropoint[0] = 0
+            self.scales_f = np.array([np.float32(1.0)])
             self.scale_multipliers = np.array([np.int32(1)])
             self.scale_shifts = np.array([np.int32(0)])
+            self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
             return
 
         bit_limit = 31
@@ -1951,12 +1986,14 @@ class Pool2DOptions(OperatorOptions):
         self.b_prime_mean = -1 * self.ip_q_zeropoint * self.area
         self.scale = b_prime_scale / (self.area)
         saturation_limit = self.op_q_zeropoint
-        error1, scale_shift_op_1 = util.optimized_ip_scaling_shift(
+        error1, scale_shift_op_1, _, _, = util.optimized_ip_scaling_shift(
             # self.scale, 8, 31, bit_limit, saturation_limit)
             self.scale, 8, self.scaleshift_max_range, bit_limit, saturation_limit)
+        self.scales_f = self.scale
         self.scale_multipliers = np.array(
             [abs(np.round(self.scale[0]*2**scale_shift_op_1)).astype(np.int32)])
         self.scale_shifts = np.array([scale_shift_op_1], dtype=np.int8)
+        self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
 
 
 class MeanOperatorOptions(Pool2DOptions):
@@ -2166,6 +2203,11 @@ class AddOptions(OperatorOptions):
                 # get the filter here as well for the constant which may not always be the second ip tensor
                 self.filter_tensor = tflite_interpreter.get_tensor(
                     constant_tensor_index[0])
+                kernel_dtype_attr = getattr(
+                    self.filter_tensor.dtype, 'as_numpy_dtype', self.filter_tensor.dtype)
+                self.kernel_bitwidth = np.dtype(kernel_dtype_attr).type
+                self.kernel_bytewidth_enum = tflite_axon_enum_wrapper.GetAxonByteWidthEnum(
+                    self.kernel_bitwidth)
                 if self.constant_location == 0:
                     # the constant is not the second input, therefore the input shape picked up for the operation is the constant which is incorrect.
                     # update the input shape here to reflect the operation input which is the same as the operation output
@@ -2241,18 +2283,29 @@ class AddOptions(OperatorOptions):
         self.op_zeropoint = self.op_q['zero_points']
         self.scale_ip1 = self.ip1_q['scales']/self.op_scales
         self.scale_ip2 = self.ip2_q['scales']/self.op_scales
-        self.error1, self.scale_shift_op_1 = util.optimized_ip_scaling_shift(
+        self.error1, self.scale_shift_op_1, _, scale_shift_op_1_max, = util.optimized_ip_scaling_shift(
             # self.scale_ip1, 8, 31, 15, self.op_zeropoint, zp_bit_limit=31)
             self.scale_ip1, 8, self.scaleshift_max_range, 15, self.op_zeropoint, zp_bit_limit=31)
-        self.error2, self.scale_shift_op_2 = util.optimized_ip_scaling_shift(
+        self.error2, self.scale_shift_op_2, _, scale_shift_op_2_max, = util.optimized_ip_scaling_shift(
             # self.scale_ip2, 8, 31, 15, self.op_zeropoint, zp_bit_limit=31)
             self.scale_ip2, 8, self.scaleshift_max_range, 15, self.op_zeropoint, zp_bit_limit=31)
-        self.scale_shifts = np.array(
-            [min(self.scale_shift_op_1, self.scale_shift_op_2)], dtype=np.int8)
-        self.scale_a = np.round(
-            self.scale_ip1*2**self.scale_shifts[0].astype(np.float32)).astype(np.int32)
-        self.scale_b = np.round(
-            self.scale_ip2*2**self.scale_shifts[0].astype(np.float32)).astype(np.int32)
+        #self.scale_shifts = np.array(
+        #    [min(self.scale_shift_op_1, self.scale_shift_op_2)], dtype=np.int8)
+        start = max(self.scale_shift_op_1, self.scale_shift_op_2)
+        end = min(scale_shift_op_1_max, scale_shift_op_2_max)
+        #if start < end:
+        #    print("Min common value:", start)
+        #    self.scale_shifts = np.array([start], dtype=np.int8)
+        #else:
+        #    print("No intersection")
+        #    self.scale_shifts = np.array([end], dtype=np.int8)
+        self.scale_shifts = np.array([min(start, end)], dtype=np.int8)
+        self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
+
+        self.scale_a = util.float_to_int32_x86(np.round(
+            self.scale_ip1*2**self.scale_shifts[0].astype(np.float32)))
+        self.scale_b = util.float_to_int32_x86(np.round(
+            self.scale_ip2*2**self.scale_shifts[0].astype(np.float32)))
         if self.constant_location:
             self.scale_multipliers = np.array(
                 [self.scale_a[0], self.scale_b[0]])
@@ -2261,6 +2314,7 @@ class AddOptions(OperatorOptions):
             # so that the input multiplier is at zero index and the constant is at index 1
             self.scale_multipliers = np.array(
                 [self.scale_b[0], self.scale_a[0]])
+        self.scales_f = np.array([self.scale_ip1, self.scale_ip2])
         self.ip_zeropoint = 0
         self.ip_q_zeropoint[0] = self.ip_zeropoint
         self.op_q_zeropoint = self.op_zeropoint
@@ -2436,9 +2490,11 @@ class PadOptions(OperatorOptions):
             (scale_q), 8, self.scaleshift_max_range, 25)
         # error = result[0]
         scaleshift = result[1]
+        self.scales_f = scale_q
         self.scale_multipliers = np.array(
             [abs(int(np.round((scale_q)*2**scaleshift)))])
         self.scale_shifts = np.array([scaleshift])
+        self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
 
 
 class SoftmaxOperatorOptions(OperatorOptions):
@@ -2459,7 +2515,7 @@ class SoftmaxOperatorOptions(OperatorOptions):
             self.kernel_bitwidth)
 
         scale = 1/self.op_q['scales']
-        error1, scale_shift_op_1 = util.optimized_ip_scaling_shift(
+        error1, scale_shift_op_1, _, _, = util.optimized_ip_scaling_shift(
             # scale, 8, 31, 31, self.op_q_zeropoint)
             scale, 8, self.scaleshift_max_range, 31, self.op_q_zeropoint)
         self.scale_multipliers = np.array(
@@ -2817,9 +2873,11 @@ class StridedSliceOptions(OperatorOptions):
             (scale_q), 8, self.scaleshift_max_range, 25)
         # error = result[0]
         scaleshift = result[1]
+        self.scales_f = scale_q
         self.scale_multipliers = np.array(
             [abs(int(np.round((scale_q)*2**scaleshift)))])
         self.scale_shifts = np.array([scaleshift])
+        self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
 
     def GetFilterTensor(self):
         # check if the filter tensors need to be transposed
@@ -2939,6 +2997,11 @@ class MultiplyOptions(OperatorOptions):
                 # populate the filter tensor with the constant value
                 self.filter_tensor = tflite_interpreter.get_tensor(
                     constant_tensor_index[0])
+                kernel_dtype_attr = getattr(
+                    self.filter_tensor.dtype, 'as_numpy_dtype', self.filter_tensor.dtype)
+                self.kernel_bitwidth = np.dtype(kernel_dtype_attr).type
+                self.kernel_bytewidth_enum = model_wrapper_ffi.GetAxonByteWidthEnum(
+                    self.kernel_bitwidth)
                 # operator_graph_info['ip_tensors'][1])
                 if len(self.filter_tensor.shape) != self.ip_shape.shape_size:
                     const_shape = [1] * (len(self.ip_shape.shape) - len(
@@ -2964,9 +3027,11 @@ class MultiplyOptions(OperatorOptions):
             # (scale_q), 8, 31, 30, zero_point_max)
             (scale_q), 8, self.scaleshift_max_range, 30, zero_point_max)
         scaleshift = result[1]
+        self.scales_f = scale_q
         self.scale_multipliers = np.array(
             [abs(int(np.round((scale_q)*2**scaleshift)))])
         self.scale_shifts = np.array([scaleshift])
+        self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
 
     def GetIpOpZeropoints(self):
         if self.multiply_with_constant:
@@ -3005,9 +3070,11 @@ class PersistentVariableOpOptions(OperatorOptions):
             (scale_q), 8, self.scaleshift_max_range, 25)
         # error = result[0]
         scaleshift = result[1]
+        self.scales_f = scale_q
         self.scale_multipliers = np.array(
             [abs(int(np.round((scale_q)*2**scaleshift)))])
         self.scale_shifts = np.array([scaleshift])
+        self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
 
     def GetInputTensorsNdx(self):
         return self.ip_ndxs
@@ -3312,15 +3379,17 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
         op_q_scales = np.array([2**-12], dtype=np.float32)
         op_q_zeropoint = np.array([0], dtype=np.int32)
         # input
-        scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+        scales_f, scale_shifts, scale_multipliers, error, _ = util.optimize_scaling_shift_per_channel(
             self.ip_q['scales'], op_q_scales, self.w_q['scales'][0:4], op_q_zeropoint, max_scale=23)
+        self.scales_f = np.append(self.scales_f, scales_f)
         self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
         self.scale_multipliers = np.append(
             self.scale_multipliers, scale_multipliers)
         # recurrent input
         op_q_zeropoint = np.array([0], dtype=np.int32)
-        scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+        scales_f, scale_shifts, scale_multipliers, error, _ = util.optimize_scaling_shift_per_channel(
             self.op_q['scales'], op_q_scales, self.w_q['scales'][4:8], op_q_zeropoint, max_scale=23)
+        self.scales_f = np.append(self.scales_f, scales_f)
         self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
         self.scale_multipliers = np.append(
             self.scale_multipliers, scale_multipliers)
@@ -3331,8 +3400,9 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
         op_q_scales = np.array([2**28], dtype=np.float32)
         output_state_in_scale = np.array(
             [self.inputs_and_outputs['OUTPUT_STATE_IN']['scale']], dtype=np.float32)
-        scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+        scales_f, scale_shifts, scale_multipliers, error, _ = util.optimize_scaling_shift_per_channel(
             ip_q_scales, op_q_scales, 1/output_state_in_scale, op_q_zeropoint, max_scale=27)
+        self.scales_f = np.append(self.scales_f, scales_f)
         self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
         self.scale_multipliers = np.append(
             self.scale_multipliers, scale_multipliers)
@@ -3341,8 +3411,9 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
         cell_state_output_scale = np.array(
             [self.attributes['cell_clip']/(2**15)], dtype=np.float32)
         w_q_scales = np.array([1], dtype=np.float32)
-        scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+        scales_f, scale_shifts, scale_multipliers, error, _ = util.optimize_scaling_shift_per_channel(
             ip_q_scales, cell_state_output_scale, w_q_scales, op_q_zeropoint, bit_limit=15, max_scale=15)
+        self.scales_f = np.append(self.scales_f, scales_f)
         self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
         self.scale_multipliers = np.append(
             self.scale_multipliers, scale_multipliers)
@@ -3351,14 +3422,16 @@ class UnidirectionalSequenceLSTMOptions(OperatorOptions):
             [self.attributes['cell_clip']], dtype=np.float32)
         op_q_scale = np.array([2**15], dtype=np.float32)
         w_q_scales = np.array([1], dtype=np.float32)
-        scale_shifts, scale_multipliers, error = util.optimize_scaling_shift_per_channel(
+        scales_f, scale_shifts, scale_multipliers, error, _ = util.optimize_scaling_shift_per_channel(
             ip_q_scales, op_q_scale, w_q_scales, op_q_zeropoint, max_scale=23)
+        self.scales_f = np.append(self.scales_f, scales_f)
         self.scale_shifts = np.append(self.scale_shifts, scale_shifts)
         self.scale_multipliers = np.append(
             self.scale_multipliers, scale_multipliers)
 
         self.scale_multipliers = self.scale_multipliers.astype(np.int32)
         self.scale_shifts = self.scale_shifts.astype(np.int8)
+        self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
 
     def PrintAttributes(self):
         self.meta_data = (
@@ -3458,9 +3531,11 @@ class BatchAndSpaceOptions(OperatorOptions):
             (scale_q), 8, self.scaleshift_max_range, 25)
         # error = result[0]
         scaleshift = result[1]
+        self.scales_f = scale_q
         self.scale_multipliers = np.array(
             [abs(int(np.round((scale_q)*2**scaleshift)))])
         self.scale_shifts = np.array([scaleshift])
+        self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
 
     def GetBlockSize(self):
         return self.block_size[0], self.block_size[1]
@@ -3857,9 +3932,11 @@ class PackOptions(OperatorOptions):
             (scale_q), 8, self.scaleshift_max_range, 25)
         # error = result[0]
         scaleshift = result[1]
+        self.scales_f = scale_q
         self.scale_multipliers = np.array(
             [abs(int(np.round((scale_q)*2**scaleshift)))])
         self.scale_shifts = np.array([scaleshift])
+        self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
 
 
 class UnpackOptions(SplitOptions):
@@ -3889,6 +3966,51 @@ class UnpackOptions(SplitOptions):
         return axis, no_of_splits, ip_shape
 
 
+class QuantizeOptions(OperatorOptions):
+    ip_axon_layer_pack_filter = None
+
+    def __init__(self, operator_code, operator, operation_detail, tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper):
+        self.InitOperatorOption(operator_code, operator, operation_detail,
+                                tensor_details, tflite_interpreter, operator_graph, tflite_axon_enum_wrapper)
+        self.option = tflite.QuantizeOptions()
+        self.axons_operation_enum = "NRF_AXON_NN_OP_QUANTIZE"
+        self.option.Init(self.bytes, self.pos)
+        if operation_detail['operator_support'].value == 'PASSTHROUGH':
+            is_passthrough = True
+            raise KeyError(-917)
+
+    def CalculateMultiplierandScaleshift(self, next_op_graph_index, next_op_is_not_last_op):
+        scale_q = self.ip_q['scales']/self.op_q['scales']
+        # result = util.optimized_ip_scaling_shift((scale_q), 8, 25, 25)
+        result = util.optimized_ip_scaling_shift(
+            (scale_q), 8, self.scaleshift_max_range, 25)
+        # error = result[0]
+        scaleshift = result[1]
+        self.scales_f = scale_q
+        self.scale_multipliers = np.array(
+            [abs(int(np.round((scale_q)*2**scaleshift)))])
+        self.scale_shifts = np.array([scaleshift])
+        self.scale_shifts_range = np.column_stack([self.scale_shifts, self.scale_shifts])
+
+    def CalculateBPrime(self):
+        b_prime = -self.ip_q_zeropoint[0]
+        self.b_prime_tensor = b_prime.astype(np.int32)
+
+    @classmethod
+    def is_quantize_a_passthrough(cls, tflite_interpreter, op_graph, quantize_op_index):
+        ip_tensor_ndx = op_graph[quantize_op_index]['inputs'][0]
+        op_tensor_ndx = op_graph[quantize_op_index]['outputs'][0]
+        ip_type = tflite_interpreter.get_tensor_details()[
+            ip_tensor_ndx]['dtype']
+        op_type = tflite_interpreter.get_tensor_details()[
+            op_tensor_ndx]['dtype']
+        if (ip_type == np.int8 or ip_type == np.int16) and (op_type == np.int8 or op_type == np.int16):
+            # cases axon compiler will handle QUANTIZE as an discrete operator, so not a passthrough here
+            return False
+        else:
+            return True
+
+
 class SupportedOperators:
     supported_operators = {}
     variable_operators = {}
@@ -3900,8 +4022,8 @@ class SupportedOperators:
     pass_through_ops_present = None
     variable_ops_present = None
     split_ops_present = None
-    model_input_info = None
-    model_output_info = None
+    model_input_tensor_info = None
+    model_output_tensor_info = None
     tflite_interpreter = None
     transposed_model = None
     equal_splits_axis_offset_ops_present = None
@@ -3910,6 +4032,10 @@ class SupportedOperators:
     new_ops_inserted = None
     reuse_fc_filters_flag = None
     weight_to_fc = None
+    tflite_axon_graph_object = None
+    op_tensor_axon_tflite_layer_map = None
+    axon_tflite_layer_op_tensor_map = None
+    axon_tflite_layer_ip_tensor_map = None
 
     @classmethod
     def get_tf_graph_index_from_tf_op_index(cls, op_graph, tf_index):
@@ -3942,7 +4068,7 @@ class SupportedOperators:
                         next_op_ndx.append(ndx)
         return list(dict.fromkeys(next_op_ndx))
 
-    def __init__(self, tflite_interpreter=None, transpose_model=False):
+    def __init__(self, tflite_interpreter, transpose_model=False, tflite_axon_graph_object=None):
         self.supported_operators = {tflite.BuiltinOperator.CONV_2D: Conv2dOperatorOptions,
                                     tflite.BuiltinOperator.DEPTHWISE_CONV_2D: DepthwiseConv2DOperatorOptions,
                                     tflite.BuiltinOperator.FULLY_CONNECTED: FullyConnectedOperatorOptions,
@@ -3963,9 +4089,9 @@ class SupportedOperators:
                                     tflite.BuiltinOperator.UNPACK: UnpackOptions,
                                     tflite.BuiltinOperator.PACK: PackOptions,
                                     tflite.BuiltinOperator.SUB: SubtractOptions,
+                                    tflite.BuiltinOperator.QUANTIZE: QuantizeOptions,
                                     }
         self.pass_through_operators = [
-            tflite.BuiltinOperator.QUANTIZE,
             tflite.BuiltinOperator.DEQUANTIZE,
             tflite.BuiltinOperator.CALL_ONCE,
             tflite.BuiltinOperator.TRANSPOSE,
@@ -3985,23 +4111,33 @@ class SupportedOperators:
         self.equal_splits_axis_offset_ops_present = False
         self.model_input_tensor_indices = []
         self.model_output_tensor_indices = []
-        self.model_input_info = None
-        self.model_output_info = None
+        self.model_input_tensor_info = None
+        self.model_output_tensor_info = None
         self.unfused_lstm_cell_block = []
         self.unfused_lstm_fc_roots_per_timestep = []
         self.new_ops_inserted = False
         self.reuse_fc_filters_flag = False
         self.weight_to_fc = {}
+        self.op_tensor_axon_tflite_layer_map = {}
+        self.ip_tensor_axon_tflite_layer_map = {}
+        self.axon_tflite_layer_op_tensor_map = {}
+        self.axon_tflite_layer_ip_tensor_map = {}
+        assert tflite_interpreter is not None, "Tflite Interpreter cannot be 'None'"
+        self.tflite_interpreter = tflite_interpreter
 
-        if tflite_interpreter is not None:
-            self.tflite_interpreter = tflite_interpreter
-            self.model_input_info = tflite_interpreter.get_input_details()
-            for ip_info in self.model_input_info:
-                self.model_input_tensor_indices.append(ip_info['index'])
+        if tflite_axon_graph_object is not None:
+            self.tflite_axon_graph_object = tflite_axon_graph_object
+            self.model_input_tensor_info = tflite_axon_graph_object.get_tflite_input_details()
+            self.model_output_tensor_info = tflite_axon_graph_object.get_tflite_output_details()
+        else:
+            self.model_input_tensor_info = self.tflite_interpreter.get_input_details()
+            self.model_output_tensor_info = self.tflite_interpreter.get_output_details()
 
-            self.model_output_info = tflite_interpreter.get_output_details()
-            for op_info in self.model_output_info:
-                self.model_output_tensor_indices.append(op_info['index'])
+        for ip_info in self.model_input_tensor_info:
+            self.model_input_tensor_indices.append(ip_info['index'])
+        for op_info in self.model_output_tensor_info:
+            self.model_output_tensor_indices.append(op_info['index'])
+
         self.transposed_model = transpose_model
 
     def add_operator_codes_to_supported_operators_list(self, code):
@@ -4048,10 +4184,15 @@ class SupportedOperators:
         not_supported_ops_dict = {}
         tr_model_support_text = {}
         constraint_index = 0
-        # check here if the model input data width is supported by axon
-        model_ip_datatype = self.model_input_info[0]['dtype']
-        if model_ip_datatype != np.int8 and operation_list[0]['op_name'] != "QUANTIZE":
-            return False, {0: f"input datatype {np.dtype(model_ip_datatype).name} is not supported "}, False, ""
+        tflite_axon_graph_object = self.tflite_axon_graph_object
+        tflite_input_ops = tflite_axon_graph_object.get_tflite_input_operations()
+        tflite_output_ops = tflite_axon_graph_object.get_tflite_output_operations()
+        for ndx, model_ip in enumerate(self.model_input_tensor_info):
+            # check here if the model input data width is supported by axon
+            model_ip_datatype = model_ip['dtype']
+            if model_ip_datatype != np.int8 and model_ip_datatype != np.int16 and tflite_input_ops[ndx]['op_name'] != "QUANTIZE":
+                return False, {0: f"input datatype {np.dtype(model_ip_datatype).name} is not supported "}, False, ""
+
         if self.transposed_model:
             constraint_index = 1
         for i in range(len(operation_list)):
@@ -4059,7 +4200,7 @@ class SupportedOperators:
             layer_error_text = ""
             operators = subgraph.Operators(i)
             operation_code = model.OperatorCodes(
-                (operators.OpcodeIndex())).BuiltinCode()
+                operators.OpcodeIndex()).BuiltinCode()
             # supported_ops_list[i] = (operation_code in self.supported_operators) or (operation_code in self.pass_through_operators)
             self.operators_detail_graph[i]["op_code"] = operation_code
             self.operators_detail_graph[i]["tflite_operator"] = operators
@@ -4084,6 +4225,11 @@ class SupportedOperators:
                     if StridedSliceOptions.is_strided_slice_a_passthrough(self.tflite_interpreter, self.operators_detail_graph, i):
                         self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
                         self.pass_through_ops_present = True
+                elif self.operators_detail_graph[i]['op_name'] == "QUANTIZE":
+                    if QuantizeOptions.is_quantize_a_passthrough(self.tflite_interpreter, self.operators_detail_graph, i):
+                        self.operators_detail_graph[i]["operator_support"] = OperatorSupportEnum.PASSTHROUGH
+                        self.pass_through_ops_present = True
+
                 # TODO or self.operators_detail_graph[i]['op_name'] == "SPLIT":
                 elif self.operators_detail_graph[i]['op_name'] == "SPLIT_V":
                     # TODO determine if this is an equal split or not, if it is not an equal split we need to handle it using strided slice or else they can be a passthrough op
@@ -4177,7 +4323,7 @@ class SupportedOperators:
         split_nodes = {}
         ip_nodes = {}
         new_graph = []
-
+        tensor_details = self.tflite_axon_graph_object.get_tflite_tensor_details()
         # the first loop for graph creation will throw the exception if there is any operation that we do no support or allow to be passed through
         for ndx, operations in enumerate(operation_details):
             if self.operators_detail_graph[ndx]['operator_support'] != OperatorSupportEnum.NOT_SUPPORTED:
@@ -4194,20 +4340,20 @@ class SupportedOperators:
                 else:
                     # model with just one operation?
                     op_nodes[operations['index']] = [ndx]
+
+                for ops_ndx in range(operations['index'], -1, -1):
+                    _is_element_present = False
+                    _is_element_present = any(
+                        i in operations['inputs'] for i in operation_details[ops_ndx]['outputs'])
+                    if (_is_element_present):
+                        try:
+                            ip_nodes[operations['index']].append(ops_ndx)
+                        except KeyError:
+                            ip_nodes[operations['index']] = [ops_ndx]
+
             else:
                 raise Exception(
                     f"{operations['op_name']} operator is not supported!")
-
-        for operations in operation_details:
-            for ops_ndx in range(operations['index'], -1, -1):
-                _is_element_present = False
-                _is_element_present = any(
-                    i in operations['inputs'] for i in operation_details[ops_ndx]['outputs'])
-                if (_is_element_present):
-                    try:
-                        ip_nodes[operations['index']].append(ops_ndx)
-                    except KeyError:
-                        ip_nodes[operations['index']] = [ops_ndx]
 
         """ DO NOT NEED TO FIND OUT THE SPLIT AND MERGE NODES RIGHT NOW THUS COMMENTING OUT    
         # max_track_count=-1
@@ -4244,11 +4390,25 @@ class SupportedOperators:
             try:
                 # find out if the node has an input from the first tensor or zero tensor
                 new_graph[ndx]['ip_tensors'] = new_graph[ndx]['inputs']
-                # zero is not the first input, is it something else? FIXME ONLY HANDLING ONE TENSOR INPUTS
-                if (self.model_input_tensor_indices[0] in operation_details[ndx]['inputs']):
-                    new_graph[ndx]['inputs'] = np.array([-1])
-                else:
+                # zero is not the first input, is it something else?
+
+                found_inputs = False
+                for _ip_ndx, _ip_t in enumerate(self.model_input_tensor_indices):
+                    if _ip_t in operation_details[ndx]['inputs']:
+                        new_graph[ndx]['inputs'] = np.array([(_ip_ndx+1)*-1])
+                        found_inputs = True
+
+                if not found_inputs:
                     new_graph[ndx]['inputs'] = ip_nodes[operations['index']]
+                # if ndx in ip_nodes:
+                #     new_graph[ndx]['inputs'] = ip_nodes[operations['index']]
+                # else:
+                #     #we might have a model input which is not represented in ip nodes
+                #     #FIXME there might be cyclic nodes in here which might be present, TBD
+                #     for _ip_ndx, _ip_t in enumerate(self.model_input_tensor_indices):
+                #         if _ip_t in operation_details[ndx]['inputs']:
+                #             new_graph[ndx]['inputs'] = np.array([(_ip_ndx+1)*-1])
+
             except KeyError:
                 new_graph[ndx]['inputs'] = []
             try:
@@ -4273,7 +4433,25 @@ class SupportedOperators:
                 new_graph[ndx]['outputs'])
             new_graph[ndx]['axon_ip_axis_offset'] = None
             new_graph[ndx]['reuse_filters_flag'] = None
-            """end of for loop for creating new graph"""
+            new_graph[ndx]['op_input_shape'] = None
+            new_graph[ndx]['op_output_shape'] = None
+            # new_graph[ndx]['shape_size_changed'] = False
+
+            # if operations['op_name'] in ["CONCATENATION"]:#CONCAT needs special handling for axon operation
+            #     new_graph[ndx]['in_shape'] = np.array([])
+            #     new_graph[ndx]['out_shape'] = np.array([])
+            # else:
+            #     if operation_details[ndx]['inputs'].size :
+            #         new_graph[ndx]['in_shape'] = tensor_details[operation_details[ndx]['inputs'][0]]['shape']
+            #     else:
+            #         new_graph[ndx]['in_shape'] = np.array([])
+            #     if operation_details[ndx]['outputs'].size :
+            #         new_graph[ndx]['out_shape'] = tensor_details[operation_details[ndx]['outputs'][0]]['shape']
+            #     else:
+            #         new_graph[ndx]['out_shape'] = np.array([])
+
+            # new_graph[ndx]['shape_size_changed'] = len(new_graph[ndx]['in_shape']) != len(new_graph[ndx]['out_shape'])
+        """end of for loop for creating new graph"""
 
         # Add code here to figure out and combine the variable operators together and make them a persistent variable instead
         if self.variable_ops_present:
@@ -4311,14 +4489,15 @@ class SupportedOperators:
 
                     ops['ip_tensors'] = np.array(new_ip_tensors)
                     ops['axon_op_ops'] = read_variable_op['outputs']
-                    reading_operator = new_graph[read_variable_op['outputs'][0]]
-                    logger.debug(
-                        f"{ops['op_name']} @index {ndx} is read by operator {reading_operator['op_name']} @index{reading_operator['index']}")
-                    # print(f"{ops['op_name']} @index {ndx} is read by operator {reading_operator['op_name']} @index{reading_operator['index']}")
-                    # have to update the reading operators op indices accordingly
-                    for r_ndx, ops_ndx in enumerate(reading_operator['axon_ip_ops']):
-                        if ops_ndx == read_variable_op['index']:
-                            reading_operator['axon_ip_ops'][r_ndx] = ndx
+                    for op_ndx in read_variable_op['outputs']:
+                        reading_operator = new_graph[op_ndx]
+                        logger.debug(
+                            f"{ops['op_name']} @index {ndx} is read by operator {reading_operator['op_name']} @index{reading_operator['index']}")
+                        # print(f"{ops['op_name']} @index {ndx} is read by operator {reading_operator['op_name']} @index{reading_operator['index']}")
+                        # have to update the reading operators op indices accordingly
+                        for r_ndx, ops_ndx in enumerate(reading_operator['axon_ip_ops']):
+                            if ops_ndx == read_variable_op['index']:
+                                reading_operator['axon_ip_ops'][r_ndx] = ndx
 
                     ops['op_tensors'] = read_variable_op['op_tensors']
                     # change the read and write variables as pass through ops
@@ -4502,7 +4681,7 @@ class SupportedOperators:
                                     new_graph[output_ndx]['axon_ip_ops'][j] = ops['axon_ip_ops'][0]
 
                     for i, input_ndx in enumerate(ops['axon_ip_ops']):
-                        if input_ndx != -1:
+                        if input_ndx > -1:
                             for j, input_operator_ndx in enumerate(new_graph[input_ndx]['axon_op_ops']):
                                 if input_operator_ndx == ndx:
                                     if len(ops['axon_op_ops']) == 0:
@@ -4535,8 +4714,35 @@ class SupportedOperators:
                                 ops['axon_ip_axis_offset'][input_graph_index]
                     ops['axon_ip_axis_offset'] = updated_axon_ip_axis_offset
 
+        # create a axon graph here with the axon layer nums as key values
+
+        axon_graph = {}
+        for n in new_graph:
+            # if n['ip_tensors'].size > 0:
+            #     n['op_input_shape'] = np.array([tensor_details[_ip_t]['shape'] for _ip_t in n['ip_tensors']])
+            # if n['op_tensors'].size > 0:
+            #     n['op_output_shape'] = np.array([tensor_details[_op_t]['shape'] for _op_t in n['op_tensors']])
+            # if n['op_input_shape'].size > 0 and n['op_output_shape'].size > 0:
+            #     n['shape_size_changed'] = len(n['op_input_shape'][0]) != len(n['op_output_shape'][0])
+            if n['axon_layer_num'] >= 0:
+                if n['op_input_shape'] is None:
+                    if len(n['axon_ip_ops']) > 1:
+                        n['op_input_shape'] = {
+                            _ip_t: tensor_details[_ip_t]['shape'] for _ip_t in n['ip_tensors']}
+                    else:
+                        n['op_input_shape'] = {
+                            n['ip_tensors'][0]: tensor_details[n['ip_tensors'][0]]['shape']}
+                if n['op_output_shape'] is None:
+                    if len(n['axon_op_ops']) > 1:
+                        n['op_output_shape'] = {
+                            _op_t: tensor_details[_op_t]['shape'] for _op_t in n['op_tensors']}
+                    else:
+                        n['op_output_shape'] = {
+                            n['op_tensors'][0]: tensor_details[n['op_tensors'][0]]['shape']}
+                axon_graph[n['axon_layer_num']] = n
+
         self.nodes_info = {'op_nodes': op_nodes, 'ip_nodes': ip_nodes,
-                           'split_nodes': split_nodes, 'merge_nodes': merge_nodes, 'op_graph': new_graph}
+                           'split_nodes': split_nodes, 'merge_nodes': merge_nodes, 'op_graph': new_graph, 'axon_graph': axon_graph}
         return self.nodes_info
 
     def get_connected_operation_output_tensor_index(self, op_index, split_op_num, op_graph):
@@ -4561,6 +4767,7 @@ class SupportedOperators:
 
     def get_index_of_input_operator(self, current_op_index):
         for ndx, node in enumerate(self.nodes_info['op_graph']):
+            # if any(v<0 for v in node['inputs']) : # <= -1:
             if node['inputs'] == -1:
                 # check if the current index is directly connected to the current op index
                 if any(o in self.nodes_info['op_graph'][current_op_index]['ip_tensors'] for o in node['op_tensors']):
@@ -4576,13 +4783,16 @@ class SupportedOperators:
     def get_axon_layer_num_of_output_operator(self):
         op_graph = self.nodes_info['op_graph']
         if len(op_graph) == 1:
+            for output_tensor in self.model_output_tensor_indices:
+                self.op_tensor_axon_tflite_layer_map[output_tensor] = 0
+                self.axon_tflite_layer_op_tensor_map[0] = output_tensor
             return [0], [0]
         axon_layer_num = []
         layer_ndx = []
         seen = set()
         # this is added as indexing op graphs is incorrect if new ops have been added
         if (not self.new_ops_inserted):
-            for output_tensor in self.model_output_tensor_indices:
+            for n, output_tensor in enumerate(self.model_output_tensor_indices):
                 # all the
                 producer_indices = [ndx for ndx, node in enumerate(
                     op_graph) if output_tensor in node['op_tensors']]
@@ -4593,37 +4803,84 @@ class SupportedOperators:
                 for prod_ndx in producer_indices:
                     prod_node = op_graph[prod_ndx]
                     if prod_node['axon_layer_num'] >= 0:
-                        output_index = prod_ndx
+                        output_indices = [prod_ndx]
                     else:
-                        # need to walk back to figure out the actual axon supported layer which produces this node
-                        output_index = self.walk_back_to_axon_producer(
-                            op_graph, prod_ndx)
-                    if output_index is None:
-                        continue
+                        output_indices = self.walk_back_to_axon_producer(
+                            op_graph, prod_ndx
+                        )
+                    for output_index in output_indices:
+                        output_node = op_graph[output_index]
+                        output_axon_layer_num = output_node['axon_layer_num']
+                        if output_axon_layer_num in seen:
+                            continue
+                        seen.add(output_axon_layer_num)
+                        axon_layer_num.append(output_axon_layer_num)
+                        layer_ndx.append(output_index)
+                        self.op_tensor_axon_tflite_layer_map[output_tensor] = output_index
+                        self.axon_tflite_layer_op_tensor_map[output_index] = output_tensor
 
-                    output_node = op_graph[output_index]
-                    output_axon_layer_num = output_node['axon_layer_num']
-                    if output_axon_layer_num in seen:
-                        continue
-                    seen.add(output_axon_layer_num)
-                    axon_layer_num.append(output_axon_layer_num)
-                    layer_ndx.append(output_index)
-
-            axon_layer_num.sort()
-            layer_ndx.sort()
+            # axon_layer_num.sort()
+            # layer_ndx.sort()
 
         if not axon_layer_num:
-            for ndx, node in enumerate(op_graph):
-                if node['axon_op_ops'] == [] and node['axon_layer_num'] >= 0:
-                    axon_layer_num.append(node['axon_layer_num'])
-                    layer_ndx.append(ndx)
+            for _op_tensor in self.model_output_tensor_indices:
+                for ndx, node in enumerate(op_graph):
+                    if node['axon_op_ops'] == [] and node['axon_layer_num'] >= 0:
+                        axon_layer_num.append(node['axon_layer_num'])
+                        layer_ndx.append(ndx)
+                        self.op_tensor_axon_tflite_layer_map[_op_tensor] = ndx
+                        self.axon_tflite_layer_op_tensor_map[ndx] = _op_tensor
 
         return axon_layer_num, layer_ndx
 
     def get_axon_layer_num_of_input_operator(self):
-        for ndx, node in enumerate(self.nodes_info['op_graph']):
-            if -1 in node['axon_ip_ops'] and node['axon_layer_num'] >= 0:
-                return node['axon_layer_num'], ndx
+        op_graph = self.nodes_info['op_graph']
+        if len(op_graph) == 1:
+            for input_tensor in self.model_input_tensor_indices:
+                self.ip_tensor_axon_tflite_layer_map[input_tensor] = 0
+                self.axon_tflite_layer_ip_tensor_map[0] = input_tensor
+            return [0], [0]
+        axon_layer_num = []
+        layer_ndx = []
+        seen = set()
+        if not self.new_ops_inserted:
+            for input_tensor in self.model_input_tensor_indices:
+                consumer_indices = [
+                    ndx for ndx, node in enumerate(op_graph)
+                    if input_tensor in node['ip_tensors']
+                ]
+                if not consumer_indices:
+                    continue
+                for cons_ndx in consumer_indices:
+                    cons_node = op_graph[cons_ndx]
+                    if cons_node['axon_layer_num'] >= 0:
+                        input_indices = [cons_ndx]
+                    else:
+                        input_indices = self.walk_forward_to_axon_consumer(
+                            op_graph, cons_ndx
+                        )
+                    for input_index in input_indices:
+                        input_node = op_graph[input_index]
+                        input_axon_layer_num = input_node['axon_layer_num']
+                        if input_axon_layer_num in seen:
+                            continue
+                        seen.add(input_axon_layer_num)
+                        axon_layer_num.append(input_axon_layer_num)
+                        layer_ndx.append(input_index)
+                        self.ip_tensor_axon_tflite_layer_map[input_tensor] = input_index
+                        self.axon_tflite_layer_ip_tensor_map[input_index] = input_tensor
+            # axon_layer_num.sort()
+            # layer_ndx.sort()
+
+        if not axon_layer_num:
+            for _ip_tensor in self.model_input_tensor_indices:
+                for ndx, node in enumerate(op_graph):
+                    if any(v < 0 for v in node['axon_ip_ops']) and node['axon_layer_num'] >= 0:
+                        axon_layer_num.append(node['axon_layer_num'])
+                        layer_ndx.append(ndx)
+                        self.ip_tensor_axon_tflite_layer_map[_ip_tensor] = ndx
+                        self.axon_tflite_layer_ip_tensor_map[ndx] = _ip_tensor
+        return axon_layer_num, layer_ndx
 
     # def check_if_input_operator(self, node):
     #   if -1 in node['axon_ip_ops'] and node['axon_layer_num']>=0:
@@ -4758,9 +5015,26 @@ class SupportedOperators:
             node.pop('orig_op_op', None)
         return graph
 
+    # def walk_back_to_axon_producer(self, op_graph, start_ndx):
+    #     visited = set()
+    #     stack = [start_ndx]
+    #     while stack:
+    #         ndx = stack.pop()
+    #         if ndx in visited:
+    #             continue
+    #         visited.add(ndx)
+    #         node = op_graph[ndx]
+    #         if node.get('axon_layer_num', -1) >= 0:
+    #             return ndx
+    #         for ip_ndx in node.get('inputs', []):
+    #             if isinstance(ip_ndx, int) and ip_ndx >= 0:
+    #                 stack.append(ip_ndx)
+    #     return None
+
     def walk_back_to_axon_producer(self, op_graph, start_ndx):
         visited = set()
         stack = [start_ndx]
+        axon_indices = []
         while stack:
             ndx = stack.pop()
             if ndx in visited:
@@ -4768,35 +5042,74 @@ class SupportedOperators:
             visited.add(ndx)
             node = op_graph[ndx]
             if node.get('axon_layer_num', -1) >= 0:
-                return ndx
+                axon_indices.append(ndx)
+                continue
             for ip_ndx in node.get('inputs', []):
                 if isinstance(ip_ndx, int) and ip_ndx >= 0:
                     stack.append(ip_ndx)
-        return None
+        return axon_indices
+
+    # def walk_forward_to_axon_consumer(self, op_graph, start_ndx):
+    #     visited = set()
+    #     stack = [start_ndx]
+    #     while stack:
+    #         ndx = stack.pop()
+    #         if ndx in visited:
+    #             continue
+    #         visited.add(ndx)
+    #         node = op_graph[ndx]
+    #         if node.get('axon_layer_num', -1) >= 0:
+    #             return ndx
+    #         for op_ndx in node.get('outputs', []):
+    #             if isinstance(op_ndx, int) and op_ndx >= 0:
+    #                 stack.append(op_ndx)
+    #     return None
+
+    def walk_forward_to_axon_consumer(self, op_graph, start_ndx):
+        visited = set()
+        stack = [start_ndx]
+        axon_indices = []
+        while stack:
+            ndx = stack.pop()
+            if ndx in visited:
+                continue
+            visited.add(ndx)
+            node = op_graph[ndx]
+            if node.get('axon_layer_num', -1) >= 0:
+                axon_indices.append(ndx)
+                continue
+            for op_ndx in node.get('outputs', []):
+                if isinstance(op_ndx, int) and op_ndx >= 0:
+                    stack.append(op_ndx)
+        return axon_indices
 
     def get_op_index_from_ip_tensor_index(self, ip_tensor_index):
-        for ndx, op_node in enumerate(self.operator_graph_info):
+        for ndx, op_node in enumerate(self.tflite_axon_graph_object.operator_graph_info):
             if ip_tensor_index in op_node['ip_tensors']:
                 return ndx
         return -1
 
 
-class TfLiteAxonGraph(SupportedOperators):
+class TfLiteAxonGraph:
     tflite_filename = None
     tflite_graph_dict = None
     axon_supported_operators_object = None
     operator_graph_info = None
     model_support_info_dict = None
-    model_input_operator_name = None
-    model_output_operator_name = None
+    model_input_operations = None
+    model_output_operations = None
     multiple_output_model = None
+    model_input_shapes = None
+    axon_node_graph_info = None
 
     def __init__(self, tflite_filename):
         self.operator_graph_info = None
+        self.axon_node_graph_info = None
         self.model_support_info_dict = None
-        self.model_input_operator_name = None
-        self.model_output_operator_name = None
         self.axon_supported_operators_object = None
+        self.model_input_operations = []
+        self.model_output_operations = []
+        self.model_input_shapes = {}
         self.tflite_graph_dict = {
             'model': None,
             'subgraph': None,
@@ -4806,6 +5119,9 @@ class TfLiteAxonGraph(SupportedOperators):
             'tflite_outputs': None,
             'tflite_operation_details': None,
             'tflite_tensor_details': None,
+            'io_signature_defs': None,
+            'tflite_input_signature_list': None,
+            'tflite_input_signature_list_tensor_index': None,
         }
         with open(tflite_filename, "rb") as f:
             buf = f.read()
@@ -4818,6 +5134,48 @@ class TfLiteAxonGraph(SupportedOperators):
         self.tflite_graph_dict['interpreter'] = tf.lite.Interpreter(
             model_path=self.tflite_filename, experimental_preserve_all_tensors=True)
         self.tflite_graph_dict['interpreter'].allocate_tensors()
+        self.tflite_graph_dict['tflite_inputs'] = self.tflite_graph_dict['interpreter'].get_input_details(
+        )
+        self.tflite_graph_dict['tflite_outputs'] = self.tflite_graph_dict['interpreter'].get_output_details(
+        )
+        self.tflite_graph_dict['tflite_operation_details'] = self.tflite_graph_dict['interpreter']._get_ops_details()[
+            0:self.tflite_graph_dict['operators_length']]
+        self.tflite_graph_dict['tflite_tensor_details'] = self.tflite_graph_dict['interpreter'].get_tensor_details(
+        )
+        if self.tflite_graph_dict['interpreter'].get_signature_list() == {}:
+            self.tflite_graph_dict['io_signature_defs'] = {}
+            self.tflite_graph_dict['io_signature_defs']['inputs'] = {
+                ip['name']: ip['index'] for ip in self.tflite_graph_dict['tflite_inputs']}
+            self.tflite_graph_dict['io_signature_defs']['outputs'] = {
+                op['name']: op['index'] for op in self.tflite_graph_dict['tflite_outputs']}
+        else:
+            self.tflite_graph_dict['io_signature_defs'] = self.tflite_graph_dict['interpreter'].get_signature_runner(
+            )._signature_def.copy()
+        self.tflite_graph_dict['tflite_input_signature_list'] = list(
+            self.tflite_graph_dict['io_signature_defs']['inputs'].keys())
+        self.tflite_graph_dict['tflite_input_signature_list_tensor_index'] = list(
+            self.tflite_graph_dict['io_signature_defs']['inputs'].values())
+
+        # determine here the operations connected to the input tensors
+        for ip_ndx, input_tensor in enumerate(self.tflite_graph_dict['tflite_inputs']):
+            self.model_input_shapes[input_tensor['name']
+                                    ] = input_tensor['shape']
+            for operations in self.tflite_graph_dict['tflite_operation_details']:
+                if input_tensor['index'] in operations['inputs']:
+                    self.model_input_operations.append(operations)
+
+        # determine here the operations connected to the output tensors
+        for output_tensor in self.tflite_graph_dict['tflite_outputs']:
+            for operations in self.tflite_graph_dict['tflite_operation_details']:
+                if output_tensor['index'] in operations['outputs']:
+                    self.model_output_operations.append(operations)
+
+    def reset_axon_graph_objects(self):
+        self.axon_supported_operators_object = None
+        self.operator_graph_info = None
+        self.model_support_info_dict = None
+        self.multiple_output_model = None
+        self.axon_node_graph_info = None
 
     def is_tflite_model_multiple_output(self):
         self.multiple_output_model = len(self.get_tflite_output_details()) > 1
@@ -4832,12 +5190,12 @@ class TfLiteAxonGraph(SupportedOperators):
     def get_tflite_operators_len(self):
         return self.tflite_graph_dict['operators_length']
 
-    def get_tflite_interpreter(self):
-        if self.tflite_graph_dict['interpreter'] is not None:
+    def get_tflite_interpreter(self, reset_variables=False):
+        if self.tflite_graph_dict['interpreter'] is None or reset_variables:
             # attempting to reset the interpreter
-            self.tflite_graph_dict['interpreter'] = None
-        self.tflite_graph_dict['interpreter'] = tf.lite.Interpreter(
-            model_path=self.tflite_filename, experimental_preserve_all_tensors=True)
+            self.tflite_graph_dict['interpreter'].reset_all_variables()
+            self.tflite_graph_dict['interpreter'] = tf.lite.Interpreter(
+                model_path=self.tflite_filename, experimental_preserve_all_tensors=True)
         self.tflite_graph_dict['interpreter'].allocate_tensors()
         return self.tflite_graph_dict['interpreter']
 
@@ -4868,11 +5226,23 @@ class TfLiteAxonGraph(SupportedOperators):
             )
         return self.tflite_graph_dict['tflite_tensor_details']
 
+    def get_tflite_signature_list_details(self):
+        if self.tflite_graph_dict['tflite_signature_list'] is None:
+            self.tflite_graph_dict['tflite_signature_list'] = self.tflite_graph_dict['interpreter'].get_signature_list(
+            )
+        return self.tflite_graph_dict['tflite_signature_list']
+
+    def get_tflite_input_operations(self):
+        return self.model_input_operations
+
+    def get_tflite_output_operations(self):
+        return self.model_output_operations
+
     def init_axon_supported_ops_object(self, transpose_model_flag=False, cpu_op_codes_list=None):
         # if self.axon_supported_operators_object is None:
         #     self.axon_supported_operators_object = SupportedOperators(self.tflite_graph_dict['interpreter'], transpose_model_flag)
         self.axon_supported_operators_object = SupportedOperators(
-            self.tflite_graph_dict['interpreter'], transpose_model_flag)
+            self.tflite_graph_dict['interpreter'], transpose_model_flag, self)
         if cpu_op_codes_list is not None:
             self.add_cpu_ops_to_supported_axon_ops(cpu_op_codes_list)
         # also figure if the model operators are supported by axons here
@@ -4912,8 +5282,10 @@ class TfLiteAxonGraph(SupportedOperators):
     def get_axon_operator_graph_info(self):
         if self.operator_graph_info is None:
             assert self.axon_supported_operators_object is not None, "call 'init_axon_supported_ops_object' before getting graph info!"
-            self.operator_graph_info = self.axon_supported_operators_object.get_graph_info_from_ops(
-                self.get_tflite_operator_details())['op_graph']
+            nodes_info = self.axon_supported_operators_object.get_graph_info_from_ops(
+                self.get_tflite_operator_details())
+            self.operator_graph_info = nodes_info['op_graph']
+            self.axon_node_graph_info = nodes_info['axon_graph']
         return self.operator_graph_info
 
     def get_axon_layer_num_of_output_operator(self):
@@ -4932,23 +5304,23 @@ class TfLiteAxonGraph(SupportedOperators):
         op_graph['operator_options'] = operator_options
         op_graph['options_initialized'] = True
 
-    def get_axon_input_op_graph_details(self):
+    def get_axon_input_op_graph_details(self, input_layers_ndx=None):
         op_graph = self.get_axon_operator_graph_info()
-        for ndx, node in enumerate(op_graph):
-            if -1 in node['axon_ip_ops'] and node['axon_layer_num'] >= 0:
-                return node
+        if input_layers_ndx:
+            tflite_input_layer_ndx = input_layers_ndx
+        else:
+            _, tflite_input_layer_ndx = self.get_axon_layer_num_of_input_operator()
+        axon_input_graph_details = []
+        for tflite_ndx in tflite_input_layer_ndx:
+            axon_input_graph_details.append(op_graph[tflite_ndx])
+        return axon_input_graph_details
 
-    def get_axon_output_op_graph_details(self):
+    def get_axon_output_op_graph_details(self, output_layers_ndx=None):
         op_graph = self.get_axon_operator_graph_info()
-        # if len(op_graph) == 1:
-        #     return [op_graph[0]]
-        # axon_output_graph_details = []
-        # for ndx, node in enumerate(op_graph):
-        #     if node['axon_op_ops'] == [] and node['axon_layer_num'] >= 0:
-        #         # map the tflite output to the axon graph detail
-        #         axon_output_graph_details.append(node)
-        # return axon_output_graph_details
-        _, tflite_output_layer_ndx = self.get_axon_layer_num_of_output_operator()
+        if output_layers_ndx:
+            tflite_output_layer_ndx = output_layers_ndx
+        else:
+            _, tflite_output_layer_ndx = self.get_axon_layer_num_of_output_operator()
         axon_output_graph_details = []
         for tflite_ndx in tflite_output_layer_ndx:
             axon_output_graph_details.append(op_graph[tflite_ndx])
@@ -4962,20 +5334,129 @@ class TfLiteAxonGraph(SupportedOperators):
         for op_details in tflite_output_details:
             tflite_output_indices.append(op_details['index'])
             tflite_output_detail_copy.append(op_details)
-        # we need to sort this array based on the order of occurrence in the axon graph.
-        # look up into the operator details
-        tflite_output_nodes = []
-        tflite_output_mapping = {}
-        order = 0
-        for n, nodes in enumerate(self.get_tflite_operator_details()):
-            if nodes['outputs'].shape[0] != 0 and nodes['outputs'][0] in tflite_output_indices:
-                # this is an output node
-                tflite_output_nodes.append(nodes)
-                location = tflite_output_indices.index(nodes['outputs'][0])
-                tflite_output_mapping[order] = tflite_output_detail_copy[location]
-                order += 1
-
+        # # we need to sort this array based on the order of occurrence in the axon graph.
+        # # look up into the operator details
+        # tflite_output_nodes = []
+        # tflite_output_mapping = {}
+        # order = 0
+        # for n, nodes in enumerate(self.get_tflite_operator_details()):
+        #     if nodes['outputs'].shape[0] != 0 and nodes['outputs'][0] in tflite_output_indices:
+        #         # this is an output node
+        #         tflite_output_nodes.append(nodes)
+        #         location = tflite_output_indices.index(nodes['outputs'][0])
+        #         tflite_output_mapping[order] = tflite_output_detail_copy[location]
+        #         order += 1
+        tflite_output_mapping = tflite_output_detail_copy
         return tflite_output_mapping
 
+    def get_tflite_axon_input_details_mapping(self):
+        tflite_input_details = self.get_tflite_input_details()
+        tflite_input_indices = [d['index'] for d in tflite_input_details]
+        tflite_input_detail_copy = list(tflite_input_details)
+        tflite_input_mapping = {}
+        order = 0
+        for nodes in self.get_tflite_operator_details():
+            if nodes['inputs'].shape[0] != 0 and nodes['inputs'][0] in tflite_input_indices:
+                location = tflite_input_indices.index(nodes['inputs'][0])
+                tflite_input_mapping[order] = tflite_input_detail_copy[location]
+                order += 1
+        return tflite_input_mapping
+
     def get_tflite_op_index_from_input_tensor_index(self, input_tensor_index):
-        return self.get_op_index_from_ip_tensor_index(input_tensor_index)
+        return self.axon_supported_operators_object.get_op_index_from_ip_tensor_index(input_tensor_index)
+
+    def get_tflite_model_ip_shapes(self):
+        """
+        get the model input shape as a shape array
+        """
+        input_shapes = []
+        # Evaluate the TFLite model using "test" dataset.
+        for input_shape in self.model_input_shapes.values():
+         # find the expected shape of the input test vector here
+            input_shapes.append(input_shape)
+        return input_shapes
+
+    def get_tflite_model_ip_shape_for_input_signature(self, input_signature_name):
+        """
+        get the input shape for a given input signature
+        """
+        # Evaluate the TFLite model using "test" dataset.
+        for input_signature, input_shape in self.model_input_shapes.items():
+            if input_signature_name in input_signature:
+                return input_shape
+        raise ValueError(
+            f"{input_signature_name} not found in model input signatures.")
+
+    def get_op_tensor_axon_tflite_layer_map(self):
+        return self.axon_supported_operators_object.op_tensor_axon_tflite_layer_map
+
+    def get_axon_tflite_layer_op_tensor_map(self):
+        return self.axon_supported_operators_object.axon_tflite_layer_op_tensor_map
+
+    def get_axon_layer_num_of_input_operator(self):
+        return self.axon_supported_operators_object.get_axon_layer_num_of_input_operator()
+
+    def get_ip_tensor_axon_tflite_layer_map(self):
+        return self.axon_supported_operators_object.ip_tensor_axon_tflite_layer_map
+
+    def get_axon_tflite_layer_ip_tensor_map(self):
+        return self.axon_supported_operators_object.axon_tflite_layer_ip_tensor_map
+
+    def get_tflite_model_ip_signatures_list(self):
+        return self.tflite_graph_dict['tflite_input_signature_list']
+
+    def get_tflite_model_ip_signatures_list_index(self):
+        return self.tflite_graph_dict['tflite_input_signature_list_index']
+
+    def _check_if_shapes_are_same(self, shape1, shape2, axon_ndx, shape_type="Input"):
+        if shape1.size == shape2.size:
+            if not util.shapes_are_same(shape1, shape2):
+                raise ValueError(
+                    f"{shape_type} shape mismatch for axon node {axon_ndx} : "
+                    f"expected {shape1}, got {shape2}"
+                )
+        else:
+            raise ValueError(f"{shape_type} shape size mismatch for axon node {axon_ndx} : "
+                             f"expected {shape1}, got {shape2}"
+                             )
+            # check here if there is a reshape, split or unpack operation in between the operations
+            ops_graph = self.operator_graph_info
+            axon_graph = self.axon_node_graph_info
+            axon_node = axon_graph[axon_ndx]
+            axon_start_node = axon_graph[axon_node['axon_ip_ops'][0]]
+            axon_end_node = axon_graph[axon_node['axon_op_ops'][0]]
+            tflite_start_op = ops_graph[axon_start_node['index']]
+            tflite_end_node = ops_graph[axon_end_node['index']]
+            for op_index in range(tflite_start_op['index'], tflite_end_node['index'] + 1):
+                current_op = ops_graph[op_index]
+                if current_op['op_name'] in ["RESHAPE", "SPLIT", "UNPACK"]:
+                    return True
+
+    def verify_axon_operations_input_output_shapes(self):
+        if self.axon_node_graph_info is None:
+            raise ValueError(
+                "Axon node graph info is not available, run 'get_graph_info_from_ops' first.")
+        for axon_ndx, axon_node in self.axon_node_graph_info.items():
+            current_op_input_shapes = axon_node['op_input_shape']
+            current_op_output_shapes = axon_node['op_output_shape']
+            axon_ip_nodes = axon_node['axon_ip_ops']
+            axon_op_nodes = axon_node['axon_op_ops']
+            input_node_output_shape = {}
+            for _ip_o in axon_ip_nodes:
+                if _ip_o >= 0:
+                    input_node_output_shape.update(
+                        self.axon_node_graph_info[_ip_o]['op_output_shape'])
+            output_node_input_shape = {}
+            if len(axon_op_nodes) > 0:
+                for _op_o in axon_op_nodes:
+                    output_node_input_shape.update(
+                        self.axon_node_graph_info[_op_o]['op_input_shape'])
+
+            for _t, current_ip_shape in current_op_input_shapes.items():
+                ip_shape = input_node_output_shape.get(_t, current_ip_shape)
+                self._check_if_shapes_are_same(
+                    current_ip_shape, ip_shape, axon_ndx, shape_type="Input")
+            for _t, current_op_shape in current_op_output_shapes.items():
+                op_shape = output_node_input_shape.get(_t, current_op_shape)
+                self._check_if_shapes_are_same(
+                    current_op_shape, op_shape, axon_ndx, shape_type="Output")

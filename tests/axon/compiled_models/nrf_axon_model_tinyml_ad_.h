@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_ad
- * Axon Neural Network Compiler Version: 2.0.1
+ * Axon Neural Network Compiler Version: 2.1.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -61,31 +61,32 @@ const static struct {
 
 
 NRF_AXON_CMD_BUFFER_ALIGN
-const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ad[159] = {
-// segment 0,length 157,Axon NN
-0x1fff009d,0x000000a0,
+const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ad[179] = {
+// segment 0,length 177,Axon NN
+0x1fff00b1,0x000000b4,
 0x02000080,0x00010280,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00330280,
 0x02000090,0x00800280,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l00_weights,0x00330001,
 0x050000a0,0x00010080,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l00_biasp,0x00050200,0x00010080,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00030080,
 0x000000bc,0x00000000,
-0x040000c8,0x00000000,0x00000000,0x03010000,0x00011703,0x00000205,
+0x040000c8,0x00000000,0x00000000,0x03010000,0x00011603,0x00000205,
 0x01000180,0x00000003,0x00000000,
-0x010001a4,0x00000000,0x000061a2,
-0x010001c8,0xc0000000,0xc0000000,
+0x010001a4,0x00000000,0x000030d1,
+0x010001c8,0xe0000000,0xe0000000,
 0x000000f0,0x00000100,
 0x00000080,0x00010080,
 0x00000088,0x00330080,
 0x01000090,0x00800080,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l01_weights,
 0x000000a4,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l01_biasp,
-0x000001a8,0x0002afea,
+0x000001a8,0x000157f5,
 0x000000f0,0x00000100,
 0x00000094,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l02_weights,
 0x000000a4,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l02_biasp,
-0x000001a8,0x0011a87e,
+0x000001a8,0x0008d43f,
 0x000000f0,0x00000100,
 0x00000094,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l03_weights,
 0x000000a4,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l03_biasp,
-0x000001a8,0x00055d1f,
+0x00000160,0x00011703,
+0x02000168,0x00055d1f,0xc0000000,0xc0000000,
 0x000000f0,0x00000100,
 0x01000090,0x00080080,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l04_weights,
 0x030000a0,0x00010008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l04_biasp,0x00050020,0x00010008,
@@ -97,27 +98,31 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ad[159] = {
 0x01000090,0x00800008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l05_weights,
 0x030000a0,0x00010080,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l05_biasp,0x00050200,0x00010080,
 0x000000b4,0x00030080,
-0x000001a8,0x0002afb6,
+0x00000160,0x00011603,
+0x02000168,0x000157db,0xe0000000,0xe0000000,
 0x000000f0,0x00000100,
 0x00000080,0x00010080,
 0x00000088,0x00330080,
 0x01000090,0x00800080,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l06_weights,
 0x000000a4,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l06_biasp,
-0x000001a8,0x0002735c,
+0x00000160,0x00011503,
+0x02000168,0x00009cd7,0xf0000000,0xf0000000,
 0x000000f0,0x00000100,
 0x00000094,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l07_weights,
 0x000000a4,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l07_biasp,
-0x000001a8,0x0001db7e,
+0x00000160,0x00011603,
+0x02000168,0x0000edbf,0xe0000000,0xe0000000,
 0x000000f0,0x00000100,
 0x00000094,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l08_weights,
 0x000000a4,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l08_biasp,
-0x000001a8,0x000107ac,
+0x00000160,0x00011503,
+0x02000168,0x000041eb,0xf0000000,0xf0000000,
 0x000000f0,0x00000100,
 0x01000090,0x02000080,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l09_weights,
 0x050000a0,0x00010200,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ad.l09_biasp,0x00050800,0x00010200,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x80),0x00050800,
-0x000000d4,0x00010d05,
+0x000000d4,0x00011205,
 0x01000180,0x00000002,0x80000000,
-0x000001a8,0x0007f184,
+0x000001a8,0x7f183a80,
 0x000001cc,0x00000000,
 0x000000f0,0x00000100,
 0x01000090,0x00800080,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)(axon_model_const_tinyml_ad.l09_weights+0x10000),
@@ -126,6 +131,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ad[159] = {
 };
 #define NRF_AXON_MODEL_TINYML_AD_INPUT_VECTOR_CNT 1
 NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ad_input_vector_list[NRF_AXON_MODEL_TINYML_AD_INPUT_VECTOR_CNT];
+#define TINYML_AD_INPUT_1_INPUT_NDX 0
 const nrf_axon_nn_compiled_model_input_s tinyml_ad_inputs[] = {
   {/* 0 */
     .ptr = (int8_t*)nrf_axon_interlayer_buffer,
@@ -136,10 +142,10 @@ const nrf_axon_nn_compiled_model_input_s tinyml_ad_inputs[] = {
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .quant_mult = 1340838,
+    .quant_mult = 670419,
     .node_id = -1,
     .stride = 640,
-    .quant_round = 19,
+    .quant_round = 18,
     .quant_zp = 89,
   }, /* 0 */
 }; /* inputs */
@@ -149,6 +155,7 @@ const nrf_axon_nn_compiled_model_input_s tinyml_ad_inputs[] = {
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
 NRF_AXON_MODEL_APP_STORAGE uint32_t tinyml_ad_packed_output_buf[NRF_AXON_MODEL_TINYML_AD_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
+#define TINYML_AD_IDENTITY_OUTPUT_NDX 0
 const nrf_axon_compiled_model_output_s tinyml_ad_outputs[] = {
   {
     .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x80),
@@ -161,15 +168,15 @@ const nrf_axon_compiled_model_output_s tinyml_ad_outputs[] = {
       .batch_cnt = 1,
       .byte_width = 4,
     },
-    .dequant_mult = 536870912,
+    .dequant_mult = 1,
     .node_id = 9,
-    .dequant_round = 29,
+    .dequant_round = 24,
     .dequant_zp = 0,
     .stride = 2560,
   },
 };
 const nrf_axon_nn_compiled_model_s model_tinyml_ad = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020100,
     .model_name = "tinyml_ad",
     .labels = NULL,
     .inputs = tinyml_ad_inputs,
@@ -182,7 +189,7 @@ const nrf_axon_nn_compiled_model_s model_tinyml_ad = {
 
     .model_const_ptr = &axon_model_const_tinyml_ad,
     .model_const_size = sizeof(axon_model_const_tinyml_ad),
-    .cmd_buffer_len = 159,
+    .cmd_buffer_len = 179,
     .persistent_vars = {
       .count = 0,
     },
