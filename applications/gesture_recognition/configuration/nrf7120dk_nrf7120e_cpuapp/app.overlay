@@ -9,6 +9,11 @@
  * application can use its PWM LED effects instead of the GPIO fallback.
  */
 / {
+	/* Power measurement trace line, used with CONFIG_INFERENCE_GPIO_TRACE. */
+	zephyr,user {
+		infer-trace-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+	};
+
 	aliases {
 		pwm-led0 = &pwm_led0;
 		pwm-led1 = &pwm_led1;

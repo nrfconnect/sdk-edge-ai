@@ -24,3 +24,13 @@ tests:
     integration_platforms:
       - nrf54lm20dk/nrf54lm20b/cpuapp
       - nrf7120dk/nrf7120e/cpuapp
+
+  applications.person_detection.power_measurement.zdebug:
+    extra_args:
+      - EXTRA_CONF_FILE="power_measurement.conf"
+    platform_allow:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp
+    integration_platforms:
+      - nrf54lm20dk/nrf54lm20b/cpuapp
+      - nrf7120dk/nrf7120e/cpuapp

@@ -14,6 +14,7 @@
 #include <nrf_edgeai/rt/nrf_edgeai_runtime_aux.h>
 
 #include "../dmic.h"
+#include "../inference_trace.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "wakeword.h"
 
@@ -118,7 +119,9 @@ int ww_process(uint8_t *const audio_buffer, const uint16_t num_samples, bool *co
 	}
 #endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_WW) */
 
+	inference_trace_set(INFERENCE_TRACE_WW, true);
 	err = nrf_edgeai_run_inference(ww_model);
+	inference_trace_set(INFERENCE_TRACE_WW, false);
 	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
 		/* Skip output extraction, not enough data. */
 		return -EBUSY;

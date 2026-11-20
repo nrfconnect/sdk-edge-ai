@@ -14,6 +14,7 @@
 #include <nrf_edgeai/rt/nrf_edgeai_runtime_aux.h>
 
 #include "../dmic.h"
+#include "../inference_trace.h"
 #include "kws.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model.h"
 #include "nrf_edgeai_generated/nrf_edgeai_user_model_labels.h"
@@ -170,7 +171,9 @@ int kws_process(uint8_t *const audio_buffer, const uint16_t num_samples,
 	}
 #endif /* IS_ENABLED(CONFIG_MODELS_OBSERVABILITY_KWS) */
 
+	inference_trace_set(INFERENCE_TRACE_KWS, true);
 	err = nrf_edgeai_run_inference(kws_model);
+	inference_trace_set(INFERENCE_TRACE_KWS, false);
 	if (err == NRF_EDGEAI_ERR_INPROGRESS) {
 		/* Skip output extraction, not enough data. */
 		return -EBUSY;

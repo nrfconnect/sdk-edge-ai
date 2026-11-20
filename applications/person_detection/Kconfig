@@ -20,6 +20,15 @@ config IOU_THRESHOLD
 	  The Intersection-over-Union threshold for Non-Maximum Suppression (NMS).
 	  Used to eliminate overlapping bounding boxes from multiple detections of the same person.
 
+config INFERENCE_GPIO_TRACE
+	bool "GPIO trace line for power measurements"
+	select GPIO
+	help
+	  Drive the infer-trace-gpios pin from the zephyr,user node in the
+	  board overlay high while the model runs inference, for gating current
+	  measurements with a logic analyzer or the Power Profiler Kit II
+	  digital inputs.
+
 config ARDUCAM_MEGA
 	bool
 	select EXPERIMENTAL

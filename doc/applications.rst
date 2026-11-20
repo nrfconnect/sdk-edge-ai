@@ -18,3 +18,4 @@ This section provides information about various applications that can be built u
    /../applications/gesture_recognition/README.rst
    /../applications/person_detection/README.rst
    /../applications/ww_kws/README.rst
+   applications/power_measurements

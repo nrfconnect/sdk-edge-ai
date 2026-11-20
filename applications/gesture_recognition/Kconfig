@@ -16,6 +16,15 @@ config LED_NOTIFICATION_BLINK
 config DATA_COLLECTION_MODE
 	bool "Enable Data Collection Mode (no inference run)"
 
+config INFERENCE_GPIO_TRACE
+	bool "GPIO trace line for power measurements"
+	select GPIO
+	help
+	  Drive the infer-trace-gpios pin from the zephyr,user node in the
+	  board overlay high while the model runs inference, for gating current
+	  measurements with a logic analyzer or the Power Profiler Kit II
+	  digital inputs.
+
 choice NRF_EDGEAI_GESTURE_RECOGNITION_MODEL
 	prompt "Edge AI model backend"
 	default NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON if SOC_NRF54LM20B || SOC_NRF7120E
