@@ -6,7 +6,7 @@ Sphinx extension that:
 
 1. Provides helper functions used by ``conf.py`` to compute version strings
    and read them from the west manifest (``get_manifest_revision``,
-   ``strip_v``).
+   ``strip_v``, ``get_intersphinx_ncs_docs_version``).
 
 2. Pre-expands ``|name|`` substitution markers in RST source *before*
    docutils parses it (including inside ``code-block`` /
@@ -55,7 +55,9 @@ Copyright (c) 2026 Nordic Semiconductor ASA
 SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 """
 
+import json
 import re
+import subprocess
 from pathlib import Path
 
 
@@ -134,6 +136,85 @@ def get_manifest_revision(manifest, name: str) -> str:
 def strip_v(rev: str) -> str:
     """Strip a leading ``v`` from *rev* (e.g. ``"v3.3.0"`` → ``"3.3.0"``)."""
     return rev[1:] if rev.startswith("v") else rev
+
+
+_MANIFEST_VERSION_RE = re.compile(r"^v?\d+\.\d+\.\d+")
+_GIT_SHA_RE = re.compile(r"^[0-9a-f]{7,40}$", re.IGNORECASE)
+
+
+def _is_published_doc_bundle(version: str) -> bool:
+    """True if *version* has a hosted doc bundle (excludes development placeholders)."""
+    return not version.endswith(".99")
+
+
+def load_published_ncs_doc_versions(nrf_base: Path) -> set[str]:
+    """Return NCS doc bundle IDs listed in the checked-out sdk-nrf ``versions.json``."""
+    versions_file = nrf_base / "doc" / "versions.json"
+    if not versions_file.is_file():
+        raise RuntimeError(
+            f"Missing {versions_file}; cannot resolve hosted NCS doc version."
+        )
+    with versions_file.open(encoding="utf-8") as f:
+        versions = json.load(f)
+    return {
+        v for v in versions
+        if isinstance(v, str) and _is_published_doc_bundle(v)
+    }
+
+
+def _list_merged_version_tags(nrf_base: Path) -> list[str]:
+    """Git tags reachable from ``HEAD``, highest version first."""
+    try:
+        out = subprocess.check_output(
+            [
+                "git",
+                "-C",
+                str(nrf_base),
+                "tag",
+                "-l",
+                "v*",
+                "--merged",
+                "HEAD",
+                "--sort=-v:refname",
+            ],
+            text=True,
+            stderr=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError as err:
+        raise RuntimeError(
+            f"Could not list git tags under {nrf_base}: {err.stderr or err}"
+        ) from err
+    return [tag for tag in out.splitlines() if tag.strip()]
+
+
+def get_intersphinx_ncs_docs_version(
+    manifest_revision: str, nrf_base: Path
+) -> str:
+    """Hosted NCS doc bundle version to use for Intersphinx inventories.
+
+    When ``west.yml`` pins sdk-nrf to a tag, that tag is used.  When it pins a
+    commit SHA, this picks the newest git tag on that commit's history whose ID
+    appears in sdk-nrf's ``doc/versions.json`` (i.e. a bundle actually
+    published on nrfconnectdocs), not the globally advertised ``latest``.
+    """
+    published = load_published_ncs_doc_versions(nrf_base)
+
+    if not _GIT_SHA_RE.match(manifest_revision):
+        manifest_ver = strip_v(manifest_revision)
+        if manifest_ver in published or _MANIFEST_VERSION_RE.match(manifest_revision):
+            return manifest_ver
+
+    for tag in _list_merged_version_tags(nrf_base):
+        ver = strip_v(tag)
+        if ver in published:
+            return ver
+
+    raise RuntimeError(
+        "Could not determine hosted NCS doc version for west nrf revision "
+        f"{manifest_revision!r}: no merged v* tag matches sdk-nrf "
+        "doc/versions.json (the sdk-nrf checkout may need fetched tags after "
+        "a shallow west update)."
+    )
 
 
 # ---------------------------------------------------------------------------
