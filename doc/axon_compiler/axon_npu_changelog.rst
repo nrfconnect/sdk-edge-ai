@@ -17,6 +17,28 @@ Changelog
 
 See the list of changes for a specific release of the Axon NPU software.
 
+Release 2.1.0  17 Nov 2026
+===========================
+
+* Added:
+
+  * Compiler release v2.1.0.
+  * Support for up to 100 inputs to a model.
+  * Experimnental support for the 16bit activation with 8bit weights quantization.
+  * Pre-processor macro index labels for model output indices.
+
+* Updated:
+
+  * Order of model outputs for multi-output models is reversed, now matches the order from the source .tflite file.
+  * int32 output models have optimized radix to maximize precision.
+    Dequantization parameters are changed accordingly.
+  * Model scaling values have been minimized. There is  no effect on the model output, but the compiled model object code will change.
+
+* Fixed:
+
+  * int32 outputs had dequantiztion values that resulted in no change to the value (multiply by 1). Deqauntization values now reflect the radix of the output.
+  * Compiler log reported a command buffer size that was 2x bigger than the actual command buffer size.
+
 Release 2.0.1  21 Sep 2026
 ==========================
 
