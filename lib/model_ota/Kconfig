@@ -1,0 +1,27 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig MODEL_OTA
+	bool "Model OTA [EXPERIMENTAL]"
+	select EXPERIMENTAL
+	help
+	  Load models from model images placed in a memory-mapped model partition, so a model can be
+	  updated without updating the firmware.
+
+if MODEL_OTA
+
+config MODEL_OTA_AXON
+	bool "Axon model images"
+	default y
+	depends on NRF_AXON
+	help
+	  Load compiled Axon models from model images.
+
+module = MODEL_OTA
+module-str = Model OTA
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # MODEL_OTA
