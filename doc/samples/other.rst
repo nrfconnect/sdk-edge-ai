@@ -11,3 +11,4 @@ They support Edge AI development workflows outside the existing sample groups.
    :caption: Subpages
 
    /../samples/data_forwarder/README.rst
+   /../samples/model_observability/README.rst
