@@ -1,0 +1,22 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Model Observability sample"
+
+config APP_FEED_INTERVAL_MS
+	int "Interval between probability vectors (ms)"
+	default 500
+	range 1 2000
+	help
+	  Delay after each predefined probability vector fed to the
+	  observability metrics, standing in for the inference period of a
+	  real model. A whole scenario must be fed within one
+	  CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC interval,
+	  which is checked at build time.
+
+endmenu
+
+source "Kconfig.zephyr"
