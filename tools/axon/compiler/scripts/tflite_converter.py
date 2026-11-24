@@ -3,24 +3,25 @@ Copyright (c) 2026 Nordic Semiconductor
 
 SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 """
-
+import os
 import logging
 import numpy as np
 import tensorflow as tf
 import utility.util as util
 
 
-def get_tflite_model_ip_shape(tflite_path):
+def get_tflite_model_ip_shapes(tflite_path):
     """
     get the model input shape as a shape array
     """
+    input_shapes = []
     interpreter = tf.lite.Interpreter(model_path=tflite_path)
     interpreter.allocate_tensors()
     # Evaluate the TFLite model using "test" dataset.
-    input_index = interpreter.get_input_details()[0]["index"]
-    # find the expected shape of the input test vector here
-    input_shape = interpreter.get_tensor_details()[input_index]['shape']
-    return input_shape
+    for inputs in interpreter.get_input_details():
+        # find the expected shape of the input test vector here
+        input_shapes.append(inputs['shape'])
+    return input_shapes
 
 # Conversion of keras file to tflite file:
 
@@ -138,7 +139,7 @@ def Test_TFliteModel(Tflite_dir, x_testQ, x_test, y_test, keras_file):
     return acc_float, acc_tflite
 
 
-def test_tflite_model(tflite_path, quantized_x_test, y_test=None, classification_model=True, get_results=False):
+def get_tflite_model_test_results(tflite_path, quantized_x_test, y_test=None, classification_model=True, get_results=False, tflite_interpreter=None):
     # logger = logging.getLogger(__name__)
     """
     8_bit quantization for float input dataset, using scale and zero points form tflite.
@@ -159,24 +160,43 @@ def test_tflite_model(tflite_path, quantized_x_test, y_test=None, classification
     returns the accuracy of the float and tflite model.
 
     """
-    # first we quantize the input dataset.
-    if quantized_x_test.dtype != np.int8:
-        quantized_x_test = quantize_test_dataset(tflite_path, quantized_x_test)
     # Test the accuracy of fixed model:
-    interpreter = tf.lite.Interpreter(model_path=tflite_path)
-    interpreter.allocate_tensors()
-    # Evaluate the TFLite model using "test" dataset.
-    input_index = interpreter.get_input_details()[0]["index"]
+    if tflite_interpreter == None:
+        interpreter = tf.lite.Interpreter(model_path=tflite_path)
+        interpreter.allocate_tensors()
+    else:
+        interpreter = tflite_interpreter
+    input_details = interpreter.get_input_details()
     output_index = interpreter.get_output_details()[0]["index"]
 
+    # Accept legacy single ndarray or list per TFLite input order
+    if isinstance(quantized_x_test, np.ndarray):
+        x_list = [quantized_x_test]
+    else:
+        x_list = quantized_x_test
+
+    data_q = []
+    for ndx, model_inputs in enumerate(input_details):
+        arr = np.asarray(x_list[ndx])
+        ip_dtype = model_inputs["dtype"]
+        if arr.dtype != ip_dtype:
+            if ip_dtype in (np.int8, np.uint8):
+                scale = model_inputs["quantization_parameters"]["scales"][0]
+                zeropoints = model_inputs["quantization_parameters"]["zero_points"][0]
+                arr = ((arr / scale) + zeropoints).astype(ip_dtype)
+            else:
+                arr = arr.astype(ip_dtype)
+        data_q.append(arr)
+
     # Run predictions on every sample in the "test" dataset.
+    num_samples = int(data_q[0].shape[0])
     prediction_results = []
     prediction_digits = []
-    for test_ in quantized_x_test:
-        # test_ = np.expand_dims(test_, axis=0)
-        test_ = util.check_input_shape_for_inference(
-            test_, interpreter.get_input_details()[0]['shape'])
-        interpreter.set_tensor(input_index, test_)
+    for n in range(num_samples):
+        for ndx, model_inputs in enumerate(input_details):
+            test_ = util.check_input_shape_for_inference(
+                data_q[ndx][n], model_inputs['shape'])
+            interpreter.set_tensor(model_inputs["index"], test_)
 
         # Run inference.
         interpreter.invoke()
@@ -248,7 +268,46 @@ def test_scaled_model_on_simulator(tflite_model_path, x_test, y_test, simulator_
     return accuracy
 
 
-def test_floating_point_model(keras_model_path, x_test, y_test=None, classification_model=True, get_results=False):
+def is_keras_model_path(value):
+    """True if value looks like a filesystem path to load, not an in-memory model."""
+    if value is None or value == "":
+        return False
+    return isinstance(value, (str, os.PathLike))
+
+
+def is_loaded_keras_model(value):
+    """True if value is already a Keras model instance."""
+    if value is None:
+        return False
+    if isinstance(value, (str, bytes, os.PathLike)):
+        return False
+    return isinstance(value, tf.keras.Model)
+
+
+def load_keras_model_if_needed(keras_model_or_path):
+    """
+    Returns a loaded tf.keras.Model.
+    - Already loaded -> return as-is
+    - str / Path -> load from disk
+    """
+    if is_loaded_keras_model(keras_model_or_path):
+        return keras_model_or_path
+    if not is_keras_model_path(keras_model_or_path):
+        raise TypeError(
+            f"Expected Keras model or path, got {type(keras_model_or_path)!r}"
+        )
+    path = os.fspath(keras_model_or_path)
+    if path.endswith((".h5", ".keras")):
+        return tf.keras.models.load_model(path)
+    if os.path.isdir(path):
+        # SavedModel folder (.pb + variables)
+        return tf.keras.models.load_model(path)
+    raise ValueError(
+        f"Keras path is not .h5, .keras, or an existing directory: {path!r}"
+    )
+
+
+def test_floating_point_model(keras_model_or_path, x_test, y_test=None, classification_model=True, get_results=False):
     """
     tests the floating point model.
     returns the accuracy of the model if y_test is provided and it is a classification model,
@@ -256,8 +315,17 @@ def test_floating_point_model(keras_model_path, x_test, y_test=None, classificat
     presiction results
     prediction_indices (if a classification model)
     """
-    model = tf.keras.models.load_model(keras_model_path)
-    prediction_results = model.predict(x_test, verbose=0)
+    # check here if the keras_model_path is a variable, if not it must be the loaded model already
+
+    model = load_keras_model_if_needed(keras_model_or_path)
+
+    if isinstance(x_test, np.ndarray):
+        x_test = [x_test]
+    assert len(x_test) == len(model.inputs), (
+        f"floating point input data and test data lengths do not match, expected {len(model.inputs)} input array(s), got {len(x_test)}")
+    # Keras: one tensor for single-input, list of tensors for multi-input
+    x_for_predict = x_test[0] if len(model.inputs) == 1 else list(x_test)
+    prediction_results = model.predict(x_for_predict, verbose=0)
     prediction_indexes = []
     if y_test is None:
         if (get_results):
@@ -276,16 +344,118 @@ def test_floating_point_model(keras_model_path, x_test, y_test=None, classificat
     return acc_float
 
 
-def quantize_test_dataset(tflite_model_path, x_test):
+def quantize_test_dataset(tflite_model_path, x_test, input_index=0, tflite_interpreter=None):
     # first we quantize the input dataset, save it in a text file which can be given as an input to the simulator exe
     # logger = logging.getLogger(__name__)
-    interpreter = tf.lite.Interpreter(model_path=tflite_model_path)
-    interpreter.allocate_tensors()
-    input_details = interpreter.get_input_details()
-    if input_details[0]['dtype'] == np.int8:
-        scale = input_details[0]['quantization_parameters']["scales"][0]
-        zeropoints = input_details[0]['quantization_parameters']['zero_points'][0]
+
+    if tflite_interpreter == None:
+        tflite_interpreter = tf.lite.Interpreter(model_path=tflite_model_path)
+        tflite_interpreter.allocate_tensors()
+    else:
+        if not isinstance(tflite_interpreter, tf.lite.Interpreter):
+            raise TypeError(
+                "Expected tf.lite.Interpreter; "
+                f"got {type(tflite_interpreter)!r}")
+
+    input_details = tflite_interpreter.get_input_details()
+    if input_details[input_index]['dtype'] == np.int8:
+        scale = input_details[input_index]['quantization_parameters']["scales"][0]
+        zeropoints = input_details[input_index]['quantization_parameters']['zero_points'][0]
         data_q = ((x_test/scale)+zeropoints).astype(np.int8)
     else:  # TODO the input type of the model is float and this needs extra handling
         return x_test
     return data_q
+
+
+def generate_representative_dataset(model_type, train_data, input_signatures):
+    """
+    Returns a calibration generator tailored to the specific model architecture.
+    """
+    # if model_type in ("Lstm"):
+    #     # LSTMs need more samples to properly calibrate the recurring loops
+    #     def generator():
+    #         for i in range(int(train_data.shape[0])):
+    #             image = np.expand_dims(train_data[i], axis=0)
+    #             yield [image]
+    #         # Generate more data that spans the full operational spectrum
+    #         for _ in range(200):
+    #             data = np.random.uniform(-1.0, 1.0,
+    #                                      size=(1, *train_data.shape[1:]))
+    #             yield [data.astype(np.float32)]
+    # elif model_type in ("MIMO"):
+    #     def generator():
+    #         for i in range(int(train_data[0].shape[0])):
+    #             input1 = np.expand_dims(train_data[0][i], axis=0)
+    #             input2 = np.expand_dims(train_data[1][i], axis=0)
+    #             yield [input1, input2]
+    # else:
+    #     def generator():
+    #         for i in range(int(train_data.shape[0])):
+    #             image = np.expand_dims(train_data[i], axis=0)
+    #             yield [image]
+
+    def generator():
+        num_samples = int(train_data[0].shape[0])
+        for n in range(num_samples):
+            yield {input_signatures[i]: np.expand_dims(train_data[i][n], axis=0).astype(np.float32) for i in range(len(train_data))}
+
+        if model_type in ("Lstm"):
+            for _ in range(200):
+                yield {input_signatures[i]: np.random.uniform(-1.0, 1.0,
+                                                              size=(1, *train_data[i].shape[1:])).astype(np.float32) for i in range(len(train_data))}
+    return generator
+
+
+def convert_tf_to_tflite(model_type, model, train_data, model_path="", disable_fc_chan_q=False, input_signatures=None, act_bits=8):
+    """
+    supports conversion from keras as well as saved model
+    inputs the model and the train data
+    outputs the quantized tflite model
+    """
+    # Convert to TFLite
+    if model_path.endswith(".h5") or model_path.endswith(".keras"):
+        model = tf.keras.models.load_model(model_path)
+        converter = tf.lite.TFLiteConverter.from_keras_model(model)
+    else:
+        converter = tf.lite.TFLiteConverter.from_saved_model(model_path)
+
+    # DYNAMIC CONFIGURATION GUARD
+    # Check if the active framework pointer belongs to the legacy engine
+    if tf.keras.__name__ == "tf_keras":
+        print("[CONVERTER] Legacy Keras 2 detected. Enabling resource variables pass...")
+        converter.experimental_enable_resource_variables = True
+        print("[CONVERTER] Disabling break down loop-based sequence structures into standard low-level tensor lists...")
+        converter._experimental_lower_tensor_list_ops = False
+
+    # Optional: enable optimization to encourage fusion
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    # Provide a representative dataset for calibration
+    converter.representative_dataset = generate_representative_dataset(
+        model_type, train_data, input_signatures)
+
+    # Flag to disable per-channel quantization for dense layers (for testing)
+    converter._experimental_disable_per_channel_quantization_for_dense_layers = disable_fc_chan_q
+
+    # Set quantization bits
+    if act_bits == 16:
+        converter.target_spec.supported_ops = [
+            tf.lite.OpsSet.EXPERIMENTAL_TFLITE_BUILTINS_ACTIVATIONS_INT16_WEIGHTS_INT8]
+        converter.inference_input_type = tf.int16
+        converter.inference_output_type = tf.int16
+    else:
+        converter.target_spec.supported_ops = [
+            tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        converter.inference_input_type = tf.int8  # or tf.uint8
+        converter.inference_output_type = tf.int8  # or tf.uint8
+
+    try:
+        tflite_model = converter.convert()
+    except Exception as e:
+        print(f"[CONVERTER] Error: {e}")
+        tflite_model = None
+
+    return tflite_model
+
+
+def load_keras_model(keras_model_path):
+    return tf.keras.models.load_model(keras_model_path)

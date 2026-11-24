@@ -333,7 +333,7 @@ static int run_layer_test_vector(const nrf_axon_nn_compiled_model_s *compiled_mo
  * Inner layer models are not supported.
  */
 static int run_test_vector_sync(const nrf_axon_nn_compiled_model_s *compiled_model,
-	const int8_t *packed_input, const int8_t **expected_output_list)
+	const int8_t **expected_output_list)
 {
 	/* do the inference. don't provide the input vector as it has already
 	 * been transferred to the proper location
@@ -355,8 +355,8 @@ static int run_test_vector_sync(const nrf_axon_nn_compiled_model_s *compiled_mod
 	int8_t *packed_output_ptr = compiled_model->packed_output_buf != NULL ?
 		compiled_model->packed_output_buf :
 		NULL;
-	nrf_axon_result_e result = nrf_axon_nn_model_infer_sync(compiled_model,
-		packed_input, packed_output_ptr);
+	nrf_axon_result_e result = nrf_axon_nn_model_infer_sync_multi_inputs(compiled_model,
+		packed_output_ptr);
 
 	/*
 	 * inference is complete but cannot release axon until output has either been consumed
@@ -403,7 +403,7 @@ static void test_vector_async_inference_callback(nrf_axon_result_e result, void 
  * callback. So it isn't safe to retrieve the output in the callback function.
  */
 static int run_test_vector_async(nrf_axon_nn_model_async_inference_wrapper_s *model_wrapper,
-	const int8_t *packed_input, const int8_t **expected_output_list)
+	const int8_t **expected_output_list)
 {
 	const nrf_axon_nn_compiled_model_s *compiled_model = model_wrapper->compiled_model;
 	uint32_t profiling_ticks = nrf_axon_platform_get_ticks();
@@ -421,8 +421,9 @@ static int run_test_vector_async(nrf_axon_nn_model_async_inference_wrapper_s *mo
 		compiled_model->packed_output_buf :
 		NULL;
 
-	nrf_axon_result_e result = nrf_axon_nn_model_infer_async(model_wrapper, packed_input,
-		packed_output_ptr, test_vector_async_inference_callback, NULL);
+	nrf_axon_result_e result = nrf_axon_nn_model_infer_async_multi_inputs(model_wrapper,
+		model_wrapper->compiled_model->input_vector_list, packed_output_ptr,
+		test_vector_async_inference_callback, NULL);
 
 	nrf_axon_platform_wait_for_user_event();
 
@@ -554,20 +555,21 @@ static int run_test_vectors_1_model(const nrf_axon_nn_compiled_model_s *this_ful
 	/* 1st loop. Process compiled-in full model test vectors */
 
 #if END_TO_END_INFERENCE_ENABLED
-	/* Will alternate between async and sync inference,
+	/*
+	 * Will alternate between async and sync inference,
 	 * just to exercise both paths in this test.
 	 */
 	bool use_async_inference = false;
 	const int8_t **this_model_expected_outputs =
 		test_vectors->full_model_expected_output_vectors;
 	for (int vector_ndx = 0; vector_ndx < test_vectors->full_model_vector_count;
-		vector_ndx++, use_async_inference = !use_async_inference) {
+		vector_ndx += this_full_model->input_cnt,
+		use_async_inference = !use_async_inference) {
 		nrf_axon_platform_printf("\r\nTEST:\t%s\tSTART CASE NO\t%d\n",
 			test_vectors->test_name, *test_case_ndx);
 		nrf_axon_platform_printf("Test inference %s vector %d FULL MODEL %s mode\n",
 			this_full_model->model_name, vector_ndx,
 			use_async_inference ? "async" : "sync");
-		const int8_t *input_ptr = test_vectors->full_model_input_vectors[vector_ndx];
 
 #if NRF_AXON_SIMULATION
 		if (vector_ndx == 0) {
@@ -578,12 +580,16 @@ static int run_test_vectors_1_model(const nrf_axon_nn_compiled_model_s *this_ful
 		}
 #endif
 
+		memcpy(this_full_model->input_vector_list,
+			&test_vectors->full_model_input_vectors[vector_ndx],
+			this_full_model->input_cnt * sizeof(void *));
+
 		if (use_async_inference) {
-			result = run_test_vector_async(&the_model_wrapper, input_ptr,
+			result = run_test_vector_async(&the_model_wrapper,
 				this_model_expected_outputs);
 		} else {
 			result = run_test_vector_sync(the_model_wrapper.compiled_model,
-				input_ptr, this_model_expected_outputs);
+				this_model_expected_outputs);
 		}
 		this_model_expected_outputs += the_model_wrapper.compiled_model->output_cnt;
 
@@ -643,7 +649,8 @@ int nrf_axon_nn_run_test_vectors(const nrf_axon_nn_compiled_model_s **compiled_f
 	uint16_t model_ndx;
 
 	for (model_ndx = 0; model_ndx < models_count; model_ndx++) {
-		test_case_cnt += test_vectors[model_ndx].full_model_vector_count;
+		test_case_cnt += test_vectors[model_ndx].full_model_vector_count /
+			compiled_full_models[model_ndx]->input_cnt;
 		if (model_layers_count == NULL) {
 			continue;
 		}

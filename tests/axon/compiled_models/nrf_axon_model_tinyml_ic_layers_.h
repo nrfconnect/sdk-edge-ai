@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: tinyml_ic
- * Axon Neural Network Compiler Version: 2.0.1
+ * Axon Neural Network Compiler Version: 2.1.1
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -423,11 +423,8 @@ const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_0[] = {
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .quant_mult = 524288,
     .node_id = -1,
     .stride = 32,
-    .quant_round = 19,
-    .quant_zp = -128,
   }, /* 0 */
 }; /* inputs */
 
@@ -450,7 +447,7 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_0[] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_0 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_0,
@@ -917,7 +914,7 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_1[] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_1 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_1,
@@ -1375,16 +1372,16 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_2[] = {
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .dequant_mult = 27969622,
+    .dequant_mult = 13984811,
     .node_id = 2,
-    .dequant_round = 28,
+    .dequant_round = 27,
     .dequant_zp = 4,
     .stride = 32,
   },
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_2 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_2,
@@ -1472,7 +1469,7 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_3[] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_3 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_3,
@@ -1924,7 +1921,7 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_4[] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_4 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_4,
@@ -2367,16 +2364,16 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_5[] = {
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .dequant_mult = 30365108,
+    .dequant_mult = 7591277,
     .node_id = 5,
-    .dequant_round = 28,
+    .dequant_round = 26,
     .dequant_zp = 4,
     .stride = 16,
   },
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_5 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_5,
@@ -2511,16 +2508,16 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_6[] = {
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .dequant_mult = 3003888,
+    .dequant_mult = 187743,
     .node_id = 6,
-    .dequant_round = 26,
+    .dequant_round = 22,
     .dequant_zp = -17,
     .stride = 16,
   },
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_6 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_6,
@@ -2599,16 +2596,16 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_7[] = {
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .dequant_mult = 446578,
+    .dequant_mult = 223289,
     .node_id = 7,
-    .dequant_round = 23,
+    .dequant_round = 22,
     .dequant_zp = -128,
     .stride = 16,
   },
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_7 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_7,
@@ -3444,7 +3441,7 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_8[] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_8 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_8,
@@ -4271,16 +4268,16 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_9[] = {
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .dequant_mult = 116631792,
+    .dequant_mult = 7289487,
     .node_id = 9,
-    .dequant_round = 29,
+    .dequant_round = 25,
     .dequant_zp = -2,
     .stride = 8,
   },
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_9 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_9,
@@ -4412,16 +4409,16 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_10[] = {
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .dequant_mult = 2813818,
+    .dequant_mult = 1406909,
     .node_id = 10,
-    .dequant_round = 25,
+    .dequant_round = 24,
     .dequant_zp = 38,
     .stride = 8,
   },
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_10 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_10,
@@ -4509,7 +4506,7 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_11[] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_11 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_11,
@@ -4547,10 +4544,10 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_12[37] = {
 0x00000098,0x003b0040,
 0x000000a0,0x00010001,
 0x050000a8,0x00050004,0x00010001,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x1100),0x00050004,0x00000004,0x00000000,
-0x050000c4,0x00002000,0x00010000,0x01010000,0x03010000,0x00011103,0x00000004,
+0x050000c4,0x00002000,0x00010000,0x01010000,0x03010000,0x00010803,0x00000004,
 0x01000180,0x00000002,0x80000000,
-0x010001a4,0x00000000,0x00000800,
-0x000001cc,0xff000000,
+0x010001a4,0x00000000,0x00000004,
+0x000001cc,0xffff8000,
 0x000000f0,0x00000100,
 };
 NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_12[1];
@@ -4588,7 +4585,7 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_12[] = {
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_12 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_12,
@@ -4629,9 +4626,9 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_13[62] = {
 0x02000080,0x00010040,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x00330040,
 0x01000090,0x000a0040,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l13_weights,
 0x050000a0,0x0001000a,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_tinyml_ic.l13_biasp,0x00050028,0x0001000a,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),0x00050028,
-0x030000cc,0x00000000,0x03010000,0x00010d05,0x00000205,
-0x02000180,0x00000007,0xffffbf9c,0x00004064,
-0x020001a4,0x00000000,0x0001fce4,0x00000000,
+0x030000cc,0x00000000,0x03010000,0x00010b05,0x00000205,
+0x02000180,0x00000007,0xfffefe70,0x00010190,
+0x020001a4,0x00000000,0x00007f39,0x00000000,
 0x020001c8,0x80000000,0x00000000,0x7fffffff,
 0x000000f0,0x00000100,
 };
@@ -4661,16 +4658,16 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_13[] = {
       .batch_cnt = 1,
       .byte_width = 4,
     },
-    .dequant_mult = 536870912,
+    .dequant_mult = 4096,
     .node_id = 13,
-    .dequant_round = 17,
+    .dequant_round = 12,
     .dequant_zp = 0,
     .stride = 40,
   },
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_13 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_13,
@@ -4705,7 +4702,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_tinyml_ic_14[11] = {
 // segment 0,length 9,CPU(software)
 0x2fff0009,0x0000000c,
 0x00000001,
-(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_softmax,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x40000000,0x00010001,0x0002000a,0x00000004,
+(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_nn_op_extension_softmax,0x00000006,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x40),(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)nrf_axon_interlayer_buffer,0x40000000,0x00010001,0x0000000a,0x00000004,
 };
 NRF_AXON_MODEL_APP_STORAGE const int8_t *tinyml_ic_input_vector_list_14[1];
 const nrf_axon_nn_compiled_model_input_s tinyml_ic_inputs_14[] = {
@@ -4733,16 +4730,16 @@ const nrf_axon_compiled_model_output_s tinyml_ic_outputs_14[] = {
       .batch_cnt = 1,
       .byte_width = 4,
     },
-    .dequant_mult = 536870912,
+    .dequant_mult = 1,
     .node_id = 14,
-    .dequant_round = 29,
+    .dequant_round = 30,
     .dequant_zp = 0,
     .stride = 40,
   },
 };
 const nrf_axon_nn_compiled_model_layer_s model_tinyml_ic_14 = {
   .base = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020101,
     .model_name = "tinyml_ic",
     .labels = labels_tinyml_ic,
     .inputs = tinyml_ic_inputs_14,

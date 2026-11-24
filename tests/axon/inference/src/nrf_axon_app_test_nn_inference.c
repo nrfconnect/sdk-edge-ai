@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Nordic Semiconductor ASA
+ * Copyright (c) 2024-2026 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -15,9 +15,9 @@
 #include "axon/nrf_axon_stringization.h"
 
 /**
- * Set this to 0 to perform a build w/o the test vector header file to verify the build process and see
- * the image size without the test vectors included. 
- * 
+ * Set this to 0 to perform a build w/o the test vector header file to verify the build process
+ * and see the image size without the test vectors included.
+ *
  * Set this one to include the test vector header file and perform inference.
  */
 #define INCLUDE_VECTORS 1
@@ -28,22 +28,23 @@
 #define NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER 1
 /**
  * Set this to 1 to enable the bare minimum test vectors; a single end-to-end vector.
- * Minimizes the image size while still performing an infernce. 
+ * Minimizes the image size while still performing an infernce.
  * If 0, all the end-to-end test vectors in the header file will by inferenced.
  */
 #define AXON_MINIMUM_TEST_VECTORS 0
 
 /**
  * Set this to 1 to include single layer test vectors. The model will perform inference on
- * each layer separately. Single layer vectors can be large and potentially not fit in the device's memory.
+ * each layer separately. Single layer vectors can be large and potentially not fit in the
+ * device's memory.
  * The number of layers to include can be controlled by setting the start and stop layers.
  */
 #define AXON_LAYER_TEST_VECTORS (1 && INCLUDE_VECTORS)
 #define AXON_LAYER_TEST_START_LAYER 0
-#define AXON_LAYER_TEST_STOP_LAYER  1000
+#define AXON_LAYER_TEST_STOP_LAYER 1000
 
 /*
-* Create the model include header file name and structure from 
+* Create the model include header file name and structure from
 * the model name.
 */
 #define AXON_MODEL_FILE_NAME_ROOT nrf_axon_model_
@@ -53,31 +54,38 @@
 #define AXON_MODEL_LAYERS_FILE_NAME_TAIL _layers_.h
 #define AXON_MODEL_DOT_H _.h
 
-#define AXON_MODEL_FILE_NAME STRINGIZE_3_CONCAT(AXON_MODEL_FILE_NAME_ROOT, NRF_AXON_MODEL_NAME, AXON_MODEL_DOT_H)
-#define AXON_MODEL_FILE_LAYERS_NAME STRINGIZE_3_CONCAT(AXON_MODEL_LAYERS_FILE_NAME_ROOT, NRF_AXON_MODEL_NAME, AXON_MODEL_LAYERS_FILE_NAME_TAIL)
-#define AXON_MODEL_TEST_VECTORS_FILE_NAME STRINGIZE_3_CONCAT(AXON_MODEL_TEST_VECTORS_FILE_NAME_ROOT, NRF_AXON_MODEL_NAME, AXON_MODEL_TEST_VECTORS_FILE_NAME_END)
+#define AXON_MODEL_FILE_NAME \
+	STRINGIZE_3_CONCAT(AXON_MODEL_FILE_NAME_ROOT, NRF_AXON_MODEL_NAME, AXON_MODEL_DOT_H)
+#define AXON_MODEL_FILE_LAYERS_NAME STRINGIZE_3_CONCAT(AXON_MODEL_LAYERS_FILE_NAME_ROOT, \
+	NRF_AXON_MODEL_NAME, AXON_MODEL_LAYERS_FILE_NAME_TAIL)
+#define AXON_MODEL_TEST_VECTORS_FILE_NAME \
+	STRINGIZE_3_CONCAT(AXON_MODEL_TEST_VECTORS_FILE_NAME_ROOT, NRF_AXON_MODEL_NAME, \
+		AXON_MODEL_TEST_VECTORS_FILE_NAME_END)
 
-// generate structure name model_<model_name>
+/* generate structure name model_<model_name> j*/
 #define THE_REAL_MODEL_STRUCT_NAME(model_name) model_##model_name
 #define THE_MODEL_STRUCT_NAME(model_name) THE_REAL_MODEL_STRUCT_NAME(model_name)
 
-// generate structure name model_<model_name>_layer_list
+/* generate structure name model_<model_name>_layer_list */
 #define THE_REAL_MODEL_LAYERS_STRUCT_NAME(model_name) model_##model_name##_layer_list
 #define THE_MODEL_LAYERS_STRUCT_NAME(model_name) THE_REAL_MODEL_LAYERS_STRUCT_NAME(model_name)
 
-// generate structure name model_<model_name>_test_vectors
+/* generate structure name model_<model_name>_test_vectors */
 #define THE_REAL_MODEL_TEST_VECTORS_STRUCT_NAME(model_name) model_##model_name##_test_vectors
-#define THE_MODEL_TEST_VECTORS_STRUCT_NAME(model_name) THE_REAL_MODEL_TEST_VECTORS_STRUCT_NAME(model_name)
+#define THE_MODEL_TEST_VECTORS_STRUCT_NAME(model_name) \
+	THE_REAL_MODEL_TEST_VECTORS_STRUCT_NAME(model_name)
 
-// generate structure name <model_name>_input_test_vectors
+/* generate structure name <model_name>_input_test_vectors */
 #define THE_REAL_TEST_INPUT_VECTORS_LIST_NAME(model_name) model_name##_input_test_vectors
-#define THE_TEST_INPUT_VECTORS_LIST_NAME(model_name) THE_REAL_TEST_INPUT_VECTORS_LIST_NAME(model_name)
+#define THE_TEST_INPUT_VECTORS_LIST_NAME(model_name) \
+	THE_REAL_TEST_INPUT_VECTORS_LIST_NAME(model_name)
 
-// generate structure name <model_name>_expected_output_test_vectors
+/* generate structure name <model_name>_expected_output_test_vectors */
 #define THE_REAL_expected_output_vectors_NAME(model_name) model_name##_expected_output_vectors
-#define THE_expected_output_vectors_NAME(model_name) THE_REAL_expected_output_vectors_NAME(model_name)
+#define THE_expected_output_vectors_NAME(model_name) \
+	THE_REAL_expected_output_vectors_NAME(model_name)
 
-// generate structure name <model_name>_layer_vectors
+/* generate structure name <model_name>_layer_vectors */
 #define THE_REAL_layer_vectors_NAME(model_name) model_name##_layer_expected_output_vectors
 #define THE_layer_vectors_NAME(model_name) THE_REAL_layer_vectors_NAME(model_name)
 
@@ -91,60 +99,69 @@ nrf_axon_nn_model_test_info_s the_test_vectors[] = {0};
 #include AXON_MODEL_FILE_NAME
 #if INCLUDE_VECTORS
 # include AXON_MODEL_TEST_VECTORS_FILE_NAME
-# if AXON_LAYER_TEST_VECTORS 
+# if AXON_LAYER_TEST_VECTORS
 #   include AXON_MODEL_FILE_LAYERS_NAME
 # endif
 #endif
-int AxonnnModelPrepare() {
-  the_full_model_static_info[0] = &THE_MODEL_STRUCT_NAME(NRF_AXON_MODEL_NAME);
+static void model_prepare(void)
+{
+	the_full_model_static_info[0] = &THE_MODEL_STRUCT_NAME(NRF_AXON_MODEL_NAME);
+
 #if INCLUDE_VECTORS
-  nrf_axon_nn_populate_model_test_info_s(
-    &the_test_vectors[0], // structure to populate
-    STRINGIZE_2_CONCAT(THE_TEST_NAME_ROOT, NRF_AXON_MODEL_NAME),
-    (const int8_t**)THE_TEST_INPUT_VECTORS_LIST_NAME(NRF_AXON_MODEL_NAME),  // test vectors for full model
-    (const int8_t**)THE_expected_output_vectors_NAME(NRF_AXON_MODEL_NAME), // expected output vectors, one for each input vector (full model)
-    sizeof(THE_TEST_INPUT_VECTORS_LIST_NAME(NRF_AXON_MODEL_NAME))/sizeof(*THE_TEST_INPUT_VECTORS_LIST_NAME(NRF_AXON_MODEL_NAME)), // number of full model test/expected_output vector pairs.
-    (const int8_t**)THE_layer_vectors_NAME(NRF_AXON_MODEL_NAME),  // individual layer outputs. for each n, layer_models[n] input is layer_vectors[n-1] (except n=0, input is full_model_input_vectors[0]), expected output is layer_vectors[n]
-    sizeof(THE_layer_vectors_NAME(NRF_AXON_MODEL_NAME))/sizeof(*THE_layer_vectors_NAME(NRF_AXON_MODEL_NAME))); // number of elements in layer_vectors
-# if AXON_LAYER_TEST_VECTORS 
-  the_model_layers_static_info[0] = THE_MODEL_LAYERS_STRUCT_NAME(NRF_AXON_MODEL_NAME);
-  model_layers_count[0] = sizeof(THE_MODEL_LAYERS_STRUCT_NAME(NRF_AXON_MODEL_NAME)) / sizeof(*THE_MODEL_LAYERS_STRUCT_NAME(NRF_AXON_MODEL_NAME));
+	nrf_axon_nn_populate_model_test_info_s(
+		&the_test_vectors[0], /* structure to populate */
+		STRINGIZE_2_CONCAT(THE_TEST_NAME_ROOT, NRF_AXON_MODEL_NAME),
+		/* test vectors for full model */
+		(const int8_t **)THE_TEST_INPUT_VECTORS_LIST_NAME(NRF_AXON_MODEL_NAME),
+		/* expected output vectors, one for each input vector (full model) */
+		(const int8_t **)THE_expected_output_vectors_NAME(NRF_AXON_MODEL_NAME),
+		/*
+		 * number of full model test vectors, each inference may use multiple,
+		 * so not the same as # of infferences.
+		 */
+		sizeof(THE_TEST_INPUT_VECTORS_LIST_NAME(NRF_AXON_MODEL_NAME)) /
+			sizeof(*THE_TEST_INPUT_VECTORS_LIST_NAME(NRF_AXON_MODEL_NAME)),
+		/*
+		 * individual layer outputs. for each n, layer_models[n] input is
+		 * layer_vectors[n-1] (except n=0, input is full_model_input_vectors[0]),
+		 * expected output is layer_vectors[n]
+		 */
+		(const int8_t **)THE_layer_vectors_NAME(NRF_AXON_MODEL_NAME),
+		/* number of elements in layer_vectors */
+		sizeof(THE_layer_vectors_NAME(NRF_AXON_MODEL_NAME)) /
+			sizeof(*THE_layer_vectors_NAME(NRF_AXON_MODEL_NAME)));
+# if AXON_LAYER_TEST_VECTORS
+	the_model_layers_static_info[0] = THE_MODEL_LAYERS_STRUCT_NAME(NRF_AXON_MODEL_NAME);
+	model_layers_count[0] = sizeof(THE_MODEL_LAYERS_STRUCT_NAME(NRF_AXON_MODEL_NAME)) /
+		sizeof(*THE_MODEL_LAYERS_STRUCT_NAME(NRF_AXON_MODEL_NAME));
 # endif
 #endif
-
-  return 0;
 }
-
 
 void base_inference_main(void)
 {
-  nrf_axon_platform_printf("Start Platform!\n");
+	nrf_axon_platform_printf("Start Platform!\n");
 
-  nrf_axon_result_e result = nrf_axon_platform_init();
-  
-  if (result != NRF_AXON_RESULT_SUCCESS) {
-    nrf_axon_platform_printf("axon_platform_init failed!\n");
-  }
+	nrf_axon_result_e result = nrf_axon_platform_init();
 
-  nrf_axon_platform_printf("Prepare and run Axon!\n");
+	if (result != NRF_AXON_RESULT_SUCCESS) {
+		nrf_axon_platform_printf("axon_platform_init failed!\n");
+	}
 
-  if (0 > (result = AxonnnModelPrepare())) {
-    return; // failed!
-  } //AxonnnPrepare();
+	nrf_axon_platform_printf("Prepare and run Axon!\n");
 
-  // run the internal test vectors
-  nrf_axon_nn_run_test_vectors(the_full_model_static_info,
-      NULL, 1, 
-      the_model_layers_static_info,
-      model_layers_count,
-      the_test_vectors); 
+	model_prepare();
 
-  nrf_axon_platform_printf("test_nn_inference complete!\n");
-  nrf_axon_platform_close();
+	/* run the internal test vectors */
+	nrf_axon_nn_run_test_vectors(the_full_model_static_info, NULL, 1,
+		the_model_layers_static_info, model_layers_count, the_test_vectors);
+
+	nrf_axon_platform_printf("test_nn_inference complete!\n");
+	nrf_axon_platform_close();
 }
 #if (NOT_A_ZEPHYR_BUILD)
-int main(int argc, char* argv[]) 
-{ 
-  base_inference_main();
+int main(int argc, char *argv[])
+{
+	base_inference_main();
 }
 #endif
