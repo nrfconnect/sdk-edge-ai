@@ -6,8 +6,8 @@
 
 The contract hash itself is *not* computed here. It folds sizeof() of the runtime structs, which
 neither the preprocessor nor a host reimplementation can evaluate, so the build reads the
-compiler's own value out of a probe object instead (elf_const.py,
-lib/model_ota/src/model_ota_contract_probe.c). What is left are the two things the preprocessor
+compiler's own value out of each slot's wired loader object instead (elf_const.py,
+MODEL_OTA_CONTRACT_HASH_EXPORT in lib/model_ota/src/model_ota_stub_macros.h). What is left are the two things the preprocessor
 genuinely cannot do, both of which hash a *string*:
 
   - solution_id_hash(), passed to the stubs as MODEL_OTA_SOLUTION_ID_HASH and mixed into the

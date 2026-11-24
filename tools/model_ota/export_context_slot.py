@@ -6,9 +6,9 @@
 #
 """Export build-time slot metadata for model_ota_context.json.
 
-The contract hash is the compiler's own value, read back out of the slot's contract probe (see
-lib/model_ota/src/model_ota_contract_probe.c). With --config, Axon slots also publish caps from
-the generated private axon_config.h.
+The contract hash is the compiler's own value, read back out of the slot's wired loader object
+(see MODEL_OTA_CONTRACT_HASH_EXPORT in lib/model_ota/src/model_ota_stub_macros.h). With --config,
+Axon slots also publish caps from the generated private axon_config.h.
 """
 from __future__ import annotations
 
@@ -17,20 +17,21 @@ import json
 import sys
 from pathlib import Path
 
-from elf_const import contract_hash_from_probe
+from elf_const import contract_hash_from_object
 from model_contract import config_define
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--contract-probe", type=Path, required=True)
+    parser.add_argument("--wired-obj", type=Path, required=True,
+                        help="the slot's compiled wired loader object")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--config", type=Path,
                         help="Axon private axon_config.h (optional)")
     args = parser.parse_args(argv)
 
     try:
-        contract_hash = contract_hash_from_probe(args.contract_probe)
+        contract_hash = contract_hash_from_object(args.wired_obj)
     except (ImportError, OSError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc
 

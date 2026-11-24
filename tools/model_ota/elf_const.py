@@ -7,10 +7,10 @@
 The contract hash (lib/model_ota/include/model_ota/model_contract.h) mixes sizeof() of the runtime
 structs, and
 neither the preprocessor nor a host reimplementation can fold that: only the compiler knows the
-target layout. So the build compiles lib/model_ota/src/model_ota_contract_probe.c with the
-application's own flags and the host reads the finished word out of that object, which is what
-keeps model_ota_context.json carrying the compiler's value rather than a second implementation of
-the hash.
+target layout. Each slot's wired loader exports the hash it checks at runtime
+(MODEL_OTA_CONTRACT_HASH_EXPORT in lib/model_ota/src/model_ota_stub_macros.h) and the host reads
+the finished word out of that object, which is what keeps model_ota_context.json carrying the
+firmware's own value rather than a second implementation of the hash.
 
 Kept apart from axon_elf.py because every flavor needs it, including Neuton, which has nothing to
 do with Axon model inspection. axon_elf.py takes its pyelftools access from here.
@@ -22,7 +22,7 @@ import struct
 import sys
 from pathlib import Path
 
-#: The constant model_ota_contract_probe.c defines.
+#: The constant MODEL_OTA_CONTRACT_HASH_EXPORT() defines in each wired loader object.
 CONTRACT_HASH_SYMBOL = "model_ota_contract_hash"
 
 _UNDEFINED_SECTIONS = ("SHN_UNDEF", "UND")
@@ -97,8 +97,8 @@ def read_u32(elf_path: Path, symbol: str) -> int:
     return int(struct.unpack("<I", data)[0])
 
 
-def contract_hash_from_probe(probe: Path) -> int:
-    """The contract hash the compiler folded for one model slot."""
-    if not probe.is_file():
-        raise ValueError(f"contract probe object not found: {probe}")
-    return read_u32(probe, CONTRACT_HASH_SYMBOL)
+def contract_hash_from_object(obj: Path) -> int:
+    """The contract hash the compiler folded into one slot's wired loader object."""
+    if not obj.is_file():
+        raise ValueError(f"wired loader object not found: {obj}")
+    return read_u32(obj, CONTRACT_HASH_SYMBOL)

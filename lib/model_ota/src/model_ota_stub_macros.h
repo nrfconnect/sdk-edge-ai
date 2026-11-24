@@ -42,16 +42,14 @@
  *   MODEL_OTA_PARTITION_NODELABEL and MODEL_OTA_IMAGE_LINK_BASE; defines
  *   model_ota_load_axon_<TARGET>() (declared via model_ota_axon.h).
  *
- * Contract-hash probe (every flavour, see model_ota_contract_probe() in model_ota_common.cmake):
- *   model_ota_contract_probe.c
- *   MODEL_OTA_CONTRACT_PROBE_NEUTON / _AXON / _AXON_EDGEAI - flavour selector
- *   MODEL_OTA_CONTRACT_PROBE_MODEL_SRC - basename of nrf_edgeai_user_model.c, for the two
- *   solution flavours; MODEL_OTA_IMAGE_LINK_BASE - partition flash base from dt_reg_addr()
+ * Every wired loader exports the contract hash it checks with MODEL_OTA_CONTRACT_HASH_EXPORT();
+ * tools/model_ota/export_context_slot.py reads it out of the wired object into
+ * model_ota_context.json.
  *
  * Axon partition image stub (model_ota_axon_image_stub.c / model_ota_edgeai_axon_model):
  *   MODEL_OTA_IMAGE_LINK_BASE, MODEL_OTA_AXON_HEADER, optional MODEL_OTA_EDGEAI_AXON_MODEL_SRC
  *
- * Contract hash and image_size (probe, image stubs, wired loaders): MODEL_OTA_IMAGE_LINK_BASE,
+ * Contract hash and image_size (image stubs, wired loaders): MODEL_OTA_IMAGE_LINK_BASE,
  * supplied by CMake from the same dt_reg_addr() as the partition-image link --defsym.
  *
  * Wired loaders also take MODEL_OTA_PARTITION_NODELABEL for the runtime mapped partition pointer
@@ -95,5 +93,14 @@
 	BUILD_ASSERT(MODEL_OTA_PARTITION_SIZE(label) >=                                            \
 			     MODEL_IMAGE_PAYLOAD_OFFSET + sizeof(struct model_image_header),       \
 		     STRINGIFY(label) " is too small for a model image header")
+
+/**
+ * Publish a wired loader's contract hash as the object-local constant model_ota_contract_hash
+ * (see CONTRACT_HASH_SYMBOL in tools/model_ota/elf_const.py). The hash folds sizeof() of runtime
+ * structs, so only the compiler can evaluate it; the host reads the word back out of the
+ * relocatable object, where it survives even when the firmware link garbage-collects it.
+ */
+#define MODEL_OTA_CONTRACT_HASH_EXPORT(hash)                                                       \
+	__attribute__((used)) static const uint32_t model_ota_contract_hash = (hash)
 
 #endif /* MODEL_OTA_STUB_MACROS_H_ */

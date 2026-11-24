@@ -12,8 +12,8 @@ Exit codes:
   2 — requires firmware update (model exceeds firmware caps)
 
 Also the build's own gate on the contract hash: the image carries the hash its stub folded, the
-context carries the one the slot's contract probe folded, and they are compiled as separate
-translation units, so requiring them to agree is what keeps the value released to the field equal
+context carries the one the slot's wired loader folded, and they are compiled as separate
+translation units, so requiring them to agree is what keeps the value the firmware checks equal
 to the value images actually carry. That verdict is fatal even under --report-only.
 """
 from __future__ import annotations

@@ -24,17 +24,18 @@ that cannot be expressed directly in the toolchain:
   magic/format-version, image and partition sizes, model pointers, and CRC.
 - `check_model_compat.py` - compares a model image against a `model_ota_context.json` (exit 0
   compatible, 1 incompatible, 2 requires firmware update). Also the build's gate on the contract
-  hash: the image carries the stub's value and the context the probe's, so requiring them to agree
+  hash: the image carries the stub's value and the context the wired loader's, so requiring them to agree
   is what keeps the released value equal to the one images carry. That verdict is fatal even under
   `--report-only`, which only makes the capacity verdicts a report.
 - `export_model_ota_context.py` - invoked from CMake to emit `model_ota_context.json` per app
   build (partition map, caps, contract hashes, and the device-wide Axon `axon_bindings` map read
   out of the linked `model_ota_axon_binding_table`).
 - `elf_const.py` - reads a compile-time constant back out of an object. The contract hash mixes
-  `sizeof` of the runtime structs, so only the compiler can fold it; the build compiles
-  `lib/model_ota/src/model_ota_contract_probe.c` per slot and this reads the finished word,
-  which is why no host script reimplements the hash.
-- `export_context_slot.py` - turn a slot's probe (and, for Axon, its generated config header)
+  `sizeof` of the runtime structs, so only the compiler can fold it; each slot's wired loader
+  exports the value it checks (`MODEL_OTA_CONTRACT_HASH_EXPORT()`) and this reads the finished
+  word out of the wired object, which is why no host script reimplements the hash.
+- `export_context_slot.py` - turn a slot's wired loader object (and, for Axon, its generated
+  config header)
   into the build-time half of its `model_ota_context.json` entry.
 - `model_contract.py` - the *string* hashes the preprocessor cannot do: the solution ID mixed into
   the solution contract, and the Axon binding table's symbol names. Both are 32-bit `blake2s`
@@ -172,7 +173,8 @@ nrfutil device program --firmware gear_anomaly_model_partition.hex \
 
 - Image format and loader: `lib/model_ota/include/model_ota/model_image.h`,
   `lib/model_ota/include/model_ota/model_contract.h` (the one definition of the contract hash),
-  `lib/model_ota/src/model_ota_contract_probe.c` (how the host gets its value),
+  `lib/model_ota/src/model_ota_stub_macros.h` (`MODEL_OTA_CONTRACT_HASH_EXPORT()`, how the host
+  gets its value),
   `lib/model_ota/model_image_neuton.c`, `lib/model_ota/model_image_axon.c`
 - Production flow doc: `doc/libraries/model_ota.rst`
 - Context export: `lib/model_ota/cmake/model_ota_context.cmake`

@@ -20,7 +20,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from elf_const import CONTRACT_HASH_SYMBOL, contract_hash_from_probe, read_u32
+from elf_const import CONTRACT_HASH_SYMBOL, contract_hash_from_object, read_u32
 
 CC = os.environ.get("CC") or shutil.which("cc") or shutil.which("gcc")
 
@@ -28,7 +28,7 @@ PROBE_C = """
 #include <stdint.h>
 struct runtime_thing { uint64_t a; void *b; uint8_t c; };
 #define MIX(h, k) (((uint32_t)(h) ^ (uint32_t)(k)) * 16777619u)
-const uint32_t %s = %s;
+__attribute__((used)) static const uint32_t %s = %s;
 const uint16_t model_ota_too_small = 1;
 """
 
@@ -54,17 +54,17 @@ class ProbeReadTests(unittest.TestCase):
             )
             expected = ((2166136261 ^ 12) * 16777619) & 0xFFFFFFFF
             expected = ((expected ^ 24) * 16777619) & 0xFFFFFFFF
-            self.assertEqual(contract_hash_from_probe(obj), expected)
+            self.assertEqual(contract_hash_from_object(obj), expected)
 
     def test_reads_a_zero_value(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertEqual(contract_hash_from_probe(self._probe(Path(tmp), "0u")), 0)
+            self.assertEqual(contract_hash_from_object(self._probe(Path(tmp), "0u")), 0)
 
     def test_reads_a_high_bit_value(self) -> None:
         """The constant is unsigned; the assembler spells it as a negative decimal."""
         with tempfile.TemporaryDirectory() as tmp:
             obj = self._probe(Path(tmp), "0xbfd5cb73u")
-            self.assertEqual(contract_hash_from_probe(obj), 0xBFD5CB73)
+            self.assertEqual(contract_hash_from_object(obj), 0xBFD5CB73)
 
     def test_wrong_size_symbol_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -81,7 +81,7 @@ class ProbeReadTests(unittest.TestCase):
     def test_missing_probe_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):
-                contract_hash_from_probe(Path(tmp) / "absent.o")
+                contract_hash_from_object(Path(tmp) / "absent.o")
 
 
 if __name__ == "__main__":

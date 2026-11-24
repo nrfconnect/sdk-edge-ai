@@ -102,28 +102,28 @@ function(model_ota_context_register_slot_build)
   set_property(GLOBAL APPEND PROPERTY model_ota_context_slot_build_json ${S_SLOT_JSON})
 endfunction()
 
-# Emit context_slot.json, register configure-time and build-time slot metadata.
+# Emit context_slot.json, register configure-time and build-time slot metadata. The contract hash
+# is read out of WIRED_LIB's object, the loader that checks it at runtime, so this is only called
+# for a firmware build (a released-firmware tree has no wired library and no context to export).
 #
 # model_ota_add_context_slot(TARGET <id> BACKEND <axon|neuton> PARTITION_NODELABEL <label>
-#                            NAME <str> WORK_DIR <dir> CONTRACT_PROBE <obj>
-#                            [CONFIG_HEADER <axon_config.h>] [NEURONS_CAP <n>]
-#                            OUT_SLOT_JSON <var>)
+#                            NAME <str> WORK_DIR <dir> WIRED_LIB <static-lib-target>
+#                            [CONFIG_HEADER <axon_config.h>] [NEURONS_CAP <n>])
 function(model_ota_add_context_slot)
   set(oneValueArgs
-      TARGET BACKEND PARTITION_NODELABEL NAME WORK_DIR CONTRACT_PROBE CONFIG_HEADER NEURONS_CAP
-      OUT_SLOT_JSON)
+      TARGET BACKEND PARTITION_NODELABEL NAME WORK_DIR WIRED_LIB CONFIG_HEADER NEURONS_CAP)
   cmake_parse_arguments(CS "" "${oneValueArgs}" "" ${ARGN})
 
   model_ota_check_unparsed(CS)
-  model_ota_check_required_all(CS TARGET BACKEND PARTITION_NODELABEL WORK_DIR CONTRACT_PROBE
-                               OUT_SLOT_JSON)
+  model_ota_check_required_all(CS TARGET BACKEND PARTITION_NODELABEL WORK_DIR WIRED_LIB)
   if(NOT CS_NAME)
     set(CS_NAME ${CS_TARGET})
   endif()
 
   set(_slot_json ${CS_WORK_DIR}/context_slot.json)
+  set(_wired_obj $<TARGET_OBJECTS:${CS_WIRED_LIB}>)
   set(_emit_cmd ${PYTHON_EXECUTABLE} ${MODEL_OTA_CONTEXT_SLOT_TOOL}
-               --contract-probe ${CS_CONTRACT_PROBE} --out ${_slot_json})
+               --wired-obj ${_wired_obj} --out ${_slot_json})
   if(CS_CONFIG_HEADER)
     list(APPEND _emit_cmd --config ${CS_CONFIG_HEADER})
   endif()
@@ -131,13 +131,13 @@ function(model_ota_add_context_slot)
   add_custom_command(
     OUTPUT ${_slot_json}
     COMMAND ${_emit_cmd}
-    DEPENDS ${CS_CONTRACT_PROBE} ${MODEL_OTA_CONTEXT_SLOT_TOOL} ${CS_CONFIG_HEADER}
+    DEPENDS ${CS_WIRED_LIB} ${_wired_obj} ${MODEL_OTA_CONTEXT_SLOT_TOOL} ${CS_CONFIG_HEADER}
+    COMMAND_EXPAND_LISTS
     COMMENT "Emitting OTA context slot metadata (${CS_TARGET})"
     VERBATIM)
   add_custom_target(${CS_TARGET}_contract_slot DEPENDS ${_slot_json})
 
-  model_ota_using_released_fw(_using_released_fw)
-  if(CONFIG_MODEL_OTA AND NOT _using_released_fw)
+  if(CONFIG_MODEL_OTA)
     set(_register_args
       TARGET ${CS_TARGET}
       BACKEND ${CS_BACKEND}
@@ -149,8 +149,6 @@ function(model_ota_add_context_slot)
     model_ota_context_register_slot(${_register_args})
     model_ota_context_register_slot_build(SLOT_JSON ${_slot_json})
   endif()
-
-  set(${CS_OUT_SLOT_JSON} ${_slot_json} PARENT_SCOPE)
 endfunction()
 
 function(model_ota_block_app_build)

@@ -69,24 +69,6 @@ function(model_ota_edgeai_neuton_model)
 
   model_ota_solution_id_hash(${MI_SOLUTION_ID} _solution_id_hash)
 
-  model_ota_contract_probe(
-    OUT_OBJ _contract_probe_o
-    WORK_DIR ${_work_dir}
-    FLAVOR edgeai_neuton
-    IMAGE_BASE ${_partition_addr}
-    MODEL_SRC ${MI_MODEL_SRC}
-    SOLUTION_ID_HASH ${_solution_id_hash})
-
-  model_ota_add_context_slot(
-    TARGET ${MI_TARGET}
-    BACKEND neuton
-    PARTITION_NODELABEL ${MI_PARTITION_NODELABEL}
-    NAME ${MI_NAME}
-    WORK_DIR ${_work_dir}
-    CONTRACT_PROBE ${_contract_probe_o}
-    NEURONS_CAP ${MI_NEURONS_CAP}
-    OUT_SLOT_JSON _context_slot)
-
   model_ota_using_released_fw(_using_released_fw)
 
   if(NOT _using_released_fw)
@@ -109,6 +91,15 @@ function(model_ota_edgeai_neuton_model)
         MODEL_OTA_SMP_SLOT_NAME=\"${MI_NAME}\"
         MODEL_OTA_SOLUTION_ID_HASH=${_solution_id_hash}u
       INCLUDES ${_model_dir})
+
+    model_ota_add_context_slot(
+      TARGET ${MI_TARGET}
+      BACKEND neuton
+      PARTITION_NODELABEL ${MI_PARTITION_NODELABEL}
+      NAME ${MI_NAME}
+      WORK_DIR ${_work_dir}
+      WIRED_LIB ${_wired_lib}
+      NEURONS_CAP ${MI_NEURONS_CAP})
   endif()
 
   set(_image_obj tgt_${MI_TARGET}_model_image_stub)

@@ -102,7 +102,7 @@ Contract vs binding
 
 Only *identity* invariants are hashed: values that must be equal or the image is meaningless. Every flavor starts from the same envelope — format version and the partition base the image was linked at (which ties an image to one slot, since all its pointers are absolute flash addresses).
 
-The base folded into the hash is ``MODEL_OTA_IMAGE_LINK_BASE``: CMake passes the same ``dt_reg_addr()`` literal to the contract probe, the partition-image stub, wired loaders (for hashing), and the standalone image link (``--defsym`` in ``model_image.ld``). Wired loaders also take a devicetree nodelabel and ``BUILD_ASSERT`` that ``MODEL_OTA_PARTITION_ADDR()`` matches ``MODEL_OTA_IMAGE_LINK_BASE`` before dereferencing the mapped partition at runtime.
+The base folded into the hash is ``MODEL_OTA_IMAGE_LINK_BASE``: CMake passes the same ``dt_reg_addr()`` literal to the partition-image stub, wired loaders (for hashing), and the standalone image link (``--defsym`` in ``model_image.ld``). Wired loaders also take a devicetree nodelabel and ``BUILD_ASSERT`` that ``MODEL_OTA_PARTITION_ADDR()`` matches ``MODEL_OTA_IMAGE_LINK_BASE`` before dereferencing the mapped partition at runtime.
 
 - **Edge AI Lab / Neuton** (``MODEL_OTA_CONTRACT_HASH_EDGEAI_NEUTON``): envelope, weight precision, descriptor/meta struct sizes, then the solution contract
 - **Edge AI Lab / Axon** (``MODEL_OTA_CONTRACT_HASH_EDGEAI_AXON``): envelope, the same driver ABI, then the solution contract
@@ -116,7 +116,7 @@ There is no backend tag in the hash. The flavors differ in the *sequence* of chu
 
 The solution ID hashed here is the ``SOLUTION_ID`` the CMake helper was called with, not the generated source's ``EDGEAI_LAB_SOLUTION_ID_STR``, so both sides of an update derive it from the value the build was configured with.
 
-**One implementation, the compiler's.** Every value above is folded by the C macros — nothing recomputes the hash on the host. Since the mix includes ``sizeof`` of the runtime structs, the preprocessor cannot evaluate it and a host reimplementation would need hand-maintained struct sizes that go stale behind a runtime header change. Instead the build compiles ``lib/model_ota/src/model_ota_contract_probe.c`` once per slot — a throwaway translation unit built with the application's own flags and linked into neither the firmware nor the image — and the host reads the finished word out of that object (``tools/model_ota/elf_const.py``). That is the value ``model_ota_context.json`` carries. The image's own copy is baked by the flavor's stub, a separate translation unit, and ``check_model_compat.py`` requires the two to agree — which is what keeps the value released to the field equal to the one images actually carry, and is fatal even in the in-tree ``--report-only`` build report. The only hashing left on the host is over *strings*, which the preprocessor genuinely cannot do: the solution ID above and the Axon binding table's symbol names. Those two are a 32-bit ``blake2s`` rather than the FNV-1a chain — C only ever consumes them as literals, never recomputing one, so they are free of the constraint that shaped the contract hash, and an avalanching hash is what keeps two Axon symbol names sharing a long prefix from colliding into the wrong binding row.
+**One implementation, the compiler's.** Every value above is folded by the C macros — nothing recomputes the hash on the host. Since the mix includes ``sizeof`` of the runtime structs, the preprocessor cannot evaluate it and a host reimplementation would need hand-maintained struct sizes that go stale behind a runtime header change. Instead each slot's wired loader — the code that checks the hash at runtime — exports the value it compiled as ``model_ota_contract_hash`` (``MODEL_OTA_CONTRACT_HASH_EXPORT()``), and the host reads the finished word out of the wired loader's object file (``tools/model_ota/elf_const.py``). That is the value ``model_ota_context.json`` carries. The image's own copy is baked by the flavor's stub, a separate translation unit, and ``check_model_compat.py`` requires the two to agree — which is what keeps the value the firmware checks equal to the one images actually carry, and is fatal even in the in-tree ``--report-only`` build report. The only hashing left on the host is over *strings*, which the preprocessor genuinely cannot do: the solution ID above and the Axon binding table's symbol names. Those two are a 32-bit ``blake2s`` rather than the FNV-1a chain — C only ever consumes them as literals, never recomputing one, so they are free of the constraint that shaped the contract hash, and an avalanching hash is what keeps two Axon symbol names sharing a long prefix from colliding into the wrong binding row.
 
 **Capacities are deliberately not hashed.** The Neuton neuron scratch capacity and the Axon persistent-vars and packed-output caps have a "required <= provided" relation, so they stay as header fields checked by inequality. Hashing them would collapse the "model outgrew this firmware" verdict (exit 2) into an opaque contract mismatch.
 
@@ -136,7 +136,7 @@ Under ``tools/model_ota/``:
 
 - ``patch_image_crc.py`` — patches CRC at offset 20
 - ``validate_model_image_layout.py`` — post-link build gate
-- ``elf_const.py`` — reads the compiler-folded contract hash out of a slot's contract probe
+- ``elf_const.py`` — reads the compiler-folded contract hash out of a slot's wired loader object
 - ``axon_elf.py`` — Axon probe inspect, device-wide binding-table merge, and ``PROVIDE()`` fragment from the context's ``axon_bindings``
 - ``export_model_ota_context.py`` / ``model_ota_context.cmake`` — emit ``model_ota_context.json``
 - ``check_model_compat.py`` — pre-flash compatibility verdict, and the build's contract-hash gate
@@ -293,7 +293,7 @@ Known limitations
 - The solution wrapper (DSP pipeline, decode interfaces) is not swappable — only the model payload and the ``nrf_edgeai_t`` parameters that travel with it
 - ``model_image_bind_edgeai_params()`` trusts the image it is handed: apart from comparing the extraction mask, it assumes the backend loader validated it first, and that the contract hash already covered the scaling geometry
 - If a retrained Axon model needs a new op-extension symbol the old firmware never kept, image link fails at build time
-- A contract mismatch surfaces once the slot's contract probe has compiled, i.e. during the build rather than at CMake configure time, since that is when the compiler's value first exists
+- A contract mismatch surfaces once the slot's wired loader has compiled, i.e. during the build rather than at CMake configure time, since that is when the compiler's value first exists
 - A Lab release that changes what an extraction function *computes* while keeping the same ``FEATURES_EXTRACTION_MASK`` is caught only by ``EDGEAI_RUNTIME_VERSION_COMBINED`` — a version bump being trusted, not a digest of the implementation
 
 Kconfig

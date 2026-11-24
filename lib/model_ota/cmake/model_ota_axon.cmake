@@ -187,31 +187,7 @@ function(_model_ota_axon_slot)
 
   if(MI_FLAVOR STREQUAL "edgeai_axon")
     model_ota_solution_id_hash(${MI_SOLUTION_ID} _solution_id_hash)
-    model_ota_contract_probe(
-      OUT_OBJ _contract_probe_o
-      WORK_DIR ${_work_dir}
-      FLAVOR edgeai_axon
-      IMAGE_BASE ${_partition_addr}
-      MODEL_SRC ${MI_MODEL_SRC}
-      SOLUTION_ID_HASH ${_solution_id_hash})
-  else()
-    model_ota_contract_probe(
-      OUT_OBJ _contract_probe_o
-      WORK_DIR ${_work_dir}
-      FLAVOR axon
-      IMAGE_BASE ${_partition_addr})
   endif()
-
-  model_ota_add_context_slot(
-    TARGET ${MI_TARGET}
-    BACKEND axon
-    PARTITION_NODELABEL ${MI_PARTITION_NODELABEL}
-    NAME ${MI_NAME}
-    WORK_DIR ${_work_dir}
-    CONTRACT_PROBE ${_contract_probe_o}
-    CONFIG_HEADER ${_private_h}
-    OUT_SLOT_JSON _context_slot)
-  add_dependencies(${_meta_target} ${MI_TARGET}_contract_slot)
 
   if(MI_FLAVOR STREQUAL "edgeai_axon" AND NOT _using_released_fw)
     get_filename_component(_model_dir ${MI_MODEL_SRC} DIRECTORY)
@@ -254,6 +230,15 @@ function(_model_ota_axon_slot)
   endif()
 
   if(NOT _using_released_fw)
+    model_ota_add_context_slot(
+      TARGET ${MI_TARGET}
+      BACKEND axon
+      PARTITION_NODELABEL ${MI_PARTITION_NODELABEL}
+      NAME ${MI_NAME}
+      WORK_DIR ${_work_dir}
+      WIRED_LIB ${_wired_lib}
+      CONFIG_HEADER ${_private_h})
+
     set(_app_lib ota_axon_${MI_TARGET})
     add_library(${_app_lib} OBJECT ${MODEL_OTA_AXON_APP_STUB})
     target_link_libraries(${_app_lib} PRIVATE zephyr_interface)
