@@ -53,6 +53,10 @@ target_sources(app PRIVATE
   ${NN_PATH}
 )
 
+target_sources_ifdef(CONFIG_INFERENCE_GPIO_TRACE app PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/inference_trace.c
+)
+
 if(CONFIG_BLE_MODE_HID)
   target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/uxsm/ux_state_manager.c)
   target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ble/hid/ble_hid.c)

@@ -123,6 +123,17 @@ config MODELS_OBSERVABILITY_MEMFAULT_HTTP
 
 endchoice
 
+config INFERENCE_GPIO_TRACE
+	bool "GPIO trace lines for power measurements"
+	select GPIO
+	help
+	  Drive two GPIOs from the zephyr,user node in the board overlay, for
+	  gating current measurements with a logic analyzer or the Power
+	  Profiler Kit II digital inputs:
+	  ww-trace-gpios - high while the wake word model runs inference.
+	  kws-trace-gpios - high while the keyword spotting model runs inference.
+	  Each window covers feature extraction and the neural network.
+
 endmenu
 
 source "Kconfig.zephyr"

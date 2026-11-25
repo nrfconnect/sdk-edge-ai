@@ -12,6 +12,12 @@
 	chosen {
 		ncs,control-output-uart = &uart21;
 	};
+
+	/* Power measurement trace lines, used with CONFIG_INFERENCE_GPIO_TRACE. */
+	zephyr,user {
+		ww-trace-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+		kws-trace-gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &uart21 {

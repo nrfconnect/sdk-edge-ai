@@ -263,6 +263,8 @@ The application supports the following build types:
      - :file:`prj_release_no_ble.conf`
      - Release version of the application without Bluetooth LE, but with serial logging enabled for diagnostics.
 
+.. include:: /includes/application_power_measurement.txt
+
 Choosing Bluetooth LE mode
 ==========================
 

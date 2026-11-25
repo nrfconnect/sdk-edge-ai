@@ -97,6 +97,8 @@ Configuration
 
 |config|
 
+.. include:: /includes/application_power_measurement.txt
+
 Configuration options
 =====================
 

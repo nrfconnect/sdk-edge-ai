@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+#include "inference_trace.h"
 #include "postprocessing.h"
 
 #include <assert.h>
@@ -208,7 +209,9 @@ static int capture_and_detect(const struct device *video, const nrf_axon_nn_comp
 		return -1;
 	}
 
+	inference_trace_set(true);
 	result = nrf_axon_nn_model_infer_sync(model, input_buf, output_buf);
+	inference_trace_set(false);
 	if (result != NRF_AXON_RESULT_SUCCESS) {
 		LOG_ERR("Inference failed (result %d)", result);
 		(void)gpio_pin_set_dt(&led_detection, 0);

@@ -25,6 +25,7 @@ Changelog
   * Support for model observability over Wi-Fi in the :ref:`WW KWS <app_ww_kws>` application on the nRF7120 DK.
     The device uploads data directly to Memfault over HTTPS.
     To enable it, use the :file:`observability_wifi.conf` and :file:`observability_wifi.overlay` files.
+  * A new :ref:`Power Measurements Guide <app_power_measurements>` for the nRF7120 DK and the nRF54LM20 DK.
 
 * Updated:
 

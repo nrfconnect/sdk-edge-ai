@@ -260,6 +260,8 @@ See :ref:`nrf:cmake_options` for details.
 .. note::
    Set the ``CONFIG_MEMFAULT_PROJECT_KEY`` Kconfig option to your `Memfault`_ project key to successfully send metrics to Memfault.
 
+.. include:: /includes/application_power_measurement.txt
+
 Building and running
 ********************
 
