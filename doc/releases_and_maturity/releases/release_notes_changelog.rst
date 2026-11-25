@@ -25,6 +25,7 @@ Changelog
   * Support for model observability over Wi-Fi in the :ref:`WW KWS <app_ww_kws>` application on the nRF7120 DK.
     The device uploads data directly to Memfault over HTTPS.
     To enable it, use the :file:`observability_wifi.conf` and :file:`observability_wifi.overlay` files.
+  * The :ref:`Model observability sample <model_observability_sample>`, which demonstrates how to send runtime statistics of a machine learning model to the cloud using Memfault.
 
 * Updated:
 
