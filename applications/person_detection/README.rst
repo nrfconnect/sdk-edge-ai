@@ -97,11 +97,7 @@ Configuration
 
 |config|
 
-Power measurement
-=================
-
-To measure the power consumption during inference, include the :file:`power_measurement.conf` configuration file.
-See :ref:`app_power_measurements` for more information.
+.. include:: /includes/application_power_measurement.txt
 
 Configuration options
 =====================

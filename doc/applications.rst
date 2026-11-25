@@ -12,10 +12,14 @@ This section provides information about various applications that can be built u
 
 .. toctree::
    :maxdepth: 1
-   :glob:
-   :caption: Subpages:
+   :caption: Applications:
 
    /../applications/gesture_recognition/README.rst
    /../applications/person_detection/README.rst
    /../applications/ww_kws/README.rst
-   applications/power_measurements
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Guides:
+
+   applications/guides/power_measurements

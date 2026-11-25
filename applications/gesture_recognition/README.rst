@@ -263,11 +263,7 @@ The application supports the following build types:
      - :file:`prj_release_no_ble.conf`
      - Release version of the application without Bluetooth LE, but with serial logging enabled for diagnostics.
 
-Power measurement
-=================
-
-To measure the power consumption during inference, include the :file:`power_measurement.conf` configuration file from the board directory.
-See :ref:`app_power_measurements` for more information.
+.. include:: /includes/application_power_measurement.txt
 
 Choosing Bluetooth LE mode
 ==========================
