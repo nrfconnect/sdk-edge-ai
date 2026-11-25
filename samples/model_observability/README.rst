@@ -7,33 +7,45 @@ Model observability sample
    :local:
    :depth: 2
 
-This sample demonstrates how to send runtime statistics of an machine learning model to the cloud using Memfault.
+This sample demonstrates how to send runtime statistics of a machine learning model to the cloud using Memfault.
+
+Requirements
+************
+
+The sample supports the following development kits:
+
+.. table-from-sample-yaml::
+
+The sample uses only the blue channel of the on-board RGB LED.
 
 Overview
 ********
 
-The sample feeds predefined class-probability vectors to the :ref:`nrf_edgeai_obsv_lib`, as if they were the output of an activity recognition model.
-Use it to try the observability pipeline end to end, from the device to `Memfault`_ and the decoding script, with known input data.
+The sample does not run an activity recognition model; it feeds predefined class-probability vectors to the :ref:`nrf_edgeai_obsv_lib` in the same format as model inference output.
+The sample validates the end-to-end observability path from the device through `Memfault`_ to the decoding script, using the predefined probability vectors as input.
 For a conceptual introduction to model observability, see :ref:`model_observability`.
-For integration details, see :ref:`nrf_edgeai_obsv_lib`.
+For integration details, refer to the :ref:`nrf_edgeai_obsv_lib` documentation.
 
-The probability vectors cover the following activity classes, in this order:
+The probability vectors cover the following activity classes, in the following order:
 
-* Walking
-* Sitting
-* Running
-* Laying
+1. Walking
+2. Sitting
+3. Running
+4. Laying
 
-Scenarios
-=========
+The sample feeds these vectors as three fixed sequences.
+In the source code and in this documentation page, each sequence is called a scenario.
 
-The sample contains three scenarios.
-A scenario is a sequence of probability vectors, and the activity that has the highest probability in a vector is the predicted class of that vector.
-The following table shows how often each activity is predicted in each scenario:
+Predefined class-probability sequences
+**************************************
+
+The sequences are defined in :file:`src/scenarios.c`.
+For each vector, the activity with the highest probability is the predicted class.
+The following table summarizes predicted activities for each scenario:
 
 .. list-table:: Predicted activities per scenario
    :header-rows: 1
-   :widths: 16 14 14 14 14 14 14
+   :widths: 7 7 10 10 10 10 46
 
    * - Scenario
      - Vectors
@@ -48,37 +60,45 @@ The following table shows how often each activity is predicted in each scenario:
      - 3 (15%)
      - 1 (5%)
      - 9 (45%)
-     - Walking with one running vector, then sitting, then laying.
+     - Walking → running → walking → sitting → laying
    * - 2
      - 20
      - 3 (15%)
      - 3 (15%)
      - 1 (5%)
      - 13 (65%)
-     - Laying with one sitting vector, then sitting, walking and running.
+     - Laying → sitting → laying → sitting → walking → running
    * - 3
      - 20
      - 5 (25%)
      - 7 (35%)
      - 3 (15%)
      - 5 (25%)
-     - Sitting, walking, running, walking, sitting, then laying.
+     - Sitting → walking → running → walking → sitting → laying
 
 The probabilities of the predicted class vary between the vectors, and the vectors at the activity changes have lower probabilities, so the certainty metrics are not constant.
-The vectors are defined in the :file:`src/scenarios.c` file.
 
 The sample feeds one vector every 500 milliseconds, set by the ``CONFIG_APP_FEED_INTERVAL_MS`` Kconfig option.
 After feeding a scenario, the sample waits until the automatic collection encodes it into a recording, then starts the next scenario.
 After the third scenario, the sample starts again from the first one.
 
-Observability
-=============
+Metrics collection and Memfault upload
+======================================
 
 The sample collects the following output metrics from each probability vector:
 
-* :ref:`Class predictions distribution <nrf_edgeai_obsv_metrics_built_in_class_pred>`  - How often each class is predicted and with what probability, including how long the same class is predicted in a row.
-* :ref:`Transition matrix <nrf_edgeai_obsv_metrics_built_in_transition>`  - How often the predicted class changes from one class to another.
-* :ref:`Model certainty descriptor <nrf_edgeai_obsv_metrics_built_in_certainty>`  - How confident the model is in its predictions.
+.. list-table::
+   :header-rows: 1
+   :widths: 32 68
+
+   * - Metric
+     - Description
+   * - :ref:`Class predictions distribution <nrf_edgeai_obsv_metrics_built_in_class_pred>`
+     - How often each class is predicted and with what probability, including how long the same class is predicted in a row.
+   * - :ref:`Transition matrix <nrf_edgeai_obsv_metrics_built_in_transition>`
+     - How often the predicted class changes from one class to another.
+   * - :ref:`Model certainty descriptor <nrf_edgeai_obsv_metrics_built_in_certainty>`
+     - How confident the model is in its predictions.
 
 The observability code is located in the :file:`src/model_obsv.c` file.
 It creates the observability context, registers the metrics and binds the Memfault transport.
@@ -95,15 +115,6 @@ Each recording contains exactly one scenario:
 * A new collection is skipped while the previous recording is still waiting to be read by the gateway.
   The next scenario then stays in the metrics until the gateway reads the previous recording.
 * A whole scenario is fed within one collection interval, which is checked at build time.
-
-Requirements
-************
-
-The sample supports the following development kits:
-
-.. table-from-sample-yaml::
-
-The sample uses only the blue channel of the on-board RGB LED.
 
 User interface
 **************
@@ -135,7 +146,7 @@ Configuration options
 Additional configuration
 ========================
 
-All configuration of the observability library, the Memfault transport and the metrics, including buffer sizing, is described in the :ref:`nrf_edgeai_obsv_lib` library documentation.
+For the observability library, Memfault transport, built-in metrics, and buffer sizing, see :ref:`nrf_edgeai_obsv_lib`.
 For the Bluetooth® LE transport (MDS) options, see :ref:`nrf:peripheral_mds`.
 
 The :file:`prj.conf` file of the sample enables the library, the Memfault transport with automatic collection, and MDS.
@@ -149,6 +160,13 @@ The following settings are specific to the sample:
 * ``CONFIG_MEMFAULT_PROJECT_KEY`` - Your `Memfault`_ project key.
   The key in the :file:`prj.conf` file is a placeholder, and your device data is not available in your own Memfault project until you replace it.
 * ``CONFIG_MEMFAULT_NCS_DEVICE_ID`` - A fixed device ID, so that you can find the device in the `Memfault`_ dashboard.
+
+Building and running
+********************
+
+.. |sample path| replace:: :file:`samples/model_observability`
+
+.. include:: /includes/build_and_run.txt
 
 Testing
 =======
@@ -185,10 +203,10 @@ Testing
       Scenario 3: waiting for auto collect
       Scenario 3 staged as CDR
 
-#. In a web browser, navigate to `Memfault`_.
+#. In a web browser, open `Memfault`_.
 #. In the left-hand menu, go to :guilabel:`CDR Payloads`.
 #. Select a CDR payload from your test device with "edgeai_observability" as reason.
-   You can filter the list of CDR payloads by device name and time.
+   Filter the list of CDR payloads by device name and time.
 #. Download the payload for metrics analysis.
 #. Decode it on a host PC using the :file:`scripts/decode_edgeai_obsv_cdr/decode_edgeai_obsv_cdr.py` script in binary mode:
 
@@ -200,7 +218,7 @@ Testing
    The payload format is defined in the :file:`lib/nrf_edgeai_obsv/obsv.cddl` file.
 
 #. Compare the decoded metrics with the scenario.
-   For example, ``num_inferences`` is 20, the class predictions distribution matches the predicted activities in the `Scenarios`_ table, and the transition matrix shows the order of the activities.
+   For example, ``num_inferences`` is 20, the class predictions distribution matches the predicted activities in the scenarios table above, and the transition matrix shows the order of the activities.
 
 Dependencies
 ************
