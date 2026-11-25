@@ -208,7 +208,7 @@ The integration step is the same for both formats (CPU archive and Axon NPU arch
          Keep in mind that some tools might interpret the ``#`` character in the auto-generated name as a comment.
          If you encounter this, rename the archive to :file:`<model_name>.zip`.
 
-      #. Enable the following Kconfig options in your application's :file:`prj.conf`:
+      #. Set the following Kconfig options in your application's :file:`prj.conf`:
 
          .. code-block:: cfg
 
@@ -216,6 +216,7 @@ The integration step is the same for both formats (CPU archive and Axon NPU arch
             CONFIG_STD_CPP11=y
             CONFIG_REQUIRES_FULL_LIBCPP=y
             CONFIG_EDGE_IMPULSE_SDK=y
+            CONFIG_HEAP_MEM_POOL_SIZE=<heap_size>
 
          The ``CONFIG_FPU`` Kconfig option is implied by default if floating point unit (FPU) is supported by the hardware.
          Using FPU speeds up calculations.
@@ -262,7 +263,7 @@ The integration step is the same for both formats (CPU archive and Axon NPU arch
                status = "okay";
             };
 
-      #. Enable the following Kconfig options in your application's :file:`prj.conf`:
+      #. Set the following Kconfig options in your application's :file:`prj.conf`:
 
          .. code-block:: cfg
 
@@ -270,6 +271,7 @@ The integration step is the same for both formats (CPU archive and Axon NPU arch
             CONFIG_STD_CPP11=y
             CONFIG_REQUIRES_FULL_LIBCPP=y
             CONFIG_EDGE_IMPULSE_SDK=y
+            CONFIG_HEAP_MEM_POOL_SIZE=<heap_size>
             CONFIG_NRF_AXON=y
 
       #. Disable the ``CONFIG_FP16`` Kconfig option in your application's :file:`prj.conf`.
@@ -373,6 +375,9 @@ After building the application, flash it to your device and observe the output t
      A missing or misnamed file typically produces a CMake error from ``FetchContent`` indicating that the resource is not available.
 
    * Ensure that all required Kconfig options are enabled in the :file:`prj.conf` file.
+     When ``CONFIG_EDGE_IMPULSE_HEAP_TYPE`` is ``1`` (default), the SDK uses the :ref:`Zephyr kernel heap <zephyr:heap_v2>` (``k_malloc``) for DSP and inference.
+     Set the ``CONFIG_HEAP_MEM_POOL_SIZE`` Kconfig option large enough to accommodate both these allocations and for any other code in your application that shares the kernel heap.
+
    * For Axon NPU models, check the model name and buffer size Kconfig values.
 
 .. _ug_edge_impulse_building:
