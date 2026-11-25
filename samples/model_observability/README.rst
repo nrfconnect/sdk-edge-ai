@@ -21,7 +21,7 @@ The sample uses only the blue channel of the on-board RGB LED.
 Overview
 ********
 
-The sample does not run an activity recognition model; it feeds predefined class-probability vectors to the :ref:`nrf_edgeai_obsv_lib` in the same format as model inference output.
+The sample does not run any actual model; it feeds predefined class-probability vectors to the :ref:`nrf_edgeai_obsv_lib` in the same format as model inference output.
 The sample validates the end-to-end observability path from the device through `Memfault`_ to the decoding script, using the predefined probability vectors as input.
 For a conceptual introduction to model observability, see :ref:`model_observability`.
 For integration details, refer to the :ref:`nrf_edgeai_obsv_lib` documentation.
@@ -105,7 +105,7 @@ It creates the observability context, registers the metrics and binds the Memfau
 The :file:`src/main.c` file defines the model metadata, with a fixed model ID of ``777``, and passes it to the observability code.
 
 The metrics are collected automatically at an interval set by the ``CONFIG_NRF_EDGEAI_OBSV_MEMFAULT_AUTO_COLLECT_INTERVAL_SEC`` Kconfig option.
-After each collection, the metrics are encoded and staged as a `Memfault Custom Data Recording <Memfault Custom Data Recording_>`_ (CDR).
+After each collection, the metrics are encoded and staged in RAM as a `Memfault Custom Data Recording <Memfault Custom Data Recording_>`_ (CDR).
 A gateway, for example a phone, reads the staged recording over the Memfault Diagnostic Service (MDS) and uploads it to `Memfault`_.
 The metrics are reset after each collection, so every recording describes one collection period.
 
