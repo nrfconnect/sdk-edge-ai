@@ -11,6 +11,7 @@ the naming contract allows, and _probe() derives variants from it.
 """
 
 import dataclasses
+import json
 import os
 from collections.abc import Iterator
 from pathlib import Path
@@ -41,6 +42,13 @@ def _undefined(name: str, sym_type: str = "STT_NOTYPE", bind: str = "STB_GLOBAL"
 
 def _storage(name: str, size: int, **kwargs) -> ElfSymbol:
     return _symbol(name, size, read_only=False, **kwargs)
+
+
+def _keep_json(tmp_path: Path, target: str, symbols: list[str]) -> Path:
+    """Write a keep JSON for target listing symbols in the given order."""
+    path = tmp_path / f"{target}_keep.json"
+    path.write_text(json.dumps({"target": target, "keep_symbols": symbols}), encoding="utf-8")
+    return path
 
 
 HEADER_NAME = "nrf_axon_model_demo_.h"
@@ -461,23 +469,143 @@ class TestAtomicWriteIfChanged:
         assert path.read_text(encoding="utf-8") == "old\n"
 
 
-class CliPaths(NamedTuple):
+class TestKeepJson:
+    """render_keep_json and load_keep_symbols, the two ends of the keep JSON file."""
+
+    def test_render_keep_json(self) -> None:
+        text = axon_elf.render_keep_json("door bell-v2", FULL_METADATA)
+
+        assert json.loads(text) == {
+            "target": "door bell-v2",
+            "keep_symbols": list(FULL_METADATA.keep_symbols),
+        }
+
+    def test_load_keep_symbols(self, tmp_path: Path) -> None:
+        text = axon_elf.render_keep_json("demo", FULL_METADATA)
+        path = tmp_path / "axon_keep.json"
+        path.write_text(text, encoding="utf-8")
+
+        symbols = axon_elf.load_keep_symbols(path)
+
+        assert symbols == list(FULL_METADATA.keep_symbols)
+
+    @pytest.mark.parametrize(
+        "payload",
+        (
+            pytest.param({}, id="missing"),
+            pytest.param({"keep_symbols": "driver_call"}, id="not-a-list"),
+            pytest.param({"keep_symbols": ["driver_call", 1]}, id="non-string-entry"),
+        ),
+    )
+    def test_load_rejects_bad_keep_symbols(self, tmp_path: Path, payload: dict) -> None:
+        path = tmp_path / "axon_keep.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+
+        with pytest.raises(ValueError, match="keep_symbols must be a JSON string array"):
+            axon_elf.load_keep_symbols(path)
+
+
+class TestMergeKeepSymbols:
+    """merge_keep_symbols on keep JSON files."""
+
+    def test_merge_sorts_symbols(self, tmp_path: Path) -> None:
+        path = _keep_json(tmp_path, "demo", [DRIVER_CALL.name, INPUT_VECTORS.name])
+
+        symbols = axon_elf.merge_keep_symbols([path])
+
+        assert symbols == [INPUT_VECTORS.name, DRIVER_CALL.name]
+
+    def test_merge_combines_and_deduplicates(self, tmp_path: Path) -> None:
+        first = _keep_json(
+            tmp_path, "first", [axon_elf.INTERLAYER_BUFFER_SYMBOL, INPUT_VECTORS.name]
+        )
+        second = _keep_json(tmp_path, "second", [PACKED.name, axon_elf.INTERLAYER_BUFFER_SYMBOL])
+        expected = [INPUT_VECTORS.name, PACKED.name, axon_elf.INTERLAYER_BUFFER_SYMBOL]
+
+        assert axon_elf.merge_keep_symbols([first, second]) == expected
+        assert axon_elf.merge_keep_symbols([second, first]) == expected
+
+    def test_merge_rejects_hash_collision(self, tmp_path: Path) -> None:
+        first = _keep_json(tmp_path, "first", ["a"])
+        second = _keep_json(tmp_path, "second", ["b"])
+
+        with (
+            patch.object(axon_elf, "symbol_name_hash", return_value=0x12345678),
+            pytest.raises(ValueError, match=r"hash collision between 'a' and 'b' \(0x12345678\)"),
+        ):
+            axon_elf.merge_keep_symbols([first, second])
+
+    def test_merge_rejects_no_symbols(self, tmp_path: Path) -> None:
+        path = _keep_json(tmp_path, "demo", [])
+
+        with pytest.raises(ValueError, match="list no symbols"):
+            axon_elf.merge_keep_symbols([path])
+
+
+class TestRenderBindingTableHeader:
+    """Contents of the binding table header."""
+
+    BINDING_SYMBOLS = (INPUT_VECTORS.name, PACKED.name, DRIVER_CALL.name)
+
+    @staticmethod
+    def _hash_define(name: str) -> str:
+        return f"#define MODEL_OTA_AXON_SYM_HASH_{name} 0x{symbol_name_hash(name):08X}u"
+
+    def test_defines(self) -> None:
+        expected = (
+            "#define MODEL_OTA_AXON_BINDING_SYMBOL_COUNT 3",
+            *(self._hash_define(symbol) for symbol in self.BINDING_SYMBOLS),
+            "#define MODEL_OTA_AXON_SYM_HASH(sym) MODEL_OTA_AXON_SYM_HASH_##sym",
+        )
+
+        header = axon_elf.render_binding_table_header(self.BINDING_SYMBOLS).splitlines()
+
+        for line in expected:
+            assert line in header
+
+    def test_binding_refs(self) -> None:
+        lines = axon_elf.render_binding_table_header(self.BINDING_SYMBOLS).splitlines()
+
+        start = lines.index("#define MODEL_OTA_AXON_BINDING_REFS(X) \\")
+
+        assert lines[start + 1 :] == [
+            "\tX(demo_input_vector_list) \\",
+            "\tX(demo_packed_output_buf) \\",
+            "\tX(driver_call)",
+        ]
+
+
+class TestRenderBindingSymbolsJson:
+    """Contents of the binding symbols JSON."""
+
+    def test_binding_symbols(self) -> None:
+        symbols = (INPUT_VECTORS.name, PACKED.name, DRIVER_CALL.name)
+
+        text = axon_elf.render_binding_symbols_json(symbols)
+
+        assert json.loads(text) == {"binding_symbols": list(symbols)}
+
+
+class InspectPaths(NamedTuple):
     """Files the inspect subcommand reads and writes."""
 
     probe: Path
     private: Path
     public: Path
+    keep: Path
 
 
-class TestCli:
+class TestInspectCli:
     """The inspect subcommand: argument wiring, with every collaborator mocked."""
 
     @pytest.fixture(name="paths")
-    def paths_fixture(self, tmp_path: Path) -> CliPaths:
+    def paths_fixture(self, tmp_path: Path) -> InspectPaths:
         """An empty probe file, which must exist to pass the is_file() check, and the outputs."""
         probe = tmp_path / "probe.o"
         probe.touch()
-        return CliPaths(probe, tmp_path / "private.h", tmp_path / "public.h")
+        return InspectPaths(
+            probe, tmp_path / "private.h", tmp_path / "public.h", tmp_path / "axon_keep.json"
+        )
 
     @pytest.fixture(name="mocks")
     def mocks_fixture(self) -> Iterator[dict[str, MagicMock]]:
@@ -487,18 +615,20 @@ class TestCli:
             "inspect_symbols",
             "render_private_header",
             "render_public_header",
+            "render_keep_json",
             "atomic_write_if_changed",
         )
         patchers = [patch.object(axon_elf, name, autospec=True) for name in names]
         mocks = dict(zip(names, (patcher.start() for patcher in patchers), strict=True))
         mocks["render_private_header"].return_value = "private"
         mocks["render_public_header"].return_value = "public"
+        mocks["render_keep_json"].return_value = "keep"
         yield mocks
         for patcher in patchers:
             patcher.stop()
 
     @staticmethod
-    def _argv(paths: CliPaths, *extra: str) -> tuple[str, ...]:
+    def _argv(paths: InspectPaths, *extra: str) -> tuple[str, ...]:
         return (
             "inspect",
             "--probe",
@@ -511,10 +641,14 @@ class TestCli:
             str(paths.private),
             "--public-header",
             str(paths.public),
+            "--keep-json",
+            str(paths.keep),
             *extra,
         )
 
-    def test_wires_arguments_through(self, mocks: dict[str, MagicMock], paths: CliPaths) -> None:
+    def test_wires_arguments_through(
+        self, mocks: dict[str, MagicMock], paths: InspectPaths
+    ) -> None:
         argv = self._argv(paths, "--persistent-vars-cap", "8", "--allocate-packed-output")
 
         result = axon_elf.main(argv)
@@ -529,12 +663,14 @@ class TestCli:
         metadata = mocks["inspect_symbols"].return_value
         mocks["render_private_header"].assert_called_once_with(HEADER_NAME, metadata)
         mocks["render_public_header"].assert_called_once_with("demo", metadata)
+        mocks["render_keep_json"].assert_called_once_with("demo", metadata)
         assert mocks["atomic_write_if_changed"].call_args_list == [
             ((paths.private, "private"),),
             ((paths.public, "public"),),
+            ((paths.keep, "keep"),),
         ]
 
-    def test_defaults(self, mocks: dict[str, MagicMock], paths: CliPaths) -> None:
+    def test_defaults(self, mocks: dict[str, MagicMock], paths: InspectPaths) -> None:
         argv = self._argv(paths)
 
         axon_elf.main(argv)
@@ -553,7 +689,7 @@ class TestCli:
         ),
     )
     def test_rejects_model_id_breaking_comment(
-        self, mocks: dict[str, MagicMock], paths: CliPaths, model_id: str
+        self, mocks: dict[str, MagicMock], paths: InspectPaths, model_id: str
     ) -> None:
         argv = self._argv(paths, "--model-id", model_id)
 
@@ -564,7 +700,7 @@ class TestCli:
         mocks["load_symbol_index"].assert_not_called()
 
     def test_missing_probe_exits_with_usage_error(
-        self, mocks: dict[str, MagicMock], paths: CliPaths
+        self, mocks: dict[str, MagicMock], paths: InspectPaths
     ) -> None:
         paths.probe.unlink()
         argv = self._argv(paths)
@@ -578,7 +714,7 @@ class TestCli:
     def test_contract_error_exits_with_usage_error(
         self,
         mocks: dict[str, MagicMock],
-        paths: CliPaths,
+        paths: InspectPaths,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         mocks["inspect_symbols"].side_effect = ValueError("mocked error")
@@ -590,3 +726,85 @@ class TestCli:
         assert excinfo.value.code == 2
         assert "mocked error" in capsys.readouterr().err
         mocks["atomic_write_if_changed"].assert_not_called()
+
+
+class TestBindingTableCli:
+    """The binding-table subcommand: argument wiring, with every collaborator mocked."""
+
+    @pytest.fixture(name="mocks")
+    def mocks_fixture(self) -> Iterator[dict[str, MagicMock]]:
+        """Every axon_elf function cmd_binding_table calls, autospecced, keyed by name."""
+        names = (
+            "merge_keep_symbols",
+            "render_binding_table_header",
+            "render_binding_symbols_json",
+            "atomic_write_if_changed",
+        )
+        patchers = [patch.object(axon_elf, name, autospec=True) for name in names]
+        mocks = dict(zip(names, (patcher.start() for patcher in patchers), strict=True))
+        mocks["render_binding_table_header"].return_value = "header"
+        mocks["render_binding_symbols_json"].return_value = "symbols"
+        yield mocks
+        for patcher in patchers:
+            patcher.stop()
+
+    def test_wires_arguments_through(self, mocks: dict[str, MagicMock], tmp_path: Path) -> None:
+        first = _keep_json(tmp_path, "first", [DRIVER_CALL.name])
+        second = _keep_json(tmp_path, "second", [PACKED.name])
+        header = tmp_path / "binding.h"
+        symbols_json = tmp_path / "binding_symbols.json"
+        argv = (
+            "binding-table",
+            "--keep-json",
+            str(first),
+            "--keep-json",
+            str(second),
+            "--output",
+            str(header),
+            "--symbols-json",
+            str(symbols_json),
+        )
+
+        result = axon_elf.main(argv)
+
+        assert result == 0
+        mocks["merge_keep_symbols"].assert_called_once_with([first, second])
+        symbols = mocks["merge_keep_symbols"].return_value
+        mocks["render_binding_table_header"].assert_called_once_with(symbols)
+        mocks["render_binding_symbols_json"].assert_called_once_with(symbols)
+        assert mocks["atomic_write_if_changed"].call_args_list == [
+            ((header, "header"),),
+            ((symbols_json, "symbols"),),
+        ]
+
+    def test_symbols_json_is_optional(self, mocks: dict[str, MagicMock], tmp_path: Path) -> None:
+        keep = _keep_json(tmp_path, "demo", [DRIVER_CALL.name])
+        header = tmp_path / "binding.h"
+        argv = ("binding-table", "--keep-json", str(keep), "--output", str(header))
+
+        result = axon_elf.main(argv)
+
+        assert result == 0
+        assert mocks["atomic_write_if_changed"].call_args_list == [((header, "header"),)]
+
+    def test_missing_keep_json_exits_with_usage_error(
+        self, mocks: dict[str, MagicMock], tmp_path: Path
+    ) -> None:
+        keep = _keep_json(tmp_path, "demo", [DRIVER_CALL.name])
+        header = tmp_path / "binding.h"
+        missing = tmp_path / "missing_keep.json"
+        argv = (
+            "binding-table",
+            "--keep-json",
+            str(keep),
+            "--keep-json",
+            str(missing),
+            "--output",
+            str(header),
+        )
+
+        with pytest.raises(SystemExit) as excinfo:
+            axon_elf.main(argv)
+
+        assert excinfo.value.code == 2
+        mocks["merge_keep_symbols"].assert_not_called()
