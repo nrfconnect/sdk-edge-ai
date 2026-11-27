@@ -14,9 +14,10 @@ Model structure
 
 The Axon Compiler has the following constraints on model structure:
 
-* Allows a maximum of 1 external input to the model.
-* Allows a maximum of 20 outputs of the model.
-* Supports 8-bit quantized input and output for all layers, with an option to use int32 model output with a configurable radix.
+* Allows a maximum of 100 external input to the model.
+* Allows a maximum of 100 outputs of the model.
+* Supports 8-bit quantized activations and weights for all layers, with an option to use int32 model output with a configurable radix.
+* Experimental support for 16-bit activation and 8-bit weight quantization for all layers.
 * Supports stateful behavior between inferences when declared using VarHandle, ReadVariable, or AssignVariable.
 * Allows a maximum of two inputs per node.
 * Supports maximum tensor sizes:
@@ -218,6 +219,10 @@ Elementwise operators
      - Vector operation with broadcast on height and/or width
      - Axon NPU
      - 2.0.0
+   * - (re)Quantize
+     - Vector operation that changes the quantization parameters on an already quantized tensor.
+     - Axon NPU
+     - 2.1.0
 
 Tensor manipulation operators
 =============================

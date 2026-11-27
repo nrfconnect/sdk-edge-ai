@@ -1,7 +1,7 @@
 /*********************************************************************************
  * Auto-generated nrf Axon compiled neural network model header file.
  * Model Name: person_det
- * Axon Neural Network Compiler Version: 2.0.1
+ * Axon Neural Network Compiler Version: 2.1.0
  *********************************************************************************/
 #ifdef __cplusplus
 extern "C" {
@@ -5334,9 +5334,9 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_person_det[23540] = {
 0x00000080,0x00040008,
 0x05000088,0x00330008,0x00000020,0x00040008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),0x00330030,0x00000020,
 0x010000ac,0x00040008,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),
-0x010000d8,0x00000006,0x69286316,
-0x02000160,0x00010f03,0xfffd1fea,0x00000001,
-0x00000170,0xffff8000,
+0x010000d8,0x00000006,0x3494318b,
+0x02000160,0x00010e03,0xfffe8ff5,0x00000001,
+0x00000170,0xffffc000,
 0x000000f0,0x00000100,
 0x07000080,0x00040005,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2000),0x30030008,0x00040020,0x00010030,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)axon_model_const_person_det.l26_filters,0x030300c0,0x00000030,
 0x010000ac,0x00040005,(NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2600),
@@ -8283,6 +8283,7 @@ const NRF_AXON_PLATFORM_BITWIDTH_UNSIGNED_TYPE cmd_buffer_person_det[23540] = {
 };
 #define NRF_AXON_MODEL_PERSON_DET_INPUT_VECTOR_CNT 1
 NRF_AXON_MODEL_APP_STORAGE const int8_t *person_det_input_vector_list[NRF_AXON_MODEL_PERSON_DET_INPUT_VECTOR_CNT];
+#define PERSON_DET_INPUT_0_F_1_INPUT_NDX 0
 const nrf_axon_nn_compiled_model_input_s person_det_inputs[] = {
   {/* 0 */
     .ptr = (int8_t*)nrf_axon_interlayer_buffer,
@@ -8293,10 +8294,10 @@ const nrf_axon_nn_compiled_model_input_s person_det_inputs[] = {
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .quant_mult = 24454344,
+    .quant_mult = 3056793,
     .node_id = -1,
     .stride = 160,
-    .quant_round = 19,
+    .quant_round = 16,
     .quant_zp = -7,
   }, /* 0 */
 }; /* inputs */
@@ -8306,27 +8307,30 @@ const nrf_axon_nn_compiled_model_input_s person_det_inputs[] = {
 #if NRF_AXON_MODEL_ALLOCATE_PACKED_OUTPUT_BUFFER
 NRF_AXON_MODEL_APP_STORAGE uint32_t person_det_packed_output_buf[NRF_AXON_MODEL_PERSON_DET_PACKED_OUTPUT_SIZE/sizeof(uint32_t)];
 #endif
+#define PERSON_DET_1807_OUTPUT_NDX 0
+#define PERSON_DET_1808_OUTPUT_NDX 1
+#define PERSON_DET_1809_OUTPUT_NDX 2
 const nrf_axon_compiled_model_output_s person_det_outputs[] = {
   {
-    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2c00),
+    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
     .packed_buffer_offset = 0,
-    .packed_size = 5760,
+    .packed_size = 360,
     .dimensions = {
-      .height = 16,
-      .width = 20,
+      .height = 4,
+      .width = 5,
       .channel_cnt = 18,
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .dequant_mult = 4682987,
-    .node_id = 51,
-    .dequant_round = 25,
-    .dequant_zp = 34,
-    .stride = 20,
+    .dequant_mult = 904365,
+    .node_id = 69,
+    .dequant_round = 23,
+    .dequant_zp = 41,
+    .stride = 8,
   },
   {
     .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x600),
-    .packed_buffer_offset = 5760,
+    .packed_buffer_offset = 360,
     .packed_size = 1440,
     .dimensions = {
       .height = 8,
@@ -8342,25 +8346,25 @@ const nrf_axon_compiled_model_output_s person_det_outputs[] = {
     .stride = 12,
   },
   {
-    .ptr = (int8_t*)nrf_axon_interlayer_buffer,
-    .packed_buffer_offset = 7200,
-    .packed_size = 360,
+    .ptr = (int8_t*)((uint8_t*)(nrf_axon_interlayer_buffer)+0x2c00),
+    .packed_buffer_offset = 1800,
+    .packed_size = 5760,
     .dimensions = {
-      .height = 4,
-      .width = 5,
+      .height = 16,
+      .width = 20,
       .channel_cnt = 18,
       .batch_cnt = 1,
       .byte_width = 1,
     },
-    .dequant_mult = 3617460,
-    .node_id = 69,
+    .dequant_mult = 4682987,
+    .node_id = 51,
     .dequant_round = 25,
-    .dequant_zp = 41,
-    .stride = 8,
+    .dequant_zp = 34,
+    .stride = 20,
   },
 };
 const nrf_axon_nn_compiled_model_s model_person_det = {
-    .compiler_version = 0x00020001,
+    .compiler_version = 0x00020100,
     .model_name = "person_det",
     .labels = NULL,
     .inputs = person_det_inputs,

@@ -60,6 +60,7 @@ def axons_compiler(parsed_dict):
     compiler_return_codetext = "generic error code!"
     USE_MINIMUM_TEST_VECTORS_DEFINE = "AXON_MINIMUM_TEST_VECTORS"
     test_vectors_flag = False
+    model_name = "_none_"
 
     """Handle None or empty parameters"""
     # for key in parsed_dict:
@@ -151,6 +152,12 @@ def axons_compiler(parsed_dict):
         parsed_dict['perform_bit_comparison'] = True
     if 'passlist_candidate_mode' not in parsed_dict:
         parsed_dict['passlist_candidate_mode'] = False
+    if 'tflite_ip_signature' not in parsed_dict:
+        parsed_dict['tflite_ip_signature'] = None
+
+    parsed_dict['float_model_path'] = parsed_dict.get('float_model_path', None)
+    parsed_dict['tflite_model_path'] = parsed_dict.get(
+        'tflite_model_path', None)
 
     """set the requested log level"""
     if parsed_dict['log_level'] == "debug":
@@ -183,28 +190,40 @@ def axons_compiler(parsed_dict):
     """set the assertions"""
     try:
         if not (parsed_dict['train_data'] is None or parsed_dict['train_data'] == ""):
-            assert parsed_dict['train_data'].endswith(
-                ".npy"), "Train dataset is not in a .npy format. "
-            parsed_dict['train_data'] = util.append_user_workspace(
-                parsed_dict['train_data'], USER_WORK_DIR)
+            if not isinstance(parsed_dict['train_data'], (list, tuple)):
+                parsed_dict['train_data'] = util.normalize_into_list(
+                    parsed_dict['train_data'])
+            for _n, train_data in enumerate(parsed_dict['train_data']):
+                assert train_data.endswith(
+                    ".npy"), "Train dataset is not in a .npy format. "
+                parsed_dict['train_data'][_n] = util.append_user_workspace(
+                    parsed_dict['train_data'][_n], USER_WORK_DIR)
 
         if not (parsed_dict['float_model'] is None or parsed_dict['float_model'] == ""):
-            assert parsed_dict['float_model'].endswith(".h5") or os.path.isdir(
+            assert parsed_dict['float_model'].endswith((".h5", ".keras")) or os.path.isdir(
                 parsed_dict['float_model']), "Keras/saved model is not valid. "
-            parsed_dict['float_model'] = util.append_user_workspace(
+            parsed_dict['float_model_path'] = util.append_user_workspace(
                 parsed_dict['float_model'], USER_WORK_DIR)
+            model_name = Path(parsed_dict['float_model_path']).name
+            parsed_dict['float_model'] = tc.load_keras_model(
+                parsed_dict['float_model_path'])
 
         if not (parsed_dict['tflite_model'] is None or parsed_dict['tflite_model'] == ""):
             assert parsed_dict['tflite_model'].endswith(".tflite") or parsed_dict['tflite_model'].endswith(
                 ".lite"), "Tflite file is not ending with .tflite/.lite"
-            parsed_dict['tflite_model'] = util.append_user_workspace(
+            parsed_dict['tflite_model_path'] = util.append_user_workspace(
                 parsed_dict['tflite_model'], USER_WORK_DIR)
+            model_name = Path(parsed_dict['tflite_model']).name
 
         if not (parsed_dict['test_data'] is None or parsed_dict['test_data'] == ""):
-            assert parsed_dict['test_data'].endswith(
-                ".npy"), "Test dataset is not in a \".npy\" format."
-            parsed_dict['test_data'] = util.append_user_workspace(
-                parsed_dict['test_data'], USER_WORK_DIR)
+            if not isinstance(parsed_dict['test_data'], (list, tuple)):
+                parsed_dict['test_data'] = util.normalize_into_list(
+                    parsed_dict['test_data'])
+            for _n, test_data in enumerate(parsed_dict['test_data']):
+                assert test_data.endswith(
+                    ".npy"), "Test dataset is not in a \".npy\" format."
+                parsed_dict['test_data'][_n] = util.append_user_workspace(
+                    parsed_dict['test_data'][_n], USER_WORK_DIR)
 
         if not (parsed_dict['test_labels'] is None or parsed_dict['test_labels'] == ""):
             if parsed_dict['test_labels_format'] == "custom":
@@ -223,17 +242,6 @@ def axons_compiler(parsed_dict):
                 'test_vectors'] == 'all', "The test vectors should be indices or string of ranges(e.g 2-7) of indices inside the test dataset in a list"
         else:
             parsed_dict['test_vectors'] = []
-
-        # if (parsed_dict['cpu_op_codes_list'] is not None):
-        #     assert type(parsed_dict['cpu_op_codes_list']
-        #                 ) is dict, "cpu_op_codes_list is not a dictionary "
-        #     # pick cpu op codes from the cpu op codes which the user has not entered and add them to the list
-        #     for default_cpu_op_code in cpu_operator_options.cpu_operators_list:
-        #         if default_cpu_op_code not in parsed_dict['cpu_op_codes_list']:
-        #             parsed_dict['cpu_op_codes_list'][default_cpu_op_code] = cpu_operator_options.cpu_operators_list[default_cpu_op_code].GetAxonsOperationEnum(
-        #                 default_cpu_op_code)
-        # else:
-        #     parsed_dict['cpu_op_codes_list'] = {25: 100, 14: 101, 28: 102}
 
         if (parsed_dict['interlayer_buffer_size'] is not None):
             assert type(parsed_dict['interlayer_buffer_size']
@@ -353,16 +361,11 @@ def axons_compiler(parsed_dict):
     except AssertionError as e:
         logger.critical(f"ASSERT! {e}")
         return -916, f" assert error : {e}"
-
     logger.info("starting compiler...")
-    logger.info("model name is : {}".format(parsed_dict['model_name']))
-    logger.debug("tflite model filename is : {}".format(
-        parsed_dict['tflite_model']))
 
     try:
         """handle if model name is empty"""
         if (parsed_dict['model_name'] is None):
-            model_name = Path(parsed_dict['tflite_model']).name
             parsed_dict['model_name'] = str(model_name.split('.')[-2])
 
         # check here if the model name is a valid c symbol name
@@ -371,60 +374,84 @@ def axons_compiler(parsed_dict):
                 f"{parsed_dict['model_name']} is not a valid c symbol name as required!")
 
         """handling here to check if tflite file is empty and then use the train data and float model to create a tflite file"""
-        if (parsed_dict['train_data'] is not None and parsed_dict['float_model'] is not None and parsed_dict['tflite_model'] is None):
-            logger.debug(
-                f"train dataset is loaded from : {parsed_dict['train_data']}")
-            logger.debug(
-                f"float model is loaded from : {parsed_dict['float_model']}")
-            # load the train dataset only if provided
-            x_train = np.load(parsed_dict['train_data'])
+        if (parsed_dict['train_data'] is not None and parsed_dict['float_model_path'] is not None and parsed_dict['tflite_model'] is None):
+            x_train = []
+            for train_data in parsed_dict['train_data']:
+                logger.debug(
+                    f"train dataset is loaded from : {train_data}")
+                # load the train dataset only if provided
+                x_train.append(np.load(train_data))
             # convert the keras model into tflite model
-            tflite_quant_model = tc.tflite_conversion(
-                x_train, parsed_dict['float_model'])
-            parsed_dict['tflite_model'] = intermediate_outputs_dir + \
+            tflite_quant_model = tc.convert_tf_to_tflite("None",
+                                                         x_train, parsed_dict['float_model_path'])
+            parsed_dict['tflite_model_path'] = intermediate_outputs_dir + \
                 "/" + parsed_dict['model_name'].lower() + ".tflite"
-            open(parsed_dict['tflite_model'], 'wb').write(tflite_quant_model)
-            # print(f"Tflite model is created and saved in:\n{parsed_dict['tflite_model']}")
-            logger.debug(
-                f"tflite model is created and saved in:\n{parsed_dict['tflite_model']}")
 
-        test_result_float, test_result_tflite = 'NA', 'NA'
+            with open(parsed_dict['tflite_model_path'], 'wb') as tflite_f:
+                tflite_f.write(tflite_quant_model)
+            logger.debug(
+                f"tflite model is created using float model loaded from {parsed_dict['float_model_path']} and saved in:\n{parsed_dict['tflite_model_path']}")
 
         if (parsed_dict['tflite_model'] is None or parsed_dict['tflite_model'] == ""):
             logger.critical(
                 "tflite is empty, please provide tflite file or the keras model along with train data set!")
             return -904, "tflite file is None or empty!"
 
+        logger.info(f"model name is : {parsed_dict['model_name']}")
+        logger.debug(
+            f"tflite model filename is : {parsed_dict['tflite_model']}")
+
+        # create the tflite axon graph object here
+        tflite_axon_graph_object = ops.TfLiteAxonGraph(
+            parsed_dict['tflite_model_path'])
+
+        test_result_float, test_result_tflite = 'NA', 'NA'
+
+        if parsed_dict['tflite_ip_signature'] is None:
+            parsed_dict['tflite_ip_signature'] = tflite_axon_graph_object.get_tflite_model_ip_signatures_list()
+
         if (parsed_dict['test_data'] is not None):
-            x_test = np.load(parsed_dict['test_data'])
-            logger.debug(
-                f"test dataset is loaded from : {parsed_dict['test_data']}")
-            # check here if the expected and actual input shapes match and if not throw an error or reshape the input
-            actual_input_shape = np.array(
-                np.expand_dims(x_test[0], axis=0).shape)
-            # get the model input shape
-            expected_input_shape = tc.get_tflite_model_ip_shape(
-                parsed_dict['tflite_model'])
-            if (not util.shapes_are_same(actual_input_shape, expected_input_shape)):
-                if (parsed_dict['reshape_input']):
-                    logger.debug(
-                        f"reshaping test input to {expected_input_shape} to get test vectors and accuracy results!")
-                    x_test = util.reshape_input(x_test, expected_input_shape)
-                else:
-                    raise Exception(
-                        f"test input shape {actual_input_shape} does not match with the expected model input shape {expected_input_shape}, suggest setting the 'reshape_input' config option in the yaml if reshaping the input can fix the issue!")
-            if (x_test.dtype == np.int8):
-                quantized_x_test = x_test
-            else:
-                quantized_x_test = tc.quantize_test_dataset(
-                    parsed_dict['tflite_model'], x_test)
-            if (parsed_dict['get_quantized_data']):
-                test_quant_data_filename = intermediate_outputs_dir + \
-                    parsed_dict['model_name']+"_q_data.npy"
-                np.save(test_quant_data_filename, quantized_x_test)
+            x_test = []
+            quantized_x_test = []
+            for _n, test_data in enumerate(parsed_dict['test_data']):
                 logger.debug(
-                    f"quantized test dataset (Created from scale and zero point in tflite file) is saved in: {test_quant_data_filename}")
-            x_test_max_length = len(x_test)
+                    f"test dataset{_n} is loaded from : {test_data}")
+                # load the train dataset only if provided
+                x_test.append(np.load(test_data))
+
+            x_test = util.align_data_q_using_input_signatures(
+                parsed_dict['tflite_ip_signature'], x_test, tflite_axon_graph_object.get_tflite_input_details())
+
+            expected_input_shape = tflite_axon_graph_object.get_tflite_model_ip_shapes()
+            for _n, test_data in enumerate(x_test):
+                # check here if the expected and actual input shapes match and if not throw an error or reshape the input
+                actual_input_shape = np.array(
+                    np.expand_dims(x_test[_n][0], axis=0).shape)
+                if (not util.shapes_are_same(actual_input_shape, expected_input_shape[_n])):
+                    if (parsed_dict['reshape_input']):
+                        logger.debug(
+                            f"reshaping test input to {expected_input_shape[_n]} to get test vectors and accuracy results!")
+                        x_test[_n] = util.reshape_input(
+                            x_test[_n], expected_input_shape[_n])
+                    else:
+                        raise Exception(
+                            f"test input {_n} shape {actual_input_shape} does not match with the expected model input shape {expected_input_shape[_n]}, suggest setting the 'reshape_input' config option in the yaml if reshaping the input can fix the issue!")
+
+                if (x_test[_n].dtype == np.int8):
+                    x_test_q = x_test[_n]
+                else:
+                    x_test_q = tc.quantize_test_dataset(
+                        parsed_dict['tflite_model'], x_test[_n], input_index=_n, tflite_interpreter=tflite_axon_graph_object.get_tflite_interpreter())
+
+                if (parsed_dict['get_quantized_data']):
+                    test_quant_data_filename = intermediate_outputs_dir + \
+                        parsed_dict['model_name']+f"_q_data{_n}.npy"
+                    np.save(test_quant_data_filename, x_test_q)
+                    logger.debug(
+                        f"quantized test dataset (Created from scale and zero point in tflite file) is saved in: {test_quant_data_filename}")
+                quantized_x_test.append(x_test_q)
+
+            x_test_max_length = len(x_test[0])
             if (parsed_dict['test_vectors'] == 'all'):
                 parsed_dict['test_vectors'] = [f"0-{x_test_max_length}"]
         else:
@@ -480,12 +507,12 @@ def axons_compiler(parsed_dict):
                 if (parsed_dict['float_model'] is not None):  # test the float model
                     test_result_float = tc.test_floating_point_model(
                         parsed_dict['float_model'], x_test, y_test, classification_model=(parsed_dict['classification_labels'] is not None))
-                test_result_tflite = tc.test_tflite_model(parsed_dict['tflite_model'], quantized_x_test, y_test, classification_model=(
-                    parsed_dict['classification_labels'] is not None))
+                test_result_tflite = tc.get_tflite_model_test_results(parsed_dict['tflite_model_path'], quantized_x_test, y_test, classification_model=(
+                    parsed_dict['classification_labels'] is not None), tflite_interpreter=tflite_axon_graph_object.get_tflite_interpreter())
             else:
                 logger.info(
                     "Accuracy results will be handled by the user provided function!")
-        elif (Path(parsed_dict['tflite_model']).is_file()):
+        elif (Path(parsed_dict['tflite_model_path']).is_file()):
             logger.info(
                 "test data or proper test labels are not provided, we have the tflite file.")
             # x_test = np.zeros(1)
@@ -518,23 +545,13 @@ def axons_compiler(parsed_dict):
     """echo parameters defined by the user on terminal"""
     # logger.info(log_string)
 
-    # if(parsed_dict['disable_op_quantization']):
-    #   if(parsed_dict['op_radix']==0):
-    #     parsed_dict['op_radix']=8
-    # else:
-    #   parsed_dict['op_radix']=0
-
-    """find out if the user has SOFTMAX as a cpu operation, and if yes do not skip softmax as an operation"""
-    # if(tflite.BuiltinOperator.SOFTMAX in parsed_dict['cpu_op_codes_list']):
-    #   parsed_dict['skip_softmax_op'] = False
     """
-  create the iterator for running all the variants if 'run_all_variants' is true,
-  else just run once for the input settings accordingly
-  """
+    create the iterator for running all the variants if 'run_all_variants' is true,
+    else just run once for the input settings accordingly
+    """
     variants_object = compare_models.ModelVariantsClass(
-        parsed_dict['run_all_variants'], parsed_dict['tflite_model'], parsed_dict)
+        parsed_dict['run_all_variants'], tflite_axon_graph_object.get_tflite_interpreter(), parsed_dict)
     variants = variants_object.get_variants()
-    # variants_result = variants_object.get_variants_result_dict()
 
     get_mass_inference_vectors = True
     transposed_before = False
@@ -548,23 +565,20 @@ def axons_compiler(parsed_dict):
             f"Exception: '{e}' occured when loading compiler object from {str(AXON_COMPILER_OBJECT)}")
     MULTIPLE_OUTPUT_MODEL = False
     for variant in variants:
-        tflite_axon_graph_object = None
         logger.info(f"running for variant {variant}")
         parsed_dict = variants[variant]
         """
-    start creating the file names to be generated by the pre-compiler
-    the file naming convention is as follows
-    nrf_axon_model_<model_name>_<file_content_type/info>_.extension
-    """
+        start creating the file names to be generated by the pre-compiler
+        the file naming convention is as follows
+        nrf_axon_model_<model_name>_<file_content_type/info>_.extension
+        """
         file_name_prefix = "nrf_axon_model_" + str(variant).lower()
-        # const_bin_file_name = file_name_prefix + "_const_.bin"
-        # model_desc_bin_file_name = file_name_prefix + "_description_.bin"
         # test_vectors_filename = file_name_prefix + "_test_vectors_.h"
         tflite_test_vectors_filename = file_name_prefix + "_test_vectors_tflite_.h"
         tflite_test_vectors_file_content = ""
         bin_file_name = file_name_prefix + "_bin_.bin"
         csv_test_vectors_file_name = parsed_dict['model_name'].lower(
-        ) + "_test_vectors_.csv"  # file_name_prefix + "_test_vectors_.csv"
+        ) + "_test_vectors_.csv"
         compiler_inference_results_filename = file_name_prefix + \
             "_test_inference_labels_.csv"
         compiler_inference_per_layer_results = file_name_prefix + \
@@ -575,8 +589,8 @@ def axons_compiler(parsed_dict):
         # compiler_stdout_filepath = intermediate_outputs_dir + compiler_stdout_filename
         """Create a single tflite and axon graph object here, also check if the model is compatible"""
         try:
-            tflite_axon_graph_object = ops.TfLiteAxonGraph(
-                parsed_dict['tflite_model'])
+            # reinitialize the tflite axon graph object here
+            tflite_axon_graph_object.reset_axon_graph_objects()
             # init the axon supported ops object
             tflite_axon_graph_object.init_axon_supported_ops_object(
                 parsed_dict['transpose_kernel'], cpu_operator_options.cpu_operators_list)
@@ -607,13 +621,12 @@ def axons_compiler(parsed_dict):
 
         """Generate the compiler outputs, i.e bin file"""
         try:
-            log_content, const_bin_content, model_descriptor_bin_content, model_bin_content, file_content, parsed_dict['op_radix'] = generate_compiler_outputs(COMPILER_TYPES_HDR_FILE, parsed_dict['tflite_model'], str(variant).lower(), x_test, y_test, quantized_x_test, parsed_dict['classification_labels'], test_io_vector_ndx, test_vectors_flag, parsed_dict[
-                                                                                                                                                               'normalize_scaleshift'], parsed_dict['disable_op_quantization'], parsed_dict['skip_softmax_op'], parsed_dict['op_radix'], parsed_dict['interlayer_buffer_size'], parsed_dict['psum_buffer_size'], parsed_dict['header_file_test_vector_cnt'], parsed_dict['conv2d_setting'], parsed_dict['psum_buffer_placement'], parsed_dict['transpose_kernel'], tflite_axon_graph_object)
+            _, _, log_content, model_bin_content, file_content, parsed_dict['op_radix'] = generate_compiler_outputs(COMPILER_TYPES_HDR_FILE, parsed_dict['tflite_model_path'], str(variant).lower(), x_test, y_test, quantized_x_test, parsed_dict['classification_labels'], test_io_vector_ndx, test_vectors_flag, parsed_dict[
+                'normalize_scaleshift'], parsed_dict['disable_op_quantization'], parsed_dict['skip_softmax_op'], parsed_dict['op_radix'], parsed_dict['interlayer_buffer_size'], parsed_dict['psum_buffer_size'], parsed_dict['header_file_test_vector_cnt'], parsed_dict['conv2d_setting'], parsed_dict['psum_buffer_placement'], parsed_dict['transpose_kernel'], tflite_axon_graph_object)
         except Exception as e:
             logger.critical(f"Exception: {e}")
             return -908, "exception occured when generating the bin file"
-        # util.save_to_file(intermediate_outputs_dir,const_bin_file_name,const_bin_content, file_type="bin")
-        # util.save_to_file(intermediate_outputs_dir,model_desc_bin_file_name,model_descriptor_bin_content, file_type="bin")
+
         if GET_INTERMEDIATE_FILES:
             util.save_to_file(intermediate_outputs_dir,
                               file_name_prefix + "_binfile_content_.txt", file_content)
@@ -643,93 +656,54 @@ def axons_compiler(parsed_dict):
             test_layers_name_list = ""
             # print(f"\nSaving the layer outputs for each of the requested test vectors at {compiler_outputs_dir}...")
             output_datawidth = np.int8
-            prediction_digits = []
-            tflite_interpreter = tflite_axon_graph_object.get_tflite_interpreter()
+            transpose_flag = False
+            tflite_interpreter = tflite_axon_graph_object.get_tflite_interpreter(
+                reset_variables=True)
             tflite_operators_len = tflite_axon_graph_object.get_tflite_operators_len()
             subgraph = tflite_axon_graph_object.get_tflite_subgraph()
             ops_details = tflite_axon_graph_object.get_tflite_operator_details()
-            inputs = tflite_axon_graph_object.get_tflite_input_details()
-            outputs = tflite_axon_graph_object.get_tflite_output_details()
+            model_inputs = tflite_axon_graph_object.get_tflite_input_details()
+            model_outputs = tflite_axon_graph_object.get_tflite_output_details()
+            # model_input_operations = tflite_axon_graph_object.get_tflite_input_operations()
             tensor_details = tflite_axon_graph_object.get_tflite_tensor_details()
             axon_output_op_graph_details = tflite_axon_graph_object.get_axon_output_op_graph_details()
             tflite_axon_op_detail_mapped = tflite_axon_graph_object.get_tflite_axon_output_details_mapping()
+            operators_detail_graph = tflite_axon_graph_object.get_axon_operator_graph_info()
+            axon_last_layer, last_layer_ndx = tflite_axon_graph_object.get_axon_layer_num_of_output_operator()
             test_ip_vector = []
             tflite_hist_output = {}
             axon_hw_hist_output = {}
             csv_test_vectors_op = ""
-            model_ip_shape = ops.TensorShape(inputs[0]['shape'])
-            model_op_shape = ops.TensorShape(outputs[0]['shape'])
-            # ip_q={}
+            model_ip_shapes = []
+            model_op_shapes = []
+            for _n, input in enumerate(model_inputs):
+                model_ip_shapes.append(ops.TensorShape(input['shape']))
+
+            for output in model_outputs:
+                model_op_shapes.append(ops.TensorShape(output['shape']))
             op_q_new = {}
-            # create the list of operations to be executed in CPU
-            input_transposed = False
-            input_reshaped = False
-            operators_detail_graph = tflite_axon_graph_object.get_axon_operator_graph_info()
-            axon_last_layer, last_layer_ndx = tflite_axon_graph_object.get_axon_layer_num_of_output_operator()
-            # if (parsed_dict['skip_softmax_op'] and ops_details[last_layer_ndx[0]]['op_name'] == "SOFTMAX"):
-            #     last_layer_ndx[0] = tflite_axon_graph_object.get_index_for_axon_layer_num(
-            #         axon_last_layer[0]-1)
+
             if parsed_dict['skip_softmax_op']:
                 for ndx, layer_ndx in enumerate(last_layer_ndx):
                     if ops_details[layer_ndx]['op_name'] == "SOFTMAX":
                         last_layer_ndx[ndx] = tflite_axon_graph_object.get_index_for_axon_layer_num(
                             axon_last_layer[ndx]-1)
+            parsed_dict['quantized_data'] = copy.deepcopy(quantized_x_test)
 
-            reshape_input = False
-            transpose_model_input_flag = False
+            formated_input_test_vector, transpose_flag = util.format_input_test_vectors_to_run_inference_on_compiler(
+                parsed_dict, tflite_axon_graph_object)
 
-            model_ip_datawidth = inputs[0]['dtype']
-            x_test_q = quantized_x_test
-            if model_ip_datawidth != np.int8 and x_test_q.dtype != np.int8:
-                if ops_details[0]['op_name'] == "QUANTIZE":
-                    scale, model_ip_zeropoint = tensor_details[operators_detail_graph[0]
-                                                               ['op_tensors'][0]]['quantization']
-                    x_test_q = np.round(
-                        (x_test_q/scale)+model_ip_zeropoint).astype(np.int8)
-            if (ops_details[0]["op_name"] == "RESHAPE"):
-                # check if the test input needs to be transposed
-                # we only transpose the test input if the reshape puts some element in the channel
-                reshape_ip_shape = ops.TensorShape(
-                    tensor_details[subgraph.Operators(0).InputsAsNumpy()[0]]['shape'])
-                reshape_op_shape = ops.TensorShape(
-                    tensor_details[subgraph.Operators(0).OutputsAsNumpy()[0]]['shape'])
-                reshape_input = True
-                if (reshape_op_shape.depth != reshape_ip_shape.depth):
-                    # we have to transpose the input
-                    original_shape = x_test_q.shape
-                    x_test_q_tr = x_test_q.reshape(len(
-                        x_test_q), reshape_op_shape.height, reshape_op_shape.width, reshape_op_shape.depth)
-                    x_test_q_tr = x_test_q_tr.transpose(0, 3, 1, 2)
-                    x_test_q_tr = x_test_q_tr.reshape(original_shape)
-                    input_transposed = True
-                else:
-                    x_test_q_reshaped = x_test_q.reshape(len(
-                        x_test_q), reshape_op_shape.height, reshape_op_shape.width, reshape_op_shape.depth)
-                    input_reshaped = True
-
-            # figure out here if the input needs to be transposed
-            # the input op should not be a FC,
-            if parsed_dict['transpose_kernel']:
-                # check if the first input is reshape
-                if reshape_input:
-                    if ops_details[1]["op_name"] != "FULLY_CONNECTED":
-                        transpose_model_input_flag = True
-                else:
-                    if ops_details[0]["op_name"] != "FULLY_CONNECTED":
-                        transpose_model_input_flag = True
             """Start of code to get test vectors for mass inference"""
-            if (get_mass_inference_vectors or transpose_model_input_flag != transposed_before):
+            if (get_mass_inference_vectors or transpose_flag != transposed_before):
                 logger.info("getting test vectors for mass inference...")
                 get_mass_inference_start_tick = time.time()
-                if (input_transposed):
-                    util.save_vectors_for_mass_inference(
-                        csv_test_vectors_file_name, test_io_vector_ndx, x_test_q_tr, y_test, intermediate_outputs_dir, transpose_model_input_flag)
-                elif (input_reshaped):
-                    util.save_vectors_for_mass_inference(
-                        csv_test_vectors_file_name, test_io_vector_ndx, x_test_q_reshaped, y_test, intermediate_outputs_dir, transpose_model_input_flag)
-                else:
-                    util.save_vectors_for_mass_inference(
-                        csv_test_vectors_file_name, test_io_vector_ndx, x_test_q, y_test, intermediate_outputs_dir, transpose_model_input_flag)
+                util.save_vectors_for_mass_inference(csv_test_vectors_file_name,
+                                                     test_io_vector_ndx,
+                                                     formated_input_test_vector,
+                                                     parsed_dict['test_labels'],
+                                                     intermediate_outputs_dir,
+                                                     transpose_flag,  # OP_TYPE, #uncomment hack into check for non transposed LSTM cases
+                                                     )
                 get_mass_inference_vectors = False
                 logger.info(
                     f".... done!, took {time.time()-get_mass_inference_start_tick} seconds! for {len(test_io_vector_ndx)} vectors")
@@ -737,27 +711,26 @@ def axons_compiler(parsed_dict):
             # logger.info(f"running mass inference timing calculation, will only generate vectors and break.....")
             # break
             # model_wrapper_ffi = mw.get_model_wrapper_cffi_object(COMPILER_TYPES_HDR_FILE)
-            transposed_before = transpose_model_input_flag
+            transposed_before = transpose_flag
             for i, ndx in enumerate(test_io_vector_ndx[0:parsed_dict['header_file_test_vector_cnt']]):
-                # test_ = np.expand_dims(quantized_x_test[ndx], axis=0)
-                test_ = util.check_input_shape_for_inference(
-                    quantized_x_test[ndx], inputs[0]['shape'])
-                tflite_interpreter.set_tensor(inputs[0]['index'], test_)
+                for input_idx, inp in enumerate(model_inputs):
+                    input_vector = util.check_input_shape_for_inference(
+                        quantized_x_test[input_idx][ndx], inp['shape'])
+                    tflite_interpreter.set_tensor(inp['index'], input_vector)
+                    # we have a multiple channel input
+                    if (model_ip_shapes[input_idx].depth > 1) and model_ip_shapes[input_idx].shape_size > 3:
+                        input_vector = input_vector.transpose(0, 3, 1, 2)
+                    test_ip_vector.append(input_vector)
+                    if GET_INTERMEDIATE_FILES:
+                        multiple_test_input_array_values += util.write_array_to_file(
+                            input_vector.squeeze(), parsed_dict['model_name'].lower()+"_test_input_"+str(ndx))
                 # Run inference.
                 tflite_interpreter.invoke()
-                # we have a multiple channel input
-                if (model_ip_shape.depth > 1) and model_ip_shape.shape_size > 3:
-                    test_ = test_.transpose(0, 3, 1, 2)
-                test_ip_vector.append(test_)
+
                 multiple_layer_output_vectors = ""
-                if (input_transposed):
-                    test_ = x_test_q_tr[ndx]
                 multiple_test_input_array_names_list += "    " + \
                     parsed_dict['model_name'].lower(
                     )+"_test_input_"+str(ndx)+",\n"
-                if GET_INTERMEDIATE_FILES:
-                    multiple_test_input_array_values += util.write_array_to_file(
-                        test_.squeeze(), parsed_dict['model_name'].lower()+"_test_input_"+str(ndx))
                 if (i == 0):
                     test_layers_name_list += "\n\nconst int8_t* " + parsed_dict['model_name'].lower(
                     )+"_layer_vectors[] = \n{"+f"\n#ifndef {USE_MINIMUM_TEST_VECTORS_DEFINE}"+"\n    "+parsed_dict['model_name'].lower()+"_l0_test_input,\n"
@@ -766,23 +739,16 @@ def axons_compiler(parsed_dict):
 
                 op_cnt = 0
                 # if we need the output for each of the layers we need to get them in multiple header files
-                if GET_INTERMEDIATE_FILES:
-                    multiple_layer_output_vectors += util.write_array_to_file(
-                        test_.squeeze(), parsed_dict['model_name'].lower()+"_l0_test_input")
                 multiple_layer_output_vectors += f"\n#ifndef {USE_MINIMUM_TEST_VECTORS_DEFINE}"
                 operator_op_ndx = np.array([-1])
                 for ops_graph_index in range(len(operators_detail_graph)):
                     op_num = operators_detail_graph[ops_graph_index]['index']
                     op_dw = np.int8
                     operator = subgraph.Operators(op_num)
-                    # ops_options_ndx = operator.BuiltinOptionsType()
-                    # operator_code = model.OperatorCodes(
-                    #     (operator.OpcodeIndex())).BuiltinCode()
                     operator_code = operators_detail_graph[ops_graph_index]['op_code']
                     op_graph_detail = operators_detail_graph[ops_graph_index]
-                    # if(operator_code in supported_ops.supported_operators) or (operator_code in supported_ops.variable_operators):
                     if (op_graph_detail['operator_support'] == ops.OperatorSupportEnum.SUPPORTED or op_graph_detail['operator_support'] == ops.OperatorSupportEnum.PARTIALLY_SUPPORTED or op_graph_detail['operator_support'] == ops.OperatorSupportEnum.VARIABLE):
-                        # options = supported_ops.supported_operators[operator_code](operator_code, operator, ops_details[op_num], tensor_details, tflite_interpreter)
+
                         if i == 0:
                             if op_graph_detail['options_initialized']:
                                 options = op_graph_detail['operator_options']
@@ -794,23 +760,16 @@ def axons_compiler(parsed_dict):
                         else:
                             options = op_graph_detail['operator_options']
                         axon_layer_num = op_graph_detail['axon_layer_num']
-                        # if axon_layer_num<0 or operators_detail_graph[op_num]['operator_support']!=ops.OperatorSupportEnum.SUPPORTED:
                         if axon_layer_num < 0:
                             if i == 0:  # just need to check it once for the first test vector index
                                 if (operators_detail_graph[op_num]['operator_support'].value) == ops.OperatorSupportEnum.CONVERTED_PASSTHROUGH.value:
                                     tflite_axon_graph_object.update_axon_operator_graph(
                                         operators_detail_graph[op_num])
                             continue
-                        # ops_details[op_num]["op_name"]
                         ops_name = options.GetOperationName()
-                        # operator_ip_ndx = operator.InputsAsNumpy()
-                        # operator_ip_ndx = options.GetInputTensorsNdx()
-                        # operator_op_ndx = operator.OutputsAsNumpy()
                         operator_op_ndx = options.GetOutputTensorsNdx()
-                        # shape_length = len(tflite_interpreter.tensor(operator_op_ndx[0])().shape)
                         if (ops_name == "PAD") or (("SOFTMAX" in ops_name) and parsed_dict['skip_softmax_op']):
                             continue
-                        # ip_q = copy.deepcopy(tensor_details[operator_ip_ndx[0]]['quantization_parameters'])
                         output_index = 0
                         if "SPLIT_V" in operators_detail_graph[ops_graph_index]['op_name']:
                             output_index = operators_detail_graph[ops_graph_index]['splitv_op_ndx']
@@ -833,8 +792,6 @@ def axons_compiler(parsed_dict):
                             layer_op = util.get_array_from_tensor(tflite_interpreter.get_tensor(
                                 operators_detail_graph[op_num+1]['op_tensors'][output_index]))
                             op_dw = np.int8
-                        # and (parsed_dict['op_radix'] > 8):#last layer
-                        # if (ops_graph_index == last_layer_ndx[0]) and (parsed_dict['disable_op_quantization']):
                         if (ops_graph_index in last_layer_ndx):
                             if (parsed_dict['disable_op_quantization']):
                                 # check for the radix here and multiply by that after dequantization
@@ -844,12 +801,6 @@ def axons_compiler(parsed_dict):
                                     (layer_op - op_q_new['zero_points'][0]) * op_q_new['scales']) * (2**parsed_dict['op_radix'])
                                 layer_op = layer_op.astype(op_dw)
 
-                        # if(shape_length==2):
-                        #   # multiple_layer_output_vectors += util.write_array_to_file(tflite_interpreter.tensor(operator_op_ndx[0])().squeeze(),parsed_dict['model_name'].lower()+"_l"+str(op_cnt) + "_"+ops_name+"_tflite_op")
-                        #   multiple_layer_output_vectors += util.write_array_to_file(layer_op,parsed_dict['model_name'].lower()+"_l"+str(op_cnt) + "_"+ops_name+"_tflite_op",op_dw)
-                        # else:
-                        #   # multiple_layer_output_vectors += util.write_array_to_file(tflite_interpreter.tensor(operator_op_ndx[0])().transpose(0,3,1,2).squeeze(),parsed_dict['model_name'].lower()+"_l"+str(op_cnt) + "_"+ops_name+"_tflite_op")
-                        # if (ops_graph_index == (last_layer_ndx[0])):
                         if (ops_graph_index == (np.max(last_layer_ndx))):
                             multiple_layer_output_vectors += "\n#endif"
 
@@ -861,17 +812,6 @@ def axons_compiler(parsed_dict):
                         if (i == 0):
                             test_layers_name_list += "    " + tflite_output_layer_name.lower() + ",\n"
                         op_cnt += 1
-                    # if not parsed_dict['skip_softmax_op']:
-                    #   #DEBUG# get the last operation output for testing
-                    #   #last_operator = subgraph.Operators(op_num-1)
-                    #   #last_operator_op_ndx = last_operator.OutputsAsNumpy()
-                    #   #multiple_layer_output_vectors += util.write_array_to_file(tflite_interpreter.tensor(last_operator.OutputsAsNumpy()[0])().squeeze(),parsed_dict['model_name'].lower()+"_OP_BEFORE_SOFTMAX_"+str(op_cnt) + "_op_tflite_"+str(ndx))
-                    #   #multiple_layer_output_vectors += util.write_array_to_file(tflite_interpreter.tensor(operator.OutputsAsNumpy()[0])().squeeze(),parsed_dict['model_name'].lower()+"_SOFTMAX_DEPTH"+str(op_cnt) + "_op_tflite_"+str(ndx))
-                    #   # operator_op_ndx = operator.OutputsAsNumpy()
-                    #   if(shape_length==4):
-                    #     multiple_layer_output_vectors += util.write_array_to_file(tflite_interpreter.tensor(operator.OutputsAsNumpy()[0])().transpose(0,3,1,2).squeeze(),parsed_dict['model_name'].lower()+"_SOFTMAX_"+str(op_cnt) + "_op_tflite_"+str(ndx))
-                    #   elif(shape_length==2):
-                    #     multiple_layer_output_vectors += util.write_array_to_file(tflite_interpreter.tensor(operator.OutputsAsNumpy()[0])().squeeze(),parsed_dict['model_name'].lower()+"_SOFTMAX_"+str(op_cnt) + "_op_tflite_"+str(ndx))
                     final_ops_ndx = operator_op_ndx[0]
                 # util.save_to_file(compiler_outputs_dir,file_name_prefix + "_layer_outputs_tflite_"+str(ndx)+"_.h", multiple_layer_output_vectors)
                 if (i == 0):
@@ -889,17 +829,9 @@ def axons_compiler(parsed_dict):
                         tflite_op_tensor_index = axon_output_op_graph_details[n]['op_tensors'][0]
                     # also update the op_dw here
                     tflite_op_dw = tensor_details[tflite_op_tensor_index]['dtype']
-                    # tflite_shape = tflite_interpreter.tensor(
-                    #     tflite_op_tensor_index)().shape
                     tflite_op = util.get_array_from_tensor(
                         tflite_interpreter.tensor(tflite_op_tensor_index)())
-                    # if (parsed_dict['disable_op_quantization']):
-                    #     # deaquantize the output
-                    #     # check for the radix and adjust accordingly
-                    #     output_datawidth = np.int32
-                    #     op = ((op - op_q_new['zero_points'][0]) *
-                    #         op_q_new['scales']) * (2**(parsed_dict['op_radix']))
-                    #     op = op.astype(output_datawidth)
+
                     if n not in tflite_hist_output:
                         tflite_hist_output[n] = []
                     tflite_hist_output[n].append(tflite_op)
@@ -1019,13 +951,7 @@ def axons_compiler(parsed_dict):
                         axon_multiple_op_ndx = len(
                             tflite_axon_op_detail_mapped)*i+n
                         axon_end_to_end_vector = csv_output[axon_multiple_op_ndx]
-                        # if parsed_dict['disable_op_quantization'] :
-                        #     axon_op_q_new = tensor_details[axon_output_op_graph_details[n]['op_tensors'][0]]['quantization_parameters']
-                        #     axon_end_to_end_vector = np.round((axon_end_to_end_vector/(2**parsed_dict['op_radix']))/ axon_op_q_new['scales'][0] + axon_op_q_new['zero_points'][0]).astype(np.int8)
                         tflite_op_tensor_index = tflite_axon_op_detail_mapped[n]['index']
-                        # tflite_shape = tflite_axon_op_detail_mapped[n]['shape']
-                        # axon_end_to_end_vector = axon_end_to_end_vector.reshape(
-                        #     tflite_shape)
                         if n not in axon_hw_hist_output:
                             axon_hw_hist_output[n] = []
                         axon_hw_hist_output[n].append(axon_end_to_end_vector)
@@ -1054,19 +980,31 @@ def axons_compiler(parsed_dict):
                     #     bit_comparison_range = test_io_vector_ndx
                     bit_comparison_range = test_io_vector_ndx
                     axon_bit_comparison_output = csv_output
-                    # if parsed_dict['disable_op_quantization'] :
-                    #     axon_op_q_new = tensor_details[axon_output_op_graph_details[0]['op_tensors'][0]]['quantization_parameters']
-                    #     axon_bit_comparison_output = (axon_bit_comparison_output/(2**parsed_dict['op_radix'])/ axon_op_q_new['scales'][0] + axon_op_q_new['zero_points'][0]).astype(np.float32)
-
-                    input_to_tflite = x_test[bit_comparison_range]
-                    # FIXME Use the already calculated tflite outputs here and do not run the output inference again
-                    _, tflite_output = tc.test_tflite_model(
-                        parsed_dict['tflite_model'], input_to_tflite, get_results=True)
-                    if (model_op_shape.depth > 1) and model_op_shape.shape_size > 3:
+                    input_to_tflite = util.sample_test_data_by_indices(
+                        x_test, bit_comparison_range)
+                    # TODO Use the already calculated tflite outputs here and do not run the output inference again
+                    _, tflite_output = tc.get_tflite_model_test_results(
+                        parsed_dict['tflite_model_path'], input_to_tflite, get_results=True, tflite_interpreter=tflite_axon_graph_object.get_tflite_interpreter(reset_variables=True))
+                    if (model_op_shapes[-1].depth > 1) and model_op_shapes[-1].shape_size > 3:
                         tflite_output = tflite_output.transpose(0, 3, 1, 2)
-                    if tflite_output.dtype == np.uint8:
-                        # add 128
-                        axon_bit_comparison_output += 128
+
+                    if (tflite_output.dtype == np.uint8) or (tflite_output.dtype == np.uint16):
+                        output_op = None
+                        for op in ops_details:
+                            if tflite_op_tensor_index in op['outputs']:
+                                output_op = op
+                        if output_op['op_name'] == "QUANTIZE":
+                            # this is a passthrough for compiler under this condition, so do the (re)quantization on top of compiler's results before comparing with tflite outputs
+                            ip_scale, ip_zeropoint = tensor_details[output_op['inputs']
+                                                                    [0]]['quantization']
+                            op_scale, op_zeropoint = tensor_details[output_op['outputs']
+                                                                    [0]]['quantization']
+                            axon_bit_comparison_output = ((ip_scale/op_scale)*(
+                                axon_bit_comparison_output - ip_zeropoint) + op_zeropoint).astype(tflite_output.dtype)
+                        else:
+                            logger.error(
+                                f"encountered error when doing output results comparison: output operator {output_op['op_name']} with output type {tflite_output.dtype} unhandled!")
+
                     elif tflite_output.dtype == np.float32:
                         op_scale, op_zeropoint = tensor_details[axon_output_op_graph_details[0]
                                                                 ['op_tensors'][0]]['quantization']
@@ -1086,8 +1024,8 @@ def axons_compiler(parsed_dict):
                     accuracy_results_text = f"\n\tAccuracy (test data set size {len(test_io_vector_ndx)})\n"
                     true_labels = np.array([y_test[test_vector_ndx]
                                             for test_vector_ndx in test_io_vector_ndx])
-                    sampled_x_test = np.array(
-                        [x_test[test_vector_ndx] for test_vector_ndx in test_io_vector_ndx])
+                    sampled_x_test = util.sample_test_data_by_indices(
+                        x_test, test_io_vector_ndx)
                     classification_labels = copy.deepcopy(
                         parsed_dict['classification_labels'])
                     total_labels_count = len(
@@ -1103,9 +1041,6 @@ def axons_compiler(parsed_dict):
                             #   logger.info(f"suggested threshold is {threshold}, score {f1_score}")
                             # converting a percent value into float for conversion
                             parsed_dict['precision_margin'] = parsed_dict['precision_margin'] / 100
-                            # if (parsed_dict['disable_op_quantization']):
-                            #   parsed_dict['precision_threshold'] = (((parsed_dict['precision_threshold'] -  op_q_new['zero_points'][0])* op_q_new['scales']) * (2**parsed_dict['op_radix']))
-                            #   parsed_dict['precision_margin'] = ((parsed_dict['precision_margin'] -  op_q_new['zero_points'][0])* op_q_new['scales']) * (2**parsed_dict['op_radix'])
                             compiler_op_labels = compare_models.get_labels(
                                 csv_output, parsed_dict['precision_threshold'], parsed_dict['precision_margin'], True)
                             classification_labels.append('inconclusive')
@@ -1117,10 +1052,8 @@ def axons_compiler(parsed_dict):
                         variant, precision_value)
                     # logger.info(precision_score)
                     accuracy_results, labels = compare_models.get_model_accuracy(
-                        sampled_x_test, true_labels, compiler_op_labels, parsed_dict['tflite_model'], parsed_dict['float_model'], get_results=True)
+                        sampled_x_test, true_labels, compiler_op_labels, parsed_dict['tflite_model_path'], parsed_dict['float_model'], get_results=True, tflite_interpreter=tflite_axon_graph_object.get_tflite_interpreter())
                     if (parsed_dict['float_model'] is not None):
-                        # if(test_result_float!=0):
-                        # tflite_quantization_error_overall = ((test_result_float - test_result_tflite)/test_result_float) * 100
                         if (accuracy_results['float'] != 0):
                             tflite_quantization_error_sample = (
                                 (accuracy_results['float'] - accuracy_results['tflite'])/accuracy_results['float']) * 100
@@ -1150,7 +1083,7 @@ def axons_compiler(parsed_dict):
                             user_func = util.load_func(
                                 parsed_dict['user_handle_accuracy_results'])
                             user_handle_return, user_handle_return_text = user_func(
-                                parsed_dict, x_test, y_test, csv_output, model_op_shape, variants_object, variant)
+                                parsed_dict, x_test, y_test, csv_output, model_op_shapes, variants_object, variant, tflite_interpreter=tflite_axon_graph_object.get_tflite_interpreter())
                             accuracy_results_text += user_handle_return_text
                         except Exception as e:
                             accuracy_results_text += f"\n\tModel Accuracy/Results NA, Calling User Handle raised exception {e}\n"
@@ -1302,7 +1235,7 @@ def run_app():
                         exit_code = -1
                     else:
                         logger.info(
-                            f"completed running {test}, return code {app_return}({app_return_text}), took {(time.time() - start_time):.2f} seconds")
+                            f"completed running {test} with code {app_return}({app_return_text}), took {(time.time() - start_time):.2f} seconds")
                     gc.collect()
             else:
                 raise Exception(f"yaml file doesn't exist at {path}!")

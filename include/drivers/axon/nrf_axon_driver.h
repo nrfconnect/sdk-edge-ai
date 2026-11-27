@@ -20,8 +20,23 @@ extern "C" {
 /**
  * NRF_AXON_VERSION applies to the entire axon software tool chain.
  * version history
+ * 2.1.1 11/23/2026
+ *  - Corrected dequantization parameters when softmax is skipped.
+ *
+ * 2.1.0 11/17/2026
+ * - Added support for multiple input vectors to models.
+ * - Added support for 16x8 quantization (16 bit activations, 8bit weights)
+ * - Added preprocessor macros for model output vectors.
+ * - Added (re)quantize operator support when quantized output needs new quantization parameters.
+ * - Changed model output vector order to match TFLite order.
+ * - Changed 32bit model output to retain more precision (radix is chosen based on the output
+ *   range).
+ * - Changed scaling values internal to the models to be the minimum value with the minimum
+ *   rounding. Compiled models will have bit differences but be mathematically identical.
+ * - Fixed dequantization parameters for 32bit output models.
+ *
  * 2.0.1 09/17/2026
- * - fixe to release candidate 2.0.0 to write output dequant parameters to model files.
+ * - fix to release candidate 2.0.0 to write output dequant parameters to model files.
  *
  * 2.0.0 09/14/2026
  * - Breaks backward compatibility of compiled models!!! Compiled models will not run on older
@@ -93,7 +108,7 @@ extern "C" {
  */
 #define NRF_AXON_GENERATE_VERSION(major, minor, patch) \
 	(((major) << 16) | ((minor) << 8) | (patch))
-#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(2, 0, 1)
+#define NRF_AXON_VERSION NRF_AXON_GENERATE_VERSION(2, 1, 1)
 
 
 #if !defined(AXON_FORCE_32BIT_ADDR) && \

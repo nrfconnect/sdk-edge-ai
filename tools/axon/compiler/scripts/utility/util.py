@@ -112,8 +112,8 @@ def scale_error(data_, scaling_shift):
     data_ += 1e-32  # to avoid divide by zero errors
     scaling_shift = np.int32(scaling_shift)
     if bool(np.array(data_).any()):
-        error = (((np.round(data_*(2**scaling_shift)) /
-                 (2**scaling_shift))-data_)/(data_))
+        scale = np.ldexp(1.0, scaling_shift)  # Exact float64 power of 2 (4294967296.0), never overflows int32
+        error = ((np.round(data_ * scale) / scale) - data_) / data_
     else:
         error = 0
     return abs(error*100)
@@ -145,18 +145,70 @@ def optimized_ip_scaling_shift(data_, min_, max_, bit_limit, op_zp=np.zeros(shap
     max_: maximum number of the bits for quantizing. (left shift)
 
     """
-    op_zp = (op_zp).astype(np.int64)  # to avoid the zerop point to overflow
+    op_zp_int = int(op_zp)  # Python arbitrary-precision int: never overflows
+    data_f64 = np.float64(data_)
     all_ = [(-1, 0)]
-    for scaleshift in range(min_, max_):
-        sc = int(np.round(data_*(2**scaleshift)))
-        zp = int(np.round(int(op_zp*(2**scaleshift))))
-        # Quantized values should not be more than 24 signed bits.
-        if (abs(sc) < (2**bit_limit)) and (abs(zp) < (2**zp_bit_limit)):
-            error = scale_error(data_, scaleshift)
-            all_.append((error, scaleshift))
-        else:
-            break
-    return all_[-1]
+    error_max, scaleshift_max = all_[-1]
+    error_min, scaleshift_min = all_[-1]
+    if (np.isinf(np.ldexp(data_f64, int(min_)))):
+        # scaleshift will be used in cfg_round_size where it should be 0 or positive value
+        for scaleshift in range(int(min_)-1, -1, -1):
+            scaled_data = np.ldexp(data_f64, scaleshift)
+            if not np.isinf(scaled_data):
+                sc = int(np.round(scaled_data))
+                zp = op_zp_int << scaleshift  # Exact bit-shift; works for any scaleshift >= 0
+                # Quantized values should not be more than 24 signed bits.
+                if (abs(sc) < (1 << bit_limit)) and (abs(zp) < (1 << zp_bit_limit)) and (sc != 0):
+                    error = scale_error(data_f64, scaleshift)
+                    all_.append((error, scaleshift))
+                    # find the biggest scaleshift that will not overflow, stop here
+                    scaleshift_min = scaleshift
+                    scaleshift_max = scaleshift
+                    error_min = error
+                    error_max = error
+                    break
+    else:
+        # for scaleshifts normalization and/or insufficient precision case,
+        # need to extend the scale left shift max to 63 (limited by 6-bit in axon cfg_round_size)
+        min_int = int(min_)
+        max_int = int(max_)
+        bit_bound = 1 << int(bit_limit)
+        zp_bit_bound = 1 << int(zp_bit_limit)
+
+        scaled_temp = np.ldexp(data_f64, max_int - 1)
+        temp = 0 if scaled_temp == 0.0 else (1 if np.isinf(scaled_temp) else int(np.round(scaled_temp)))
+
+        for scaleshift in range(min_int, max(max_int, 63)):
+            scaled_data = np.ldexp(data_f64, scaleshift)
+            if np.isinf(scaled_data):
+                break
+
+            sc = int(np.round(scaled_data))
+            zp = op_zp_int << scaleshift
+
+            if (abs(sc) < bit_bound) and (abs(zp) < zp_bit_bound):
+                error = scale_error(data_f64, scaleshift)
+                all_.append((error, scaleshift))
+                scaleshift_max = scaleshift
+                error_max = error
+                if (temp == 0) or (scaleshift < max_int):
+                    scaleshift_min = scaleshift
+                    error_min = error
+            else:
+                break
+
+        # reduce the scaleshift if scale_q is even
+        while scaleshift_min > min_int:
+            sc = int(np.round(np.ldexp(data_f64, scaleshift_min)))
+            if (sc & 1) == 0 and sc != 0:
+                scaleshift_min -= 1
+                error = scale_error(data_f64, scaleshift_min)
+                error_min = error
+                all_.append((error, scaleshift_min))
+            else:
+                break
+
+    return error_min, scaleshift_min, error_max, scaleshift_max
 
 
 def compare_outputs(tflite_vector, calc_vector, layer_name):
@@ -296,8 +348,11 @@ def optimize_scaling_shift_per_channel(ip_scale, op_scale, w_scales, op_zp, bit_
     if the weight scale is not scalar, we will be generating multiple scale_shifts and scale_q values,
     one for each of the different Ws values
     """
+    scale_ = np.array([])
     scale_q_ = np.array([])
     scaleshift_ = np.array([])
+    scaleshift_range_ = np.empty((0, 2), dtype=np.int8)
+    scaleshift_range = []
     error_ = np.array([])
     scaleshift = 8
     scale_q = 0
@@ -318,11 +373,14 @@ def optimize_scaling_shift_per_channel(ip_scale, op_scale, w_scales, op_zp, bit_
             # error = scale_error(scale,scaleshift)
             scaleshift = op[1]
             error_ = np.append(error_, op[0])
+            scaleshift_range.append([op[1], op[3]])
+        scale_ = np.append(scale_, scale)
         scale_q = abs(int(np.round(scale*2**scaleshift)))
         scale_q_ = np.append(scale_q_, scale_q)
         scaleshift_ = np.append(scaleshift_, scaleshift)
+    scaleshift_range_ = np.array(scaleshift_range, dtype=np.int8)
 
-    return scaleshift_.astype(np.int8), scale_q_.astype(np.int32), error_
+    return scale_, scaleshift_.astype(np.int8), scale_q_.astype(np.int32), error_, scaleshift_range_
 
 
 def find_elements_present(input_array, find_in_array):
@@ -693,6 +751,22 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def float_to_int32_x86(arr: np.ndarray) -> np.ndarray:
+    """Converts a float array to int32, matching x86_64 floating-point overflow behavior
+
+    on ARM64 (Apple Silicon).
+    """
+    int32_min = np.iinfo(np.int32).min  # -2147483648
+    int32_max = np.iinfo(np.int32).max  #  2147483647
+
+    # Identify out-of-bounds floating-point elements (overflow/underflow/NaN)
+    out_of_bounds = (arr > int32_max) | (arr < int32_min) | np.isnan(arr)
+
+    # Cast valid values normally, force overflow elements to -2147483648
+    result = np.where(out_of_bounds, int32_min, arr).astype(np.int32)
+    return result
 
 
 def getArgDict(arg):
@@ -1276,69 +1350,86 @@ def convert_range_to_list(range_string: list):
     return list(set(vectors_list))
 
 
-def save_vectors_for_mass_inference(test_vector_file_name, test_vectors_ndx, quantized_test_vectors, test_labels, output_dir, transpose_model_ip_flag=False, op_type=None, save_test_labels=False):
-    """create logger object"""
+def normalize_quantized_test_vectors(quantized_test_vectors):
+    """Single ndarray -> [ndarray]; list/tuple of ndarrays -> list."""
+    if isinstance(quantized_test_vectors, np.ndarray):
+        return [quantized_test_vectors]
+    if isinstance(quantized_test_vectors, (list, tuple)):
+        if len(quantized_test_vectors) == 0:
+            raise ValueError("quantized_test_vectors list is empty")
+        return list(quantized_test_vectors)
+    raise TypeError(
+        f"Unsupported quantized_test_vectors type: {type(quantized_test_vectors)}"
+    )
+
+
+def apply_mass_inference_input_layout(q_test_vector, transpose_model_ip_flag=False, op_type=None):
+    """Apply NHWC/NCHW layout transforms used by mass inference CSV."""
+    q_input_shape = ops.TensorShape(np.array(q_test_vector.shape))
+    q_out = q_test_vector
+    if transpose_model_ip_flag:
+        if q_input_shape.shape_size == 4:
+            q_out = q_out.transpose(0, 2, 1, 3)
+        elif q_input_shape.shape_size == 3:
+            q_out = q_out.transpose(0, 2, 1)
+    if op_type != 'Lstm':
+        if q_input_shape.depth > 1:
+            if q_input_shape.shape_size == 4:
+                q_out = q_out.transpose(0, 3, 1, 2)
+            elif q_input_shape.shape_size == 3:
+                q_out = q_out.transpose(0, 2, 1)
+    return q_out
+
+
+def save_vectors_for_mass_inference(test_vector_file_name, test_vectors_ndx, quantized_test_vectors, test_labels, output_dir, transpose_model_ip_flag=False, op_type=None, save_test_labels=False, act_bits=8):
     logger = logging.getLogger(__name__)
-    # print("\nGetting the quantized input test vector and labels for the simulator....")
     logger.debug(
-        "getting the quantized input test vector and labels for mass inferencing using the simulator...")
+        "getting the quantized input test vector and labels for mass inferencing using the simulator..."
+    )
+    q_test_vectors = normalize_quantized_test_vectors(quantized_test_vectors)
+    num_inputs = len(q_test_vectors)
+    num_samples = q_test_vectors[0].shape[0]
+    for input_idx, q_test_vector in enumerate(q_test_vectors[1:], start=1):
+        if q_test_vector.shape[0] != num_samples:
+            raise ValueError(
+                f"Input {input_idx} has {q_test_vector.shape[0]} samples, "
+                f"expected {num_samples}"
+            )
+    processed_vectors = [
+        apply_mass_inference_input_layout(q, transpose_model_ip_flag, op_type)
+        for q in q_test_vectors
+    ]
+
+    def vector_to_csv_line(vector, act_bits):
+        array_bitwidth = np.int8
+        if act_bits == 16:
+            array_bitwidth = np.int16
+        text = write_array_to_file(vector.squeeze(), "", array_bitwidth)
+        return get_csv_text(text)
+
     test_vector_text = ""
     test_labels_text = ""
-    q_input_shape = ops.TensorShape(np.array(quantized_test_vectors.shape))
-    # save_test_labels = test_labels.size>1
-    q_test_vector = quantized_test_vectors
-    """ also transpose input vector if the rotate model is set"""
-    if transpose_model_ip_flag:
-        # we have to transpose the input but,
-        # check if the operator wants the input to be transposed
-        # if the first actual operator is FC, the input may not be needed to be transposed
-        # how do we get the actual input, that is the question, a quick fix is to just check if the operator is Fully_connected
-        if q_input_shape.shape_size == 4:
-            q_test_vector = q_test_vector.transpose(0, 2, 1, 3)
-        elif q_input_shape.shape_size == 3:
-            q_test_vector = q_test_vector.transpose(0, 2, 1)
-    if op_type != 'Lstm':
-        if (q_input_shape.depth > 1):
-            if q_input_shape.shape_size == 4:
-                q_test_vector = q_test_vector.transpose(0, 3, 1, 2)
-            elif q_input_shape.shape_size == 3:
-                q_test_vector = q_test_vector.transpose(0, 2, 1)
-
-    def get_csv_text_map_func(vector):
-        test_vector_text_m = ""
-        test_vector_text_m += write_array_to_file(vector.squeeze(), "")
-        test_vector_text_m = get_csv_text(test_vector_text_m)
-        return test_vector_text_m
-
-    if (len(test_vectors_ndx) == len(q_test_vector)):  # doing it for the whole dataset
-        test_vector_iter = list(q_test_vector)
-    else:
-        test_vector_iter = [q_test_vector[ndx] for ndx in test_vectors_ndx]
-    test_vectors_list = list(map(get_csv_text_map_func, test_vector_iter))
-
-    for ndx, vector_value in enumerate(test_vectors_ndx):
-
-        # test_vect = q_test_vector[ndx]
-        # test_vector_text += write_array_to_file(test_vect.squeeze(),"")
-        # test_vector_text = get_csv_text(test_vector_text)
-
-        test_vector_text += test_vectors_list[ndx]
-
-        if (save_test_labels):
-            test_labels_text += str(test_labels[vector_value])+"\n"
-
+    for vector_value in test_vectors_ndx:
+        # One sample -> num_inputs CSV rows (input order = TFLite input index order)
+        for input_idx in range(num_inputs):
+            sample = processed_vectors[input_idx][vector_value]
+            test_vector_text += vector_to_csv_line(sample, act_bits)
+        if save_test_labels:
+            test_labels_text += str(test_labels[vector_value]) + "\n"
     test_labels_text += "\n"
-    test_vector_text = test_vector_text.replace(' ', '')
-    # replacing the carriage return in windows to ensure that it works when running inference from a linux app!
-    test_vector_text = test_vector_text.replace('\r', '')
+    test_vector_text = test_vector_text.replace(' ', '').replace('\r', '')
     save_to_file(output_dir, test_vector_file_name, test_vector_text)
     if save_test_labels:
-        label_filename = test_vector_file_name.split(
-            ".")[0] + "labels_." + test_vector_file_name.split(".")[1]
+        label_filename = (
+            test_vector_file_name.split(".")[0]
+            + "labels_."
+            + test_vector_file_name.split(".")[1]
+        )
         save_to_file(output_dir, label_filename, test_labels_text)
-    # print(f"saved the test vector text files to {compiler_outputs_dir}")
     logger.debug(
-        f"saved the test vector's text files for mass inferencing to {output_dir}")
+        f"saved the test vector's text files for mass inferencing to {output_dir} "
+        f"({num_inputs} input(s), {len(test_vectors_ndx)} sample(s))"
+    )
     return 0
 
 
@@ -1398,36 +1489,50 @@ def get_linux_path(pure_windows_path: str | Path) -> str:
     return f"/mnt/{drive.lower()}/{directory}"
 
 
-def get_output_radix(op_radix, scale_shift, op_scale, op_zp, op_bw=np.int8):
+def get_output_radix(op_radix, scale_shift, op_scale, op_zp, op_bw=np.int8, unquant_op_bw=np.int32):
     # determine the best op_radix here based on the output quantization values
     # the output quantization always quantizes the output to 8 bit, but that can be checked and,
     # the necessary max and min values can be calculated
     # using that information the user can determine a radix that might just be apt for the output
-    if op_bw == np.int16:
-        max_val = 2**15 - 1
-        min_val = -2**15
-    elif op_bw == np.int32:
-        max_val = 2**31 - 1
-        min_val = -2**31
+    if 0:
+        if op_bw == np.int16:
+            max_val = 2**15 - 1
+            min_val = -2**15
+        elif op_bw == np.int32:
+            max_val = 2**31 - 1
+            min_val = -2**31
+        else:
+            max_val = 2**7 - 1
+            min_val = -2**7
+        radix = 0
+        layer_max_value = np.ceil(op_scale*(max_val - op_zp))
+        layer_min_value = np.ceil(op_scale*(min_val - op_zp))
+        # DEBUG #\n print(f"layer max and min values {layer_max_value,layer_min_value}")
+        shift_max_range = scale_shift - \
+            (len(bin(int(max(abs(layer_max_value), abs(layer_min_value))))) - 2)
+        shift_max_range = np.int32(shift_max_range)
+        if (op_radix <= 0):  # the user has not set the output radix, we need to figure out one
+            op_radix = 8  # lets default that at 8 and then use the scale_shift values to maximize that accordingly
+        for radix in range(op_radix, shift_max_range):
+            if (layer_max_value*2**radix) > (2**shift_max_range - 1) or (layer_min_value*2**radix) < (-2**shift_max_range):
+                break
     else:
-        max_val = 2**7 - 1
-        min_val = -2**7
-    radix = 0
-    layer_max_value = np.ceil(op_scale*(max_val - op_zp))
-    layer_min_value = np.ceil(op_scale*(min_val - op_zp))
-    # DEBUG #\n print(f"layer max and min values {layer_max_value,layer_min_value}")
-    shift_max_range = scale_shift - \
-        (len(bin(int(max(abs(layer_max_value), abs(layer_min_value))))) - 2)
-    shift_max_range = np.int32(shift_max_range)
-    if (op_radix <= 0):  # the user has not set the output radix, we need to figure out one
-        op_radix = 8  # lets default that at 8 and then use the scale_shift values to maximize that accordingly
-    for radix in range(op_radix, shift_max_range):
-        if (layer_max_value*2**radix) > (2**shift_max_range - 1) or (layer_min_value*2**radix) < (-2**shift_max_range):
-            break
+        max_val_quant = np.iinfo(op_bw).max
+        min_val_quant = np.iinfo(op_bw).min
+        max_val_unquant = np.iinfo(unquant_op_bw).max
+        min_val_unquant = np.iinfo(unquant_op_bw).min
+        radix = 0
+        layer_max_value = op_scale*(max_val_quant - op_zp)
+        layer_min_value = op_scale*(min_val_quant - op_zp)
+        bitwidth_unquant = np.iinfo(unquant_op_bw).bits
+        for radix in range(min(bitwidth_unquant,scale_shift), -1, -1):
+            if np.ceil(layer_max_value*2**radix) <= max_val_unquant and np.floor(layer_min_value*2**radix) >= min_val_unquant:
+                break
+
     return radix
 
 
-def find_variant_settings(tflite_model_file):
+def find_variant_settings(tflite_interpreter):
     softmax_present = False
     per_channel_scales_present = False
     conv2d_multichannel_present = False
@@ -1436,12 +1541,12 @@ def find_variant_settings(tflite_model_file):
     # buf = bytearray(open(tflite_model_file, "rb").read())
     # model = tflite.Model.GetRootAsModel(buf, 0)
     # subgraph = model.Subgraphs(0)
-    interpreter = tf.lite.Interpreter(
-        model_path=tflite_model_file, experimental_preserve_all_tensors=True)
-    interpreter.allocate_tensors()
+    # interpreter = tf.lite.Interpreter(
+    #     model_path=tflite_model_file, experimental_preserve_all_tensors=True)
+    # interpreter.allocate_tensors()
 
-    tensor_details = interpreter.get_tensor_details()
-    ops_details = interpreter._get_ops_details()
+    tensor_details = tflite_interpreter.get_tensor_details()
+    ops_details = tflite_interpreter._get_ops_details()
     for op in ops_details:
         if (len(op['inputs']) > 1):
             per_channel_scales_present = (
@@ -1652,10 +1757,14 @@ def load_csv_lines_to_np_array(file_path, start_index=0):
     return np.array(array_)
 
 
-def get_string_from_array_values(array, seperator='x'):
-    if not isinstance(array, list):
+def get_string_from_array_values(array, separator='x'):
+    if not isinstance(array, (list, tuple)):
         return str(array)
-    return seperator.join(str(v) for v in array)
+    if len(array) > 0 and isinstance(array[0], (list, tuple)):
+        return '_'.join(
+            separator.join(str(v) for v in shape) for shape in array
+        )
+    return separator.join(str(v) for v in array)
 
 
 def float_to_str(x): return '0f' + ('%.10f' % x).split('.')[1].rstrip('0')
@@ -1794,6 +1903,18 @@ def get_unit_test_model_name(test_op_info_dict):
             model_name = model_name + \
                 "_return_seq"
 
+    if 'ACT_BITS' in test_op_info_dict:
+        act_bits_string = get_string_from_array_values(
+            test_op_info_dict['ACT_BITS'])
+        model_name = model_name + f"_act_bits_{act_bits_string}"
+    else:
+        test_op_info_dict['ACT_BITS'] = 8
+
+    if OP_TYPE == "MIMO":
+        if 'MERGE_OP' in test_op_info_dict:
+            model_name += f"_merge_op_{test_op_info_dict['MERGE_OP']}"
+        if 'OUTPUT_COUNT' in test_op_info_dict:
+            model_name += f"_output_cnt_{test_op_info_dict['OUTPUT_COUNT']}"
     return model_name.lower()
 
 
@@ -1827,22 +1948,24 @@ def plot_histogram_0_255(hist):
     plt.show()
 
 
-def compute_value_diff_histogram(tflite_tensor, hw_tensor):
+def compute_value_diff_histogram(tflite_tensor, hw_tensor, act_bits=8):
 
     a = tflite_tensor.flatten().astype(np.int16)
     b = hw_tensor.flatten().astype(np.int16)
 
+    diff_clip = 2**act_bits-1
     diff = abs(a - b)
-    diff = np.clip(diff, 0, 255)
+    diff = np.clip(diff, 0, diff_clip)
 
-    hist = np.bincount(diff, minlength=256)
+    hist = np.bincount(diff, minlength=diff_clip+1)
 
     return hist, diff
 
 
-def get_histogram_text_on_console(hist, diff_threshold=2, ratio_threshold=0.01, width=100, n=""):
+def get_histogram_text_on_console(hist, diff_threshold=2, ratio_threshold=0.01, width=100, n="", act_bits=8):
     total = np.sum(hist)
-    diff_values = np.arange(0, 256)
+    diff_max = 2**act_bits
+    diff_values = np.arange(0, diff_max)
     nonzero = np.where(hist > 0)[0]
     histogram_text = print_with_borders(
         f"\tBit Comparison Histogram {n} ({total} data points)", border="", get_text=True)
@@ -1921,6 +2044,238 @@ def print_with_borders(text, border="=", get_text=False):
     print(f"{border_text}")
     print(text)
     print(f"{border_text}")
+
+
+def normalize_into_list(vector):
+    if isinstance(vector[0], (list, tuple)):
+        return list(vector)
+    return [vector]
+
+
+def append_ndx_to_path(filepath, ndx, separator="_"):
+    path = Path(filepath)
+    return str(path.with_name(f"{path.stem}{separator}{ndx}{path.suffix}"))
+
+
+def save_test_vectors_as_npy(test_vector, test_vector_file_path):
+    if isinstance(test_vector, np.ndarray):
+        np.save(test_vector_file_path, test_vector)
+        return test_vector_file_path
+    if not isinstance(test_vector, list) or len(test_vector) == 0:
+        raise TypeError(f"Unsupported type: {type(test_vector)}")
+    if len(test_vector) == 1:
+        return save_test_vectors_as_npy(test_vector[0], test_vector_file_path)
+    arrs = [np.asarray(x) for x in test_vector]
+    # Single output stored as many samples, each batch dim 1 -> one stacked file
+    first_arr_size = arrs[0].size
+    if all(a.ndim >= 1 and a.shape[0] == 1 and a.size == first_arr_size for a in arrs) and len(arrs) > 2:
+        np.save(test_vector_file_path, np.stack(arrs, axis=0))
+        return test_vector_file_path
+    # Multi-input / multi-output -> file_0, file_1, ...
+    paths = []
+    for ndx, a in enumerate(arrs):
+        p = append_ndx_to_path(test_vector_file_path, ndx)
+        np.save(p, a)
+        paths.append(p)
+    return paths
+
+
+def reshape_test_vector_for_first_reshape_op(x, reshape_ip_shape, reshape_op_shape):
+    n = len(x)
+    h, w, d = (
+        reshape_op_shape.height,
+        reshape_op_shape.width,
+        reshape_op_shape.depth,
+    )
+    simple_swap = (
+        reshape_ip_shape.depth == reshape_op_shape.width
+        and reshape_op_shape.depth == 1
+    )
+    channel_axis_changes = (
+        reshape_op_shape.depth != reshape_ip_shape.depth and not simple_swap
+    )
+    layout_fix = channel_axis_changes and (
+        reshape_ip_shape.shape_size == 4
+        or (
+            reshape_ip_shape.shape_size == 3
+            and reshape_op_shape.shape_size == 2
+        )
+    )
+    if layout_fix:
+        original_shape = x.shape
+        return x.reshape(n, h, w, d).transpose(0, 3, 1, 2).reshape(original_shape)
+    return x.reshape(n, h, w, d)
+
+
+def format_input_test_vectors_to_run_inference_on_compiler(yaml_dict, tflite_axon_op_graph=None):
+    # buf = bytearray(open(yaml_dict['tflite_model'], "rb").read())
+    # model = tflite.Model.GetRootAsModel(buf, 0)
+    subgraph = tflite_axon_op_graph.get_tflite_subgraph()
+    # interpreter = tf.lite.Interpreter(
+    #     model_path=yaml_dict['tflite_model'], experimental_preserve_all_tensors=True)
+    # interpreter.allocate_tensors()
+    interpreter = tflite_axon_op_graph.get_tflite_interpreter()
+    ops_details = interpreter._get_ops_details()
+    tensor_details = interpreter.get_tensor_details()
+    inputs = tflite_axon_op_graph.get_tflite_input_details()
+    reshape_input = False
+    input_reshaped = False
+    input_transposed = False
+    transpose_model_input_flag = False
+    model_ip_datawidth = inputs[0]['dtype']
+    operator_graph_info = tflite_axon_op_graph.get_axon_operator_graph_info()
+    x_test_q = copy.deepcopy(yaml_dict['quantized_data'])
+    x_test_output_q = x_test_q
+    tflite_input_operations = tflite_axon_op_graph.get_tflite_input_operations()
+
+    for ndx, _ip_operation in enumerate(tflite_input_operations):
+        # get the operation that has the input tensor in its ip_tensors and check against that
+        first_op_index = _ip_operation['index']
+        first_op_name = _ip_operation['op_name']
+
+        # if model_ip_datawidth != np.int8 and x_test_q[ndx].dtype != np.int8 and ops_details[first_op_index]['op_name'] == "QUANTIZE":
+        if (((model_ip_datawidth != np.int8 and x_test_q[ndx].dtype != np.int8)
+            or (model_ip_datawidth != np.int16 and x_test_q[ndx].dtype != np.int16))
+                and (ops_details[first_op_index]['op_name'] == "QUANTIZE")):
+            scale, model_ip_zeropoint = tensor_details[operator_graph_info[first_op_index]
+                                                       ['op_tensors'][0]]['quantization']
+            x_test_q[ndx] = np.round(
+                # (x_test_q[ndx]/scale)+model_ip_zeropoint).astype(np.int8)
+                (x_test_q[ndx]/scale)+model_ip_zeropoint).astype(operator_graph_info[first_op_index]['op_tensors'].dtype)
+            x_test_output_q[ndx] = x_test_q[ndx]
+            # FIXME update the next op as the first op
+
+        if (first_op_name == "RESHAPE"):
+            reshape_input = True
+            # check if the test input needs to be transposed
+            # we only transpose the test input if the reshape puts some element in the channel
+            reshape_ip_shape = ops.TensorShape(
+                tensor_details[subgraph.Operators(first_op_index).InputsAsNumpy()[0]]['shape'])
+            reshape_op_shape = ops.TensorShape(
+                tensor_details[subgraph.Operators(first_op_index).OutputsAsNumpy()[0]]['shape'])
+            next_op_index = tflite_axon_op_graph.get_tflite_op_index_from_input_tensor_index(
+                ops_details[first_op_index]['outputs'][0])
+            if ops_details[next_op_index]["op_name"] == "UNPACK" and reshape_op_shape.shape_size == 3:
+                # confirm that this is indeed an LSTM
+                fc_op_index = tflite_axon_op_graph.get_tflite_op_index_from_input_tensor_index(
+                    ops_details[next_op_index]['outputs'][0])
+                if ops_details[fc_op_index]["op_name"] == "FULLY_CONNECTED":
+                    # this is an input to an unfused LSTM block
+                    x_test_output_q[ndx] = x_test_q[ndx].reshape(len(
+                        x_test_q[ndx]), reshape_op_shape.height, reshape_op_shape.depth, reshape_op_shape.width)
+            else:
+                channel_width_swapped = (
+                    reshape_ip_shape.depth == reshape_op_shape.width
+                    and reshape_op_shape.depth == 1
+                )
+                channel_axis_changed = (
+                    (reshape_op_shape.depth != reshape_ip_shape.depth)
+                    and not channel_width_swapped)
+
+                nhwc_layout_change_needed = channel_axis_changed and (
+                    reshape_ip_shape.shape_size == 4
+                    or (reshape_ip_shape.shape_size == 3
+                        and reshape_op_shape.shape_size == 2)
+                )
+                if nhwc_layout_change_needed:
+                    original_shape = x_test_q[ndx].shape
+                    x_test_output_q[ndx] = x_test_q[ndx].reshape(len(
+                        x_test_q[ndx]), reshape_op_shape.height, reshape_op_shape.width, reshape_op_shape.depth)
+                    x_test_output_q[ndx] = x_test_output_q[ndx].transpose(
+                        0, 3, 1, 2)
+                    x_test_output_q[ndx] = x_test_output_q[ndx].reshape(
+                        original_shape)
+                else:
+                    x_test_output_q[ndx] = x_test_q[ndx].reshape(len(
+                        x_test_q[ndx]), reshape_op_shape.height, reshape_op_shape.width, reshape_op_shape.depth)
+
+        elif (first_op_name == "UNIDIRECTIONAL_SEQUENCE_LSTM"):
+            # the input shape needs to be added with a depth so that it works through the save mass vectors which tries to transpose the input based on the input shape
+            lstm_ip_shape = ops.TensorShape(x_test_q[ndx].shape)
+            x_test_output_q[ndx] = x_test_q[ndx].reshape(
+                len(x_test_q[ndx]), lstm_ip_shape.width, lstm_ip_shape.depth, 1)
+
+        if yaml_dict['transpose_kernel']:
+            # check if the first input is reshape
+            check_index = 1 if reshape_input else 0
+            if ops_details[check_index]["op_name"] != "FULLY_CONNECTED":
+                # op_type = yaml_dict.get('OP_TYPE', None)
+                # x_test_output_q[ndx] = apply_mass_inference_input_layout(x_test_output_q[ndx],True,op_type)
+                transpose_model_input_flag = True
+
+    return x_test_output_q, transpose_model_input_flag
+
+
+def sample_test_data_by_indices(x_test, indices):
+    """
+    x_test: list of per-input arrays (N, ...), or a single ndarray (legacy).
+    indices: iterable of sample indices (test_io_vector_ndx or bit_comparison_range).
+    Returns: list of arrays (K, ...) in TFLite input order.
+    """
+    if isinstance(x_test, np.ndarray):
+        x_test = [x_test]
+    idx = np.asarray(indices)
+    return [np.asarray(x_test[n][idx]) for n in range(len(x_test))]
+
+
+def tflite_input_index_from_name(name: str, signature: str = "test_input_") -> int:
+    m = re.search(fr"{signature}_(\d+)", name or "")
+    if not m:
+        raise ValueError(
+            f"Cannot map TFLite input name to {signature}_i: {name!r}")
+    return int(m.group(1))
+
+
+def align_test_data_to_input_details(test_data, input_details, input_signatures):
+    """Returns list ordered like input_details, sourced from test_data[keras_i]."""
+    if isinstance(test_data, np.ndarray):
+        test_data = [test_data]
+    aligned = [None] * len(input_details)
+    for tflite_ndx, det in enumerate(input_details):
+        keras_i = tflite_input_index_from_name(
+            det["name"], signature=input_signatures[tflite_ndx])
+        if keras_i >= len(test_data):
+            raise IndexError(
+                f"test_input_{keras_i} not in test_data (len={len(test_data)})")
+        aligned[tflite_ndx] = test_data[keras_i]
+    return aligned
+
+
+def align_data_q_using_input_signatures(user_signatures, data_q, input_details):
+    """
+    Reorder data_q to match input_details order.
+    user_signatures[i] labels data_q[i] (user order).
+    input_details[j]['name'] is the TFLite name for slot j.
+    Returns a new list: aligned[j] is the array for input_details[j].
+    """
+    if len(user_signatures) != len(data_q):
+        raise ValueError(
+            f"len(user_signatures)={len(user_signatures)} != len(data_q)={len(data_q)}"
+        )
+    if len(data_q) != len(input_details):
+        raise ValueError(
+            f"len(data_q)={len(data_q)} != len(input_details)={len(input_details)}"
+        )
+    aligned = [None] * len(input_details)
+    used_slots = set()
+    for user_idx, user_sig in enumerate(user_signatures):
+        for slot, inp in enumerate(input_details):
+            if slot in used_slots:
+                continue
+            if user_sig in inp["name"]:
+                aligned[slot] = data_q[user_idx]
+                used_slots.add(slot)
+                break
+        else:
+            raise ValueError(
+                f"No input_details name contains {user_sig!r}. "
+                f"Names: {[inp['name'] for inp in input_details]}"
+            )
+    if any(x is None for x in aligned):
+        missing = [input_details[i]["name"]
+                   for i, x in enumerate(aligned) if x is None]
+        raise ValueError(f"Unmatched input_details slots: {missing}")
+    return aligned
 
 
 NO_TRANSPOSE_TFLITE_OPERATORS = [

@@ -17,227 +17,285 @@ Changelog
 
 See the list of changes for a specific release of the Axon NPU software.
 
-Release 2.0.1  21 Sep 2026
-==========================
-
-* Fixed:
-
-  * Added writing of output dequantization parameters to the model file.
-
-Release 2.0.0  14 Sept 2026
+Release 2.1.1  23 Nov 2026
 ===========================
-
-This release has the following breaking changes:
-
-* You must recompile existing models.
-  Models and drivers are only compatible within the same major version.
-* The ``nrf_axon_nn_compiled_model_s`` model structure is modified to support a variable number of inputs and outputs:
-
-  * The ``external_input_ndx`` field and its associated APIs are removed.
-    All entries in the ``inputs[]`` field are now external.
-  * The primary output fields (starting with ``output_``) and the extra output fields (starting with ``extra_outputs``) are replaced with a single consolidated ``outputs[]`` field.
 
 * Added:
 
-  * Compiler release v2.0.0.
-  * Support for unfused Gated Recurrent Unit (GRU).
-    Only the unrolled form is supported.
-  * Support for the SUB (subtract) operator.
+  * Compiler release v2.1.1.
+
+* Fixed:
+
+  * Output dequantization parameters for models compiled with the skip-softmax option set.
+
+Release 2.1.0  17 Nov 2026
+===========================
+
+* Added:
+
+  * Compiler release v2.1.0.
+  * Support for up to 100 inputs to a model.
+  * Experimental support for 16-bit activation with 8-bit weights quantization.
+  * Preprocessor macro index labels for model output indices.
 
 * Updated:
 
-  * Support for unfused, unrolled LSTM is no longer experimental.
-    Input features (input width) and units (output width) can now both exceed 512.
+  * Order of model outputs for multi-output models is reversed, now matches the order from the source .tflite file.
+  * int32 output models have optimized radix to maximize precision.
+    Output dequantization parameters are changed accordingly.
+  * Model scaling values have been minimized.
+    There is no effect on the model output, but the compiled model object code will change.
+
+* Fixed:
+
+  * int32 outputs used dequantization parameters that left output values unchanged (multiply by 1).
+    Dequantization parameters now reflect the radix of the output.
+  * Compiler log reported a command buffer size that was 2x bigger than the actual command buffer size.
+
+Release 2.0.1  21 Sep 2026
+==========================
+
+.. toggle::
+
+   * Fixed:
+
+     * Added writing of output dequantization parameters to the model file.
+
+Release 2.0.0  14 Sep 2026
+===========================
+
+.. toggle::
+
+   This release has the following breaking changes:
+
+   * You must recompile existing models.
+     Models and drivers are only compatible within the same major version.
+   * The ``nrf_axon_nn_compiled_model_s`` model structure is modified to support a variable number of inputs and outputs:
+
+     * The ``external_input_ndx`` field and its associated APIs are removed.
+       All entries in the ``inputs[]`` field are now external.
+     * The primary output fields (starting with ``output_``) and the extra output fields (starting with ``extra_outputs``) are replaced with a single consolidated ``outputs[]`` field.
+
+   * Added:
+
+     * Compiler release v2.0.0.
+     * Support for unfused Gated Recurrent Unit (GRU).
+       Only the unrolled form is supported.
+     * Support for the SUB (subtract) operator.
+
+   * Updated:
+
+     * Support for unfused, unrolled LSTM is no longer experimental.
+       Input features (input width) and units (output width) can now both exceed 512.
 
 Release 1.5.0  13 Aug 2026
 ==========================
 
-* Added:
+.. toggle::
 
-  * Compiler release v1.5.0.
-  * Cell state clipping for unidirectional sequential (fused) Long Short-Term Memory (LSTM) model.
-  * ``passlist_candidate_mode`` support in the compiler executor.
-    You can set this option when invoking the compiler, or enable it in the YAML configuration with the ``passlist_candidate_mode`` entry.
-  * Experimental support for unfused LSTM.
-    Only the unrolled mode is supported.
-  * :ref:`Test: DSP intrinsics application <test_axon_intrinsics>` for validating Axon DSP intrinsic functions on hardware and in the simulator.
+   * Added:
 
-* Updated:
+     * Compiler release v1.5.0.
+     * Cell state clipping for unidirectional sequential (fused) Long Short-Term Memory (LSTM) model.
+     * ``passlist_candidate_mode`` support in the compiler executor.
+       You can set this option when invoking the compiler, or enable it in the YAML configuration with the ``passlist_candidate_mode`` entry.
+     * Experimental support for unfused LSTM.
+       Only the unrolled mode is supported.
+     * :ref:`Test: DSP intrinsics application <test_axon_intrinsics>` for validating Axon DSP intrinsic functions on hardware and in the simulator.
 
-  * The unidirectional sequential (fused) LSTM command buffer is now rolled up, which significantly reduces model size.
-  * Sigmoid (logistic) and tanh operators are optimized for better performance.
-  * API documentation in :c:group:`nrf_axon_dsp_intrinsics` is expanded with more complete comments.
+   * Updated:
+
+     * The unidirectional sequential (fused) LSTM command buffer is now rolled up, which significantly reduces model size.
+     * Sigmoid (logistic) and tanh operators are optimized for better performance.
+     * API documentation in :c:group:`nrf_axon_dsp_intrinsics` is expanded with more complete comments.
 
 Release 1.4.0  17 Jul 2026
 ==========================
 
-* Added:
+.. toggle::
 
-  * Compiler release 1.4.0
-  * Partial and experimental support for unidirectional sequential LSTM.
+   * Added:
 
-* Updated:
+     * Compiler release 1.4.0
+     * Partial and experimental support for unidirectional sequential LSTM.
 
-  * Multiply no longer limited to widths less than or equal to 512.
+   * Updated:
+
+     * Multiply no longer limited to widths less than or equal to 512.
 
 Release 1.3.0  02 Jul 2026
 ==========================
 
-* Added:
+.. toggle::
 
-  * Compiler release 1.3.0
-  * Support depthwise and 2D convolutions for dilation (thorugh Space_to_Batch and Batch_to_Space operators).
-  * TFLite Compiler - Generic classification labels are now added for ``just_labels`` and ``last_layer_vectors`` labels type if you do not provide it.
+   * Added:
 
-* Fixed the following items for TFLite Compiler:
+     * Compiler release 1.3.0
+     * Support depthwise and 2D convolutions for dilation (thorugh Space_to_Batch and Batch_to_Space operators).
+     * TFLite Compiler - Generic classification labels are now added for ``just_labels`` and ``last_layer_vectors`` labels type if you do not provide it.
 
-  * Handling of 'NewShape' attribute in the RESHAPE Operator.
-  * Classification labels do not require test vectors to be populated in the model header file.
-  * Static assert on the interlayer buffer size now uses "<=" instead of "<".
+   * Fixed the following items for TFLite Compiler:
+
+     * Handling of 'NewShape' attribute in the RESHAPE Operator.
+     * Classification labels do not require test vectors to be populated in the model header file.
+     * Static assert on the interlayer buffer size now uses "<=" instead of "<".
 
 Release 1.2.1  05 May 2026
 ==========================
 
-* Added support for ``v3.3.0`` tag of ``sdk-nrf`` (``SHA-1 ba167d9f3d``).
+.. toggle::
 
-  .. note::
-    The Add-on was tested and built with SDK toolchain version v3.3.0.
-    You should use this version for stable builds.
+   * Added support for ``v3.3.0`` tag of ``sdk-nrf`` (``SHA-1 ba167d9f3d``).
 
-* Removed RRAM const-lat work-around (compatible with Bluetooth LE).
+     .. note::
+       The Add-on was tested and built with SDK toolchain version v3.3.0.
+       You should use this version for stable builds.
+
+   * Removed RRAM const-lat work-around (compatible with Bluetooth LE).
 
 Release 1.2.0  16 Apr 2026
 ==========================
 
-* Added:
+.. toggle::
 
-  * Compiler release 1.2.0
-  * Support for ``v3.3.0-preview2`` tag of ``sdk-nrf`` (``SHA-1 ede152ec21``).
+   * Added:
 
-    .. note::
-      The compiler was tested and built with SDK toolchain version v3.2.0.
-      You should use this version for stable builds.
+     * Compiler release 1.2.0
+     * Support for ``v3.3.0-preview2`` tag of ``sdk-nrf`` (``SHA-1 ede152ec21``).
 
-  * Support for multiple outputs in a model.
-  * Support CPU operator ``RESIZE_NEAREST_NEIGHBOR``.
-  *  ``static_assert`` in compiled model header files to verify that the interlayer buffer is allocated enough space to accommodate the model.
-  *  Compatibility check so that models report a minimum supported Axon version, preventing models compiled with new features from being run on an older version of the driver that does not support these features.
-  * Option to print a histogram of bit differences between Axon inference and TFLite inference.
+       .. note::
+         The compiler was tested and built with SDK toolchain version v3.2.0.
+         You should use this version for stable builds.
 
-
-* Fixed:
-
-  * Quantization multiplier misapplied under some circumstances when one input to an Add operation is packed and the other is unpacked. You must recompile models to apply this fix.
+     * Support for multiple outputs in a model.
+     * Support CPU operator ``RESIZE_NEAREST_NEIGHBOR``.
+     *  ``static_assert`` in compiled model header files to verify that the interlayer buffer is allocated enough space to accommodate the model.
+     *  Compatibility check so that models report a minimum supported Axon version, preventing models compiled with new features from being run on an older version of the driver that does not support these features.
+     * Option to print a histogram of bit differences between Axon inference and TFLite inference.
 
 
-Compatibility
-=============
+   * Fixed:
 
-* Older model versions are compatible with the latest driver.
-  You should recompile models using the Add operator.
-* New model versions are compatible with older driver versions if they do not include multiple outputs or the ``RESIZE_NEAREST_NEIGHBOR`` operation.
+     * Quantization multiplier misapplied under some circumstances when one input to an Add operation is packed and the other is unpacked. You must recompile models to apply this fix.
 
-  * Older driver versions will ignore all but the first output if a model has multiple outputs.
-  * Older driver versions will not compile models with the ``RESIZE_NEAREST_NEIGHBOR`` operation.
+
+
+   Compatibility
+   -------------
+
+   * Older model versions are compatible with the latest driver.
+     You should recompile models using the Add operator.
+   * New model versions are compatible with older driver versions if they do not include multiple outputs or the ``RESIZE_NEAREST_NEIGHBOR`` operation.
+
+     * Older driver versions will ignore all but the first output if a model has multiple outputs.
+     * Older driver versions will not compile models with the ``RESIZE_NEAREST_NEIGHBOR`` operation.
 
 Release 1.1.0  19 Mar 2026
 ===========================
 
-* Added:
+.. toggle::
 
-  * Compiler release 1.1.0.
-  * Support for the ``v3.3.0-preview2`` tag of ``sdk-nrf`` (``SHA-1 ede152ec21``).
+   * Added:
 
-    .. note::
-       The compiler was tested and built with SDK toolchain version v3.2.0.
-       You should use this version for stable builds.
+     * Compiler release 1.1.0.
+     * Support for the ``v3.3.0-preview2`` tag of ``sdk-nrf`` (``SHA-1 ede152ec21``).
 
-  * TFLite v2.19 as the officially supported version of TFLite.
-    Version 2.15 should still work.
-  * Build support for ``nRF54lm20b``, replacing ``nRF54lm20a``.
-    The new board name is ``nrf54lm20dk/nrf54lm20b/cpuapp`` in the build command.
+       .. note::
+          The compiler was tested and built with SDK toolchain version v3.2.0.
+          You should use this version for stable builds.
 
-* Fixed:
+     * TFLite v2.19 as the officially supported version of TFLite.
+       Version 2.15 should still work.
+     * Build support for ``nRF54lm20b``, replacing ``nRF54lm20a``.
+       The new board name is ``nrf54lm20dk/nrf54lm20b/cpuapp`` in the build command.
 
-  * Fully-connected layers with up to 2048 input length and 1024 output length now work correctly with TFLite 2.19.
-    The previous version supported up to 2046 and 512, respectively.
-  * Sigmoid and Tanh after fully-connected layers now work correctly with TFLite 2.19.
+   * Fixed:
+
+     * Fully-connected layers with up to 2048 input length and 1024 output length now work correctly with TFLite 2.19.
+       The previous version supported up to 2046 and 512, respectively.
+     * Sigmoid and Tanh after fully-connected layers now work correctly with TFLite 2.19.
 
 Release 1.0.1  05 Mar 2026
 ==========================
 
-* Added:
+.. toggle::
 
-  * Compiler release 1.0.1
+   * Added:
 
-  .. note::
-     The compiler was tested and built with SDK toolchain version v3.2.0.
-     You should use this version for stable builds.
+     * Compiler release 1.0.1
 
-* Fixed:
+     .. note::
+        The compiler was tested and built with SDK toolchain version v3.2.0.
+        You should use this version for stable builds.
 
-  * Compiler now correctly handles a fully-connected layer followed by softmax when the fully-connected layer uses per-channel weight quantization (TensorFlow v2.19).
+   * Fixed:
 
-Known issues
-------------
+     * Compiler now correctly handles a fully-connected layer followed by softmax when the fully-connected layer uses per-channel weight quantization (TensorFlow v2.19).
 
-There are no reported known issues for this release.
+   Known issues
+   ------------
+
+   There are no reported known issues for this release.
 
 Release 1.0.0  03 Mar 2026
 ==========================
 
-This is the first public release of the Axon NPU software.
+.. toggle::
 
-* Added:
+   This is the first public release of the Axon NPU software.
 
-  * Compiler release v1.0.0.
-  * Support for v3.3.0-preview tag of the ``sdk-nrf`` (``SHA-1 ede152ec21``).
+   * Added:
 
-  .. note::
-     The compiler was tested and built with SDK toolchain version v3.2.0.
-     You should use this version for stable builds.
+     * Compiler release v1.0.0.
+     * Support for v3.3.0-preview tag of the ``sdk-nrf`` (``SHA-1 ede152ec21``).
 
-  * Arbitrary reshape operation.
+     .. note::
+        The compiler was tested and built with SDK toolchain version v3.2.0.
+        You should use this version for stable builds.
 
-* Updated:
+     * Arbitrary reshape operation.
 
-  * Licenses to public Nordic license ``SPDX-License-Identifier: LicenseRef-Nordic-5-Clause``
+   * Updated:
 
-* Fixed:
+     * Licenses to public Nordic license ``SPDX-License-Identifier: LicenseRef-Nordic-5-Clause``
 
-  * Softmax no longer specifies unpacked output.
-    Affects a small number of models.
+   * Fixed:
 
-Known issues
-------------
+     * Softmax no longer specifies unpacked output.
+       Affects a small number of models.
 
-There are no reported known issues for this release.
+   Known issues
+   ------------
+
+   There are no reported known issues for this release.
 
 Release 0.7.0  17 Feb 2026
 ==========================
 
-* Added:
+.. toggle::
 
-  * Compiler release v0.2.0.
-  * Support for the ``main`` branch of ``sdk-nrf`` (tested with ``SHA-1 860c808db9``).
+   * Added:
 
-  .. note::
-     The compiler was tested and built with SDK toolchain version v3.2.0.
-     You should use this version for stable builds.
+     * Compiler release v0.2.0.
+     * Support for the ``main`` branch of ``sdk-nrf`` (tested with ``SHA-1 860c808db9``).
 
-* Updated:
+     .. note::
+        The compiler was tested and built with SDK toolchain version v3.2.0.
+        You should use this version for stable builds.
 
-  * Modified the source tree to match ``sdk-edge-ai`` repository.
-  * Improved performance in compiler and simulator when performing inference.
+   * Updated:
 
-* Fixed:
+     * Modified the source tree to match ``sdk-edge-ai`` repository.
+     * Improved performance in compiler and simulator when performing inference.
 
-  * Compiler now checks for dilation on depthwise convolution and returns errors.
+   * Fixed:
 
-Known issues
-------------
+     * Compiler now checks for dilation on depthwise convolution and returns errors.
 
-Current release has the following known issues:
+   Known issues
+   ------------
 
-  * ADD operation with broadcast on both height and width axes is not supported when both inputs are dynamic (outputs from previous layers).
-  * Per-layer testing in unit tests is not supported due to compilation errors caused by incompatible types.
+   Current release has the following known issues:
+
+     * ADD operation with broadcast on both height and width axes is not supported when both inputs are dynamic (outputs from previous layers).
+     * Per-layer testing in unit tests is not supported due to compilation errors caused by incompatible types.

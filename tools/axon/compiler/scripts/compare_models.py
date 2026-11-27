@@ -193,7 +193,7 @@ def get_vectors_where_reference_inferred_correctly(reference_label, test_label, 
     return mismatch_ndx_array
 
 
-def get_model_accuracy(x_test, true_labels, simulator_labels, tflite_model=None, float_model=None, get_results=False):
+def get_model_accuracy(x_test, true_labels, simulator_labels, tflite_model=None, float_model=None, get_results=False, tflite_interpreter=None):
     """
     returns a dictionary with accuracy results for float, tflite and simulator for the input test vector range
     Example : {float : 0.91, tflite : 0.90, simulator:0.90}, {'float_label':float_labels, 'tflite_label':tflite_labels}
@@ -205,8 +205,8 @@ def get_model_accuracy(x_test, true_labels, simulator_labels, tflite_model=None,
         simulator_acc = np.mean(simulator_labels == true_labels)
     # for tflite results
     if (tflite_model is not None):
-        tflite_acc, tflite_labels = tc.test_tflite_model(
-            tflite_model, x_test, true_labels, get_results=get_results)
+        tflite_acc, tflite_labels = tc.get_tflite_model_test_results(
+            tflite_model, x_test, true_labels, get_results=get_results, tflite_interpreter=tflite_interpreter)
     # test the float model
     if (float_model is not None):
         float_acc, float_labels = tc.test_floating_point_model(
@@ -341,7 +341,7 @@ class ModelVariantsClass:
     best_performance_variants = None
     compare_results_dict = None
 
-    def __init__(self, run_all_variants, tflite_model_file, parsed_yaml_dict):
+    def __init__(self, run_all_variants, tflite_interpreter, parsed_yaml_dict):
         self.variants = {}
         self.variants_results = {}
         self.lowest_memory_variants = {}
@@ -350,7 +350,7 @@ class ModelVariantsClass:
         self.compare_results_dict = {}
         # find if softmax or 2d convolutions are present in the
         softmax_present, conv2d_present, norm_ss_present, tr_kernel_present = util.find_variant_settings(
-            tflite_model_file)
+            tflite_interpreter)
         # handle boolean/str value of variant
         if run_all_variants:
             variant = 'all'

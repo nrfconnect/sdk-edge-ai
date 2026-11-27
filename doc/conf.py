@@ -64,6 +64,7 @@ ZEPHYR_VERSION           = f"v{ZEPHYR_VERSION_NUMBER}"
 # ones.
 extensions = [
     'sphinx.ext.intersphinx',
+    'sphinx_togglebutton',
     'sphinx_tabs.tabs',
     'sphinx_copybutton',
     'options_from_kconfig',
