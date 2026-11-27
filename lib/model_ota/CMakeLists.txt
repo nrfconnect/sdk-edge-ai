@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-zephyr_library()
+zephyr_library_named(model_ota)
 zephyr_library_include_directories(include)
 
 zephyr_library_sources(loader/model_image_common.c)

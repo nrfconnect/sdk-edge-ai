@@ -13,6 +13,7 @@ include_guard(GLOBAL)
 include(${CMAKE_CURRENT_LIST_DIR}/../common.cmake)
 
 set(MODEL_OTA_AXON_PROBE_SRC ${MODEL_OTA_LIB_DIR}/slot/axon/model_ota_axon_probe.c)
+set(MODEL_OTA_AXON_SLOT_SRC ${MODEL_OTA_LIB_DIR}/slot/axon/model_ota_axon_slot.c)
 set(MODEL_OTA_AXON_ELF ${MODEL_OTA_TOOLS_DIR}/axon_elf.py)
 
 #

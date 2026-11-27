@@ -13,6 +13,9 @@ set(MODEL_OTA_TOOLS_DIR ${ZEPHYR_EDGE_AI_MODULE_DIR}/scripts/model_ota
 set(MODEL_OTA_LIB_DIR ${ZEPHYR_EDGE_AI_MODULE_DIR}/lib/model_ota
     CACHE INTERNAL "edge-ai model_ota library sources")
 
+# Size of the MCUboot header that precedes the model image in a model partition.
+set(MODEL_OTA_IMAGE_OFFSET 32 CACHE INTERNAL "model_ota model image offset in the model partition")
+
 # The application's own C flags, for compiling a throwaway probe translation unit with exactly the
 # firmware's view of the headers and Kconfig.
 function(model_ota_zephyr_c_compile_flags OUT_VAR)
