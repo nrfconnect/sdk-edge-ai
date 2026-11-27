@@ -57,8 +57,9 @@ endfunction()
 #
 # Run axon_elf.py inspect on a probe object and generate the model's metadata headers.
 #
-# Creates the custom target model_ota_axon_metadata_<id> and sets <id>_AXON_PRIVATE_HEADER and
-# <id>_AXON_PUBLIC_HEADER in the caller's scope to the generated header paths.
+# Creates the custom target model_ota_axon_metadata_<id> and sets <id>_AXON_PRIVATE_HEADER,
+# <id>_AXON_PUBLIC_HEADER and <id>_AXON_KEEP_JSON in the caller's scope to the generated file
+# paths.
 #
 # Usage:
 #   model_ota_axon_inspect(TARGET <id> PROBE <obj> HEADER_NAME <name> WORK_DIR <dir>
@@ -82,6 +83,7 @@ function(model_ota_axon_inspect)
 
   set(private_h ${AI_WORK_DIR}/model_ota_axon_model_config.h)
   set(public_h ${AI_WORK_DIR}/include/model_ota/slots/${AI_TARGET}.h)
+  set(keep_json ${AI_WORK_DIR}/axon_keep.json)
 
   set(inspect_cmd
     ${PYTHON_EXECUTABLE} ${MODEL_OTA_AXON_ELF} inspect
@@ -90,6 +92,7 @@ function(model_ota_axon_inspect)
     --model-id ${AI_TARGET}
     --private-header ${private_h}
     --public-header ${public_h}
+    --keep-json ${keep_json}
   )
   if(AI_PERSISTENT_VARS_CAP)
     list(APPEND inspect_cmd --persistent-vars-cap ${AI_PERSISTENT_VARS_CAP})
@@ -99,15 +102,17 @@ function(model_ota_axon_inspect)
   endif()
 
   add_custom_command(
-    OUTPUT ${private_h} ${public_h}
+    OUTPUT ${private_h} ${public_h} ${keep_json}
     COMMAND ${inspect_cmd}
     DEPENDS ${AI_PROBE} ${MODEL_OTA_AXON_ELF}
             ${MODEL_OTA_TOOLS_DIR}/elf_symbols.py ${MODEL_OTA_TOOLS_DIR}/model_contract.py
     COMMENT "Inspecting Axon model metadata (${AI_TARGET})"
     VERBATIM
   )
-  add_custom_target(model_ota_axon_metadata_${AI_TARGET} DEPENDS ${private_h} ${public_h})
+  add_custom_target(model_ota_axon_metadata_${AI_TARGET}
+                    DEPENDS ${private_h} ${public_h} ${keep_json})
 
   set(${AI_TARGET}_AXON_PRIVATE_HEADER ${private_h} PARENT_SCOPE)
   set(${AI_TARGET}_AXON_PUBLIC_HEADER ${public_h} PARENT_SCOPE)
+  set(${AI_TARGET}_AXON_KEEP_JSON ${keep_json} PARENT_SCOPE)
 endfunction()
